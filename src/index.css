@@ -1,0 +1,498 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Deep Navy - Trust & Professionalism */
+    --background: 220 20% 97%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    /* Primary - Deep Navy */
+    --primary: 222 47% 15%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary - Light Blue Gray */
+    --secondary: 214 32% 91%;
+    --secondary-foreground: 222 47% 11%;
+
+    /* Muted */
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
+
+    /* Accent - Warm Amber */
+    --accent: 38 92% 50%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Success - Green */
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+
+    /* Warning - Orange */
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    /* Info - Blue */
+    --info: 210 100% 50%;
+    --info-foreground: 0 0% 100%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 222 47% 15%;
+
+    --radius: 0.75rem;
+
+    /* Custom gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(222 47% 15%) 0%, hsl(222 47% 25%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(38 92% 50%) 0%, hsl(28 92% 55%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(220 20% 98%) 100%);
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+
+    /* Sidebar */
+    --sidebar-background: 222 47% 11%;
+    --sidebar-foreground: 220 20% 90%;
+    --sidebar-primary: 38 92% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 222 47% 20%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 222 47% 20%;
+    --sidebar-ring: 38 92% 50%;
+  }
+
+  .dark {
+    --background: 222 47% 8%;
+    --foreground: 220 20% 95%;
+
+    --card: 222 47% 11%;
+    --card-foreground: 220 20% 95%;
+
+    --popover: 222 47% 11%;
+    --popover-foreground: 220 20% 95%;
+
+    --primary: 38 92% 50%;
+    --primary-foreground: 222 47% 11%;
+
+    --secondary: 222 47% 18%;
+    --secondary-foreground: 220 20% 95%;
+
+    --muted: 222 47% 15%;
+    --muted-foreground: 220 9% 60%;
+
+    --accent: 38 92% 50%;
+    --accent-foreground: 222 47% 11%;
+
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 222 47% 20%;
+    --input: 222 47% 20%;
+    --ring: 38 92% 50%;
+
+    --sidebar-background: 222 47% 6%;
+    --sidebar-foreground: 220 20% 90%;
+    --sidebar-primary: 38 92% 50%;
+    --sidebar-primary-foreground: 222 47% 11%;
+    --sidebar-accent: 222 47% 15%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 222 47% 15%;
+    --sidebar-ring: 38 92% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
+  }
+}
+
+@layer components {
+  .card-elevated {
+    @apply bg-card rounded-xl border shadow-md transition-all duration-200 hover:shadow-lg;
+  }
+
+  .card-flat {
+    @apply bg-card rounded-xl border;
+  }
+
+  .stat-card {
+    @apply bg-card rounded-xl border p-6 transition-all duration-200 hover:shadow-md;
+  }
+
+  .sidebar-item {
+    @apply flex items-center gap-3 px-4 py-3 rounded-lg text-sidebar-foreground/80 transition-all duration-200 hover:bg-sidebar-accent hover:text-sidebar-foreground;
+  }
+
+  .sidebar-item-active {
+    @apply bg-sidebar-accent text-sidebar-foreground font-medium;
+  }
+
+  .badge-success {
+    @apply bg-success/10 text-success px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .badge-warning {
+    @apply bg-warning/10 text-warning px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .badge-destructive {
+    @apply bg-destructive/10 text-destructive px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .badge-info {
+    @apply bg-info/10 text-info px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .input-field {
+    @apply flex h-11 w-full rounded-lg border border-input bg-background px-4 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-11 px-6;
+  }
+
+  .btn-accent {
+    @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-accent text-accent-foreground hover:opacity-90 h-11 px-6 shadow-md;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent/10 hover:text-accent h-11 px-4;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-clip-text text-transparent;
+    background-image: var(--gradient-primary);
+  }
+
+  .bg-gradient-primary {
+    background-image: var(--gradient-primary);
+  }
+
+  .bg-gradient-accent {
+    background-image: var(--gradient-accent);
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.4s ease-out;
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.2s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+}
+
+/* ========== Template Editor Dynamic Fields (editor-only chrome) ========== */
+.template-editor-content .template-field {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  margin: 0 2px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.85em;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: filter 120ms ease, box-shadow 120ms ease;
+}
+.template-editor-content .template-field:hover {
+  filter: brightness(0.97);
+  box-shadow: 0 0 0 2px hsl(var(--ring) / 0.25);
+}
+.template-editor-content .template-field[data-category="driver"] {
+  background: hsl(217 91% 60% / 0.12);
+  color: hsl(217 91% 35%);
+  border-color: hsl(217 91% 60% / 0.35);
+}
+.template-editor-content .template-field[data-category="vehicle"] {
+  background: hsl(142 71% 45% / 0.12);
+  color: hsl(142 71% 28%);
+  border-color: hsl(142 71% 45% / 0.35);
+}
+.template-editor-content .template-field[data-category="owner"] {
+  background: hsl(270 70% 60% / 0.12);
+  color: hsl(270 70% 40%);
+  border-color: hsl(270 70% 60% / 0.35);
+}
+.template-editor-content .template-field[data-category="company"] {
+  background: hsl(28 90% 55% / 0.14);
+  color: hsl(28 90% 38%);
+  border-color: hsl(28 90% 55% / 0.4);
+}
+.template-editor-content .template-field[data-category="contract"] {
+  background: hsl(220 9% 46% / 0.14);
+  color: hsl(220 14% 30%);
+  border-color: hsl(220 9% 46% / 0.35);
+}
+.template-editor-content .template-field[data-category="signature"] {
+  background: hsl(0 75% 60% / 0.12);
+  color: hsl(0 70% 42%);
+  border-color: hsl(0 75% 60% / 0.35);
+}
+
+/* ========== Print Styles ========== */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 20mm 15mm;
+  }
+
+  /* Keep signature blocks together at end of contract */
+  .signature-img,
+  [class*="signature"],
+  [class*="Signature"],
+  p:has(.signature-img),
+  div:has(> .signature-img) {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Reset everything for print */
+  html, body {
+    width: 210mm;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: white !important;
+    color: black !important;
+    font-size: 12pt;
+    line-height: 1.5;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  #root {
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* Hide non-printable UI elements */
+  nav,
+  header,
+  aside,
+  footer,
+  button,
+  [data-sidebar],
+  [role="navigation"],
+  [role="banner"],
+  .sidebar-item,
+  .no-print,
+  [data-radix-popper-content-wrapper],
+  [data-radix-dialog-overlay],
+  .toaster,
+  .sonner-toaster {
+    display: none !important;
+  }
+
+  /* Show print-only elements */
+  .print-only {
+    display: block !important;
+  }
+
+  /* Fix all containers */
+  *,
+  *::before,
+  *::after {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  div, section, main, article {
+    overflow: visible !important;
+    position: static !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    break-inside: auto;
+  }
+
+  /* Fix scroll areas */
+  [data-radix-scroll-area-viewport],
+  [style*="overflow: hidden"],
+  [style*="overflow:hidden"],
+  .overflow-hidden,
+  .overflow-auto,
+  .overflow-scroll,
+  .overflow-y-auto,
+  .overflow-y-scroll,
+  .overflow-x-auto,
+  .overflow-x-hidden {
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+  }
+
+  /* Fix fixed/sticky elements */
+  .fixed, .sticky {
+    position: static !important;
+  }
+
+  /* Content area fills page */
+  main, [role="main"], .print-content {
+    width: 100% !important;
+    max-width: 180mm !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+  }
+
+  /* Tables */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    page-break-inside: auto;
+  }
+
+  tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  /* Cards and sections */
+  .card-elevated,
+  .card-flat,
+  .stat-card,
+  [class*="Card"],
+  [class*="card"] {
+    border: 1px solid #ddd !important;
+    background: white !important;
+    break-inside: avoid;
+    margin-bottom: 8pt;
+    page-break-inside: avoid;
+  }
+
+  /* Images */
+  img {
+    max-width: 100% !important;
+    page-break-inside: avoid;
+  }
+
+  /* Page break utilities */
+  .print-break-before {
+    page-break-before: always;
+    break-before: page;
+  }
+
+  .print-break-after {
+    page-break-after: always;
+    break-after: page;
+  }
+
+  .print-break-avoid {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Links - show URL */
+  a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-size: 9pt;
+    color: #666;
+  }
+
+  /* Headings */
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+    break-after: avoid;
+    color: black !important;
+  }
+
+  /* Dialog/modal content when printing */
+  [role="dialog"],
+  [data-radix-dialog-content] {
+    position: static !important;
+    transform: none !important;
+    width: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+    height: auto !important;
+    overflow: visible !important;
+    border: none !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    padding: 10mm !important;
+    background: white !important;
+  }
+
+  /* Tabs - show active content only */
+  [role="tablist"] {
+    display: none !important;
+  }
+
+  [role="tabpanel"][data-state="active"] {
+    display: block !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  [role="tabpanel"]:not([data-state="active"]) {
+    display: none !important;
+  }
+
+  /* Badges keep colors */
+  .badge-success,
+  .badge-warning,
+  .badge-destructive,
+  .badge-info {
+    border: 1px solid currentColor !important;
+  }
+
+  /* Signatures */
+  canvas,
+  [class*="signature"],
+  [class*="Signature"] {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+}
