@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\EmpresaController;
 use App\Http\Controllers\ProprietarioController;
 use App\Services\TenantContext;
+use App\Http\Controllers\ProprietarioAccountController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth:sanctum')->group(function () {
@@ -38,6 +39,12 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::patch('/proprietarios/{id}', [ProprietarioController::class, 'update']);
             Route::patch('/proprietarios/{id}/status', [ProprietarioController::class, 'status']);
             Route::delete('/proprietarios/{id}', [ProprietarioController::class, 'destroy']);
+
+            Route::post('/proprietarios/{id}/conta',      [ProprietarioAccountController::class, 'store']
+            );
+
+            Route::patch('/proprietarios/{id}/conta/senha',               [ProprietarioAccountController::class, 'password']
+            );
         });
     });
 });
