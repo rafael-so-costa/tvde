@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Proprietario extends Model
 {
@@ -124,5 +125,9 @@ class Proprietario extends Model
 
     $this->status_cadastro = 'ativo';
     $this->ativo = true;
+}
+public function veiculos(): HasMany
+{
+    return $this->hasMany(Veiculo::class);
 }
 }
