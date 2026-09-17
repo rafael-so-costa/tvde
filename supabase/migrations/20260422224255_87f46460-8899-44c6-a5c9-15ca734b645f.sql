@@ -1,1 +1,0 @@
-ALTER TYPE public.status_contrato ADD VALUE IF NOT EXISTS 'encerrado';

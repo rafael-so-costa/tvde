@@ -1,1 +1,0 @@
-GRANT EXECUTE ON FUNCTION public.assinatura_pertence_ao_utilizador(uuid, text, text, uuid) TO authenticated, anon;

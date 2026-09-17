@@ -1,7 +1,0 @@
-- [x] Corrigir /alerts para dados reais (documentos a vencer, lembretes de peritagem, notificações de sinistros e contratos)
-- [x] Registo de Expediente do motorista (entrada/saída por NIF, landing page pública, correção de horas)
-- [x] Painel de Expediente do gestor de frota (filtros, estatísticas, gráfico de horas por dia)
-- [x] Recibos Verdes: envio de PDF pelo motorista com leitura e validação dos dados
-- [x] Recibos Verdes: gestão pelo gestor de frota (filtros, validar/rejeitar, totais, motoristas em falta)
-- [ ] Afinar a leitura dos recibos verdes com 2-3 PDFs reais (aguarda ficheiros do utilizador)
-- [x] Área restrita de gestão do SaaS: clientes, planos, subscrições, faturas em PDF, pagamentos manuais, equipa interna, configurações e métricas (MRR/ARR)
