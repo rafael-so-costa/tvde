@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\EmpresaController;
+use App\Http\Controllers\ProprietarioController;
 use App\Services\TenantContext;
 use Illuminate\Support\Facades\Route;
 
@@ -25,6 +26,18 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/empresas', [EmpresaController::class, 'store']);
             Route::patch('/empresas/{id}', [EmpresaController::class, 'update']);
             Route::delete('/empresas/{id}', [EmpresaController::class, 'destroy']);
+        });
+
+        Route::middleware('permission:proprietarios,visualizar')->group(function () {
+            Route::get('/proprietarios', [ProprietarioController::class, 'index']);
+            Route::get('/proprietarios/{id}', [ProprietarioController::class, 'show']);
+        });
+
+        Route::middleware('permission:proprietarios,configurar')->group(function () {
+            Route::post('/proprietarios', [ProprietarioController::class, 'store']);
+            Route::patch('/proprietarios/{id}', [ProprietarioController::class, 'update']);
+            Route::patch('/proprietarios/{id}/status', [ProprietarioController::class, 'status']);
+            Route::delete('/proprietarios/{id}', [ProprietarioController::class, 'destroy']);
         });
     });
 });
