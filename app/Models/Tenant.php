@@ -52,4 +52,8 @@ class Tenant extends Model
 {
     return $this->hasMany(Veiculo::class);
 }
+public function motoristas(): HasMany
+{
+    return $this->hasMany(Motorista::class);
+}
 }

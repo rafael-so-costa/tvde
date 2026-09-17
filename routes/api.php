@@ -6,6 +6,7 @@ use App\Http\Controllers\ProprietarioAccountController;
 use App\Http\Controllers\ProprietarioController;
 use App\Http\Controllers\VeiculoController;
 use App\Services\TenantContext;
+use App\Http\Controllers\MotoristaController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth:sanctum')->group(function () {
@@ -62,6 +63,17 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::patch('/veiculos/{id}', [VeiculoController::class, 'update']);
             Route::patch('/veiculos/{id}/status', [VeiculoController::class, 'status']);
             Route::delete('/veiculos/{id}', [VeiculoController::class, 'destroy']);
+        });
+        Route::middleware('permission:motoristas,visualizar')->group(function () {
+            Route::get('/motoristas', [MotoristaController::class, 'index']);
+            Route::get('/motoristas/{id}', [MotoristaController::class, 'show']);
+        });
+
+        Route::middleware('permission:motoristas,configurar')->group(function () {
+            Route::post('/motoristas', [MotoristaController::class, 'store']);
+            Route::patch('/motoristas/{id}', [MotoristaController::class, 'update']);
+            Route::patch('/motoristas/{id}/status', [MotoristaController::class, 'status']);
+            Route::delete('/motoristas/{id}', [MotoristaController::class, 'destroy']);
         });
     });
 });

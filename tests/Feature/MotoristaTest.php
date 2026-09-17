@@ -1,0 +1,727 @@
+<?php
+
+use App\Models\Motorista;
+use App\Models\Permission;
+use App\Models\Role;
+use App\Models\RolePermission;
+use App\Models\Tenant;
+use App\Models\TenantUser;
+use App\Models\User;
+use App\Models\UserRole;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
+
+uses(RefreshDatabase::class);
+
+function motoristaSpaHeaders(): array
+{
+    return [
+        'Origin' => 'http://localhost:8000',
+        'Referer' => 'http://localhost:8000/',
+        'Accept' => 'application/json',
+    ];
+}
+
+function criarTenantMotorista(string $nome, string $slug): Tenant
+{
+    return Tenant::create([
+        'nome' => $nome,
+        'slug' => $slug,
+        'ativo' => true,
+    ]);
+}
+
+function criarUsuarioMotorista(
+    string $email,
+    Tenant $tenant,
+    string $nivel
+): User {
+    $user = User::factory()->create([
+        'email' => $email,
+        'password' => Hash::make('SenhaTeste123!'),
+        'ativo' => true,
+    ]);
+
+    TenantUser::create([
+        'tenant_id' => $tenant->id,
+        'user_id' => $user->id,
+        'status' => 'ativo',
+        'principal' => true,
+    ]);
+
+    $role = Role::create([
+        'codigo' => 'funcionario',
+        'nome' => 'Funcionário',
+        'sistema' => true,
+    ]);
+
+    UserRole::create([
+        'user_id' => $user->id,
+        'role_id' => $role->id,
+        'tenant_id' => $tenant->id,
+    ]);
+
+    $permission = Permission::create([
+        'codigo' => 'motoristas',
+        'modulo' => 'motoristas',
+        'nome' => 'Motoristas',
+    ]);
+
+    RolePermission::create([
+        'role_id' => $role->id,
+        'permission_id' => $permission->id,
+        'nivel' => $nivel,
+    ]);
+
+    return $user;
+}
+
+function autenticarUsuarioMotorista($test, User $user): void
+{
+    $test->postJson('/login', [
+        'email' => $user->email,
+        'password' => 'SenhaTeste123!',
+    ])->assertOk();
+}
+
+function dadosMotoristaCompleto(array $overrides = []): array
+{
+    return array_merge([
+        'nome_completo' => 'Motorista Teste',
+        'nif' => '245123456',
+        'email' => 'motorista@example.test',
+        'telemovel' => '+351912345678',
+        'data_nascimento' => '1990-05-10',
+        'filhos' => 1,
+        'estado_civil' => 'solteiro',
+
+        'tipo_documento' => 'cartao_cidadao',
+        'numero_documento' => '12345678',
+        'documento_valid_until' => '2030-01-01',
+
+        'carta_numero' => 'L-1234567',
+        'carta_valid_until' => '2030-02-01',
+
+        'registo_criminal_valid_until' => '2030-03-01',
+
+        'endereco_rua' => 'Rua do Motorista',
+        'endereco_numero' => '10',
+        'endereco_complemento' => '2.º Esq.',
+        'endereco_cidade' => 'Lisboa',
+        'endereco_cep' => '1000-100',
+
+        'iban' => 'PT50000201231234567890154',
+
+        'bolt_email' => 'bolt@example.test',
+        'bolt_telemovel' => '+351911111111',
+        'uber_email' => 'uber@example.test',
+        'uber_telemovel' => '+351922222222',
+
+        'certificado_tvde' => 'TVDE-123456',
+        'certificado_tvde_valid_until' => '2030-04-01',
+
+        'cartao_frota' => 'FROTA-123',
+
+        'contato_urgencia_nome' => 'Contacto Urgência',
+        'contato_urgencia_telemovel' => '+351933333333',
+
+        'fotos_galeria' => [
+            'https://example.test/foto-1.jpg',
+            'https://example.test/foto-2.jpg',
+        ],
+
+        'documentos_upload' => [
+            [
+                'url' => 'https://example.test/carta.pdf',
+                'tipo' => 'Carta de Condução',
+                'nome_arquivo' => 'carta.pdf',
+                'data_validade' => '2030-02-01',
+            ],
+            [
+                'url' => 'https://example.test/iban.pdf',
+                'tipo' => 'Comprovativo de IBAN',
+                'nome_arquivo' => 'iban.pdf',
+            ],
+        ],
+    ], $overrides);
+}
+
+function criarMotoristaDireto(
+    Tenant $tenant,
+    array $dados = []
+): Motorista {
+    $motorista = new Motorista(
+        dadosMotoristaCompleto($dados)
+    );
+
+    $motorista->tenant_id = $tenant->id;
+    $motorista->sincronizarCadastro();
+    $motorista->save();
+
+    return $motorista;
+}
+
+test('rotas de motoristas exigem autenticação', function () {
+    $this->withHeaders(motoristaSpaHeaders())
+        ->getJson('/api/motoristas')
+        ->assertUnauthorized();
+});
+
+test('cliente não pode definir tenant user ativo ou status do motorista', function () {
+    $tenant = criarTenantMotorista(
+        'Tenant Segurança Motorista',
+        'tenant-seguranca-motorista'
+    );
+
+    $outroTenant = criarTenantMotorista(
+        'Tenant Malicioso Motorista',
+        'tenant-malicioso-motorista'
+    );
+
+    $outroUser = User::factory()->create();
+
+    $user = criarUsuarioMotorista(
+        'seguranca.motorista@frotapro.test',
+        $tenant,
+        'configurar'
+    );
+
+    autenticarUsuarioMotorista($this, $user);
+
+    $payload = dadosMotoristaCompleto([
+        'tenant_id' => $outroTenant->id,
+        'user_id' => $outroUser->id,
+        'ativo' => true,
+        'status_cadastro' => 'ativo',
+    ]);
+
+    $this->withHeaders(motoristaSpaHeaders())
+        ->postJson('/api/motoristas', $payload)
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors([
+            'tenant_id',
+            'user_id',
+            'ativo',
+            'status_cadastro',
+        ]);
+
+    $this->assertDatabaseMissing('motoristas', [
+        'nif' => '245123456',
+    ]);
+});
+
+test('motorista incompleto é guardado inativo', function () {
+    $tenant = criarTenantMotorista(
+        'Tenant Incompleto Motorista',
+        'tenant-incompleto-motorista'
+    );
+
+    $user = criarUsuarioMotorista(
+        'incompleto.motorista@frotapro.test',
+        $tenant,
+        'configurar'
+    );
+
+    autenticarUsuarioMotorista($this, $user);
+
+    $response = $this->withHeaders(motoristaSpaHeaders())
+        ->postJson('/api/motoristas', [
+            'nome_completo' => 'Motorista Incompleto',
+        ])
+        ->assertCreated();
+
+    $response
+        ->assertJsonPath(
+            'data.nome_completo',
+            'Motorista Incompleto'
+        )
+        ->assertJsonPath('data.ativo', false)
+        ->assertJsonPath(
+            'data.status_cadastro',
+            'incompleto'
+        );
+
+    $this->assertDatabaseHas('motoristas', [
+        'tenant_id' => $tenant->id,
+        'nome_completo' => 'Motorista Incompleto',
+        'ativo' => false,
+        'status_cadastro' => 'incompleto',
+    ]);
+});
+
+test('motorista completo é criado ativo com dados adicionais e documentos', function () {
+    $tenant = criarTenantMotorista(
+        'Tenant Completo Motorista',
+        'tenant-completo-motorista'
+    );
+
+    $user = criarUsuarioMotorista(
+        'completo.motorista@frotapro.test',
+        $tenant,
+        'configurar'
+    );
+
+    autenticarUsuarioMotorista($this, $user);
+
+    $response = $this->withHeaders(motoristaSpaHeaders())
+        ->postJson(
+            '/api/motoristas',
+            dadosMotoristaCompleto()
+        )
+        ->assertCreated();
+
+    $response
+        ->assertJsonPath('data.ativo', true)
+        ->assertJsonPath('data.status_cadastro', 'ativo')
+        ->assertJsonPath('data.nif', '245123456')
+        ->assertJsonPath(
+            'data.bolt_email',
+            'bolt@example.test'
+        )
+        ->assertJsonPath(
+            'data.uber_email',
+            'uber@example.test'
+        )
+        ->assertJsonPath(
+            'data.certificado_tvde',
+            'TVDE-123456'
+        )
+        ->assertJsonPath(
+            'data.cartao_frota',
+            'FROTA-123'
+        )
+        ->assertJsonPath(
+            'data.documentos_upload.0.tipo',
+            'Carta de Condução'
+        )
+        ->assertJsonPath(
+            'data.documentos_upload.0.nome_arquivo',
+            'carta.pdf'
+        )
+        ->assertJsonPath(
+            'data.documentos_upload.1.tipo',
+            'Comprovativo de IBAN'
+        )
+        ->assertJsonCount(
+            2,
+            'data.fotos_galeria'
+        )
+        ->assertJsonCount(
+            2,
+            'data.documentos_upload'
+        );
+
+    $this->assertDatabaseHas('motoristas', [
+        'tenant_id' => $tenant->id,
+        'nome_completo' => 'Motorista Teste',
+        'nif' => '245123456',
+        'ativo' => true,
+        'status_cadastro' => 'ativo',
+        'certificado_tvde' => 'TVDE-123456',
+        'cartao_frota' => 'FROTA-123',
+    ]);
+});
+
+test('documentos enviados precisam respeitar a estrutura esperada', function () {
+    $tenant = criarTenantMotorista(
+        'Tenant Documentos Motorista',
+        'tenant-documentos-motorista'
+    );
+
+    $user = criarUsuarioMotorista(
+        'documentos.motorista@frotapro.test',
+        $tenant,
+        'configurar'
+    );
+
+    autenticarUsuarioMotorista($this, $user);
+
+    $payload = dadosMotoristaCompleto([
+        'documentos_upload' => [
+            [
+                'url' => 'https://example.test/documento.pdf',
+            ],
+        ],
+    ]);
+
+    $this->withHeaders(motoristaSpaHeaders())
+        ->postJson('/api/motoristas', $payload)
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors([
+            'documentos_upload.0.tipo',
+            'documentos_upload.0.nome_arquivo',
+        ]);
+});
+
+test('nif não pode repetir dentro do mesmo tenant', function () {
+    $tenant = criarTenantMotorista(
+        'Tenant NIF Único Motorista',
+        'tenant-nif-unico-motorista'
+    );
+
+    criarMotoristaDireto($tenant, [
+        'nif' => '245999999',
+        'email' => 'existente@example.test',
+    ]);
+
+    $user = criarUsuarioMotorista(
+        'nif.unico.motorista@frotapro.test',
+        $tenant,
+        'configurar'
+    );
+
+    autenticarUsuarioMotorista($this, $user);
+
+    $this->withHeaders(motoristaSpaHeaders())
+        ->postJson(
+            '/api/motoristas',
+            dadosMotoristaCompleto([
+                'nif' => '245999999',
+                'email' => 'novo@example.test',
+            ])
+        )
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('nif');
+
+    expect(
+        Motorista::where('tenant_id', $tenant->id)
+            ->where('nif', '245999999')
+            ->count()
+    )->toBe(1);
+});
+
+test('mesmo nif pode existir em tenants diferentes', function () {
+    $tenantA = criarTenantMotorista(
+        'Tenant A NIF Motorista',
+        'tenant-a-nif-motorista'
+    );
+
+    $tenantB = criarTenantMotorista(
+        'Tenant B NIF Motorista',
+        'tenant-b-nif-motorista'
+    );
+
+    criarMotoristaDireto($tenantB, [
+        'nif' => '245888888',
+        'email' => 'motorista.b@example.test',
+    ]);
+
+    $user = criarUsuarioMotorista(
+        'motorista.a@frotapro.test',
+        $tenantA,
+        'configurar'
+    );
+
+    autenticarUsuarioMotorista($this, $user);
+
+    $this->withHeaders(motoristaSpaHeaders())
+        ->postJson(
+            '/api/motoristas',
+            dadosMotoristaCompleto([
+                'nif' => '245888888',
+                'email' => 'motorista.a@example.test',
+            ])
+        )
+        ->assertCreated();
+
+    $this->assertDatabaseHas('motoristas', [
+        'tenant_id' => $tenantA->id,
+        'nif' => '245888888',
+    ]);
+
+    $this->assertDatabaseHas('motoristas', [
+        'tenant_id' => $tenantB->id,
+        'nif' => '245888888',
+    ]);
+});
+
+test('listagem retorna apenas motoristas do tenant atual', function () {
+    $tenantA = criarTenantMotorista(
+        'Tenant A Listagem Motorista',
+        'tenant-a-listagem-motorista'
+    );
+
+    $tenantB = criarTenantMotorista(
+        'Tenant B Listagem Motorista',
+        'tenant-b-listagem-motorista'
+    );
+
+    criarMotoristaDireto($tenantA, [
+        'nome_completo' => 'Motorista Tenant A',
+        'nif' => '245111111',
+        'email' => 'lista.a@example.test',
+    ]);
+
+    criarMotoristaDireto($tenantB, [
+        'nome_completo' => 'Motorista Tenant B',
+        'nif' => '245222222',
+        'email' => 'lista.b@example.test',
+    ]);
+
+    $user = criarUsuarioMotorista(
+        'lista.motorista@frotapro.test',
+        $tenantA,
+        'visualizar'
+    );
+
+    autenticarUsuarioMotorista($this, $user);
+
+    $response = $this->withHeaders(motoristaSpaHeaders())
+        ->getJson('/api/motoristas')
+        ->assertOk();
+
+    $response
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath(
+            'data.0.nome_completo',
+            'Motorista Tenant A'
+        );
+
+    expect(
+        collect($response->json('data'))
+            ->pluck('nome_completo')
+            ->contains('Motorista Tenant B')
+    )->toBeFalse();
+});
+
+test('não permite ler alterar ou excluir motorista de outro tenant', function () {
+    $tenantA = criarTenantMotorista(
+        'Tenant A Isolamento Motorista',
+        'tenant-a-isolamento-motorista'
+    );
+
+    $tenantB = criarTenantMotorista(
+        'Tenant B Isolamento Motorista',
+        'tenant-b-isolamento-motorista'
+    );
+
+    $motoristaB = criarMotoristaDireto($tenantB, [
+        'nome_completo' => 'Motorista Protegido',
+        'nif' => '245333333',
+        'email' => 'protegido@example.test',
+    ]);
+
+    $user = criarUsuarioMotorista(
+        'isolamento.motorista@frotapro.test',
+        $tenantA,
+        'configurar'
+    );
+
+    autenticarUsuarioMotorista($this, $user);
+
+    $this->withHeaders(motoristaSpaHeaders())
+        ->getJson("/api/motoristas/{$motoristaB->id}")
+        ->assertNotFound();
+
+    $this->withHeaders(motoristaSpaHeaders())
+        ->patchJson(
+            "/api/motoristas/{$motoristaB->id}",
+            [
+                'nome_completo' => 'Tentativa de Alteração',
+            ]
+        )
+        ->assertNotFound();
+
+    $this->withHeaders(motoristaSpaHeaders())
+        ->deleteJson("/api/motoristas/{$motoristaB->id}")
+        ->assertNotFound();
+
+    $this->assertDatabaseHas('motoristas', [
+        'id' => $motoristaB->id,
+        'tenant_id' => $tenantB->id,
+        'nome_completo' => 'Motorista Protegido',
+    ]);
+});
+
+test('permissão visualizar permite leitura e bloqueia criação', function () {
+    $tenant = criarTenantMotorista(
+        'Tenant Visualizar Motorista',
+        'tenant-visualizar-motorista'
+    );
+
+    criarMotoristaDireto($tenant, [
+        'nif' => '245444444',
+        'email' => 'visualizar@example.test',
+    ]);
+
+    $user = criarUsuarioMotorista(
+        'visualizar.motorista@frotapro.test',
+        $tenant,
+        'visualizar'
+    );
+
+    autenticarUsuarioMotorista($this, $user);
+
+    $this->withHeaders(motoristaSpaHeaders())
+        ->getJson('/api/motoristas')
+        ->assertOk();
+
+    $this->withHeaders(motoristaSpaHeaders())
+        ->postJson(
+            '/api/motoristas',
+            dadosMotoristaCompleto([
+                'nif' => '245444445',
+                'email' => 'bloqueado@example.test',
+            ])
+        )
+        ->assertForbidden();
+
+    $this->assertDatabaseMissing('motoristas', [
+        'nif' => '245444445',
+    ]);
+});
+
+test('motorista incompleto não pode ser ativado manualmente', function () {
+    $tenant = criarTenantMotorista(
+        'Tenant Status Incompleto Motorista',
+        'tenant-status-incompleto-motorista'
+    );
+
+    $motorista = new Motorista([
+        'nome_completo' => 'Motorista Incompleto Status',
+    ]);
+
+    $motorista->tenant_id = $tenant->id;
+    $motorista->sincronizarCadastro();
+    $motorista->save();
+
+    $user = criarUsuarioMotorista(
+        'status.incompleto@frotapro.test',
+        $tenant,
+        'configurar'
+    );
+
+    autenticarUsuarioMotorista($this, $user);
+
+    $this->withHeaders(motoristaSpaHeaders())
+        ->patchJson(
+            "/api/motoristas/{$motorista->id}/status",
+            ['ativo' => true]
+        )
+        ->assertUnprocessable()
+        ->assertJsonPath(
+            'message',
+            'O motorista possui cadastro incompleto e não pode ser ativado.'
+        );
+
+    $this->assertDatabaseHas('motoristas', [
+        'id' => $motorista->id,
+        'ativo' => false,
+        'status_cadastro' => 'incompleto',
+    ]);
+});
+
+test('motorista completo pode ser inativado e reativado', function () {
+    $tenant = criarTenantMotorista(
+        'Tenant Status Completo Motorista',
+        'tenant-status-completo-motorista'
+    );
+
+    $motorista = criarMotoristaDireto($tenant, [
+        'nif' => '245555555',
+        'email' => 'status.completo@example.test',
+    ]);
+
+    $user = criarUsuarioMotorista(
+        'status.completo.user@frotapro.test',
+        $tenant,
+        'configurar'
+    );
+
+    autenticarUsuarioMotorista($this, $user);
+
+    $this->withHeaders(motoristaSpaHeaders())
+        ->patchJson(
+            "/api/motoristas/{$motorista->id}/status",
+            ['ativo' => false]
+        )
+        ->assertOk()
+        ->assertJsonPath('data.ativo', false)
+        ->assertJsonPath(
+            'data.status_cadastro',
+            'ativo'
+        );
+
+    $this->assertDatabaseHas('motoristas', [
+        'id' => $motorista->id,
+        'ativo' => false,
+        'status_cadastro' => 'ativo',
+    ]);
+
+    $this->withHeaders(motoristaSpaHeaders())
+        ->patchJson(
+            "/api/motoristas/{$motorista->id}/status",
+            ['ativo' => true]
+        )
+        ->assertOk()
+        ->assertJsonPath('data.ativo', true)
+        ->assertJsonPath(
+            'data.status_cadastro',
+            'ativo'
+        );
+
+    $this->assertDatabaseHas('motoristas', [
+        'id' => $motorista->id,
+        'ativo' => true,
+        'status_cadastro' => 'ativo',
+    ]);
+});
+
+test('permissão configurar permite atualizar e excluir motorista', function () {
+    $tenant = criarTenantMotorista(
+        'Tenant Configurar Motorista',
+        'tenant-configurar-motorista'
+    );
+
+    $motorista = criarMotoristaDireto($tenant, [
+        'nif' => '245666666',
+        'email' => 'configurar@example.test',
+    ]);
+
+    $user = criarUsuarioMotorista(
+        'configurar.motorista@frotapro.test',
+        $tenant,
+        'configurar'
+    );
+
+    autenticarUsuarioMotorista($this, $user);
+
+    $this->withHeaders(motoristaSpaHeaders())
+        ->patchJson(
+            "/api/motoristas/{$motorista->id}",
+            [
+                'nome_completo' => 'Motorista Atualizado',
+                'bolt_email' => 'novo.bolt@example.test',
+                'cartao_frota' => 'FROTA-999',
+            ]
+        )
+        ->assertOk()
+        ->assertJsonPath(
+            'data.nome_completo',
+            'Motorista Atualizado'
+        )
+        ->assertJsonPath(
+            'data.bolt_email',
+            'novo.bolt@example.test'
+        )
+        ->assertJsonPath(
+            'data.cartao_frota',
+            'FROTA-999'
+        );
+
+    $this->assertDatabaseHas('motoristas', [
+        'id' => $motorista->id,
+        'tenant_id' => $tenant->id,
+        'nome_completo' => 'Motorista Atualizado',
+        'bolt_email' => 'novo.bolt@example.test',
+        'cartao_frota' => 'FROTA-999',
+    ]);
+
+    $this->withHeaders(motoristaSpaHeaders())
+        ->deleteJson("/api/motoristas/{$motorista->id}")
+        ->assertNoContent();
+
+    $this->assertDatabaseMissing('motoristas', [
+        'id' => $motorista->id,
+    ]);
+});
