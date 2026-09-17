@@ -11,6 +11,7 @@ use App\Models\TenantUser;
 use App\Models\User;
 use App\Models\UserRole;
 use App\Models\Veiculo;
+use App\Models\Contrato;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -343,7 +344,7 @@ test('não aceita entidades pertencentes a outro tenant', function () {
     expect(Aluguer::count())->toBe(0);
 });
 
-test('ids de contratos e checklist de entrega podem ser guardados no rascunho', function () {
+test('contratos válidos e checklist de entrega podem ser guardados no rascunho', function () {
     $tenant = aluguerTenant(
         'Tenant IDs Futuros',
         'tenant-ids-futuros'
@@ -354,30 +355,102 @@ test('ids de contratos e checklist de entrega podem ser guardados no rascunho', 
         'ids.futuros@frotapro.test'
     );
 
-    aluguerLogin($this, $user);
+    $contratoAluguer = new Contrato([
+        'tipo' => 'aluguer',
+    ]);
 
-    $contratoAluguer = Str::uuid()->toString();
-    $contratoPrestacao = Str::uuid()->toString();
+    $contratoAluguer->tenant_id = $tenant->id;
+    $contratoAluguer->save();
+
+    $contratoPrestacao = new Contrato([
+        'tipo' => 'prestacao_servico',
+    ]);
+
+    $contratoPrestacao->tenant_id = $tenant->id;
+    $contratoPrestacao->save();
+
     $checklistEntrega = Str::uuid()->toString();
+
+    aluguerLogin($this, $user);
 
     $this->withHeaders(aluguerHeaders())
         ->postJson('/api/alugueres', [
-            'contrato_aluguer_id' => $contratoAluguer,
-            'contrato_prestacao_id' => $contratoPrestacao,
+            'contrato_aluguer_id' => $contratoAluguer->id,
+            'contrato_prestacao_id' => $contratoPrestacao->id,
             'checklist_entrega_id' => $checklistEntrega,
         ])
         ->assertCreated()
         ->assertJsonPath(
             'data.contrato_aluguer_id',
-            $contratoAluguer
+            $contratoAluguer->id
         )
         ->assertJsonPath(
             'data.contrato_prestacao_id',
-            $contratoPrestacao
+            $contratoPrestacao->id
         )
         ->assertJsonPath(
             'data.checklist_entrega_id',
             $checklistEntrega
+        );
+});
+
+test('não aceita contratos inexistentes de outro tenant ou de tipo incorreto', function () {
+    $tenantA = aluguerTenant(
+        'Tenant Contrato A',
+        'tenant-contrato-a'
+    );
+
+    $tenantB = aluguerTenant(
+        'Tenant Contrato B',
+        'tenant-contrato-b'
+    );
+
+    $user = aluguerUsuario(
+        $tenantA,
+        'contratos.invalidos@frotapro.test'
+    );
+
+    $contratoOutroTenant = new Contrato([
+        'tipo' => 'aluguer',
+    ]);
+
+    $contratoOutroTenant->tenant_id = $tenantB->id;
+    $contratoOutroTenant->save();
+
+    $contratoTipoErrado = new Contrato([
+        'tipo' => 'prestacao_servico',
+    ]);
+
+    $contratoTipoErrado->tenant_id = $tenantA->id;
+    $contratoTipoErrado->save();
+
+    aluguerLogin($this, $user);
+
+    $this->withHeaders(aluguerHeaders())
+        ->postJson('/api/alugueres', [
+            'contrato_aluguer_id' => Str::uuid()->toString(),
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(
+            'contrato_aluguer_id'
+        );
+
+    $this->withHeaders(aluguerHeaders())
+        ->postJson('/api/alugueres', [
+            'contrato_aluguer_id' => $contratoOutroTenant->id,
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(
+            'contrato_aluguer_id'
+        );
+
+    $this->withHeaders(aluguerHeaders())
+        ->postJson('/api/alugueres', [
+            'contrato_aluguer_id' => $contratoTipoErrado->id,
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(
+            'contrato_aluguer_id'
         );
 });
 

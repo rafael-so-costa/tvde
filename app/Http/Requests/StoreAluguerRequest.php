@@ -41,7 +41,7 @@ class StoreAluguerRequest extends FormRequest
                 'uuid',
                 Rule::exists('motoristas', 'id')
                     ->where(
-                        fn ($query) => $query
+                        fn($query) => $query
                             ->where('tenant_id', $tenantId)
                     ),
             ],
@@ -51,7 +51,7 @@ class StoreAluguerRequest extends FormRequest
                 'uuid',
                 Rule::exists('veiculos', 'id')
                     ->where(
-                        fn ($query) => $query
+                        fn($query) => $query
                             ->where('tenant_id', $tenantId)
                     ),
             ],
@@ -61,7 +61,7 @@ class StoreAluguerRequest extends FormRequest
                 'uuid',
                 Rule::exists('proprietarios', 'id')
                     ->where(
-                        fn ($query) => $query
+                        fn($query) => $query
                             ->where('tenant_id', $tenantId)
                     ),
             ],
@@ -70,8 +70,27 @@ class StoreAluguerRequest extends FormRequest
              * Validação referencial será acrescentada quando
              * Contratos e Checklists existirem no Laravel.
              */
-            'contrato_aluguer_id' => ['nullable', 'uuid'],
-            'contrato_prestacao_id' => ['nullable', 'uuid'],
+            'contrato_aluguer_id' => [
+                'nullable',
+                'uuid',
+                Rule::exists('contratos', 'id')
+                    ->where(
+                        fn($query) => $query
+                            ->where('tenant_id', $tenantId)
+                            ->where('tipo', 'aluguer')
+                    ),
+            ],
+
+            'contrato_prestacao_id' => [
+                'nullable',
+                'uuid',
+                Rule::exists('contratos', 'id')
+                    ->where(
+                        fn($query) => $query
+                            ->where('tenant_id', $tenantId)
+                            ->where('tipo', 'prestacao_servico')
+                    ),
+            ],
             'checklist_entrega_id' => ['nullable', 'uuid'],
             'checklist_devolucao_id' => ['prohibited'],
 

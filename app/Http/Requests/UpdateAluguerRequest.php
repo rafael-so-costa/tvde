@@ -42,7 +42,7 @@ class UpdateAluguerRequest extends FormRequest
                 'uuid',
                 Rule::exists('motoristas', 'id')
                     ->where(
-                        fn ($query) => $query
+                        fn($query) => $query
                             ->where('tenant_id', $tenantId)
                     ),
             ],
@@ -53,7 +53,7 @@ class UpdateAluguerRequest extends FormRequest
                 'uuid',
                 Rule::exists('veiculos', 'id')
                     ->where(
-                        fn ($query) => $query
+                        fn($query) => $query
                             ->where('tenant_id', $tenantId)
                     ),
             ],
@@ -64,7 +64,7 @@ class UpdateAluguerRequest extends FormRequest
                 'uuid',
                 Rule::exists('proprietarios', 'id')
                     ->where(
-                        fn ($query) => $query
+                        fn($query) => $query
                             ->where('tenant_id', $tenantId)
                     ),
             ],
@@ -73,12 +73,24 @@ class UpdateAluguerRequest extends FormRequest
                 'sometimes',
                 'nullable',
                 'uuid',
+                Rule::exists('contratos', 'id')
+                    ->where(
+                        fn($query) => $query
+                            ->where('tenant_id', $tenantId)
+                            ->where('tipo', 'aluguer')
+                    ),
             ],
 
             'contrato_prestacao_id' => [
                 'sometimes',
                 'nullable',
                 'uuid',
+                Rule::exists('contratos', 'id')
+                    ->where(
+                        fn($query) => $query
+                            ->where('tenant_id', $tenantId)
+                            ->where('tipo', 'prestacao_servico')
+                    ),
             ],
 
             'checklist_entrega_id' => [

@@ -9,6 +9,7 @@ use App\Services\TenantContext;
 use App\Http\Controllers\MotoristaController;
 use App\Http\Controllers\MotoristaAccountController;
 use App\Http\Controllers\AluguerController;
+use App\Http\Controllers\ContratoController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth:sanctum')->group(function () {
@@ -96,6 +97,18 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/alugueres', [AluguerController::class, 'store']);
             Route::patch('/alugueres/{id}', [AluguerController::class, 'update']);
             Route::delete('/alugueres/{id}', [AluguerController::class, 'destroy']);
+        });
+
+        Route::middleware('permission:contratos,visualizar')->group(function () {
+            Route::get('/contratos', [ContratoController::class, 'index']);
+            Route::get('/contratos/{id}', [ContratoController::class, 'show']);
+        });
+
+        Route::middleware('permission:contratos,configurar')->group(function () {
+            Route::post('/contratos', [ContratoController::class, 'store']);
+            Route::patch('/contratos/{id}', [ContratoController::class, 'update']);
+            Route::patch('/contratos/{id}/encerrar', [ContratoController::class, 'encerrar']);
+            Route::delete('/contratos/{id}', [ContratoController::class, 'destroy']);
         });
     });
 });
