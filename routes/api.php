@@ -8,6 +8,7 @@ use App\Http\Controllers\VeiculoController;
 use App\Services\TenantContext;
 use App\Http\Controllers\MotoristaController;
 use App\Http\Controllers\MotoristaAccountController;
+use App\Http\Controllers\AluguerController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth:sanctum')->group(function () {
@@ -85,6 +86,16 @@ Route::middleware('auth:sanctum')->group(function () {
                 '/motoristas/{id}/conta/senha',
                 [MotoristaAccountController::class, 'password']
             );
+        });
+        Route::middleware('permission:alugueres,visualizar')->group(function () {
+            Route::get('/alugueres', [AluguerController::class, 'index']);
+            Route::get('/alugueres/{id}', [AluguerController::class, 'show']);
+        });
+
+        Route::middleware('permission:alugueres,configurar')->group(function () {
+            Route::post('/alugueres', [AluguerController::class, 'store']);
+            Route::patch('/alugueres/{id}', [AluguerController::class, 'update']);
+            Route::delete('/alugueres/{id}', [AluguerController::class, 'destroy']);
         });
     });
 });
