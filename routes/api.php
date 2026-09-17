@@ -7,6 +7,7 @@ use App\Http\Controllers\ProprietarioController;
 use App\Http\Controllers\VeiculoController;
 use App\Services\TenantContext;
 use App\Http\Controllers\MotoristaController;
+use App\Http\Controllers\MotoristaAccountController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth:sanctum')->group(function () {
@@ -74,6 +75,16 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::patch('/motoristas/{id}', [MotoristaController::class, 'update']);
             Route::patch('/motoristas/{id}/status', [MotoristaController::class, 'status']);
             Route::delete('/motoristas/{id}', [MotoristaController::class, 'destroy']);
+
+            Route::post(
+                '/motoristas/{id}/conta',
+                [MotoristaAccountController::class, 'store']
+            );
+
+            Route::patch(
+                '/motoristas/{id}/conta/senha',
+                [MotoristaAccountController::class, 'password']
+            );
         });
     });
 });
