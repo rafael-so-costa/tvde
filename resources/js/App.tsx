@@ -1,48 +1,21 @@
-import {
-    Navigate,
-    Route,
-    Routes,
-} from 'react-router-dom';
-import ProtectedRoute from './components/ProtectedRoute';
-import AppShell from './layouts/AppShell';
-import DashboardPage from './pages/DashboardPage';
-import LoginPage from './pages/LoginPage';
-import ModulePlaceholderPage from './pages/ModulePlaceholderPage';
+import { Navigate, Route, Routes } from "react-router-dom";
+import ProtectedRoute from "./components/ProtectedRoute";
+import AppShell from "./layouts/AppShell";
+import DashboardPage from "./pages/DashboardPage";
+import LoginPage from "./pages/LoginPage";
+import ModulePlaceholderPage from "./pages/ModulePlaceholderPage";
+import EmpresasPage from "./pages/EmpresasPage";
 
 export default function App() {
     return (
         <Routes>
-            <Route
-                path="/login"
-                element={<LoginPage />}
-            />
+            <Route path="/login" element={<LoginPage />} />
 
-            <Route
-                element={
-                    <ProtectedRoute />
-                }
-            >
-                <Route
-                    element={
-                        <AppShell />
-                    }
-                >
-                    <Route
-                        index
-                        element={
-                            <DashboardPage />
-                        }
-                    />
+            <Route element={<ProtectedRoute />}>
+                <Route element={<AppShell />}>
+                    <Route index element={<DashboardPage />} />
 
-                    <Route
-                        path="empresas"
-                        element={
-                            <ModulePlaceholderPage
-                                title="Empresas"
-                                description="Gestão das empresas da organização."
-                            />
-                        }
-                    />
+                    <Route path="empresas" element={<EmpresasPage />} />
 
                     <Route
                         path="proprietarios"
@@ -106,15 +79,7 @@ export default function App() {
                 </Route>
             </Route>
 
-            <Route
-                path="*"
-                element={
-                    <Navigate
-                        to="/"
-                        replace
-                    />
-                }
-            />
+            <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
     );
 }
