@@ -6,6 +6,7 @@ use App\Http\Requests\StoreTemplateContratoRequest;
 use App\Http\Requests\UpdateTemplateContratoRequest;
 use App\Models\TemplateContrato;
 use App\Services\TenantContext;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -30,7 +31,7 @@ class TemplateContratoController extends Controller
                     'perfis_template',
                     'id'
                 )->where(
-                    fn ($query) => $query
+                    fn($query) => $query
                         ->where(
                             'tenant_id',
                             $tenantId
@@ -77,7 +78,7 @@ class TemplateContratoController extends Controller
 
         return response()->json([
             'message' =>
-                'Template criado com sucesso.',
+            'Template criado com sucesso.',
             'data' => $template,
         ], 201);
     }
@@ -107,7 +108,7 @@ class TemplateContratoController extends Controller
 
         return response()->json([
             'message' =>
-                'Template atualizado com sucesso.',
+            'Template atualizado com sucesso.',
             'data' => $template,
         ]);
     }
@@ -117,7 +118,20 @@ class TemplateContratoController extends Controller
     ): Response {
         $template = $this->findTemplate($id);
 
+        $arquivo = $template->arquivo_url;
+
         $template->delete();
+
+        if (
+            $arquivo &&
+            $this->isArquivoPrivadoDoTenant(
+                $template,
+                $arquivo
+            )
+        ) {
+            Storage::disk('local')
+                ->delete($arquivo);
+        }
 
         return response()->noContent();
     }
@@ -131,6 +145,28 @@ class TemplateContratoController extends Controller
                 $this->tenantId()
             )
             ->findOrFail($id);
+    }
+
+
+    private function isArquivoPrivadoDoTenant(
+        TemplateContrato $template,
+        string $path
+    ): bool {
+        if (
+            str_contains(
+                str_replace('\\', '/', $path),
+                '../'
+            )
+        ) {
+            return false;
+        }
+
+        return str_starts_with(
+            str_replace('\\', '/', $path),
+            'contract-templates/' .
+                $template->tenant_id .
+                '/'
+        );
     }
 
     private function tenantId(): string

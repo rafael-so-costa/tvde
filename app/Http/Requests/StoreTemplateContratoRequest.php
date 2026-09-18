@@ -36,11 +36,7 @@ class StoreTemplateContratoRequest extends FormRequest
                 'max:255',
             ],
 
-            'arquivo_url' => [
-                'nullable',
-                'string',
-                'max:2048',
-            ],
+            'arquivo_url' => ['prohibited'],
 
             'tipo_arquivo' => [
                 'sometimes',

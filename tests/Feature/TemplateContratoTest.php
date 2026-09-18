@@ -188,9 +188,9 @@ test('perfil é criado no tenant atual com nome normalizado', function () {
             '/api/perfis-template',
             [
                 'nome' =>
-                    '  ALUGUER DE VEÍCULOS  ',
+                '  ALUGUER DE VEÍCULOS  ',
                 'descricao' =>
-                    'Contratos de aluguer',
+                'Contratos de aluguer',
             ]
         )
         ->assertCreated()
@@ -215,7 +215,7 @@ test('perfil é criado no tenant atual com nome normalizado', function () {
             ),
             'tenant_id' => $tenant->id,
             'nome' =>
-                'ALUGUER DE VEÍCULOS',
+            'ALUGUER DE VEÍCULOS',
             'ordem' => 0,
         ]
     );
@@ -245,7 +245,7 @@ test('cliente não pode controlar tenant nem ordem do perfil', function () {
             [
                 'nome' => 'Perfil',
                 'tenant_id' =>
-                    Str::uuid()->toString(),
+                Str::uuid()->toString(),
                 'ordem' => 99,
             ]
         )
@@ -426,7 +426,7 @@ test('perfil pode ser atualizado sem colidir com o próprio nome', function () {
             [
                 'nome' => ' Perfil Atual ',
                 'descricao' =>
-                    'Descrição alterada',
+                'Descrição alterada',
             ]
         )
         ->assertOk()
@@ -514,26 +514,24 @@ test('template é criado com campos detectados e perfil do próprio tenant', fun
             [
                 'perfil_id' => $perfil->id,
                 'nome' =>
-                    '  Contrato Principal  ',
-                'arquivo_url' =>
-                    'templates/contrato.pdf',
+                '  Contrato Principal  ',
                 'tipo_arquivo' => 'pdf',
                 'conteudo_original' =>
-                    '{{NOME_MOTORISTA}}',
+                '{{NOME_MOTORISTA}}',
                 'campos_detectados' => [
                     [
                         'id' => $fieldId,
                         'name' =>
-                            'NOME_MOTORISTA',
+                        'NOME_MOTORISTA',
                         'label' =>
-                            'Nome Motorista',
+                        'Nome Motorista',
                         'type' => 'text',
                         'required' => true,
                     ],
                 ],
                 'campos_mapeados' => [
                     'NOME_MOTORISTA' =>
-                        'motorista.nome_completo',
+                    'motorista.nome_completo',
                 ],
             ]
         )
@@ -564,7 +562,7 @@ test('template é criado com campos detectados e perfil do próprio tenant', fun
             'tenant_id' => $tenant->id,
             'perfil_id' => $perfil->id,
             'nome' =>
-                'Contrato Principal',
+            'Contrato Principal',
             'tipo_arquivo' => 'pdf',
         ]
     );
@@ -593,9 +591,9 @@ test('template sem tipo de arquivo usa pdf por padrão', function () {
             '/api/templates-contrato',
             [
                 'nome' =>
-                    'Template PDF Default',
+                'Template PDF Default',
                 'conteudo_original' =>
-                    '{{NIF}}',
+                '{{NIF}}',
             ]
         )
         ->assertCreated()
@@ -683,7 +681,7 @@ test('estrutura de campos detectados é validada', function () {
                 'campos_detectados' => [
                     [
                         'id' =>
-                            Str::uuid()->toString(),
+                        Str::uuid()->toString(),
                         'name' => 'CAMPO',
                         'label' => 'Campo',
                         'type' => 'inexistente',
@@ -766,11 +764,11 @@ test('listagem de templates respeita tenant e filtro por perfil', function () {
         templateContratoHeaders()
     )
         ->getJson(
-            '/api/templates-contrato?'.
-            http_build_query([
-                'perfil_id' =>
+            '/api/templates-contrato?' .
+                http_build_query([
+                    'perfil_id' =>
                     $perfilA1->id,
-            ])
+                ])
         )
         ->assertOk()
         ->assertJsonCount(
@@ -1109,4 +1107,65 @@ test('permissão visualizar permite leitura mas bloqueia escrita', function () {
             "/api/templates-contrato/{$template->id}"
         )
         ->assertForbidden();
+});
+
+
+test('crud genérico não permite controlar caminho do arquivo do template', function () {
+    $tenant = templateContratoTenant(
+        'Tenant Caminho Protegido',
+        'tenant-caminho-protegido'
+    );
+
+    $template = templateContratoTemplate(
+        $tenant,
+        'Template Protegido'
+    );
+
+    $user = templateContratoUsuario(
+        $tenant,
+        'caminho.template@frotapro.test'
+    );
+
+    templateContratoLogin(
+        $this,
+        $user
+    );
+
+    $this->withHeaders(
+        templateContratoHeaders()
+    )
+        ->postJson(
+            '/api/templates-contrato',
+            [
+                'nome' =>
+                    'Template Forjado',
+                'arquivo_url' =>
+                    'contract-templates/outro-tenant/forjado.pdf',
+            ]
+        )
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(
+            'arquivo_url'
+        );
+
+    $this->withHeaders(
+        templateContratoHeaders()
+    )
+        ->patchJson(
+            "/api/templates-contrato/{$template->id}",
+            [
+                'arquivo_url' =>
+                    'contract-templates/outro-tenant/forjado.pdf',
+            ]
+        )
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(
+            'arquivo_url'
+        );
+
+    $template->refresh();
+
+    expect(
+        $template->arquivo_url
+    )->toBeNull();
 });

@@ -12,6 +12,7 @@ use App\Http\Controllers\AluguerController;
 use App\Http\Controllers\ContratoController;
 use App\Http\Controllers\PerfilTemplateController;
 use App\Http\Controllers\TemplateContratoController;
+use App\Http\Controllers\TemplateImportController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth:sanctum')->group(function () {
@@ -126,6 +127,14 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/templates-contrato', [TemplateContratoController::class, 'store']);
             Route::patch('/templates-contrato/{id}', [TemplateContratoController::class, 'update']);
             Route::delete('/templates-contrato/{id}', [TemplateContratoController::class, 'destroy']);
+            Route::post(
+                '/templates-contrato/importar/preview',
+                [TemplateImportController::class, 'preview']
+            );
+            Route::post(
+                '/templates-contrato/importar',
+                [TemplateImportController::class, 'store']
+            );
         });
     });
 });
