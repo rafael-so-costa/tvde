@@ -15,6 +15,7 @@ use App\Http\Controllers\TemplateContratoController;
 use App\Http\Controllers\TemplateImportController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\RemoteSignatureController;
+use App\Http\Controllers\TenantContextController;
 
 
 Route::get(
@@ -33,6 +34,20 @@ Route::post(
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [AuthController::class, 'me']);
+    Route::get(
+        '/tenant-options',
+        [TenantContextController::class, 'options']
+    );
+
+    Route::post(
+        '/tenant-context',
+        [TenantContextController::class, 'select']
+    );
+
+    Route::delete(
+        '/tenant-context',
+        [TenantContextController::class, 'clear']
+    );
 
     Route::middleware('tenant')->group(function () {
         Route::get('/tenant-context', function (TenantContext $tenantContext) {

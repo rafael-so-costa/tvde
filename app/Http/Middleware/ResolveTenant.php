@@ -6,6 +6,7 @@ use App\Services\TenantContext;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
+use App\Models\Tenant;
 
 class ResolveTenant
 {
@@ -26,6 +27,45 @@ class ResolveTenant
         }
 
         if ($user->isSuperAdmin()) {
+            if (!$request->hasSession()) {
+                return $next($request);
+            }
+
+            $tenantId =
+                $request->session()
+                ->get('tenant_id');
+
+            if (!$tenantId) {
+                return $next($request);
+            }
+
+            $tenant = Tenant::query()
+                ->whereKey($tenantId)
+                ->where('ativo', true)
+                ->first();
+
+            if (!$tenant) {
+                $request->session()
+                    ->forget('tenant_id');
+
+                $this->tenantContext
+                    ->clear();
+
+                return response()->json([
+                    'message' =>
+                    'A organização selecionada não está disponível.',
+                ], 403);
+            }
+
+            $this->tenantContext
+                ->set($tenant->id);
+
+            $request->attributes
+                ->set(
+                    'tenant_id',
+                    $tenant->id
+                );
+
             return $next($request);
         }
 

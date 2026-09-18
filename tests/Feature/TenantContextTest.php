@@ -181,3 +181,162 @@ test('utilizador não pode usar tenant de outra organização', function () {
         )
         ->assertSessionMissing('tenant_id');
 });
+
+test('super admin pode selecionar qualquer tenant ativo', function () {
+    $user = criarUtilizadorTenant(
+        'super-selecao@frotapro.test'
+    );
+
+    $role = Role::create([
+        'codigo' => 'super_admin',
+        'nome' => 'Super Administrador',
+        'sistema' => true,
+    ]);
+
+    UserRole::create([
+        'user_id' => $user->id,
+        'role_id' => $role->id,
+        'tenant_id' => null,
+    ]);
+
+    $tenant = Tenant::create([
+        'nome' => 'Tenant Selecionado',
+        'slug' => 'tenant-selecionado',
+        'ativo' => true,
+    ]);
+
+    $this->postJson('/login', [
+        'email' =>
+            'super-selecao@frotapro.test',
+        'password' =>
+            'SenhaTeste123!',
+    ])->assertOk();
+
+    $this->withHeaders(
+        spaHeaders()
+    )
+        ->postJson(
+            '/api/tenant-context',
+            [
+                'tenant_id' =>
+                    $tenant->id,
+            ]
+        )
+        ->assertOk()
+        ->assertJsonPath(
+            'data.id',
+            $tenant->id
+        )
+        ->assertSessionHas(
+            'tenant_id',
+            $tenant->id
+        );
+
+    $this->withHeaders(
+        spaHeaders()
+    )
+        ->getJson(
+            '/api/tenant-context'
+        )
+        ->assertOk()
+        ->assertJson([
+            'tenant_id' =>
+                $tenant->id,
+            'has_tenant' =>
+                true,
+        ]);
+});
+
+test('super admin não pode selecionar tenant inativo', function () {
+    $user = criarUtilizadorTenant(
+        'super-inativo@frotapro.test'
+    );
+
+    $role = Role::create([
+        'codigo' => 'super_admin',
+        'nome' => 'Super Administrador',
+        'sistema' => true,
+    ]);
+
+    UserRole::create([
+        'user_id' => $user->id,
+        'role_id' => $role->id,
+        'tenant_id' => null,
+    ]);
+
+    $tenant = Tenant::create([
+        'nome' => 'Tenant Inativo',
+        'slug' => 'tenant-inativo-super',
+        'ativo' => false,
+    ]);
+
+    $this->postJson('/login', [
+        'email' =>
+            'super-inativo@frotapro.test',
+        'password' =>
+            'SenhaTeste123!',
+    ])->assertOk();
+
+    $this->withHeaders(
+        spaHeaders()
+    )
+        ->postJson(
+            '/api/tenant-context',
+            [
+                'tenant_id' =>
+                    $tenant->id,
+            ]
+        )
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(
+            'tenant_id'
+        );
+});
+
+test('utilizador comum não pode selecionar tenant alheio', function () {
+    $user = criarUtilizadorTenant(
+        'selecao-isolada@frotapro.test'
+    );
+
+    $permitido = Tenant::create([
+        'nome' => 'Tenant Permitido',
+        'slug' => 'tenant-permitido',
+        'ativo' => true,
+    ]);
+
+    $alheio = Tenant::create([
+        'nome' => 'Tenant Alheio',
+        'slug' => 'tenant-alheio',
+        'ativo' => true,
+    ]);
+
+    TenantUser::create([
+        'tenant_id' =>
+            $permitido->id,
+        'user_id' =>
+            $user->id,
+        'status' =>
+            'ativo',
+        'principal' =>
+            true,
+    ]);
+
+    $this->postJson('/login', [
+        'email' =>
+            'selecao-isolada@frotapro.test',
+        'password' =>
+            'SenhaTeste123!',
+    ])->assertOk();
+
+    $this->withHeaders(
+        spaHeaders()
+    )
+        ->postJson(
+            '/api/tenant-context',
+            [
+                'tenant_id' =>
+                    $alheio->id,
+            ]
+        )
+        ->assertForbidden();
+});
