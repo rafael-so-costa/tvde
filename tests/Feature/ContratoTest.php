@@ -98,6 +98,61 @@ function contratoUsuario(
     return $user;
 }
 
+function contratoUsuarioComRole(
+    Tenant $tenant,
+    string $email,
+    string $roleCodigo
+): User {
+    $user = User::factory()->create([
+        'email' => $email,
+        'password' => Hash::make(
+            'SenhaTeste123!'
+        ),
+        'ativo' => true,
+    ]);
+
+    TenantUser::create([
+        'tenant_id' => $tenant->id,
+        'user_id' => $user->id,
+        'status' => 'ativo',
+        'principal' => true,
+    ]);
+
+    $nomes = [
+        'motorista' => 'Motorista',
+        'proprietario' =>
+            'Proprietário',
+        'funcionario' =>
+            'Funcionário',
+    ];
+
+    $role = Role::firstOrCreate(
+        [
+            'codigo' =>
+                $roleCodigo,
+        ],
+        [
+            'nome' =>
+                $nomes[$roleCodigo]
+                ?? ucfirst(
+                    $roleCodigo
+                ),
+            'sistema' => true,
+        ]
+    );
+
+    UserRole::create([
+        'user_id' =>
+            $user->id,
+        'role_id' =>
+            $role->id,
+        'tenant_id' =>
+            $tenant->id,
+    ]);
+
+    return $user;
+}
+
 function contratoLogin(
     $test,
     User $user
@@ -1272,4 +1327,656 @@ test('novo contrato no mesmo veículo não altera associação ativa existente',
 
     expect($associacao->contrato_id)
         ->toBe($primeiroContratoId);
+});
+
+test('patch não aceita data fim anterior à data início já existente', function () {
+    $tenant = contratoTenant(
+        'Tenant Cronologia Fim',
+        'tenant-cronologia-fim'
+    );
+
+    $user = contratoUsuario(
+        $tenant,
+        'cronologia.fim@frotapro.test'
+    );
+
+    contratoLogin(
+        $this,
+        $user
+    );
+
+    $create = $this->withHeaders(
+        contratoHeaders()
+    )
+        ->postJson(
+            '/api/contratos',
+            [
+                'tipo' => 'aluguer',
+                'data_inicio' =>
+                    '2026-10-10',
+            ]
+        )
+        ->assertCreated();
+
+    $id = $create->json(
+        'data.id'
+    );
+
+    $versoesAntes =
+        VersaoContrato::query()
+            ->where(
+                'contrato_id',
+                $id
+            )
+            ->count();
+
+    $logsAntes =
+        LogAuditoriaContrato::query()
+            ->where(
+                'contrato_id',
+                $id
+            )
+            ->count();
+
+    $this->withHeaders(
+        contratoHeaders()
+    )
+        ->patchJson(
+            "/api/contratos/{$id}",
+            [
+                'data_fim' =>
+                    '2026-10-09',
+            ]
+        )
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(
+            'data_fim'
+        );
+
+    $contrato =
+        Contrato::findOrFail($id);
+
+    expect(
+        $contrato->data_inicio
+            ->toDateString()
+    )->toBe(
+        '2026-10-10'
+    );
+
+    expect(
+        $contrato->data_fim
+    )->toBeNull();
+
+    expect(
+        $contrato->versao_atual
+    )->toBe(1);
+
+    expect(
+        VersaoContrato::query()
+            ->where(
+                'contrato_id',
+                $id
+            )
+            ->count()
+    )->toBe(
+        $versoesAntes
+    );
+
+    expect(
+        LogAuditoriaContrato::query()
+            ->where(
+                'contrato_id',
+                $id
+            )
+            ->count()
+    )->toBe(
+        $logsAntes
+    );
+});
+
+test('patch não aceita data início posterior à data fim já existente', function () {
+    $tenant = contratoTenant(
+        'Tenant Cronologia Início',
+        'tenant-cronologia-inicio'
+    );
+
+    $user = contratoUsuario(
+        $tenant,
+        'cronologia.inicio@frotapro.test'
+    );
+
+    contratoLogin(
+        $this,
+        $user
+    );
+
+    $create = $this->withHeaders(
+        contratoHeaders()
+    )
+        ->postJson(
+            '/api/contratos',
+            [
+                'tipo' => 'aluguer',
+                'data_inicio' =>
+                    '2026-10-01',
+                'data_fim' =>
+                    '2026-10-10',
+            ]
+        )
+        ->assertCreated();
+
+    $id = $create->json(
+        'data.id'
+    );
+
+    $versoesAntes =
+        VersaoContrato::query()
+            ->where(
+                'contrato_id',
+                $id
+            )
+            ->count();
+
+    $this->withHeaders(
+        contratoHeaders()
+    )
+        ->patchJson(
+            "/api/contratos/{$id}",
+            [
+                'data_inicio' =>
+                    '2026-10-11',
+            ]
+        )
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(
+            'data_fim'
+        );
+
+    $contrato =
+        Contrato::findOrFail($id);
+
+    expect(
+        $contrato->data_inicio
+            ->toDateString()
+    )->toBe(
+        '2026-10-01'
+    );
+
+    expect(
+        $contrato->data_fim
+            ->toDateString()
+    )->toBe(
+        '2026-10-10'
+    );
+
+    expect(
+        $contrato->versao_atual
+    )->toBe(1);
+
+    expect(
+        VersaoContrato::query()
+            ->where(
+                'contrato_id',
+                $id
+            )
+            ->count()
+    )->toBe(
+        $versoesAntes
+    );
+});
+
+test('encerramento não aceita data fim anterior à data início', function () {
+    $tenant = contratoTenant(
+        'Tenant Cronologia Encerramento',
+        'tenant-cronologia-encerramento'
+    );
+
+    $user = contratoUsuario(
+        $tenant,
+        'cronologia.encerramento@frotapro.test'
+    );
+
+    $template = contratoTemplate(
+        $tenant,
+        '{{ASSINATURA_MOTORISTA}}'
+    );
+
+    $motorista = contratoMotorista(
+        $tenant,
+        'CronologiaEncerramento'
+    );
+
+    $veiculo = contratoVeiculo(
+        $tenant,
+        'CR-10-NO',
+        350
+    );
+
+    contratoLogin(
+        $this,
+        $user
+    );
+
+    $payload =
+        contratoPayloadAssinado(
+            $template,
+            $motorista,
+            $veiculo
+        );
+
+    $payload['data_inicio'] =
+        '2026-10-10';
+
+    $create = $this->withHeaders(
+        contratoHeaders()
+    )
+        ->postJson(
+            '/api/contratos',
+            $payload
+        )
+        ->assertCreated();
+
+    $id = $create->json(
+        'data.id'
+    );
+
+    $this->withHeaders(
+        contratoHeaders()
+    )
+        ->patchJson(
+            "/api/contratos/{$id}/encerrar",
+            [
+                'data_fim' =>
+                    '2026-10-09',
+            ]
+        )
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(
+            'data_fim'
+        );
+
+    $contrato =
+        Contrato::findOrFail($id);
+
+    expect(
+        $contrato->status
+    )->toBe(
+        'assinado'
+    );
+
+    expect(
+        $contrato->bloqueado
+    )->toBeFalse();
+
+    expect(
+        $contrato->data_fim
+    )->toBeNull();
+
+    $this->assertDatabaseHas(
+        'contratos_ativos_veiculos',
+        [
+            'contrato_id' => $id,
+            'ativo' => 1,
+        ]
+    );
+
+    $this->assertDatabaseMissing(
+        'logs_auditoria_contratos',
+        [
+            'contrato_id' => $id,
+            'acao' => 'encerramento',
+        ]
+    );
+});
+
+
+test('motorista pode listar e consultar apenas os próprios contratos', function () {
+    $tenant = contratoTenant(
+        'Tenant Contratos Motorista',
+        'tenant-contratos-motorista'
+    );
+
+    $user =
+        contratoUsuarioComRole(
+            $tenant,
+            'self.motorista@frotapro.test',
+            'motorista'
+        );
+
+    $motorista =
+        contratoMotorista(
+            $tenant,
+            'SelfMotorista'
+        );
+
+    $motorista->user_id =
+        $user->id;
+
+    $motorista->save();
+
+    $outroMotorista =
+        contratoMotorista(
+            $tenant,
+            'OutroMotorista'
+        );
+
+    $proprio = new Contrato([
+        'tipo' => 'aluguer',
+        'motorista_id' =>
+            $motorista->id,
+    ]);
+
+    $proprio->tenant_id =
+        $tenant->id;
+
+    $proprio->save();
+
+    $alheio = new Contrato([
+        'tipo' => 'aluguer',
+        'motorista_id' =>
+            $outroMotorista->id,
+    ]);
+
+    $alheio->tenant_id =
+        $tenant->id;
+
+    $alheio->save();
+
+    contratoLogin(
+        $this,
+        $user
+    );
+
+    $response = $this->withHeaders(
+        contratoHeaders()
+    )
+        ->getJson('/api/contratos')
+        ->assertOk()
+        ->assertJsonCount(
+            1,
+            'data'
+        );
+
+    expect(
+        $response->json(
+            'data.0.id'
+        )
+    )->toBe(
+        $proprio->id
+    );
+
+    $this->withHeaders(
+        contratoHeaders()
+    )
+        ->getJson(
+            "/api/contratos/{$proprio->id}"
+        )
+        ->assertOk()
+        ->assertJsonPath(
+            'data.id',
+            $proprio->id
+        );
+
+    $this->withHeaders(
+        contratoHeaders()
+    )
+        ->getJson(
+            "/api/contratos/{$alheio->id}"
+        )
+        ->assertNotFound();
+
+    $this->withHeaders(
+        contratoHeaders()
+    )
+        ->postJson(
+            '/api/contratos',
+            [
+                'tipo' =>
+                    'aluguer',
+            ]
+        )
+        ->assertForbidden();
+
+    $this->withHeaders(
+        contratoHeaders()
+    )
+        ->patchJson(
+            "/api/contratos/{$proprio->id}",
+            [
+                'valor_total' => 100,
+            ]
+        )
+        ->assertForbidden();
+
+    $this->withHeaders(
+        contratoHeaders()
+    )
+        ->deleteJson(
+            "/api/contratos/{$proprio->id}"
+        )
+        ->assertForbidden();
+});
+
+test('proprietário pode listar e consultar apenas os próprios contratos', function () {
+    $tenant = contratoTenant(
+        'Tenant Contratos Proprietário',
+        'tenant-contratos-proprietario'
+    );
+
+    $user =
+        contratoUsuarioComRole(
+            $tenant,
+            'self.proprietario@frotapro.test',
+            'proprietario'
+        );
+
+    $proprietario =
+        contratoProprietario(
+            $tenant,
+            'SelfProprietario'
+        );
+
+    $proprietario->user_id =
+        $user->id;
+
+    $proprietario->save();
+
+    $outroProprietario =
+        contratoProprietario(
+            $tenant,
+            'OutroProprietario'
+        );
+
+    $proprio = new Contrato([
+        'tipo' => 'aluguer',
+        'proprietario_id' =>
+            $proprietario->id,
+    ]);
+
+    $proprio->tenant_id =
+        $tenant->id;
+
+    $proprio->save();
+
+    $alheio = new Contrato([
+        'tipo' => 'aluguer',
+        'proprietario_id' =>
+            $outroProprietario->id,
+    ]);
+
+    $alheio->tenant_id =
+        $tenant->id;
+
+    $alheio->save();
+
+    contratoLogin(
+        $this,
+        $user
+    );
+
+    $response = $this->withHeaders(
+        contratoHeaders()
+    )
+        ->getJson('/api/contratos')
+        ->assertOk()
+        ->assertJsonCount(
+            1,
+            'data'
+        );
+
+    expect(
+        $response->json(
+            'data.0.id'
+        )
+    )->toBe(
+        $proprio->id
+    );
+
+    $this->withHeaders(
+        contratoHeaders()
+    )
+        ->getJson(
+            "/api/contratos/{$proprio->id}"
+        )
+        ->assertOk()
+        ->assertJsonPath(
+            'data.id',
+            $proprio->id
+        );
+
+    $this->withHeaders(
+        contratoHeaders()
+    )
+        ->getJson(
+            "/api/contratos/{$alheio->id}"
+        )
+        ->assertNotFound();
+
+    $this->withHeaders(
+        contratoHeaders()
+    )
+        ->postJson(
+            '/api/contratos',
+            [
+                'tipo' =>
+                    'aluguer',
+            ]
+        )
+        ->assertForbidden();
+
+    $this->withHeaders(
+        contratoHeaders()
+    )
+        ->patchJson(
+            "/api/contratos/{$proprio->id}",
+            [
+                'valor_total' =>
+                    100,
+            ]
+        )
+        ->assertForbidden();
+
+    $this->withHeaders(
+        contratoHeaders()
+    )
+        ->deleteJson(
+            "/api/contratos/{$proprio->id}"
+        )
+        ->assertForbidden();
+});
+
+test('motorista sem registo vinculado recebe lista vazia', function () {
+    $tenant = contratoTenant(
+        'Tenant Motorista Sem Vínculo',
+        'tenant-motorista-sem-vinculo'
+    );
+
+    $user =
+        contratoUsuarioComRole(
+            $tenant,
+            'sem.vinculo.motorista@frotapro.test',
+            'motorista'
+        );
+
+    $motorista =
+        contratoMotorista(
+            $tenant,
+            'NaoVinculado'
+        );
+
+    $contrato = new Contrato([
+        'tipo' => 'aluguer',
+        'motorista_id' =>
+            $motorista->id,
+    ]);
+
+    $contrato->tenant_id =
+        $tenant->id;
+
+    $contrato->save();
+
+    contratoLogin(
+        $this,
+        $user
+    );
+
+    $this->withHeaders(
+        contratoHeaders()
+    )
+        ->getJson('/api/contratos')
+        ->assertOk()
+        ->assertJsonCount(
+            0,
+            'data'
+        );
+
+    $this->withHeaders(
+        contratoHeaders()
+    )
+        ->getJson(
+            "/api/contratos/{$contrato->id}"
+        )
+        ->assertNotFound();
+});
+
+test('funcionário sem permissão de contratos continua sem acesso de leitura', function () {
+    $tenant = contratoTenant(
+        'Tenant Funcionário Sem Contratos',
+        'tenant-funcionario-sem-contratos'
+    );
+
+    $user =
+        contratoUsuarioComRole(
+            $tenant,
+            'sem.permissao.contratos@frotapro.test',
+            'funcionario'
+        );
+
+    $contrato = new Contrato([
+        'tipo' => 'aluguer',
+    ]);
+
+    $contrato->tenant_id =
+        $tenant->id;
+
+    $contrato->save();
+
+    contratoLogin(
+        $this,
+        $user
+    );
+
+    $this->withHeaders(
+        contratoHeaders()
+    )
+        ->getJson('/api/contratos')
+        ->assertForbidden();
+
+    $this->withHeaders(
+        contratoHeaders()
+    )
+        ->getJson(
+            "/api/contratos/{$contrato->id}"
+        )
+        ->assertForbidden();
 });

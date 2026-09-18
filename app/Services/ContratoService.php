@@ -110,6 +110,10 @@ class ContratoService
             $contrato->valor_semanal =
                 $veiculo?->valor_aluguel;
 
+            $this->validarCronologia(
+                $contrato
+            );
+
             if ($assinaturas !== []) {
                 $todasAssinadas = collect($assinaturas)
                     ->every(
@@ -269,6 +273,10 @@ class ContratoService
 
             $contrato->fill($data);
 
+            $this->validarCronologia(
+                $contrato
+            );
+
             $veiculo = $this->veiculo(
                 $tenantId,
                 $contrato->veiculo_id
@@ -339,6 +347,10 @@ class ContratoService
                 $dataFim
                 ?: $contrato->data_fim
                 ?: today()->toDateString();
+
+            $this->validarCronologia(
+                $contrato
+            );
 
             $contrato->save();
 
@@ -418,6 +430,29 @@ class ContratoService
 
             $contrato->delete();
         });
+    }
+
+    private function validarCronologia(
+        Contrato $contrato
+    ): void {
+        if (
+            !$contrato->data_inicio ||
+            !$contrato->data_fim
+        ) {
+            return;
+        }
+
+        if (
+            $contrato->data_fim
+            ->lt(
+                $contrato->data_inicio
+            )
+        ) {
+            throw ValidationException::withMessages([
+                'data_fim' =>
+                'A data de fim deve ser igual ou posterior à data de início.',
+            ]);
+        }
     }
 
     private function guardarVersao(

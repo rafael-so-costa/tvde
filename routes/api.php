@@ -102,10 +102,10 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::delete('/alugueres/{id}', [AluguerController::class, 'destroy']);
         });
 
-        Route::middleware('permission:contratos,visualizar')->group(function () {
-            Route::get('/contratos', [ContratoController::class, 'index']);
-            Route::get('/contratos/{id}', [ContratoController::class, 'show']);
-        });
+
+        Route::get('/contratos', [ContratoController::class, 'index']);
+        Route::get('/contratos/{id}', [ContratoController::class, 'show']);
+
 
         Route::middleware('permission:contratos,configurar')->group(function () {
             Route::post('/contratos', [ContratoController::class, 'store']);

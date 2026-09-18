@@ -6,8 +6,12 @@ use App\Http\Requests\EncerrarContratoRequest;
 use App\Http\Requests\StoreContratoRequest;
 use App\Http\Requests\UpdateContratoRequest;
 use App\Models\Contrato;
+use App\Models\Motorista;
+use App\Models\Proprietario;
 use App\Services\ContratoService;
+use App\Services\PermissionService;
 use App\Services\TenantContext;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -17,7 +21,8 @@ class ContratoController extends Controller
 {
     public function __construct(
         private TenantContext $tenantContext,
-        private ContratoService $contratoService
+        private ContratoService $contratoService,
+        private PermissionService $permissionService
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -46,11 +51,7 @@ class ContratoController extends Controller
             ],
         ]);
 
-        $query = Contrato::query()
-            ->where(
-                'tenant_id',
-                $this->tenantId()
-            )
+        $query = $this->leituraQuery($request)
             ->with([
                 'template',
                 'motorista',
@@ -98,13 +99,11 @@ class ContratoController extends Controller
         ], 201);
     }
 
-    public function show(string $id): JsonResponse
-    {
-        $contrato = Contrato::query()
-            ->where(
-                'tenant_id',
-                $this->tenantId()
-            )
+    public function show(
+        Request $request,
+        string $id
+    ): JsonResponse {
+        $contrato = $this->leituraQuery($request)
             ->with([
                 'template',
                 'motorista',
@@ -187,9 +186,112 @@ class ContratoController extends Controller
         return response()->noContent();
     }
 
+    private function leituraQuery(
+        Request $request
+    ): Builder {
+        $tenantId = $this->tenantId();
+        $user = $request->user();
+
+        $query = Contrato::query()
+            ->where(
+                'tenant_id',
+                $tenantId
+            );
+
+        if (
+            $this->permissionService
+                ->allows(
+                    $user,
+                    'contratos',
+                    'visualizar',
+                    $tenantId
+                )
+        ) {
+            return $query;
+        }
+
+        $temEscopoProprio = false;
+
+        if (
+            $user->hasRole(
+                'motorista',
+                $tenantId
+            )
+        ) {
+            $temEscopoProprio = true;
+
+            $motoristaId =
+                Motorista::query()
+                    ->where(
+                        'tenant_id',
+                        $tenantId
+                    )
+                    ->where(
+                        'user_id',
+                        $user->id
+                    )
+                    ->value('id');
+
+            if (!$motoristaId) {
+                $query->whereRaw(
+                    '1 = 0'
+                );
+            } else {
+                $query->where(
+                    'motorista_id',
+                    $motoristaId
+                );
+            }
+        }
+
+        if (
+            $user->hasRole(
+                'proprietario',
+                $tenantId
+            )
+        ) {
+            $temEscopoProprio = true;
+
+            $proprietarioId =
+                Proprietario::query()
+                    ->where(
+                        'tenant_id',
+                        $tenantId
+                    )
+                    ->where(
+                        'user_id',
+                        $user->id
+                    )
+                    ->value('id');
+
+            if (!$proprietarioId) {
+                $query->whereRaw(
+                    '1 = 0'
+                );
+            } else {
+                $query->where(
+                    'proprietario_id',
+                    $proprietarioId
+                );
+            }
+        }
+
+        if (!$temEscopoProprio) {
+            abort(
+                403,
+                'Sem permissão suficiente para este recurso.'
+            );
+        }
+
+        return $query;
+    }
+
     private function tenantId(): string
     {
-        if (!$this->tenantContext->hasTenant()) {
+        if (
+            !$this->tenantContext
+                ->hasTenant()
+        ) {
             abort(
                 403,
                 'Selecione uma organização para aceder a este recurso.'
