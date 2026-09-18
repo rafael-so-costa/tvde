@@ -10,6 +10,8 @@ use App\Http\Controllers\MotoristaController;
 use App\Http\Controllers\MotoristaAccountController;
 use App\Http\Controllers\AluguerController;
 use App\Http\Controllers\ContratoController;
+use App\Http\Controllers\PerfilTemplateController;
+use App\Http\Controllers\TemplateContratoController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth:sanctum')->group(function () {
@@ -109,6 +111,21 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::patch('/contratos/{id}', [ContratoController::class, 'update']);
             Route::patch('/contratos/{id}/encerrar', [ContratoController::class, 'encerrar']);
             Route::delete('/contratos/{id}', [ContratoController::class, 'destroy']);
+        });
+        Route::middleware('permission:templates,visualizar')->group(function () {
+            Route::get('/perfis-template', [PerfilTemplateController::class, 'index']);
+            Route::get('/templates-contrato', [TemplateContratoController::class, 'index']);
+            Route::get('/templates-contrato/{id}', [TemplateContratoController::class, 'show']);
+        });
+
+        Route::middleware('permission:templates,configurar')->group(function () {
+            Route::post('/perfis-template', [PerfilTemplateController::class, 'store']);
+            Route::patch('/perfis-template/{id}', [PerfilTemplateController::class, 'update']);
+            Route::delete('/perfis-template/{id}', [PerfilTemplateController::class, 'destroy']);
+
+            Route::post('/templates-contrato', [TemplateContratoController::class, 'store']);
+            Route::patch('/templates-contrato/{id}', [TemplateContratoController::class, 'update']);
+            Route::delete('/templates-contrato/{id}', [TemplateContratoController::class, 'destroy']);
         });
     });
 });
