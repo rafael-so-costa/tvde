@@ -16,6 +16,9 @@ use App\Models\VersaoContrato;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Storage;
+use RuntimeException;
+use Throwable;
 
 class ContratoService
 {
@@ -191,6 +194,692 @@ class ContratoService
 
             return $this->carregar($contrato);
         });
+    }
+
+    public function remoteSignaturePreview(
+        string $token
+    ): array {
+        $assinatura =
+            AssinaturaDigital::query()
+            ->where(
+                'token_verificacao',
+                $token
+            )
+            ->with([
+                'contrato.template',
+                'contrato.motorista',
+                'contrato.proprietario',
+                'contrato.veiculo',
+            ])
+            ->firstOrFail();
+
+        $contrato =
+            $assinatura->contrato;
+
+        if (
+            !$contrato ||
+            $contrato->tenant_id !==
+            $assinatura->tenant_id
+        ) {
+            abort(404);
+        }
+
+        $empresa = Empresa::query()
+            ->where(
+                'tenant_id',
+                $contrato->tenant_id
+            )
+            ->first();
+
+        return [
+            'assinatura' => [
+                'id' =>
+                $assinatura->id,
+                'signatario_tipo' =>
+                $assinatura
+                    ->signatario_tipo,
+                'signatario_nome' =>
+                $assinatura
+                    ->signatario_nome,
+                'signatario_email' =>
+                $this->mascararEmail(
+                    $assinatura
+                        ->signatario_email
+                ),
+                'placeholder' =>
+                $assinatura
+                    ->placeholder,
+                'status' =>
+                $assinatura->status,
+                'verificado' =>
+                $assinatura
+                    ->verificado,
+                'solicitado_em' =>
+                $assinatura
+                    ->solicitado_em,
+                'otp_expira_em' =>
+                $assinatura
+                    ->otp_expira_em,
+                'expirado' =>
+                !$assinatura
+                    ->verificado &&
+                    $assinatura
+                    ->otp_expira_em
+                    ?->isPast() === true,
+            ],
+
+            'contrato' => [
+                'id' =>
+                $contrato->id,
+                'tipo' =>
+                $contrato->tipo,
+                'status' =>
+                $contrato->status,
+                'data_inicio' =>
+                $contrato
+                    ->data_inicio,
+                'data_fim' =>
+                $contrato
+                    ->data_fim,
+                'valor_diaria' =>
+                $contrato
+                    ->valor_diaria,
+                'valor_semanal' =>
+                $contrato
+                    ->valor_semanal,
+                'valor_caucao' =>
+                $contrato
+                    ->valor_caucao,
+                'valor_total' =>
+                $contrato
+                    ->valor_total,
+                'campos_preenchidos' =>
+                $contrato
+                    ->campos_preenchidos,
+                'versao_atual' =>
+                $contrato
+                    ->versao_atual,
+            ],
+
+            'template' =>
+            $contrato->template
+                ? [
+                    'nome' =>
+                    $contrato
+                        ->template
+                        ->nome,
+                    'conteudo_original' =>
+                    $contrato
+                        ->template
+                        ->conteudo_original,
+                    'campos_detectados' =>
+                    $contrato
+                        ->template
+                        ->campos_detectados,
+                    'campos_mapeados' =>
+                    $contrato
+                        ->template
+                        ->campos_mapeados,
+                ]
+                : null,
+
+            'empresa' =>
+            $empresa
+                ? [
+                    'nome_empresa' =>
+                    $empresa
+                        ->nome_empresa,
+                    'nif' =>
+                    $empresa->nif,
+                    'email' =>
+                    $empresa->email,
+                    'telemovel' =>
+                    $empresa
+                        ->telemovel,
+                    'nome_gerente' =>
+                    $empresa
+                        ->nome_gerente,
+                    'endereco_rua' =>
+                    $empresa
+                        ->endereco_rua,
+                    'endereco_numero' =>
+                    $empresa
+                        ->endereco_numero,
+                    'endereco_complemento' =>
+                    $empresa
+                        ->endereco_complemento,
+                    'endereco_cep' =>
+                    $empresa
+                        ->endereco_cep,
+                    'endereco_cidade' =>
+                    $empresa
+                        ->endereco_cidade,
+                    'capital_social' =>
+                    $empresa
+                        ->capital_social,
+                    'certificado_tvde' =>
+                    $empresa
+                        ->certificado_tvde,
+                ]
+                : null,
+
+            'motorista' =>
+            $contrato->motorista
+                ? [
+                    'nome_completo' =>
+                    $contrato
+                        ->motorista
+                        ->nome_completo,
+                    'nif' =>
+                    $contrato
+                        ->motorista
+                        ->nif,
+                    'email' =>
+                    $contrato
+                        ->motorista
+                        ->email,
+                    'telemovel' =>
+                    $contrato
+                        ->motorista
+                        ->telemovel,
+                    'iban' =>
+                    $contrato
+                        ->motorista
+                        ->iban,
+                    'endereco_rua' =>
+                    $contrato
+                        ->motorista
+                        ->endereco_rua,
+                    'endereco_numero' =>
+                    $contrato
+                        ->motorista
+                        ->endereco_numero,
+                    'endereco_complemento' =>
+                    $contrato
+                        ->motorista
+                        ->endereco_complemento,
+                    'endereco_cep' =>
+                    $contrato
+                        ->motorista
+                        ->endereco_cep,
+                    'endereco_cidade' =>
+                    $contrato
+                        ->motorista
+                        ->endereco_cidade,
+                    'tipo_documento' =>
+                    $contrato
+                        ->motorista
+                        ->tipo_documento,
+                    'numero_documento' =>
+                    $contrato
+                        ->motorista
+                        ->numero_documento,
+                    'documento_valid_until' =>
+                    $contrato
+                        ->motorista
+                        ->documento_valid_until,
+                    'certificado_tvde' =>
+                    $contrato
+                        ->motorista
+                        ->certificado_tvde,
+                    'carta_numero' =>
+                    $contrato
+                        ->motorista
+                        ->carta_numero,
+                    'carta_valid_until' =>
+                    $contrato
+                        ->motorista
+                        ->carta_valid_until,
+                    'data_nascimento' =>
+                    $contrato
+                        ->motorista
+                        ->data_nascimento,
+                ]
+                : null,
+
+            'proprietario' =>
+            $contrato->proprietario
+                ? [
+                    'tipo' =>
+                    $contrato
+                        ->proprietario
+                        ->tipo,
+                    'nome_completo' =>
+                    $contrato
+                        ->proprietario
+                        ->nome_completo,
+                    'nome_empresa' =>
+                    $contrato
+                        ->proprietario
+                        ->nome_empresa,
+                    'nome_gerente' =>
+                    $contrato
+                        ->proprietario
+                        ->nome_gerente,
+                    'nif' =>
+                    $contrato
+                        ->proprietario
+                        ->nif,
+                    'email' =>
+                    $contrato
+                        ->proprietario
+                        ->email,
+                    'telemovel' =>
+                    $contrato
+                        ->proprietario
+                        ->telemovel,
+                    'iban' =>
+                    $contrato
+                        ->proprietario
+                        ->iban,
+                    'endereco_rua' =>
+                    $contrato
+                        ->proprietario
+                        ->endereco_rua,
+                    'endereco_numero' =>
+                    $contrato
+                        ->proprietario
+                        ->endereco_numero,
+                    'endereco_complemento' =>
+                    $contrato
+                        ->proprietario
+                        ->endereco_complemento,
+                    'endereco_cep' =>
+                    $contrato
+                        ->proprietario
+                        ->endereco_cep,
+                    'endereco_cidade' =>
+                    $contrato
+                        ->proprietario
+                        ->endereco_cidade,
+                    'tipo_documento' =>
+                    $contrato
+                        ->proprietario
+                        ->tipo_documento,
+                    'numero_documento' =>
+                    $contrato
+                        ->proprietario
+                        ->numero_documento,
+                    'documento_valid_until' =>
+                    $contrato
+                        ->proprietario
+                        ->documento_valid_until,
+                    'capital_social' =>
+                    $contrato
+                        ->proprietario
+                        ->capital_social,
+                ]
+                : null,
+
+            'veiculo' =>
+            $contrato->veiculo
+                ? [
+                    'matricula' =>
+                    $contrato
+                        ->veiculo
+                        ->matricula,
+                    'marca' =>
+                    $contrato
+                        ->veiculo
+                        ->marca,
+                    'modelo' =>
+                    $contrato
+                        ->veiculo
+                        ->modelo,
+                    'data_matricula' =>
+                    $contrato
+                        ->veiculo
+                        ->data_matricula,
+                    'chassi' =>
+                    $contrato
+                        ->veiculo
+                        ->chassi,
+                    'cilindrada' =>
+                    $contrato
+                        ->veiculo
+                        ->cilindrada,
+                    'potencia' =>
+                    $contrato
+                        ->veiculo
+                        ->potencia,
+                    'combustivel' =>
+                    $contrato
+                        ->veiculo
+                        ->combustivel,
+                    'lugares' =>
+                    $contrato
+                        ->veiculo
+                        ->lugares,
+                    'portas' =>
+                    $contrato
+                        ->veiculo
+                        ->portas,
+                    'cor' =>
+                    $contrato
+                        ->veiculo
+                        ->cor,
+                    'valor_caucao' =>
+                    $contrato
+                        ->veiculo
+                        ->valor_caucao,
+                    'valor_aluguel' =>
+                    $contrato
+                        ->veiculo
+                        ->valor_aluguel,
+                ]
+                : null,
+        ];
+    }
+
+    public function confirmRemoteSignature(
+        string $token,
+        string $otp,
+        string $assinaturaDataUrl,
+        ?string $ip = null,
+        ?string $userAgent = null
+    ): array {
+        $binary =
+            $this->decodeRemoteSignature(
+                $assinaturaDataUrl
+            );
+
+        $storedPath = null;
+
+        try {
+            return DB::transaction(
+                function () use (
+                    $token,
+                    $otp,
+                    $binary,
+                    $ip,
+                    $userAgent,
+                    &$storedPath
+                ): array {
+                    $assinatura =
+                        AssinaturaDigital::query()
+                        ->where(
+                            'token_verificacao',
+                            $token
+                        )
+                        ->lockForUpdate()
+                        ->firstOrFail();
+
+                    if (
+                        $assinatura->verificado ||
+                        $assinatura->status ===
+                        'assinado'
+                    ) {
+                        throw ValidationException::withMessages([
+                            'assinatura' =>
+                            'Esta solicitação já foi assinada.',
+                        ]);
+                    }
+
+                    if (
+                        !$assinatura
+                            ->otp_expira_em ||
+                        $assinatura
+                        ->otp_expira_em
+                        ->isPast()
+                    ) {
+                        throw ValidationException::withMessages([
+                            'codigo_otp' =>
+                            'O código OTP expirou.',
+                        ]);
+                    }
+
+                    if (
+                        blank(
+                            $assinatura->codigo_otp
+                        ) ||
+                        !hash_equals(
+                            (string)
+                            $assinatura->codigo_otp,
+                            $otp
+                        )
+                    ) {
+                        throw ValidationException::withMessages([
+                            'codigo_otp' =>
+                            'Código OTP inválido.',
+                        ]);
+                    }
+
+                    $contrato =
+                        Contrato::query()
+                        ->where(
+                            'tenant_id',
+                            $assinatura
+                                ->tenant_id
+                        )
+                        ->whereKey(
+                            $assinatura
+                                ->contrato_id
+                        )
+                        ->lockForUpdate()
+                        ->firstOrFail();
+
+                    if (
+                        $contrato->status !==
+                        'enviado'
+                    ) {
+                        throw ValidationException::withMessages([
+                            'contrato' =>
+                            'Este contrato não está disponível para assinatura remota.',
+                        ]);
+                    }
+
+                    $storedPath =
+                        'contract-signatures/' .
+                        $contrato->tenant_id .
+                        '/' .
+                        $contrato->id .
+                        '/' .
+                        $assinatura->id .
+                        '.png';
+
+                    $stored =
+                        Storage::disk('local')
+                        ->put(
+                            $storedPath,
+                            $binary
+                        );
+
+                    if (!$stored) {
+                        throw new RuntimeException(
+                            'Não foi possível guardar a assinatura.'
+                        );
+                    }
+
+                    $assinatura
+                        ->assinatura_url =
+                        $storedPath;
+
+                    $assinatura->verificado =
+                        true;
+
+                    $assinatura->status =
+                        'assinado';
+
+                    $assinatura->assinado_em =
+                        now();
+
+                    $assinatura->ip_address =
+                        $ip;
+
+                    $assinatura->user_agent =
+                        $userAgent;
+
+                    $assinatura
+                        ->hash_documento =
+                        hash(
+                            'sha256',
+                            implode('|', [
+                                $contrato->id,
+                                $assinatura->id,
+                                hash(
+                                    'sha256',
+                                    $binary
+                                ),
+                            ])
+                        );
+
+                    $assinatura->codigo_otp =
+                        null;
+
+                    $assinatura->token_verificacao =
+                        null;
+
+                    $assinatura->save();
+                    $campos =
+                        $contrato
+                        ->campos_preenchidos
+                        ?? [];
+
+                    if (
+                        filled(
+                            $assinatura
+                                ->placeholder
+                        )
+                    ) {
+                        $campos[$assinatura
+                            ->placeholder] = $storedPath;
+                    }
+
+                    $contrato
+                        ->campos_preenchidos =
+                        $campos;
+
+                    if (
+                        $assinatura
+                        ->placeholder ===
+                        'ASSINATURA_MOTORISTA'
+                    ) {
+                        $contrato
+                            ->assinatura_motorista_url =
+                            $storedPath;
+                    }
+
+                    if (
+                        $assinatura
+                        ->placeholder ===
+                        'ASSINATURA_PROPRIETARIO'
+                    ) {
+                        $contrato
+                            ->assinatura_proprietario_url =
+                            $storedPath;
+                    }
+
+                    $pendentes =
+                        AssinaturaDigital::query()
+                        ->where(
+                            'tenant_id',
+                            $contrato
+                                ->tenant_id
+                        )
+                        ->where(
+                            'contrato_id',
+                            $contrato->id
+                        )
+                        ->where(
+                            function (
+                                $query
+                            ) {
+                                $query
+                                    ->where(
+                                        'status',
+                                        '!=',
+                                        'assinado'
+                                    )
+                                    ->orWhere(
+                                        'verificado',
+                                        false
+                                    );
+                            }
+                        )
+                        ->exists();
+
+                    $contratoAssinado =
+                        !$pendentes;
+
+                    if ($contratoAssinado) {
+                        $contrato->status =
+                            'assinado';
+
+                        $contrato
+                            ->data_assinatura =
+                            now();
+                    }
+
+                    $contrato->save();
+
+                    $actor =
+                        $assinatura
+                        ->signatario_user_id
+                        ? User::query()
+                        ->find(
+                            $assinatura
+                                ->signatario_user_id
+                        )
+                        : null;
+
+                    $this->auditar(
+                        $contrato,
+                        $actor,
+                        'assinatura_remota',
+                        [
+                            'assinatura_id' =>
+                            $assinatura->id,
+                            'placeholder' =>
+                            $assinatura
+                                ->placeholder,
+                            'signatario_tipo' =>
+                            $assinatura
+                                ->signatario_tipo,
+                            'contrato_assinado' =>
+                            $contratoAssinado,
+                        ],
+                        $ip
+                    );
+
+                    if (
+                        $contratoAssinado &&
+                        $contrato->tipo ===
+                        'aluguer'
+                    ) {
+                        $this
+                            ->associarMotoristaVeiculo(
+                                $contrato
+                            );
+                    }
+
+                    return [
+                        'assinatura_id' =>
+                        $assinatura->id,
+                        'status' =>
+                        $assinatura->status,
+                        'verificado' =>
+                        $assinatura
+                            ->verificado,
+                        'assinado_em' =>
+                        $assinatura
+                            ->assinado_em,
+                        'contrato_id' =>
+                        $contrato->id,
+                        'contrato_status' =>
+                        $contrato->status,
+                    ];
+                }
+            );
+        } catch (Throwable $exception) {
+            if ($storedPath) {
+                Storage::disk('local')
+                    ->delete(
+                        $storedPath
+                    );
+            }
+
+            throw $exception;
+        }
     }
 
     public function updateDraft(
@@ -455,6 +1144,95 @@ class ContratoService
         }
     }
 
+    private function decodeRemoteSignature(
+        string $dataUrl
+    ): string {
+        $prefix =
+            'data:image/png;base64,';
+
+        if (
+            !str_starts_with(
+                $dataUrl,
+                $prefix
+            )
+        ) {
+            throw ValidationException::withMessages([
+                'assinatura' =>
+                'A assinatura deve ser uma imagem PNG válida.',
+            ]);
+        }
+
+        $binary = base64_decode(
+            substr(
+                $dataUrl,
+                strlen($prefix)
+            ),
+            true
+        );
+
+        if (
+            $binary === false ||
+            !str_starts_with(
+                $binary,
+                "\x89PNG\r\n\x1a\n"
+            )
+        ) {
+            throw ValidationException::withMessages([
+                'assinatura' =>
+                'A assinatura deve ser uma imagem PNG válida.',
+            ]);
+        }
+
+        if (
+            strlen($binary) >
+            1024 * 1024
+        ) {
+            throw ValidationException::withMessages([
+                'assinatura' =>
+                'A assinatura não pode exceder 1 MB.',
+            ]);
+        }
+
+        return $binary;
+    }
+
+    private function mascararEmail(
+        string $email
+    ): string {
+        $parts = explode(
+            '@',
+            $email,
+            2
+        );
+
+        if (count($parts) !== 2) {
+            return '';
+        }
+
+        [$local, $domain] =
+            $parts;
+
+        $visible =
+            mb_substr(
+                $local,
+                0,
+                min(
+                    2,
+                    mb_strlen($local)
+                )
+            );
+
+        return $visible .
+            str_repeat(
+                '*',
+                max(
+                    3,
+                    mb_strlen($local) - 2
+                )
+            ) .
+            '@' .
+            $domain;
+    }
     private function guardarVersao(
         Contrato $contrato,
         User $actor,
@@ -479,7 +1257,7 @@ class ContratoService
 
     private function auditar(
         Contrato $contrato,
-        User $actor,
+        ?User $actor,
         string $acao,
         array $detalhes,
         ?string $ip
@@ -492,7 +1270,8 @@ class ContratoService
 
         $log->contrato_id = $contrato->id;
         $log->tenant_id = $contrato->tenant_id;
-        $log->user_id = $actor->id;
+        $log->user_id =
+            $actor?->id;
 
         $log->save();
     }

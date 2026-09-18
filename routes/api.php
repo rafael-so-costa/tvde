@@ -14,6 +14,22 @@ use App\Http\Controllers\PerfilTemplateController;
 use App\Http\Controllers\TemplateContratoController;
 use App\Http\Controllers\TemplateImportController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\RemoteSignatureController;
+
+
+Route::get(
+    '/assinaturas/remotas/{token}',
+    [RemoteSignatureController::class, 'show']
+)
+    ->whereUuid('token')
+    ->middleware('throttle:30,1');
+
+Route::post(
+    '/assinaturas/remotas/{token}/confirmar',
+    [RemoteSignatureController::class, 'confirm']
+)
+    ->whereUuid('token')
+    ->middleware('throttle:5,1');
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [AuthController::class, 'me']);
