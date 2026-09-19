@@ -1468,3 +1468,131 @@ test(
         );
     }
 );
+
+test(
+    'penalização da recolha é calculada pelo servidor',
+    function () {
+        $tenant =
+            checklistTenant(
+                'Tenant Penalização Segura',
+                'tenant-penalizacao-segura'
+            );
+
+        $user =
+            checklistUsuario(
+                $tenant,
+                'penalizacao.segura@frotapro.test'
+            );
+
+        $entidades =
+            checklistEntidades(
+                $tenant,
+                'PS'
+            );
+
+        $entrega =
+            checklistCriarDireto(
+                $tenant,
+                $user,
+                $entidades[
+                    'motorista'
+                ],
+                $entidades[
+                    'veiculo'
+                ],
+                [
+                    'estado' =>
+                        'finalizado',
+
+                    'finalizado_em' =>
+                        now(),
+                ]
+            );
+
+        checklistLogin(
+            $this,
+            $user
+        );
+
+        $response =
+            $this
+                ->withHeaders(
+                    checklistHeaders()
+                )
+                ->postJson(
+                    '/api/checklists',
+                    checklistPayload(
+                        $entidades[
+                            'motorista'
+                        ],
+                        $entidades[
+                            'veiculo'
+                        ],
+                        [
+                            'tipo' =>
+                                'recolha',
+
+                            'entrega_vinculada_id' =>
+                                $entrega->id,
+
+                            'penalizacao_total' =>
+                                999999,
+
+                            'itens_faltantes' => [
+                                'colete' =>
+                                    true,
+
+                                'triangulo' =>
+                                    true,
+                            ],
+
+                            'novos_danos' => [
+                                [
+                                    'part' =>
+                                        'Para-choque Dianteiro',
+
+                                    'types' => [
+                                        'riscado',
+                                    ],
+
+                                    'status' =>
+                                        'riscado',
+
+                                    'value' =>
+                                        999999,
+                                ],
+                            ],
+                        ]
+                    )
+                )
+                ->assertCreated();
+
+        $id =
+            $response->json(
+                'data.id'
+            );
+
+        $checklist =
+            ChecklistRecord::findOrFail(
+                $id
+            );
+
+        expect(
+            (float)
+            $checklist
+                ->penalizacao_total
+        )->toBe(
+            335.0
+        );
+
+        expect(
+            (float)
+            $checklist
+                ->novos_danos[0][
+                    'value'
+                ]
+        )->toBe(
+            300.0
+        );
+    }
+);

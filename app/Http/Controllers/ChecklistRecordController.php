@@ -17,11 +17,13 @@ use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 use Throwable;
+use App\Services\ChecklistPenaltyService;
 
 class ChecklistRecordController extends Controller
 {
     public function __construct(
-        private TenantContext $tenantContext
+        private TenantContext $tenantContext,
+        private ChecklistPenaltyService $penaltyService
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -93,6 +95,12 @@ class ChecklistRecordController extends Controller
     ): JsonResponse {
         $tenantId = $this->tenantId();
         $validated = $request->validated();
+
+        $validated =
+            $this->applyFinancialRules(
+                $validated['tipo'],
+                $validated
+            );
 
         $checklist = DB::transaction(
             function () use (
@@ -254,6 +262,52 @@ class ChecklistRecordController extends Controller
         $validated =
             $request->validated();
 
+        $financialData = [
+            'itens_faltantes' =>
+            array_key_exists(
+                'itens_faltantes',
+                $validated
+            )
+                ? $validated['itens_faltantes']
+                : (
+                    $checklist
+                    ->itens_faltantes ??
+                    []
+                ),
+
+            'novos_danos' =>
+            array_key_exists(
+                'novos_danos',
+                $validated
+            )
+                ? $validated['novos_danos']
+                : (
+                    $checklist
+                    ->novos_danos ??
+                    []
+                ),
+        ];
+
+        $financial =
+            $this->applyFinancialRules(
+                $checklist->tipo,
+                $financialData
+            );
+
+        $validated['penalizacao_total'] =
+            $financial['penalizacao_total'];
+
+        if (
+            $checklist->tipo ===
+            'recolha'
+        ) {
+            $validated['itens_faltantes'] =
+                $financial['itens_faltantes'];
+
+            $validated['novos_danos'] =
+                $financial['novos_danos'];
+        }
+
         $motoristaId =
             $validated['motorista_id'] ??
             $checklist->motorista_id;
@@ -401,11 +455,42 @@ class ChecklistRecordController extends Controller
                             );
                         }
 
+                        $financial =
+                            $this->applyFinancialRules(
+                                $checklist->tipo,
+                                [
+                                    'itens_faltantes' =>
+                                    $checklist->itens_faltantes ??
+                                        [],
+
+                                    'novos_danos' =>
+                                    $checklist->novos_danos ??
+                                        [],
+                                ]
+                            );
+
+                        $checklist->penalizacao_total =
+                            $financial['penalizacao_total'];
+
+                        if (
+                            $checklist->tipo ===
+                            'recolha'
+                        ) {
+                            $checklist->itens_faltantes =
+                                $financial['itens_faltantes'];
+
+                            $checklist->novos_danos =
+                                $financial['novos_danos'];
+                        }
+
                         $basePath =
                             'checklist-signatures/' .
                             $tenantId .
                             '/' .
                             $checklist->id;
+
+
+
 
                         $empresaPath =
                             $basePath .
@@ -512,6 +597,30 @@ class ChecklistRecordController extends Controller
                 $this->tenantId()
             )
             ->findOrFail($id);
+    }
+
+    private function applyFinancialRules(
+        string $tipo,
+        array $data
+    ): array {
+        if ($tipo !== 'recolha') {
+            return array_merge(
+                $data,
+                [
+                    'penalizacao_total' =>
+                    0,
+                ]
+            );
+        }
+
+        return array_merge(
+            $data,
+            $this->penaltyService
+                ->calculate(
+                    $data['itens_faltantes'] ?? [],
+                    $data['novos_danos'] ?? []
+                )
+        );
     }
 
     private function decodeSignature(

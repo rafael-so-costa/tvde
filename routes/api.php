@@ -129,9 +129,35 @@ Route::middleware('auth:sanctum')->group(function () {
         });
 
         Route::middleware('permission:alugueres,configurar')->group(function () {
-            Route::post('/alugueres', [AluguerController::class, 'store']);
-            Route::patch('/alugueres/{id}', [AluguerController::class, 'update']);
-            Route::delete('/alugueres/{id}', [AluguerController::class, 'destroy']);
+            Route::post(
+                '/alugueres',
+                [AluguerController::class, 'store']
+            );
+
+            Route::patch(
+                '/alugueres/{id}',
+                [AluguerController::class, 'update']
+            );
+
+            Route::post(
+                '/alugueres/{id}/ativar',
+                [AluguerController::class, 'activate']
+            );
+
+            Route::post(
+                '/alugueres/{id}/finalizar',
+                [AluguerController::class, 'finalize']
+            );
+
+            Route::post(
+                '/alugueres/{id}/finalizar-devolucao',
+                [AluguerController::class, 'finalizeReturn']
+            );
+
+            Route::delete(
+                '/alugueres/{id}',
+                [AluguerController::class, 'destroy']
+            );
         });
 
 

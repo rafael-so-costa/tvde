@@ -92,4 +92,20 @@ class Aluguer extends Model
             'checklist_devolucao_id'
         );
     }
+
+    public function contratoAluguer(): BelongsTo
+    {
+        return $this->belongsTo(
+            Contrato::class,
+            'contrato_aluguer_id'
+        );
+    }
+
+    public function contratoPrestacao(): BelongsTo
+    {
+        return $this->belongsTo(
+            Contrato::class,
+            'contrato_prestacao_id'
+        );
+    }
 }
