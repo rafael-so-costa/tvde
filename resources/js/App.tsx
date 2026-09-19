@@ -8,6 +8,7 @@ import EmpresasPage from "./pages/EmpresasPage";
 import ProprietariosPage from "./pages/ProprietariosPage";
 import VeiculosPage from "./pages/VeiculosPage";
 import MotoristasPage from "./pages/MotoristasPage";
+import ChecklistsPage from "./pages/ChecklistsPage";
 
 export default function App() {
     return (
@@ -20,12 +21,16 @@ export default function App() {
 
                     <Route path="empresas" element={<EmpresasPage />} />
 
-                    <Route path="proprietarios"                   element={<ProprietariosPage />}
+                    <Route
+                        path="proprietarios"
+                        element={<ProprietariosPage />}
                     />
 
                     <Route path="motoristas" element={<MotoristasPage />} />
 
                     <Route path="veiculos" element={<VeiculosPage />} />
+
+                    <Route path="checklists" element={<ChecklistsPage />} />
 
                     <Route
                         path="alugueres"
