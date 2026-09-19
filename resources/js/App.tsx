@@ -5,6 +5,7 @@ import DashboardPage from "./pages/DashboardPage";
 import LoginPage from "./pages/LoginPage";
 import ModulePlaceholderPage from "./pages/ModulePlaceholderPage";
 import EmpresasPage from "./pages/EmpresasPage";
+import ProprietariosPage from "./pages/ProprietariosPage";
 
 export default function App() {
     return (
@@ -19,12 +20,7 @@ export default function App() {
 
                     <Route
                         path="proprietarios"
-                        element={
-                            <ModulePlaceholderPage
-                                title="Proprietários"
-                                description="Gestão de proprietários e contas de acesso."
-                            />
-                        }
+                        element={<ProprietariosPage />}
                     />
 
                     <Route
