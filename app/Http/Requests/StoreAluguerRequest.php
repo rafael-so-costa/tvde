@@ -91,7 +91,28 @@ class StoreAluguerRequest extends FormRequest
                             ->where('tipo', 'prestacao_servico')
                     ),
             ],
-            'checklist_entrega_id' => ['nullable', 'uuid'],
+            'checklist_entrega_id' => [
+                'nullable',
+                'uuid',
+                Rule::exists(
+                    'checklist_records',
+                    'id'
+                )->where(
+                    fn($query) => $query
+                        ->where(
+                            'tenant_id',
+                            $tenantId
+                        )
+                        ->where(
+                            'tipo',
+                            'entrega'
+                        )
+                        ->where(
+                            'estado',
+                            'finalizado'
+                        )
+                ),
+            ],
             'checklist_devolucao_id' => ['prohibited'],
 
             'data_inicio' => ['nullable', 'date'],

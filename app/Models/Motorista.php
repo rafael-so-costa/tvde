@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Motorista extends Model
 {
@@ -80,22 +81,24 @@ class Motorista extends Model
 
     public function cadastroCompleto(): bool
     {
-        foreach ([
-            'nome_completo',
-            'nif',
-            'email',
-            'telemovel',
-            'data_nascimento',
-            'endereco_rua',
-            'endereco_cidade',
-            'endereco_cep',
-            'tipo_documento',
-            'numero_documento',
-            'documento_valid_until',
-            'carta_numero',
-            'carta_valid_until',
-            'registo_criminal_valid_until',
-        ] as $campo) {
+        foreach (
+            [
+                'nome_completo',
+                'nif',
+                'email',
+                'telemovel',
+                'data_nascimento',
+                'endereco_rua',
+                'endereco_cidade',
+                'endereco_cep',
+                'tipo_documento',
+                'numero_documento',
+                'documento_valid_until',
+                'carta_numero',
+                'carta_valid_until',
+                'registo_criminal_valid_until',
+            ] as $campo
+        ) {
             if (blank($this->getAttribute($campo))) {
                 return false;
             }
@@ -115,5 +118,11 @@ class Motorista extends Model
 
         $this->status_cadastro = 'ativo';
         $this->ativo = true;
+    }
+    public function checklists(): HasMany
+    {
+        return $this->hasMany(
+            ChecklistRecord::class
+        );
     }
 }

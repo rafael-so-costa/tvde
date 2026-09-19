@@ -97,6 +97,24 @@ class UpdateAluguerRequest extends FormRequest
                 'sometimes',
                 'nullable',
                 'uuid',
+                Rule::exists(
+                    'checklist_records',
+                    'id'
+                )->where(
+                    fn($query) => $query
+                        ->where(
+                            'tenant_id',
+                            $tenantId
+                        )
+                        ->where(
+                            'tipo',
+                            'entrega'
+                        )
+                        ->where(
+                            'estado',
+                            'finalizado'
+                        )
+                ),
             ],
 
             'checklist_devolucao_id' => ['prohibited'],

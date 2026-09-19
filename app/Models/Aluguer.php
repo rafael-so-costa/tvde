@@ -77,4 +77,19 @@ class Aluguer extends Model
     {
         return $this->belongsTo(Proprietario::class);
     }
+    public function checklistEntrega(): BelongsTo
+    {
+        return $this->belongsTo(
+            ChecklistRecord::class,
+            'checklist_entrega_id'
+        );
+    }
+
+    public function checklistDevolucao(): BelongsTo
+    {
+        return $this->belongsTo(
+            ChecklistRecord::class,
+            'checklist_devolucao_id'
+        );
+    }
 }

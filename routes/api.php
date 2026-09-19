@@ -16,6 +16,7 @@ use App\Http\Controllers\TemplateImportController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\RemoteSignatureController;
 use App\Http\Controllers\TenantContextController;
+use App\Http\Controllers\ChecklistRecordController;
 
 
 Route::get(
@@ -165,6 +166,43 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post(
                 '/templates-contrato/importar',
                 [TemplateImportController::class, 'store']
+            );
+        });
+        Route::middleware(
+            'permission:checklist,visualizar'
+        )->group(function () {
+            Route::get(
+                '/checklists',
+                [ChecklistRecordController::class, 'index']
+            );
+
+            Route::get(
+                '/checklists/{id}',
+                [ChecklistRecordController::class, 'show']
+            );
+        });
+
+        Route::middleware(
+            'permission:checklist,configurar'
+        )->group(function () {
+            Route::post(
+                '/checklists',
+                [ChecklistRecordController::class, 'store']
+            );
+
+            Route::patch(
+                '/checklists/{id}',
+                [ChecklistRecordController::class, 'update']
+            );
+
+            Route::post(
+                '/checklists/{id}/finalizar',
+                [ChecklistRecordController::class, 'finalize']
+            );
+
+            Route::delete(
+                '/checklists/{id}',
+                [ChecklistRecordController::class, 'destroy']
             );
         });
     });

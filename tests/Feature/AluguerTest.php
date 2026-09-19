@@ -15,6 +15,7 @@ use App\Models\Contrato;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use App\Models\ChecklistRecord;
 
 uses(RefreshDatabase::class);
 
@@ -119,17 +120,17 @@ function aluguerEntidades(
     $proprietario->save();
 
     $veiculo = new Veiculo([
-        'matricula' => 'AL-'.str_pad(
+        'matricula' => 'AL-' . str_pad(
             (string) random_int(1, 99),
             2,
             '0',
             STR_PAD_LEFT
-        ).'-'.strtoupper(
+        ) . '-' . strtoupper(
             substr(
                 preg_replace(
                     '/[^A-Za-z]/',
                     '',
-                    $sufixo.'AA'
+                    $sufixo . 'AA'
                 ),
                 0,
                 2
@@ -369,7 +370,23 @@ test('contratos válidos e checklist de entrega podem ser guardados no rascunho'
     $contratoPrestacao->tenant_id = $tenant->id;
     $contratoPrestacao->save();
 
-    $checklistEntrega = Str::uuid()->toString();
+    $checklistEntrega = new ChecklistRecord([
+        'tipo' => 'entrega',
+        'data_operacao' => '2026-09-20',
+        'quilometragem' => 1000,
+        'nivel_combustivel' => 'cheio',
+    ]);
+
+    $checklistEntrega->tenant_id =
+        $tenant->id;
+
+    $checklistEntrega->estado =
+        'finalizado';
+
+    $checklistEntrega->realizado_por =
+        $user->id;
+
+    $checklistEntrega->save();
 
     aluguerLogin($this, $user);
 
@@ -377,7 +394,7 @@ test('contratos válidos e checklist de entrega podem ser guardados no rascunho'
         ->postJson('/api/alugueres', [
             'contrato_aluguer_id' => $contratoAluguer->id,
             'contrato_prestacao_id' => $contratoPrestacao->id,
-            'checklist_entrega_id' => $checklistEntrega,
+            'checklist_entrega_id' => $checklistEntrega->id,
         ])
         ->assertCreated()
         ->assertJsonPath(
@@ -390,7 +407,7 @@ test('contratos válidos e checklist de entrega podem ser guardados no rascunho'
         )
         ->assertJsonPath(
             'data.checklist_entrega_id',
-            $checklistEntrega
+            $checklistEntrega->id
         );
 });
 
