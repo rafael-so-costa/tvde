@@ -6,6 +6,7 @@ import LoginPage from "./pages/LoginPage";
 import ModulePlaceholderPage from "./pages/ModulePlaceholderPage";
 import EmpresasPage from "./pages/EmpresasPage";
 import ProprietariosPage from "./pages/ProprietariosPage";
+import VeiculosPage from "./pages/VeiculosPage";
 
 export default function App() {
     return (
@@ -33,15 +34,7 @@ export default function App() {
                         }
                     />
 
-                    <Route
-                        path="veiculos"
-                        element={
-                            <ModulePlaceholderPage
-                                title="Veículos"
-                                description="Gestão da frota de veículos."
-                            />
-                        }
-                    />
+                    <Route path="veiculos" element={<VeiculosPage />} />
 
                     <Route
                         path="alugueres"
