@@ -10,6 +10,7 @@ import {
     LogOut,
     Menu,
     ReceiptText,
+    ShieldCheck,
     Truck,
     UserRound,
     UsersRound,
@@ -39,6 +40,11 @@ const navigation = [
         to: "/motoristas",
         label: "Motoristas",
         icon: UserRound,
+    },
+    {
+        to: "/registos-criminais",
+        label: "Registos criminais",
+        icon: ShieldCheck,
     },
     {
         to: "/veiculos",

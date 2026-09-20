@@ -12,6 +12,7 @@ import ProprietariosPage from "./pages/ProprietariosPage";
 import RemoteSignaturePage from "./pages/RemoteSignaturePage";
 import TemplatesPage from "./pages/TemplatesPage";
 import VeiculosPage from "./pages/VeiculosPage";
+import RegistosCriminaisPage from "./pages/RegistosCriminaisPage";
 
 export default function App() {
     return (
@@ -24,6 +25,7 @@ export default function App() {
                     <Route path="empresas" element={<EmpresasPage />} />
                     <Route path="proprietarios" element={<ProprietariosPage />} />
                     <Route path="motoristas" element={<MotoristasPage />} />
+                    <Route path="registos-criminais" element={<RegistosCriminaisPage />} />
                     <Route path="veiculos" element={<VeiculosPage />} />
                     <Route path="checklists" element={<ChecklistsPage />} />
                     <Route path="alugueres" element={<AlugueresPage />} />
