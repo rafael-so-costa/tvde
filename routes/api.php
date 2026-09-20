@@ -21,6 +21,7 @@ use App\Http\Controllers\ChecklistProcessTemplateController;
 use App\Http\Controllers\ChecklistProcessRunController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeclaracaoController;
+use App\Http\Controllers\RegistoCriminalController;
 
 
 Route::get(
@@ -55,6 +56,44 @@ Route::middleware('auth:sanctum')->group(function () {
     );
 
     Route::middleware('tenant')->group(function () {
+        Route::get(
+            '/registos-criminais',
+            [RegistoCriminalController::class, 'index']
+        );
+
+        Route::get(
+            '/registos-criminais/{id}',
+            [RegistoCriminalController::class, 'show']
+        );
+
+        Route::get(
+            '/registos-criminais/{id}/arquivo',
+            [RegistoCriminalController::class, 'arquivo']
+        );
+
+        Route::get(
+            '/registos-criminais/{id}/arquivo/download',
+            [RegistoCriminalController::class, 'downloadArquivo']
+        );
+
+        Route::post(
+            '/registos-criminais',
+            [RegistoCriminalController::class, 'store']
+        );
+
+        Route::middleware(
+            'permission:registos_criminais,configurar'
+        )->group(function () {
+            Route::post(
+                '/registos-criminais/{id}/validar',
+                [RegistoCriminalController::class, 'approve']
+            );
+
+            Route::post(
+                '/registos-criminais/{id}/rejeitar',
+                [RegistoCriminalController::class, 'reject']
+            );
+        });
         Route::get('/tenant-context', function (TenantContext $tenantContext) {
             return response()->json([
                 'tenant_id' => $tenantContext->id(),

@@ -125,4 +125,10 @@ class Motorista extends Model
             ChecklistRecord::class
         );
     }
+    public function registosCriminais(): HasMany
+{
+    return $this->hasMany(
+        RegistoCriminal::class
+    );
+}
 }
