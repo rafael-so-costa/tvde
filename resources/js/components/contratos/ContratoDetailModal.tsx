@@ -6,7 +6,10 @@ import {
     Check,
     CheckCircle2,
     Circle,
+    Download,
+    Eye,
     FileClock,
+    FileOutput,
     FileSignature,
     History,
     LoaderCircle,
@@ -38,7 +41,10 @@ function apiError(error: unknown): string {
             if (typeof first === "string") return first;
         }
 
-        return error.response?.data?.message ?? "Não foi possível concluir a operação.";
+        return (
+            error.response?.data?.message ??
+            "Não foi possível concluir a operação."
+        );
     }
 
     return "Não foi possível concluir a operação.";
@@ -49,6 +55,7 @@ export default function ContratoDetailModal({ id, onClose, onChanged }: Props) {
     const [error, setError] = useState<string | null>(null);
     const [completing, setCompleting] = useState<string | null>(null);
     const [resending, setResending] = useState<string | null>(null);
+    const [generatingPdf, setGeneratingPdf] = useState(false);
     const [ending, setEnding] = useState(false);
     const [deleting, setDeleting] = useState(false);
     const [endDate, setEndDate] = useState("");
@@ -104,12 +111,27 @@ export default function ContratoDetailModal({ id, onClose, onChanged }: Props) {
         }
     }
 
+    async function generatePdf() {
+        setGeneratingPdf(true);
+        setError(null);
+
+        try {
+            await api.post(`/api/contratos/${id}/pdf`);
+            await refresh();
+        } catch (requestError) {
+            setError(apiError(requestError));
+        } finally {
+            setGeneratingPdf(false);
+        }
+    }
+
     async function endContract() {
         if (
             !window.confirm(
                 "Encerrar este contrato? A associação ativa com o veículo será terminada.",
             )
-        ) return;
+        )
+            return;
 
         setEnding(true);
         setError(null);
@@ -226,6 +248,8 @@ export default function ContratoDetailModal({ id, onClose, onChanged }: Props) {
                                     endDate={endDate}
                                     ending={ending}
                                     deleting={deleting}
+                                    generatingPdf={generatingPdf}
+                                    onGeneratePdf={generatePdf}
                                     onEndDate={setEndDate}
                                     onEnd={endContract}
                                     onDelete={deleteContract}
@@ -264,6 +288,8 @@ function SummaryTab({
     endDate,
     ending,
     deleting,
+    generatingPdf,
+    onGeneratePdf,
     onEndDate,
     onEnd,
     onDelete,
@@ -272,6 +298,8 @@ function SummaryTab({
     endDate: string;
     ending: boolean;
     deleting: boolean;
+    generatingPdf: boolean;
+    onGeneratePdf: () => Promise<void>;
     onEndDate: (value: string) => void;
     onEnd: () => Promise<void>;
     onDelete: () => Promise<void>;
@@ -279,6 +307,74 @@ function SummaryTab({
     return (
         <div className="space-y-6">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <section className="rounded-2xl border border-slate-200 bg-slate-50/60 p-5">
+                    <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <FileOutput className="h-5 w-5 text-indigo-600" />
+                                <h3 className="font-semibold text-slate-900">
+                                    Documento PDF
+                                </h3>
+                            </div>
+
+                            <p className="mt-1 text-sm text-slate-500">
+                                {contrato.pdf_gerado_url
+                                    ? `PDF disponível para a versão ${contrato.versao_atual}.`
+                                    : "Gere o documento final a partir do template e dos dados do contrato."}
+                            </p>
+
+                            {contrato.hash_documento && (
+                                <p
+                                    title={contrato.hash_documento}
+                                    className="mt-2 max-w-xl truncate font-mono text-xs text-slate-400"
+                                >
+                                    SHA-256: {contrato.hash_documento}
+                                </p>
+                            )}
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                            <button
+                                type="button"
+                                disabled={generatingPdf}
+                                onClick={onGeneratePdf}
+                                className="flex h-10 items-center gap-2 rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-50"
+                            >
+                                {generatingPdf ? (
+                                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                                ) : (
+                                    <FileOutput className="h-4 w-4" />
+                                )}
+
+                                {contrato.pdf_gerado_url
+                                    ? "Regenerar PDF"
+                                    : "Gerar PDF"}
+                            </button>
+
+                            {contrato.pdf_gerado_url && (
+                                <>
+                                    <a
+                                        href={`/api/contratos/${contrato.id}/pdf`}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-indigo-200 hover:text-indigo-700"
+                                    >
+                                        <Eye className="h-4 w-4" />
+                                        Visualizar
+                                    </a>
+
+                                    <a
+                                        href={`/api/contratos/${contrato.id}/pdf/download`}
+                                        className="flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-indigo-200 hover:text-indigo-700"
+                                    >
+                                        <Download className="h-4 w-4" />
+                                        Baixar
+                                    </a>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                </section>
                 <InfoCard label="Estado" value={statusLabel(contrato.status)} />
                 <InfoCard label="Tipo" value={typeLabel(contrato.tipo)} />
                 <InfoCard label="Versão" value={`v${contrato.versao_atual}`} />
@@ -316,15 +412,32 @@ function SummaryTab({
             </section>
 
             <section className="rounded-2xl border border-slate-200 p-5">
-                <h3 className="font-semibold text-slate-900">Período e valores</h3>
+                <h3 className="font-semibold text-slate-900">
+                    Período e valores
+                </h3>
 
                 <div className="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-                    <Info label="Início" value={dateLabel(contrato.data_inicio)} />
+                    <Info
+                        label="Início"
+                        value={dateLabel(contrato.data_inicio)}
+                    />
                     <Info label="Fim" value={dateLabel(contrato.data_fim)} />
-                    <Info label="Semanal" value={currency(contrato.valor_semanal)} />
-                    <Info label="Caução" value={currency(contrato.valor_caucao)} />
-                    <Info label="Diário" value={currency(contrato.valor_diaria)} />
-                    <Info label="Total" value={currency(contrato.valor_total)} />
+                    <Info
+                        label="Semanal"
+                        value={currency(contrato.valor_semanal)}
+                    />
+                    <Info
+                        label="Caução"
+                        value={currency(contrato.valor_caucao)}
+                    />
+                    <Info
+                        label="Diário"
+                        value={currency(contrato.valor_diaria)}
+                    />
+                    <Info
+                        label="Total"
+                        value={currency(contrato.valor_total)}
+                    />
                     <Info
                         label="Assinado"
                         value={dateTimeLabel(contrato.data_assinatura)}
@@ -366,10 +479,12 @@ function SummaryTab({
 
             {contrato.status === "assinado" && (
                 <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
-                    <h3 className="font-semibold text-amber-900">Encerrar contrato</h3>
+                    <h3 className="font-semibold text-amber-900">
+                        Encerrar contrato
+                    </h3>
                     <p className="mt-1 text-sm text-amber-700">
-                        O encerramento bloqueia o contrato e termina a associação ativa
-                        com o veículo.
+                        O encerramento bloqueia o contrato e termina a
+                        associação ativa com o veículo.
                     </p>
 
                     <div className="mt-4 flex flex-col gap-3 sm:flex-row">
@@ -396,9 +511,12 @@ function SummaryTab({
 
             {!contrato.bloqueado && contrato.status !== "encerrado" && (
                 <section className="rounded-2xl border border-red-200 bg-red-50 p-5">
-                    <h3 className="font-semibold text-red-900">Eliminar contrato</h3>
+                    <h3 className="font-semibold text-red-900">
+                        Eliminar contrato
+                    </h3>
                     <p className="mt-1 text-sm text-red-700">
-                        Contratos encerrados ou bloqueados não podem ser eliminados.
+                        Contratos encerrados ou bloqueados não podem ser
+                        eliminados.
                     </p>
 
                     <button
@@ -585,7 +703,10 @@ function SignaturesTab({
                     </div>
 
                     <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                        <Info label="Placeholder" value={signature.placeholder} />
+                        <Info
+                            label="Placeholder"
+                            value={signature.placeholder}
+                        />
                         <Info
                             label="E-mail"
                             value={signature.signatario_email ?? "—"}
@@ -608,19 +729,20 @@ function SignaturesTab({
                         />
                     </div>
 
-                    {signature.status === "pendente" && !signature.verificado && (
-                        <button
-                            type="button"
-                            disabled={resending === signature.id}
-                            onClick={() => onResend(signature.id)}
-                            className="mt-5 flex h-10 items-center justify-center gap-2 rounded-xl bg-indigo-50 px-4 text-sm font-semibold text-indigo-700 disabled:opacity-50"
-                        >
-                            {resending === signature.id && (
-                                <LoaderCircle className="h-4 w-4 animate-spin" />
-                            )}
-                            Reenviar solicitação
-                        </button>
-                    )}
+                    {signature.status === "pendente" &&
+                        !signature.verificado && (
+                            <button
+                                type="button"
+                                disabled={resending === signature.id}
+                                onClick={() => onResend(signature.id)}
+                                className="mt-5 flex h-10 items-center justify-center gap-2 rounded-xl bg-indigo-50 px-4 text-sm font-semibold text-indigo-700 disabled:opacity-50"
+                            >
+                                {resending === signature.id && (
+                                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                                )}
+                                Reenviar solicitação
+                            </button>
+                        )}
                 </div>
             ))}
         </div>

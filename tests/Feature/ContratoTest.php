@@ -17,6 +17,7 @@ use App\Models\UserRole;
 use App\Models\Veiculo;
 use App\Models\VersaoContrato;
 use App\Mail\RemoteSignatureRequestMail;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -2170,4 +2171,211 @@ test('assinatura remota pendente pode ser reenviada com novo otp e token', funct
                 'reenvio_assinatura_remota',
         ]
     );
+});
+
+test('pdf do contrato é gerado em storage privado com hash e auditoria',function(){
+    Storage::fake('local');
+
+    $tenant=contratoTenant(
+        'Tenant PDF',
+        'tenant-pdf'
+    );
+
+    $user=contratoUsuario(
+        $tenant,
+        'pdf.contrato@frotapro.test'
+    );
+
+    $template=contratoTemplate(
+        $tenant,
+        "CONTRATO DE ALUGUER\n\nMotorista: {{NOME_MOTORISTA}}\nVeículo: {{MATRICULA_VEICULO}}\nInício: {{DATA_INICIO}}"
+    );
+
+    $motorista=contratoMotorista(
+        $tenant,
+        'PDF'
+    );
+
+    $veiculo=contratoVeiculo(
+        $tenant,
+        'PDF-10-AA',
+        300
+    );
+
+    contratoLogin($this,$user);
+
+    $response=$this
+        ->withHeaders(contratoHeaders())
+        ->postJson('/api/contratos',[
+            'template_id'=>$template->id,
+            'tipo'=>'aluguer',
+            'motorista_id'=>$motorista->id,
+            'veiculo_id'=>$veiculo->id,
+            'data_inicio'=>'2026-09-20',
+            'campos_preenchidos'=>[
+                'NOME_MOTORISTA'=>
+                    $motorista->nome_completo,
+            ],
+        ])
+        ->assertCreated();
+
+    $id=$response->json('data.id');
+
+    $this
+        ->withHeaders(contratoHeaders())
+        ->postJson("/api/contratos/{$id}/pdf")
+        ->assertOk()
+        ->assertJsonPath(
+            'data.pdf_disponivel',
+            true
+        );
+
+    $contrato=Contrato::findOrFail($id);
+
+    expect($contrato->pdf_gerado_url)
+        ->not->toBeNull();
+
+    expect($contrato->hash_documento)
+        ->toMatch('/^[a-f0-9]{64}$/');
+
+    Storage::disk('local')
+        ->assertExists(
+            $contrato->pdf_gerado_url
+        );
+
+    $binary=Storage::disk('local')
+        ->get(
+            $contrato->pdf_gerado_url
+        );
+
+    expect($binary)
+        ->toStartWith('%PDF-');
+
+    expect(hash('sha256',$binary))
+        ->toBe(
+            $contrato->hash_documento
+        );
+
+    $this->assertDatabaseHas(
+        'logs_auditoria_contratos',
+        [
+            'contrato_id'=>$id,
+            'tenant_id'=>$tenant->id,
+            'user_id'=>$user->id,
+            'acao'=>'geracao_pdf',
+        ]
+    );
+});
+
+test('pdf gerado pode ser visualizado e descarregado',function(){
+    Storage::fake('local');
+
+    $tenant=contratoTenant(
+        'Tenant PDF Download',
+        'tenant-pdf-download'
+    );
+
+    $user=contratoUsuario(
+        $tenant,
+        'pdf.download@frotapro.test'
+    );
+
+    $template=contratoTemplate(
+        $tenant,
+        'Contrato {{NOME_MOTORISTA}}'
+    );
+
+    $motorista=contratoMotorista(
+        $tenant,
+        'Download'
+    );
+
+    $veiculo=contratoVeiculo(
+        $tenant,
+        'PDF-20-BB',
+        320
+    );
+
+    contratoLogin($this,$user);
+
+    $response=$this
+        ->withHeaders(contratoHeaders())
+        ->postJson('/api/contratos',[
+            'template_id'=>$template->id,
+            'tipo'=>'aluguer',
+            'motorista_id'=>$motorista->id,
+            'veiculo_id'=>$veiculo->id,
+            'campos_preenchidos'=>[
+                'NOME_MOTORISTA'=>
+                    $motorista->nome_completo,
+            ],
+        ])
+        ->assertCreated();
+
+    $id=$response->json('data.id');
+
+    $this
+        ->withHeaders(contratoHeaders())
+        ->postJson("/api/contratos/{$id}/pdf")
+        ->assertOk();
+
+    $this
+        ->withHeaders(contratoHeaders())
+        ->get("/api/contratos/{$id}/pdf")
+        ->assertOk()
+        ->assertHeader(
+            'content-type',
+            'application/pdf'
+        );
+
+    $this
+        ->withHeaders(contratoHeaders())
+        ->get("/api/contratos/{$id}/pdf/download")
+        ->assertOk()
+        ->assertHeader(
+            'content-type',
+            'application/pdf'
+        );
+});
+
+test('utilizador apenas visualizar não pode gerar pdf',function(){
+    Storage::fake('local');
+
+    $tenant=contratoTenant(
+        'Tenant PDF Permissão',
+        'tenant-pdf-permissao'
+    );
+
+    $user=contratoUsuario(
+        $tenant,
+        'pdf.visualizar@frotapro.test',
+        'visualizar'
+    );
+
+    $template=contratoTemplate(
+        $tenant,
+        'Contrato de teste'
+    );
+
+    $contrato=new Contrato([
+        'template_id'=>$template->id,
+        'tipo'=>'aluguer',
+    ]);
+
+    $contrato->tenant_id=$tenant->id;
+    $contrato->save();
+
+    contratoLogin($this,$user);
+
+    $this
+        ->withHeaders(contratoHeaders())
+        ->postJson(
+            "/api/contratos/{$contrato->id}/pdf"
+        )
+        ->assertForbidden();
+
+    expect(
+        $contrato->fresh()
+            ->pdf_gerado_url
+    )->toBeNull();
 });

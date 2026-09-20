@@ -60,7 +60,7 @@ Route::middleware('auth:sanctum')->group(function () {
                 'has_tenant' => $tenantContext->hasTenant(),
             ]);
         });
-        Route::get('/dashboard',[DashboardController::class,'show']);
+        Route::get('/dashboard', [DashboardController::class, 'show']);
 
         Route::middleware('permission:empresas,visualizar')->group(function () {
             Route::get('/empresas', [EmpresaController::class, 'index']);
@@ -167,6 +167,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::get('/contratos', [ContratoController::class, 'index']);
         Route::get('/contratos/{id}', [ContratoController::class, 'show']);
+        Route::get('/contratos/{id}/pdf', [ContratoController::class, 'pdf']);
+        Route::get('/contratos/{id}/pdf/download', [ContratoController::class, 'downloadPdf']);
 
 
         Route::middleware('permission:contratos,configurar')->group(function () {
@@ -195,6 +197,10 @@ Route::middleware('auth:sanctum')->group(function () {
                     ContratoController::class,
                     'resendRemoteSignature',
                 ]
+            );
+            Route::post(
+                '/contratos/{id}/pdf',
+                [ContratoController::class, 'generatePdf']
             );
         });
         Route::middleware('permission:templates,visualizar')->group(function () {

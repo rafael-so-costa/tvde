@@ -518,6 +518,81 @@ class ChecklistProcessService
             }
         );
     }
+
+    public function completeDocumentGeneration(
+        string $tenantId,
+        string $contratoId,
+        array $result = [],
+        ?string $userId = null
+    ): ?ChecklistProcessRun {
+        return DB::transaction(
+            function () use (
+                $tenantId,
+                $contratoId,
+                $result,
+                $userId
+            ) {
+                $run = ChecklistProcessRun::query()
+                    ->where('tenant_id', $tenantId)
+                    ->where(
+                        'entidade_tipo',
+                        self::ENTITY_CONTRATO
+                    )
+                    ->where(
+                        'entidade_id',
+                        $contratoId
+                    )
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$run) {
+                    return null;
+                }
+
+                if (
+                    $run->status ===
+                    self::STATUS_CANCELLED
+                ) {
+                    return $run->load('items');
+                }
+
+                $items = ChecklistProcessRunItem::query()
+                    ->where('run_id', $run->id)
+                    ->where('tipo', 'gerar_documento')
+                    ->lockForUpdate()
+                    ->get();
+
+                foreach ($items as $item) {
+                    if (
+                        $item->status ===
+                        self::ITEM_DONE
+                    ) {
+                        continue;
+                    }
+
+                    $item->status =
+                        self::ITEM_DONE;
+
+                    $item->resultado =
+                        $result;
+
+                    $item->concluido_por =
+                        $userId;
+
+                    $item->concluido_em =
+                        now();
+
+                    $item->save();
+                }
+
+                $this->recalculate($run);
+
+                return $run
+                    ->fresh()
+                    ->load('items');
+            }
+        );
+    }
     public function isComplete(
         string $tenantId,
         string $entityType,
