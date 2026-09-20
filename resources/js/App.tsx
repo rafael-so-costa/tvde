@@ -9,6 +9,7 @@ import ProprietariosPage from "./pages/ProprietariosPage";
 import VeiculosPage from "./pages/VeiculosPage";
 import MotoristasPage from "./pages/MotoristasPage";
 import ChecklistsPage from "./pages/ChecklistsPage";
+import TemplatesPage from "./pages/TemplatesPage";
 
 export default function App() {
     return (
@@ -52,15 +53,7 @@ export default function App() {
                         }
                     />
 
-                    <Route
-                        path="templates"
-                        element={
-                            <ModulePlaceholderPage
-                                title="Templates"
-                                description="Templates e perfis de contratos."
-                            />
-                        }
-                    />
+                    <Route path="templates" element={<TemplatesPage />} />
                 </Route>
             </Route>
 

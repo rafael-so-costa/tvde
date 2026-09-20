@@ -49,23 +49,17 @@ class AluguerController extends Controller
             );
 
         if (
-            !empty(
-                $validated[
-                    'status'
-                ]
-            )
+            !empty($validated['status'])
         ) {
             $query->where(
                 'status',
-                $validated[
-                    'status'
-                ]
+                $validated['status']
             );
         }
 
         return response()->json([
             'data' =>
-                $query->get(),
+            $query->get(),
         ]);
     }
 
@@ -94,9 +88,9 @@ class AluguerController extends Controller
 
         return response()->json([
             'message' =>
-                'Rascunho de aluguer criado com sucesso.',
+            'Rascunho de aluguer criado com sucesso.',
             'data' =>
-                $aluguer,
+            $aluguer,
         ], 201);
     }
 
@@ -114,7 +108,7 @@ class AluguerController extends Controller
 
         return response()->json([
             'data' =>
-                $aluguer,
+            $aluguer,
         ]);
     }
 
@@ -133,7 +127,7 @@ class AluguerController extends Controller
         ) {
             return response()->json([
                 'message' =>
-                    'Apenas alugueres em rascunho podem ser alterados por esta operação.',
+                'Apenas alugueres em rascunho podem ser alterados por esta operação.',
             ], 422);
         }
 
@@ -149,9 +143,9 @@ class AluguerController extends Controller
 
         return response()->json([
             'message' =>
-                'Rascunho de aluguer atualizado com sucesso.',
+            'Rascunho de aluguer atualizado com sucesso.',
             'data' =>
-                $aluguer,
+            $aluguer,
         ]);
     }
 
@@ -161,17 +155,17 @@ class AluguerController extends Controller
     ): JsonResponse {
         $aluguer =
             $this->aluguerService
-                ->activate(
-                    $id,
-                    $this->tenantId(),
-                    $request->validated()
-                );
+            ->activate(
+                $id,
+                $this->tenantId(),
+                $request->validated()
+            );
 
         return response()->json([
             'message' =>
-                'Aluguer ativado com sucesso.',
+            'Aluguer ativado com sucesso.',
             'data' =>
-                $aluguer,
+            $aluguer,
         ]);
     }
 
@@ -180,16 +174,16 @@ class AluguerController extends Controller
     ): JsonResponse {
         $aluguer =
             $this->aluguerService
-                ->finalize(
-                    $id,
-                    $this->tenantId()
-                );
+            ->finalize(
+                $id,
+                $this->tenantId()
+            );
 
         return response()->json([
             'message' =>
-                'Aluguer finalizado com sucesso.',
+            'Aluguer finalizado com sucesso.',
             'data' =>
-                $aluguer,
+            $aluguer,
         ]);
     }
 
@@ -199,17 +193,17 @@ class AluguerController extends Controller
     ): JsonResponse {
         $aluguer =
             $this->aluguerService
-                ->finalizeReturn(
-                    $id,
-                    $this->tenantId(),
-                    $request->validated()
-                );
+            ->finalizeReturn(
+                $id,
+                $this->tenantId(),
+                $request->validated()
+            );
 
         return response()->json([
             'message' =>
-                'Devolução finalizada com sucesso.',
+            'Devolução finalizada com sucesso.',
             'data' =>
-                $aluguer,
+            $aluguer,
         ]);
     }
 
@@ -222,12 +216,12 @@ class AluguerController extends Controller
             );
 
         if (
-            $aluguer->status ===
-            'finalizado'
+            $aluguer->status !==
+            'rascunho'
         ) {
             return response()->json([
                 'message' =>
-                    'Alugueres finalizados não podem ser eliminados.',
+                'Apenas alugueres em rascunho podem ser eliminados.',
             ], 422);
         }
 

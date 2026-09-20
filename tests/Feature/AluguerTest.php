@@ -1240,7 +1240,7 @@ test(
 );
 
 test(
-    'rascunho pode ser atualizado e aluguer não finalizado pode ser eliminado',
+    'rascunho pode ser atualizado e eliminado',
     function () {
         $tenant =
             aluguerTenant(
@@ -1357,7 +1357,7 @@ test(
             ->assertUnprocessable()
             ->assertJsonPath(
                 'message',
-                'Alugueres finalizados não podem ser eliminados.'
+                'Apenas alugueres em rascunho podem ser eliminados.'
             );
 
         $this->assertDatabaseHas(
@@ -1612,12 +1612,8 @@ test(
             aluguerChecklist(
                 $tenant,
                 $user,
-                $entidadesA[
-                    'motorista'
-                ],
-                $entidadesB[
-                    'veiculo'
-                ],
+                $entidadesA['motorista'],
+                $entidadesB['veiculo'],
                 'entrega'
             );
 
@@ -1640,23 +1636,19 @@ test(
                 "/api/alugueres/{$aluguer->id}/ativar",
                 [
                     'motorista_id' =>
-                        $entidadesA[
-                            'motorista'
-                        ]->id,
+                    $entidadesA['motorista']->id,
 
                     'veiculo_id' =>
-                        $entidadesA[
-                            'veiculo'
-                        ]->id,
+                    $entidadesA['veiculo']->id,
 
                     'contrato_aluguer_id' =>
-                        $contratoAluguer->id,
+                    $contratoAluguer->id,
 
                     'contrato_prestacao_id' =>
-                        $contratoPrestacao->id,
+                    $contratoPrestacao->id,
 
                     'checklist_entrega_id' =>
-                        $checklistOutroVeiculo->id,
+                    $checklistOutroVeiculo->id,
                 ]
             )
             ->assertUnprocessable()
@@ -2388,12 +2380,8 @@ test(
             aluguerChecklist(
                 $tenant,
                 $user,
-                $entidades[
-                    'motorista'
-                ],
-                $entidades[
-                    'veiculo'
-                ],
+                $entidades['motorista'],
+                $entidades['veiculo'],
                 'entrega'
             );
 
@@ -2416,23 +2404,19 @@ test(
                 "/api/alugueres/{$aluguer->id}/ativar",
                 [
                     'motorista_id' =>
-                        $entidades[
-                            'motorista'
-                        ]->id,
+                    $entidades['motorista']->id,
 
                     'veiculo_id' =>
-                        $entidades[
-                            'veiculo'
-                        ]->id,
+                    $entidades['veiculo']->id,
 
                     'contrato_aluguer_id' =>
-                        $contratoAluguer->id,
+                    $contratoAluguer->id,
 
                     'contrato_prestacao_id' =>
-                        $contratoPrestacao->id,
+                    $contratoPrestacao->id,
 
                     'checklist_entrega_id' =>
-                        $checklist->id,
+                    $checklist->id,
                 ]
             )
             ->assertUnprocessable()
@@ -2450,6 +2434,63 @@ test(
             $aluguer->status
         )->toBe(
             'rascunho'
+        );
+    }
+);
+
+test(
+    'aluguer ativo não pode ser eliminado',
+    function () {
+        $tenant =
+            aluguerTenant(
+                'Tenant Exclusão Ativo',
+                'tenant-exclusao-ativo'
+            );
+
+        $user =
+            aluguerUsuario(
+                $tenant,
+                'exclusao.ativo@frotapro.test'
+            );
+
+        $aluguer =
+            aluguerCriarDireto(
+                $tenant,
+                $user
+            );
+
+        $aluguer->status =
+            'ativo';
+
+        $aluguer->save();
+
+        aluguerLogin(
+            $this,
+            $user
+        );
+
+        $this
+            ->withHeaders(
+                aluguerHeaders()
+            )
+            ->deleteJson(
+                "/api/alugueres/{$aluguer->id}"
+            )
+            ->assertUnprocessable()
+            ->assertJsonPath(
+                'message',
+                'Apenas alugueres em rascunho podem ser eliminados.'
+            );
+
+        $this->assertDatabaseHas(
+            'alugueres',
+            [
+                'id' =>
+                $aluguer->id,
+
+                'status' =>
+                'ativo',
+            ]
         );
     }
 );
