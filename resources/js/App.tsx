@@ -52,10 +52,7 @@ export default function App() {
                     <Route path="contratos" element={<ContratosPage />} />
 
                     <Route path="templates" element={<TemplatesPage />} />
-                    <Route
-                        path="/assinaturas/remotas/:token"
-                        element={<RemoteSignaturePage />}
-                    />
+
                 </Route>
             </Route>
 

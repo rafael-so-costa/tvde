@@ -19,6 +19,7 @@ use App\Http\Controllers\TenantContextController;
 use App\Http\Controllers\ChecklistRecordController;
 use App\Http\Controllers\ChecklistProcessTemplateController;
 use App\Http\Controllers\ChecklistProcessRunController;
+use App\Http\Controllers\DashboardController;
 
 
 Route::get(
@@ -59,6 +60,7 @@ Route::middleware('auth:sanctum')->group(function () {
                 'has_tenant' => $tenantContext->hasTenant(),
             ]);
         });
+        Route::get('/dashboard',[DashboardController::class,'show']);
 
         Route::middleware('permission:empresas,visualizar')->group(function () {
             Route::get('/empresas', [EmpresaController::class, 'index']);
