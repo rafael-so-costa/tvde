@@ -187,6 +187,13 @@ Route::middleware('auth:sanctum')->group(function () {
                     'completeItem',
                 ]
             );
+            Route::post(
+                '/contratos/{id}/assinaturas/{assinaturaId}/reenviar',
+                [
+                    ContratoController::class,
+                    'resendRemoteSignature',
+                ]
+            );
         });
         Route::middleware('permission:templates,visualizar')->group(function () {
             Route::get('/perfis-template', [PerfilTemplateController::class, 'index']);

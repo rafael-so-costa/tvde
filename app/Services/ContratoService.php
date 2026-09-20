@@ -13,6 +13,7 @@ use App\Models\TemplateContrato;
 use App\Models\User;
 use App\Models\Veiculo;
 use App\Models\VersaoContrato;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -24,7 +25,8 @@ class ContratoService
 {
 
     public function __construct(
-        private ChecklistProcessService $checklistProcessService
+        private ChecklistProcessService $checklistProcessService,
+        private RemoteSignatureMailService $remoteSignatureMailService
     ) {}
 
 
@@ -1138,6 +1140,186 @@ class ContratoService
         });
     }
 
+    public function resendRemoteSignature(
+        string $contratoId,
+        string $assinaturaId,
+        string $tenantId,
+        User $actor,
+        ?string $ip = null
+    ): AssinaturaDigital {
+        $assinatura =
+            DB::transaction(
+                function () use (
+                    $contratoId,
+                    $assinaturaId,
+                    $tenantId,
+                    $actor
+                ) {
+                    $contrato =
+                        Contrato::query()
+                        ->where(
+                            'tenant_id',
+                            $tenantId
+                        )
+                        ->whereKey(
+                            $contratoId
+                        )
+                        ->lockForUpdate()
+                        ->firstOrFail();
+
+                    $assinatura =
+                        AssinaturaDigital::query()
+                        ->where(
+                            'tenant_id',
+                            $tenantId
+                        )
+                        ->where(
+                            'contrato_id',
+                            $contrato->id
+                        )
+                        ->whereKey(
+                            $assinaturaId
+                        )
+                        ->lockForUpdate()
+                        ->firstOrFail();
+
+                    if (
+                        $assinatura
+                        ->status !==
+                        'pendente' ||
+                        $assinatura
+                        ->verificado ||
+                        filled(
+                            $assinatura
+                                ->assinatura_url
+                        )
+                    ) {
+                        throw ValidationException::withMessages([
+                            'assinatura' =>
+                            'Apenas assinaturas remotas pendentes podem ser reenviadas.',
+                        ]);
+                    }
+
+                    $email = strtolower(
+                        trim(
+                            (string)
+                            $assinatura
+                                ->signatario_email
+                        )
+                    );
+
+                    if (
+                        !filter_var(
+                            $email,
+                            FILTER_VALIDATE_EMAIL
+                        )
+                    ) {
+                        throw ValidationException::withMessages([
+                            'assinatura' =>
+                            'O signatário não possui um e-mail válido.',
+                        ]);
+                    }
+
+                    $assinatura
+                        ->token_verificacao =
+                        Str::uuid()
+                        ->toString();
+
+                    $assinatura
+                        ->codigo_otp =
+                        (string)
+                        random_int(
+                            100000,
+                            999999
+                        );
+
+                    $assinatura
+                        ->otp_expira_em =
+                        now()
+                        ->addMinutes(
+                            30
+                        );
+
+                    $assinatura
+                        ->solicitado_por =
+                        $actor->id;
+
+                    $assinatura
+                        ->solicitado_em =
+                        now();
+
+                    $assinatura->save();
+
+                    return $assinatura;
+                }
+            );
+
+        try {
+            $this
+                ->remoteSignatureMailService
+                ->send(
+                    $assinatura
+                );
+        } catch (
+            Throwable $exception
+        ) {
+            Log::warning(
+                'Falha ao reenviar assinatura remota.',
+                [
+                    'contrato_id' =>
+                    $contratoId,
+
+                    'assinatura_id' =>
+                    $assinaturaId,
+
+                    'exception' =>
+                    $exception::class,
+
+                    'message' =>
+                    $exception
+                        ->getMessage(),
+                ]
+            );
+
+            throw ValidationException::withMessages([
+                'assinatura' =>
+                'Não foi possível enviar o e-mail de assinatura. Tente novamente.',
+            ]);
+        }
+
+        $contrato =
+            Contrato::query()
+            ->where(
+                'tenant_id',
+                $tenantId
+            )
+            ->findOrFail(
+                $contratoId
+            );
+
+        $this->auditar(
+            $contrato,
+            $actor,
+            'reenvio_assinatura_remota',
+            [
+                'assinatura_id' =>
+                $assinatura->id,
+
+                'placeholder' =>
+                $assinatura
+                    ->placeholder,
+
+                'signatario_tipo' =>
+                $assinatura
+                    ->signatario_tipo,
+            ],
+            $ip
+        );
+
+        return $assinatura
+            ->fresh();
+    }
+
     public function delete(
         string $contratoId,
         string $tenantId,
@@ -1346,7 +1528,7 @@ class ContratoService
         User $actor,
         ?string $ip,
         ?string $userAgent
-    ): void {
+    ): AssinaturaDigital {
         $remota = $dados['modo'] === 'remota';
 
         $assinatura = new AssinaturaDigital();
@@ -1415,6 +1597,58 @@ class ContratoService
         }
 
         $assinatura->save();
+        if ($remota) {
+            $assinaturaId =
+                $assinatura->id;
+
+            DB::afterCommit(
+                function () use (
+                    $assinaturaId
+                ): void {
+                    $pendente =
+                        AssinaturaDigital::query()
+                        ->find(
+                            $assinaturaId
+                        );
+
+                    if (
+                        !$pendente ||
+                        $pendente->status !==
+                        'pendente' ||
+                        $pendente->verificado
+                    ) {
+                        return;
+                    }
+
+                    try {
+                        $this
+                            ->remoteSignatureMailService
+                            ->send(
+                                $pendente
+                            );
+                    } catch (
+                        Throwable $exception
+                    ) {
+                        Log::warning(
+                            'Falha ao enviar solicitação de assinatura remota.',
+                            [
+                                'assinatura_id' =>
+                                $assinaturaId,
+
+                                'exception' =>
+                                $exception::class,
+
+                                'message' =>
+                                $exception
+                                    ->getMessage(),
+                            ]
+                        );
+                    }
+                }
+            );
+        }
+
+        return $assinatura;
     }
 
     private function prepararAssinaturas(

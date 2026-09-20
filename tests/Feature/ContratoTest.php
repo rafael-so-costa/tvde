@@ -16,6 +16,8 @@ use App\Models\User;
 use App\Models\UserRole;
 use App\Models\Veiculo;
 use App\Models\VersaoContrato;
+use App\Mail\RemoteSignatureRequestMail;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -1979,4 +1981,193 @@ test('funcionário sem permissão de contratos continua sem acesso de leitura', 
             "/api/contratos/{$contrato->id}"
         )
         ->assertForbidden();
+});
+
+
+test('assinatura remota pendente pode ser reenviada com novo otp e token', function () {
+    Mail::fake();
+
+    $tenant =
+        contratoTenant(
+            'Tenant Reenvio Remoto',
+            'tenant-reenvio-remoto'
+        );
+
+    $user =
+        contratoUsuario(
+            $tenant,
+            'reenvio.remoto@frotapro.test'
+        );
+
+    $template =
+        contratoTemplate(
+            $tenant,
+            '{{ASSINATURA_MOTORISTA}}',
+            'Contrato Reenvio Remoto'
+        );
+
+    $motorista =
+        contratoMotorista(
+            $tenant,
+            'Reenvio'
+        );
+
+    $veiculo =
+        contratoVeiculo(
+            $tenant,
+            'RR-10-RR',
+            300
+        );
+
+    contratoLogin(
+        $this,
+        $user
+    );
+
+    $response =
+        $this
+        ->withHeaders(
+            contratoHeaders()
+        )
+        ->postJson(
+            '/api/contratos',
+            [
+                'template_id' =>
+                    $template->id,
+
+                'tipo' =>
+                    'aluguer',
+
+                'motorista_id' =>
+                    $motorista->id,
+
+                'veiculo_id' =>
+                    $veiculo->id,
+
+                'data_inicio' =>
+                    '2026-10-01',
+
+                'assinaturas' => [
+                    [
+                        'placeholder' =>
+                            'ASSINATURA_MOTORISTA',
+
+                        'modo' =>
+                            'remota',
+                    ],
+                ],
+            ]
+        )
+        ->assertCreated()
+        ->assertJsonPath(
+            'data.status',
+            'enviado'
+        );
+
+    $contratoId =
+        $response->json(
+            'data.id'
+        );
+
+    $assinatura =
+        AssinaturaDigital::query()
+        ->where(
+            'contrato_id',
+            $contratoId
+        )
+        ->firstOrFail();
+
+    $tokenAnterior =
+        $assinatura
+            ->token_verificacao;
+
+    $otpAnterior =
+        $assinatura
+            ->codigo_otp;
+
+    $this
+        ->withHeaders(
+            contratoHeaders()
+        )
+        ->postJson(
+            "/api/contratos/{$contratoId}/assinaturas/{$assinatura->id}/reenviar"
+        )
+        ->assertOk()
+        ->assertJsonPath(
+            'data.id',
+            $assinatura->id
+        )
+        ->assertJsonPath(
+            'data.status',
+            'pendente'
+        )
+        ->assertJsonMissingPath(
+            'data.codigo_otp'
+        )
+        ->assertJsonMissingPath(
+            'data.token_verificacao'
+        );
+
+    $assinatura
+        ->refresh();
+
+    expect(
+        $assinatura
+            ->token_verificacao
+    )->not->toBe(
+        $tokenAnterior
+    );
+
+    expect(
+        $assinatura
+            ->codigo_otp
+    )->not->toBe(
+        $otpAnterior
+    );
+
+    expect(
+        $assinatura
+            ->otp_expira_em
+    )->not->toBeNull();
+
+    Mail::assertSent(
+        RemoteSignatureRequestMail::class,
+        function (
+            RemoteSignatureRequestMail $mail
+        ) use (
+            $motorista,
+            $assinatura
+        ) {
+            return
+                $mail->hasTo(
+                    $motorista->email
+                ) &&
+                $mail->otp ===
+                    $assinatura
+                        ->codigo_otp &&
+                str_contains(
+                    $mail->signatureUrl,
+                    (string)
+                    $assinatura
+                        ->token_verificacao
+                );
+        }
+    );
+
+    $this->assertDatabaseHas(
+        'logs_auditoria_contratos',
+        [
+            'contrato_id' =>
+                $contratoId,
+
+            'tenant_id' =>
+                $tenant->id,
+
+            'user_id' =>
+                $user->id,
+
+            'acao' =>
+                'reenvio_assinatura_remota',
+        ]
+    );
 });

@@ -176,6 +176,51 @@ class ContratoController extends Controller
         ]);
     }
 
+    public function resendRemoteSignature(
+        Request $request,
+        string $id,
+        string $assinaturaId
+    ): JsonResponse {
+        $assinatura =
+            $this->contratoService
+            ->resendRemoteSignature(
+                $id,
+                $assinaturaId,
+                $this->tenantId(),
+                $request->user(),
+                $request->ip()
+            );
+
+        return response()->json([
+            'message' =>
+            'Solicitação de assinatura reenviada com sucesso.',
+
+            'data' => [
+                'id' =>
+                $assinatura->id,
+
+                'status' =>
+                $assinatura->status,
+
+                'signatario_nome' =>
+                $assinatura
+                    ->signatario_nome,
+
+                'signatario_email' =>
+                $assinatura
+                    ->signatario_email,
+
+                'solicitado_em' =>
+                $assinatura
+                    ->solicitado_em,
+
+                'otp_expira_em' =>
+                $assinatura
+                    ->otp_expira_em,
+            ],
+        ]);
+    }
+
     public function destroy(
         Request $request,
         string $id
