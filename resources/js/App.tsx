@@ -11,11 +11,16 @@ import MotoristasPage from "./pages/MotoristasPage";
 import ChecklistsPage from "./pages/ChecklistsPage";
 import TemplatesPage from "./pages/TemplatesPage";
 import ContratosPage from "./pages/ContratosPage";
+import RemoteSignaturePage from "./pages/RemoteSignaturePage";
 
 export default function App() {
     return (
         <Routes>
             <Route path="/login" element={<LoginPage />} />
+            <Route
+                path="/assinaturas/remotas/:token"
+                element={<RemoteSignaturePage />}
+            />
 
             <Route element={<ProtectedRoute />}>
                 <Route element={<AppShell />}>
@@ -47,6 +52,10 @@ export default function App() {
                     <Route path="contratos" element={<ContratosPage />} />
 
                     <Route path="templates" element={<TemplatesPage />} />
+                    <Route
+                        path="/assinaturas/remotas/:token"
+                        element={<RemoteSignaturePage />}
+                    />
                 </Route>
             </Route>
 
