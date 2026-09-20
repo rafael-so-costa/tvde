@@ -48,4 +48,10 @@ class Empresa extends Model
     {
         return $this->belongsTo(Tenant::class);
     }
+    public function recibosVerdes(): HasMany
+    {
+        return $this->hasMany(
+            ReciboVerde::class
+        );
+    }
 }

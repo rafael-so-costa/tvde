@@ -22,6 +22,7 @@ use App\Http\Controllers\ChecklistProcessRunController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeclaracaoController;
 use App\Http\Controllers\RegistoCriminalController;
+use App\Http\Controllers\ReciboVerdeController;
 
 
 Route::get(
@@ -56,6 +57,44 @@ Route::middleware('auth:sanctum')->group(function () {
     );
 
     Route::middleware('tenant')->group(function () {
+        Route::get(
+            '/recibos-verdes',
+            [ReciboVerdeController::class, 'index']
+        );
+
+        Route::get(
+            '/recibos-verdes/{id}',
+            [ReciboVerdeController::class, 'show']
+        );
+
+        Route::get(
+            '/recibos-verdes/{id}/arquivo',
+            [ReciboVerdeController::class, 'arquivo']
+        );
+
+        Route::get(
+            '/recibos-verdes/{id}/arquivo/download',
+            [ReciboVerdeController::class, 'downloadArquivo']
+        );
+
+        Route::post(
+            '/recibos-verdes',
+            [ReciboVerdeController::class, 'store']
+        );
+
+        Route::middleware(
+            'permission:recibos_verdes,configurar'
+        )->group(function () {
+            Route::post(
+                '/recibos-verdes/{id}/validar',
+                [ReciboVerdeController::class, 'approve']
+            );
+
+            Route::post(
+                '/recibos-verdes/{id}/rejeitar',
+                [ReciboVerdeController::class, 'reject']
+            );
+        });
         Route::get(
             '/registos-criminais',
             [RegistoCriminalController::class, 'index']

@@ -131,4 +131,10 @@ class Motorista extends Model
         RegistoCriminal::class
     );
 }
+public function recibosVerdes(): HasMany
+{
+    return $this->hasMany(
+        ReciboVerde::class
+    );
+}
 }
