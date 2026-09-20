@@ -1,0 +1,758 @@
+import {
+    useMemo,
+    useState,
+} from 'react';
+import {
+    useQuery,
+    useQueryClient,
+} from '@tanstack/react-query';
+import {
+    AlertCircle,
+    Eye,
+    FileText,
+    LoaderCircle,
+    RefreshCw,
+    Search,
+} from 'lucide-react';
+import api from '../lib/api';
+import {
+    useTenant,
+} from '../contexts/TenantContext';
+import ContratoDetailModal from '../components/contratos/ContratoDetailModal';
+import type {
+    Contrato,
+    ContratoStatus,
+    ContratoTipo,
+} from '../types/contrato';
+
+type StatusFilter =
+    | 'todos'
+    | ContratoStatus;
+
+type TypeFilter =
+    | 'todos'
+    | ContratoTipo;
+
+const statusLabels:
+    Record<
+        ContratoStatus,
+        string
+    > = {
+        rascunho:
+            'Rascunho',
+        enviado:
+            'Enviado',
+        assinado:
+            'Assinado',
+        cancelado:
+            'Cancelado',
+        renovado:
+            'Renovado',
+        expirado:
+            'Expirado',
+        encerrado:
+            'Encerrado',
+    };
+
+const statusClasses:
+    Record<
+        ContratoStatus,
+        string
+    > = {
+        rascunho:
+            'bg-slate-100 text-slate-700',
+        enviado:
+            'bg-amber-50 text-amber-700',
+        assinado:
+            'bg-emerald-50 text-emerald-700',
+        cancelado:
+            'bg-red-50 text-red-700',
+        renovado:
+            'bg-blue-50 text-blue-700',
+        expirado:
+            'bg-orange-50 text-orange-700',
+        encerrado:
+            'bg-slate-200 text-slate-600',
+    };
+
+const typeLabels:
+    Record<
+        ContratoTipo,
+        string
+    > = {
+        aluguer:
+            'Aluguer',
+        prestacao_servico:
+            'Prestação',
+        checklist_entrega:
+            'Checklist entrega',
+        checklist_devolucao:
+            'Checklist devolução',
+    };
+
+export default function ContratosPage() {
+    const {
+        tenant,
+    } = useTenant();
+
+    const queryClient =
+        useQueryClient();
+
+    const [
+        search,
+        setSearch,
+    ] = useState('');
+
+    const [
+        status,
+        setStatus,
+    ] =
+        useState<StatusFilter>(
+            'todos'
+        );
+
+    const [
+        type,
+        setType,
+    ] =
+        useState<TypeFilter>(
+            'todos'
+        );
+
+    const [
+        selectedId,
+        setSelectedId,
+    ] =
+        useState<string | null>(
+            null
+        );
+
+    const contractsQuery =
+        useQuery({
+            queryKey: [
+                'contratos',
+                tenant?.id,
+            ],
+
+            enabled:
+                Boolean(
+                    tenant?.id
+                ),
+
+            queryFn:
+                async () => {
+                    const response =
+                        await api.get(
+                            '/api/contratos'
+                        );
+
+                    return response
+                        .data
+                        .data as Contrato[];
+                },
+        });
+
+    async function refresh() {
+        await queryClient
+            .invalidateQueries({
+                queryKey: [
+                    'contratos',
+                    tenant?.id,
+                ],
+            });
+    }
+
+    const contracts =
+        useMemo(() => {
+            const list =
+                contractsQuery
+                    .data ??
+                [];
+
+            const term =
+                search
+                    .trim()
+                    .toLocaleLowerCase(
+                        'pt-PT'
+                    );
+
+            return list.filter(
+                (
+                    contract
+                ) => {
+                    if (
+                        status !==
+                            'todos' &&
+                        contract.status !==
+                            status
+                    ) {
+                        return false;
+                    }
+
+                    if (
+                        type !==
+                            'todos' &&
+                        contract.tipo !==
+                            type
+                    ) {
+                        return false;
+                    }
+
+                    if (!term) {
+                        return true;
+                    }
+
+                    return [
+                        contract
+                            .template
+                            ?.nome,
+                        contract
+                            .motorista
+                            ?.nome_completo,
+                        contract
+                            .veiculo
+                            ?.matricula,
+                        contract
+                            .veiculo
+                            ?.marca,
+                        contract
+                            .veiculo
+                            ?.modelo,
+                        contract
+                            .proprietario
+                            ?.nome_completo,
+                        contract
+                            .proprietario
+                            ?.nome_empresa,
+                        contract.status,
+                        contract.tipo,
+                    ]
+                        .filter(
+                            Boolean
+                        )
+                        .some(
+                            (
+                                value
+                            ) =>
+                                String(
+                                    value
+                                )
+                                    .toLocaleLowerCase(
+                                        'pt-PT'
+                                    )
+                                    .includes(
+                                        term
+                                    )
+                        );
+                }
+            );
+        }, [
+            contractsQuery.data,
+            search,
+            status,
+            type,
+        ]);
+
+    if (!tenant) {
+        return (
+            <div className="max-w-7xl mx-auto">
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 flex gap-4">
+                    <AlertCircle className="w-6 h-6 text-amber-600 shrink-0" />
+
+                    <div>
+                        <h1 className="font-semibold text-amber-900">
+                            Selecione uma organização
+                        </h1>
+
+                        <p className="mt-1 text-sm text-amber-700">
+                            Escolha uma organização antes de consultar contratos.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    const all =
+        contractsQuery.data ??
+        [];
+
+    return (
+        <div className="max-w-7xl mx-auto">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+                <div>
+                    <p className="text-sm font-medium text-indigo-600 mb-2">
+                        Documentação
+                    </p>
+
+                    <h1 className="text-3xl font-bold tracking-tight text-slate-950">
+                        Contratos
+                    </h1>
+
+                    <p className="mt-2 text-slate-500">
+                        Contratos, assinaturas, versões e processos da organização.
+                    </p>
+                </div>
+
+                <button
+                    type="button"
+                    disabled={
+                        contractsQuery
+                            .isFetching
+                    }
+                    onClick={
+                        refresh
+                    }
+                    className="h-11 px-4 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-600 flex items-center gap-2 disabled:opacity-50"
+                >
+                    <RefreshCw
+                        className={[
+                            'w-4 h-4',
+                            contractsQuery
+                                .isFetching
+                                ? 'animate-spin'
+                                : '',
+                        ].join(
+                            ' '
+                        )}
+                    />
+
+                    Atualizar
+                </button>
+            </div>
+
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <Stat
+                    label="Total"
+                    value={
+                        all.length
+                    }
+                />
+
+                <Stat
+                    label="Rascunhos"
+                    value={
+                        all.filter(
+                            (
+                                item
+                            ) =>
+                                item.status ===
+                                'rascunho'
+                        ).length
+                    }
+                />
+
+                <Stat
+                    label="Aguardando assinatura"
+                    value={
+                        all.filter(
+                            (
+                                item
+                            ) =>
+                                item.status ===
+                                'enviado'
+                        ).length
+                    }
+                />
+
+                <Stat
+                    label="Assinados"
+                    value={
+                        all.filter(
+                            (
+                                item
+                            ) =>
+                                item.status ===
+                                'assinado'
+                        ).length
+                    }
+                />
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+                <div className="p-5 border-b border-slate-200 grid lg:grid-cols-[1fr_220px_220px] gap-3">
+                    <div className="relative">
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+
+                        <input
+                            value={
+                                search
+                            }
+                            onChange={(
+                                event
+                            ) =>
+                                setSearch(
+                                    event
+                                        .target
+                                        .value
+                                )
+                            }
+                            placeholder="Pesquisar motorista, matrícula, template..."
+                            className="w-full h-11 rounded-xl border border-slate-200 pl-10 pr-4 text-sm outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
+                        />
+                    </div>
+
+                    <select
+                        value={
+                            status
+                        }
+                        onChange={(
+                            event
+                        ) =>
+                            setStatus(
+                                event
+                                    .target
+                                    .value as StatusFilter
+                            )
+                        }
+                        className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm"
+                    >
+                        <option value="todos">
+                            Todos os estados
+                        </option>
+
+                        {Object.entries(
+                            statusLabels
+                        ).map(
+                            ([
+                                value,
+                                label,
+                            ]) => (
+                                <option
+                                    key={
+                                        value
+                                    }
+                                    value={
+                                        value
+                                    }
+                                >
+                                    {
+                                        label
+                                    }
+                                </option>
+                            )
+                        )}
+                    </select>
+
+                    <select
+                        value={
+                            type
+                        }
+                        onChange={(
+                            event
+                        ) =>
+                            setType(
+                                event
+                                    .target
+                                    .value as TypeFilter
+                            )
+                        }
+                        className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm"
+                    >
+                        <option value="todos">
+                            Todos os tipos
+                        </option>
+
+                        {Object.entries(
+                            typeLabels
+                        ).map(
+                            ([
+                                value,
+                                label,
+                            ]) => (
+                                <option
+                                    key={
+                                        value
+                                    }
+                                    value={
+                                        value
+                                    }
+                                >
+                                    {
+                                        label
+                                    }
+                                </option>
+                            )
+                        )}
+                    </select>
+                </div>
+
+                {contractsQuery.isLoading ? (
+                    <div className="py-20 flex justify-center">
+                        <LoaderCircle className="w-8 h-8 animate-spin text-indigo-600" />
+                    </div>
+                ) : contractsQuery.isError ? (
+                    <div className="py-16 px-6 text-center">
+                        <AlertCircle className="w-10 h-10 mx-auto text-red-500" />
+
+                        <h3 className="mt-3 font-semibold text-slate-900">
+                            Não foi possível carregar os contratos
+                        </h3>
+                    </div>
+                ) : contracts.length ===
+                  0 ? (
+                    <div className="py-20 px-6 text-center">
+                        <FileText className="w-12 h-12 mx-auto text-indigo-400" />
+
+                        <h3 className="mt-4 font-semibold text-slate-900">
+                            Nenhum contrato encontrado
+                        </h3>
+
+                        <p className="mt-2 text-sm text-slate-500">
+                            Os contratos criados pela plataforma aparecerão aqui.
+                        </p>
+                    </div>
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left">
+                            <thead className="bg-slate-50 border-b border-slate-200">
+                                <tr>
+                                    <Th>
+                                        Contrato
+                                    </Th>
+
+                                    <Th>
+                                        Motorista
+                                    </Th>
+
+                                    <Th>
+                                        Veículo
+                                    </Th>
+
+                                    <Th>
+                                        Período
+                                    </Th>
+
+                                    <Th>
+                                        Processo
+                                    </Th>
+
+                                    <Th>
+                                        Estado
+                                    </Th>
+
+                                    <Th>
+                                        Ações
+                                    </Th>
+                                </tr>
+                            </thead>
+
+                            <tbody className="divide-y divide-slate-100">
+                                {contracts.map(
+                                    (
+                                        contract
+                                    ) => (
+                                        <tr
+                                            key={
+                                                contract.id
+                                            }
+                                            className="hover:bg-slate-50 transition"
+                                        >
+                                            <td className="px-5 py-4">
+                                                <div className="font-semibold text-sm text-slate-900">
+                                                    {contract
+                                                        .template
+                                                        ?.nome ??
+                                                        typeLabels[
+                                                            contract.tipo
+                                                        ]}
+                                                </div>
+
+                                                <div className="mt-1 text-xs text-slate-400">
+                                                    {
+                                                        typeLabels[
+                                                            contract.tipo
+                                                        ]
+                                                    }{' '}
+                                                    · v
+                                                    {
+                                                        contract.versao_atual
+                                                    }
+                                                </div>
+                                            </td>
+
+                                            <td className="px-5 py-4 text-sm text-slate-600">
+                                                {contract
+                                                    .motorista
+                                                    ?.nome_completo ??
+                                                    '—'}
+                                            </td>
+
+                                            <td className="px-5 py-4">
+                                                <div className="text-sm font-medium text-slate-800">
+                                                    {contract
+                                                        .veiculo
+                                                        ?.matricula ??
+                                                        '—'}
+                                                </div>
+
+                                                {contract
+                                                    .veiculo && (
+                                                    <div className="mt-1 text-xs text-slate-400">
+                                                        {
+                                                            contract
+                                                                .veiculo
+                                                                .marca
+                                                        }{' '}
+                                                        {
+                                                            contract
+                                                                .veiculo
+                                                                .modelo
+                                                        }
+                                                    </div>
+                                                )}
+                                            </td>
+
+                                            <td className="px-5 py-4 text-sm text-slate-600 whitespace-nowrap">
+                                                {dateLabel(
+                                                    contract.data_inicio
+                                                )}
+                                                {' → '}
+                                                {dateLabel(
+                                                    contract.data_fim
+                                                )}
+                                            </td>
+
+                                            <td className="px-5 py-4">
+                                                {contract
+                                                    .checklist_process_run ? (
+                                                    <span
+                                                        className={[
+                                                            'inline-flex rounded-full px-2.5 py-1 text-xs font-semibold',
+                                                            contract
+                                                                .checklist_process_run
+                                                                .status ===
+                                                            'concluido'
+                                                                ? 'bg-emerald-50 text-emerald-700'
+                                                                : 'bg-amber-50 text-amber-700',
+                                                        ].join(
+                                                            ' '
+                                                        )}
+                                                    >
+                                                        {contract
+                                                            .checklist_process_run
+                                                            .status ===
+                                                        'concluido'
+                                                            ? 'Concluído'
+                                                            : 'Em andamento'}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-xs text-slate-400">
+                                                        Sem checklist
+                                                    </span>
+                                                )}
+                                            </td>
+
+                                            <td className="px-5 py-4">
+                                                <span
+                                                    className={[
+                                                        'inline-flex rounded-full px-2.5 py-1 text-xs font-semibold',
+                                                        statusClasses[
+                                                            contract.status
+                                                        ],
+                                                    ].join(
+                                                        ' '
+                                                    )}
+                                                >
+                                                    {
+                                                        statusLabels[
+                                                            contract.status
+                                                        ]
+                                                    }
+                                                </span>
+                                            </td>
+
+                                            <td className="px-5 py-4">
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        setSelectedId(
+                                                            contract.id
+                                                        )
+                                                    }
+                                                    className="h-9 px-3 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 flex items-center gap-2"
+                                                >
+                                                    <Eye className="w-4 h-4" />
+                                                    Ver
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    )
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
+
+            {selectedId && (
+                <ContratoDetailModal
+                    id={
+                        selectedId
+                    }
+                    onClose={() =>
+                        setSelectedId(
+                            null
+                        )
+                    }
+                    onChanged={
+                        refresh
+                    }
+                />
+            )}
+        </div>
+    );
+}
+
+function Stat({
+    label,
+    value,
+}: {
+    label: string;
+    value: number;
+}) {
+    return (
+        <div className="rounded-2xl border border-slate-200 bg-white p-5">
+            <p className="text-sm text-slate-500">
+                {label}
+            </p>
+
+            <p className="mt-2 text-2xl font-bold text-slate-950">
+                {value}
+            </p>
+        </div>
+    );
+}
+
+function Th({
+    children,
+}: {
+    children: string;
+}) {
+    return (
+        <th className="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+            {children}
+        </th>
+    );
+}
+
+function dateLabel(
+    value:
+        | string
+        | null
+): string {
+    if (!value) {
+        return '—';
+    }
+
+    return new Intl.DateTimeFormat(
+        'pt-PT'
+    ).format(
+        new Date(
+            `${value.slice(
+                0,
+                10
+            )}T12:00:00`
+        )
+    );
+}
