@@ -1,11 +1,5 @@
-import {
-    useMemo,
-    useState,
-} from 'react';
-import {
-    useQuery,
-    useQueryClient,
-} from '@tanstack/react-query';
+import { useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
     AlertCircle,
     Eye,
@@ -13,245 +7,182 @@ import {
     LoaderCircle,
     RefreshCw,
     Search,
-} from 'lucide-react';
-import api from '../lib/api';
-import {
-    useTenant,
-} from '../contexts/TenantContext';
-import ContratoDetailModal from '../components/contratos/ContratoDetailModal';
-import type {
-    Contrato,
-    ContratoStatus,
-    ContratoTipo,
-} from '../types/contrato';
+    Pencil,
+    Plus,
+} from "lucide-react";
+import api from "../lib/api";
+import { useTenant } from "../contexts/TenantContext";
+import ContratoFormModal from "../components/contratos/ContratoFormModal";
+import ContratoDetailModal from "../components/contratos/ContratoDetailModal";
+import type { Contrato, ContratoStatus, ContratoTipo } from "../types/contrato";
 
-type StatusFilter =
-    | 'todos'
-    | ContratoStatus;
+import type { Empresa } from "../types/empresa";
+import type { Motorista } from "../types/motorista";
+import type { Proprietario } from "../types/proprietario";
+import type { TemplateContrato } from "../types/template";
+import type { Veiculo } from "../types/veiculo";
 
-type TypeFilter =
-    | 'todos'
-    | ContratoTipo;
+type StatusFilter = "todos" | ContratoStatus;
 
-const statusLabels:
-    Record<
-        ContratoStatus,
-        string
-    > = {
-        rascunho:
-            'Rascunho',
-        enviado:
-            'Enviado',
-        assinado:
-            'Assinado',
-        cancelado:
-            'Cancelado',
-        renovado:
-            'Renovado',
-        expirado:
-            'Expirado',
-        encerrado:
-            'Encerrado',
-    };
+type TypeFilter = "todos" | ContratoTipo;
 
-const statusClasses:
-    Record<
-        ContratoStatus,
-        string
-    > = {
-        rascunho:
-            'bg-slate-100 text-slate-700',
-        enviado:
-            'bg-amber-50 text-amber-700',
-        assinado:
-            'bg-emerald-50 text-emerald-700',
-        cancelado:
-            'bg-red-50 text-red-700',
-        renovado:
-            'bg-blue-50 text-blue-700',
-        expirado:
-            'bg-orange-50 text-orange-700',
-        encerrado:
-            'bg-slate-200 text-slate-600',
-    };
+const statusLabels: Record<ContratoStatus, string> = {
+    rascunho: "Rascunho",
+    enviado: "Enviado",
+    assinado: "Assinado",
+    cancelado: "Cancelado",
+    renovado: "Renovado",
+    expirado: "Expirado",
+    encerrado: "Encerrado",
+};
 
-const typeLabels:
-    Record<
-        ContratoTipo,
-        string
-    > = {
-        aluguer:
-            'Aluguer',
-        prestacao_servico:
-            'Prestação',
-        checklist_entrega:
-            'Checklist entrega',
-        checklist_devolucao:
-            'Checklist devolução',
-    };
+const statusClasses: Record<ContratoStatus, string> = {
+    rascunho: "bg-slate-100 text-slate-700",
+    enviado: "bg-amber-50 text-amber-700",
+    assinado: "bg-emerald-50 text-emerald-700",
+    cancelado: "bg-red-50 text-red-700",
+    renovado: "bg-blue-50 text-blue-700",
+    expirado: "bg-orange-50 text-orange-700",
+    encerrado: "bg-slate-200 text-slate-600",
+};
+
+const typeLabels: Record<ContratoTipo, string> = {
+    aluguer: "Aluguer",
+    prestacao_servico: "Prestação",
+    checklist_entrega: "Checklist entrega",
+    checklist_devolucao: "Checklist devolução",
+};
 
 export default function ContratosPage() {
-    const {
-        tenant,
-    } = useTenant();
+    const { tenant } = useTenant();
 
-    const queryClient =
-        useQueryClient();
+    const queryClient = useQueryClient();
 
-    const [
-        search,
-        setSearch,
-    ] = useState('');
+    const [search, setSearch] = useState("");
 
-    const [
-        status,
-        setStatus,
-    ] =
-        useState<StatusFilter>(
-            'todos'
-        );
+    const [status, setStatus] = useState<StatusFilter>("todos");
 
-    const [
-        type,
-        setType,
-    ] =
-        useState<TypeFilter>(
-            'todos'
-        );
+    const [type, setType] = useState<TypeFilter>("todos");
 
-    const [
-        selectedId,
-        setSelectedId,
-    ] =
-        useState<string | null>(
-            null
-        );
+    const [selectedId, setSelectedId] = useState<string | null>(null);
 
-    const contractsQuery =
-        useQuery({
-            queryKey: [
-                'contratos',
-                tenant?.id,
-            ],
+    const [formOpen, setFormOpen] = useState(false);
 
-            enabled:
-                Boolean(
-                    tenant?.id
-                ),
+    const [editing, setEditing] = useState<Contrato | null>(null);
 
-            queryFn:
-                async () => {
-                    const response =
-                        await api.get(
-                            '/api/contratos'
-                        );
+    const contractsQuery = useQuery({
+        queryKey: ["contratos", tenant?.id],
 
-                    return response
-                        .data
-                        .data as Contrato[];
-                },
-        });
+        enabled: Boolean(tenant?.id),
+
+        queryFn: async () => {
+            const response = await api.get("/api/contratos");
+
+            return response.data.data as Contrato[];
+        },
+    });
+
+    const templatesQuery = useQuery({
+        queryKey: ["contract-form-templates", tenant?.id],
+
+        enabled: Boolean(tenant?.id && formOpen),
+
+        queryFn: async () => {
+            const response = await api.get("/api/templates-contrato");
+
+            return response.data.data as TemplateContrato[];
+        },
+    });
+
+    const motoristasQuery = useQuery({
+        queryKey: ["contract-form-motoristas", tenant?.id],
+
+        enabled: Boolean(tenant?.id && formOpen),
+
+        queryFn: async () => {
+            const response = await api.get("/api/motoristas");
+
+            return response.data.data as Motorista[];
+        },
+    });
+
+    const veiculosQuery = useQuery({
+        queryKey: ["contract-form-veiculos", tenant?.id],
+
+        enabled: Boolean(tenant?.id && formOpen),
+
+        queryFn: async () => {
+            const response = await api.get("/api/veiculos");
+
+            return response.data.data as Veiculo[];
+        },
+    });
+
+    const proprietariosQuery = useQuery({
+        queryKey: ["contract-form-proprietarios", tenant?.id],
+
+        enabled: Boolean(tenant?.id && formOpen),
+
+        queryFn: async () => {
+            const response = await api.get("/api/proprietarios");
+
+            return response.data.data as Proprietario[];
+        },
+    });
+
+    const empresasQuery = useQuery({
+        queryKey: ["contract-form-empresas", tenant?.id],
+
+        enabled: Boolean(tenant?.id && formOpen),
+
+        queryFn: async () => {
+            const response = await api.get("/api/empresas");
+
+            return response.data.data as Empresa[];
+        },
+    });
 
     async function refresh() {
-        await queryClient
-            .invalidateQueries({
-                queryKey: [
-                    'contratos',
-                    tenant?.id,
-                ],
-            });
+        await queryClient.invalidateQueries({
+            queryKey: ["contratos", tenant?.id],
+        });
     }
 
-    const contracts =
-        useMemo(() => {
-            const list =
-                contractsQuery
-                    .data ??
-                [];
+    const contracts = useMemo(() => {
+        const list = contractsQuery.data ?? [];
 
-            const term =
-                search
-                    .trim()
-                    .toLocaleLowerCase(
-                        'pt-PT'
-                    );
+        const term = search.trim().toLocaleLowerCase("pt-PT");
 
-            return list.filter(
-                (
-                    contract
-                ) => {
-                    if (
-                        status !==
-                            'todos' &&
-                        contract.status !==
-                            status
-                    ) {
-                        return false;
-                    }
+        return list.filter((contract) => {
+            if (status !== "todos" && contract.status !== status) {
+                return false;
+            }
 
-                    if (
-                        type !==
-                            'todos' &&
-                        contract.tipo !==
-                            type
-                    ) {
-                        return false;
-                    }
+            if (type !== "todos" && contract.tipo !== type) {
+                return false;
+            }
 
-                    if (!term) {
-                        return true;
-                    }
+            if (!term) {
+                return true;
+            }
 
-                    return [
-                        contract
-                            .template
-                            ?.nome,
-                        contract
-                            .motorista
-                            ?.nome_completo,
-                        contract
-                            .veiculo
-                            ?.matricula,
-                        contract
-                            .veiculo
-                            ?.marca,
-                        contract
-                            .veiculo
-                            ?.modelo,
-                        contract
-                            .proprietario
-                            ?.nome_completo,
-                        contract
-                            .proprietario
-                            ?.nome_empresa,
-                        contract.status,
-                        contract.tipo,
-                    ]
-                        .filter(
-                            Boolean
-                        )
-                        .some(
-                            (
-                                value
-                            ) =>
-                                String(
-                                    value
-                                )
-                                    .toLocaleLowerCase(
-                                        'pt-PT'
-                                    )
-                                    .includes(
-                                        term
-                                    )
-                        );
-                }
-            );
-        }, [
-            contractsQuery.data,
-            search,
-            status,
-            type,
-        ]);
+            return [
+                contract.template?.nome,
+                contract.motorista?.nome_completo,
+                contract.veiculo?.matricula,
+                contract.veiculo?.marca,
+                contract.veiculo?.modelo,
+                contract.proprietario?.nome_completo,
+                contract.proprietario?.nome_empresa,
+                contract.status,
+                contract.tipo,
+            ]
+                .filter(Boolean)
+                .some((value) =>
+                    String(value).toLocaleLowerCase("pt-PT").includes(term),
+                );
+        });
+    }, [contractsQuery.data, search, status, type]);
 
     if (!tenant) {
         return (
@@ -265,7 +196,8 @@ export default function ContratosPage() {
                         </h1>
 
                         <p className="mt-1 text-sm text-amber-700">
-                            Escolha uma organização antes de consultar contratos.
+                            Escolha uma organização antes de consultar
+                            contratos.
                         </p>
                     </div>
                 </div>
@@ -273,9 +205,7 @@ export default function ContratosPage() {
         );
     }
 
-    const all =
-        contractsQuery.data ??
-        [];
+    const all = contractsQuery.data ?? [];
 
     return (
         <div className="max-w-7xl mx-auto">
@@ -290,81 +220,63 @@ export default function ContratosPage() {
                     </h1>
 
                     <p className="mt-2 text-slate-500">
-                        Contratos, assinaturas, versões e processos da organização.
+                        Contratos, assinaturas, versões e processos da
+                        organização.
                     </p>
                 </div>
 
-                <button
-                    type="button"
-                    disabled={
-                        contractsQuery
-                            .isFetching
-                    }
-                    onClick={
-                        refresh
-                    }
-                    className="h-11 px-4 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-600 flex items-center gap-2 disabled:opacity-50"
-                >
-                    <RefreshCw
-                        className={[
-                            'w-4 h-4',
-                            contractsQuery
-                                .isFetching
-                                ? 'animate-spin'
-                                : '',
-                        ].join(
-                            ' '
-                        )}
-                    />
+                <div className="flex gap-3">
+                    <button
+                        type="button"
+                        disabled={contractsQuery.isFetching}
+                        onClick={refresh}
+                        className="h-11 px-4 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-600 flex items-center gap-2 disabled:opacity-50"
+                    >
+                        <RefreshCw
+                            className={[
+                                "w-4 h-4",
+                                contractsQuery.isFetching ? "animate-spin" : "",
+                            ].join(" ")}
+                        />
+                        Atualizar
+                    </button>
 
-                    Atualizar
-                </button>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setEditing(null);
+
+                            setFormOpen(true);
+                        }}
+                        className="h-11 px-5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold flex items-center gap-2"
+                    >
+                        <Plus className="w-4 h-4" />
+                        Novo contrato
+                    </button>
+                </div>
             </div>
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                <Stat
-                    label="Total"
-                    value={
-                        all.length
-                    }
-                />
+                <Stat label="Total" value={all.length} />
 
                 <Stat
                     label="Rascunhos"
                     value={
-                        all.filter(
-                            (
-                                item
-                            ) =>
-                                item.status ===
-                                'rascunho'
-                        ).length
+                        all.filter((item) => item.status === "rascunho").length
                     }
                 />
 
                 <Stat
                     label="Aguardando assinatura"
                     value={
-                        all.filter(
-                            (
-                                item
-                            ) =>
-                                item.status ===
-                                'enviado'
-                        ).length
+                        all.filter((item) => item.status === "enviado").length
                     }
                 />
 
                 <Stat
                     label="Assinados"
                     value={
-                        all.filter(
-                            (
-                                item
-                            ) =>
-                                item.status ===
-                                'assinado'
-                        ).length
+                        all.filter((item) => item.status === "assinado").length
                     }
                 />
             </div>
@@ -375,105 +287,43 @@ export default function ContratosPage() {
                         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
 
                         <input
-                            value={
-                                search
-                            }
-                            onChange={(
-                                event
-                            ) =>
-                                setSearch(
-                                    event
-                                        .target
-                                        .value
-                                )
-                            }
+                            value={search}
+                            onChange={(event) => setSearch(event.target.value)}
                             placeholder="Pesquisar motorista, matrícula, template..."
                             className="w-full h-11 rounded-xl border border-slate-200 pl-10 pr-4 text-sm outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
                         />
                     </div>
 
                     <select
-                        value={
-                            status
-                        }
-                        onChange={(
-                            event
-                        ) =>
-                            setStatus(
-                                event
-                                    .target
-                                    .value as StatusFilter
-                            )
+                        value={status}
+                        onChange={(event) =>
+                            setStatus(event.target.value as StatusFilter)
                         }
                         className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm"
                     >
-                        <option value="todos">
-                            Todos os estados
-                        </option>
+                        <option value="todos">Todos os estados</option>
 
-                        {Object.entries(
-                            statusLabels
-                        ).map(
-                            ([
-                                value,
-                                label,
-                            ]) => (
-                                <option
-                                    key={
-                                        value
-                                    }
-                                    value={
-                                        value
-                                    }
-                                >
-                                    {
-                                        label
-                                    }
-                                </option>
-                            )
-                        )}
+                        {Object.entries(statusLabels).map(([value, label]) => (
+                            <option key={value} value={value}>
+                                {label}
+                            </option>
+                        ))}
                     </select>
 
                     <select
-                        value={
-                            type
-                        }
-                        onChange={(
-                            event
-                        ) =>
-                            setType(
-                                event
-                                    .target
-                                    .value as TypeFilter
-                            )
+                        value={type}
+                        onChange={(event) =>
+                            setType(event.target.value as TypeFilter)
                         }
                         className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm"
                     >
-                        <option value="todos">
-                            Todos os tipos
-                        </option>
+                        <option value="todos">Todos os tipos</option>
 
-                        {Object.entries(
-                            typeLabels
-                        ).map(
-                            ([
-                                value,
-                                label,
-                            ]) => (
-                                <option
-                                    key={
-                                        value
-                                    }
-                                    value={
-                                        value
-                                    }
-                                >
-                                    {
-                                        label
-                                    }
-                                </option>
-                            )
-                        )}
+                        {Object.entries(typeLabels).map(([value, label]) => (
+                            <option key={value} value={value}>
+                                {label}
+                            </option>
+                        ))}
                     </select>
                 </div>
 
@@ -489,8 +339,7 @@ export default function ContratosPage() {
                             Não foi possível carregar os contratos
                         </h3>
                     </div>
-                ) : contracts.length ===
-                  0 ? (
+                ) : contracts.length === 0 ? (
                     <div className="py-20 px-6 text-center">
                         <FileText className="w-12 h-12 mx-auto text-indigo-400" />
 
@@ -499,7 +348,8 @@ export default function ContratosPage() {
                         </h3>
 
                         <p className="mt-2 text-sm text-slate-500">
-                            Os contratos criados pela plataforma aparecerão aqui.
+                            Os contratos criados pela plataforma aparecerão
+                            aqui.
                         </p>
                     </div>
                 ) : (
@@ -507,167 +357,111 @@ export default function ContratosPage() {
                         <table className="w-full text-left">
                             <thead className="bg-slate-50 border-b border-slate-200">
                                 <tr>
-                                    <Th>
-                                        Contrato
-                                    </Th>
+                                    <Th>Contrato</Th>
 
-                                    <Th>
-                                        Motorista
-                                    </Th>
+                                    <Th>Motorista</Th>
 
-                                    <Th>
-                                        Veículo
-                                    </Th>
+                                    <Th>Veículo</Th>
 
-                                    <Th>
-                                        Período
-                                    </Th>
+                                    <Th>Período</Th>
 
-                                    <Th>
-                                        Processo
-                                    </Th>
+                                    <Th>Processo</Th>
 
-                                    <Th>
-                                        Estado
-                                    </Th>
+                                    <Th>Estado</Th>
 
-                                    <Th>
-                                        Ações
-                                    </Th>
+                                    <Th>Ações</Th>
                                 </tr>
                             </thead>
 
                             <tbody className="divide-y divide-slate-100">
-                                {contracts.map(
-                                    (
-                                        contract
-                                    ) => (
-                                        <tr
-                                            key={
-                                                contract.id
-                                            }
-                                            className="hover:bg-slate-50 transition"
-                                        >
-                                            <td className="px-5 py-4">
-                                                <div className="font-semibold text-sm text-slate-900">
-                                                    {contract
-                                                        .template
-                                                        ?.nome ??
-                                                        typeLabels[
-                                                            contract.tipo
-                                                        ]}
-                                                </div>
+                                {contracts.map((contract) => (
+                                    <tr
+                                        key={contract.id}
+                                        className="hover:bg-slate-50 transition"
+                                    >
+                                        <td className="px-5 py-4">
+                                            <div className="font-semibold text-sm text-slate-900">
+                                                {contract.template?.nome ??
+                                                    typeLabels[contract.tipo]}
+                                            </div>
 
+                                            <div className="mt-1 text-xs text-slate-400">
+                                                {typeLabels[contract.tipo]} · v
+                                                {contract.versao_atual}
+                                            </div>
+                                        </td>
+
+                                        <td className="px-5 py-4 text-sm text-slate-600">
+                                            {contract.motorista
+                                                ?.nome_completo ?? "—"}
+                                        </td>
+
+                                        <td className="px-5 py-4">
+                                            <div className="text-sm font-medium text-slate-800">
+                                                {contract.veiculo?.matricula ??
+                                                    "—"}
+                                            </div>
+
+                                            {contract.veiculo && (
                                                 <div className="mt-1 text-xs text-slate-400">
-                                                    {
-                                                        typeLabels[
-                                                            contract.tipo
-                                                        ]
-                                                    }{' '}
-                                                    · v
-                                                    {
-                                                        contract.versao_atual
-                                                    }
+                                                    {contract.veiculo.marca}{" "}
+                                                    {contract.veiculo.modelo}
                                                 </div>
-                                            </td>
+                                            )}
+                                        </td>
 
-                                            <td className="px-5 py-4 text-sm text-slate-600">
-                                                {contract
-                                                    .motorista
-                                                    ?.nome_completo ??
-                                                    '—'}
-                                            </td>
+                                        <td className="px-5 py-4 text-sm text-slate-600 whitespace-nowrap">
+                                            {dateLabel(contract.data_inicio)}
+                                            {" → "}
+                                            {dateLabel(contract.data_fim)}
+                                        </td>
 
-                                            <td className="px-5 py-4">
-                                                <div className="text-sm font-medium text-slate-800">
-                                                    {contract
-                                                        .veiculo
-                                                        ?.matricula ??
-                                                        '—'}
-                                                </div>
-
-                                                {contract
-                                                    .veiculo && (
-                                                    <div className="mt-1 text-xs text-slate-400">
-                                                        {
-                                                            contract
-                                                                .veiculo
-                                                                .marca
-                                                        }{' '}
-                                                        {
-                                                            contract
-                                                                .veiculo
-                                                                .modelo
-                                                        }
-                                                    </div>
-                                                )}
-                                            </td>
-
-                                            <td className="px-5 py-4 text-sm text-slate-600 whitespace-nowrap">
-                                                {dateLabel(
-                                                    contract.data_inicio
-                                                )}
-                                                {' → '}
-                                                {dateLabel(
-                                                    contract.data_fim
-                                                )}
-                                            </td>
-
-                                            <td className="px-5 py-4">
-                                                {contract
-                                                    .checklist_process_run ? (
-                                                    <span
-                                                        className={[
-                                                            'inline-flex rounded-full px-2.5 py-1 text-xs font-semibold',
-                                                            contract
-                                                                .checklist_process_run
-                                                                .status ===
-                                                            'concluido'
-                                                                ? 'bg-emerald-50 text-emerald-700'
-                                                                : 'bg-amber-50 text-amber-700',
-                                                        ].join(
-                                                            ' '
-                                                        )}
-                                                    >
-                                                        {contract
-                                                            .checklist_process_run
-                                                            .status ===
-                                                        'concluido'
-                                                            ? 'Concluído'
-                                                            : 'Em andamento'}
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-xs text-slate-400">
-                                                        Sem checklist
-                                                    </span>
-                                                )}
-                                            </td>
-
-                                            <td className="px-5 py-4">
+                                        <td className="px-5 py-4">
+                                            {contract.checklist_process_run ? (
                                                 <span
                                                     className={[
-                                                        'inline-flex rounded-full px-2.5 py-1 text-xs font-semibold',
-                                                        statusClasses[
-                                                            contract.status
-                                                        ],
-                                                    ].join(
-                                                        ' '
-                                                    )}
+                                                        "inline-flex rounded-full px-2.5 py-1 text-xs font-semibold",
+                                                        contract
+                                                            .checklist_process_run
+                                                            .status ===
+                                                        "concluido"
+                                                            ? "bg-emerald-50 text-emerald-700"
+                                                            : "bg-amber-50 text-amber-700",
+                                                    ].join(" ")}
                                                 >
-                                                    {
-                                                        statusLabels[
-                                                            contract.status
-                                                        ]
-                                                    }
+                                                    {contract
+                                                        .checklist_process_run
+                                                        .status === "concluido"
+                                                        ? "Concluído"
+                                                        : "Em andamento"}
                                                 </span>
-                                            </td>
+                                            ) : (
+                                                <span className="text-xs text-slate-400">
+                                                    Sem checklist
+                                                </span>
+                                            )}
+                                        </td>
 
-                                            <td className="px-5 py-4">
+                                        <td className="px-5 py-4">
+                                            <span
+                                                className={[
+                                                    "inline-flex rounded-full px-2.5 py-1 text-xs font-semibold",
+                                                    statusClasses[
+                                                        contract.status
+                                                    ],
+                                                ].join(" ")}
+                                            >
+                                                {statusLabels[contract.status]}
+                                            </span>
+                                        </td>
+
+                                        <td className="px-5 py-4">
+                                            <div className="flex items-center gap-2">
                                                 <button
                                                     type="button"
                                                     onClick={() =>
                                                         setSelectedId(
-                                                            contract.id
+                                                            contract.id,
                                                         )
                                                     }
                                                     className="h-9 px-3 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 flex items-center gap-2"
@@ -675,10 +469,31 @@ export default function ContratosPage() {
                                                     <Eye className="w-4 h-4" />
                                                     Ver
                                                 </button>
-                                            </td>
-                                        </tr>
-                                    )
-                                )}
+
+                                                {contract.status ===
+                                                    "rascunho" &&
+                                                    !contract.bloqueado && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setEditing(
+                                                                    contract,
+                                                                );
+
+                                                                setFormOpen(
+                                                                    true,
+                                                                );
+                                                            }}
+                                                            className="h-9 px-3 rounded-lg bg-indigo-50 text-sm font-medium text-indigo-700 flex items-center gap-2"
+                                                        >
+                                                            <Pencil className="w-4 h-4" />
+                                                            Editar
+                                                        </button>
+                                                    )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
                             </tbody>
                         </table>
                     </div>
@@ -687,48 +502,48 @@ export default function ContratosPage() {
 
             {selectedId && (
                 <ContratoDetailModal
-                    id={
-                        selectedId
-                    }
-                    onClose={() =>
-                        setSelectedId(
-                            null
-                        )
-                    }
-                    onChanged={
-                        refresh
-                    }
+                    id={selectedId}
+                    onClose={() => setSelectedId(null)}
+                    onChanged={refresh}
+                />
+            )}
+
+            {formOpen && (
+                <ContratoFormModal
+                    open={formOpen}
+                    contract={editing}
+                    templates={templatesQuery.data ?? []}
+                    motoristas={motoristasQuery.data ?? []}
+                    veiculos={veiculosQuery.data ?? []}
+                    proprietarios={proprietariosQuery.data ?? []}
+                    empresas={empresasQuery.data ?? []}
+                    onClose={() => {
+                        setFormOpen(false);
+
+                        setEditing(null);
+                    }}
+                    onSuccess={async (contract) => {
+                        await refresh();
+
+                        setSelectedId(contract.id);
+                    }}
                 />
             )}
         </div>
     );
 }
 
-function Stat({
-    label,
-    value,
-}: {
-    label: string;
-    value: number;
-}) {
+function Stat({ label, value }: { label: string; value: number }) {
     return (
         <div className="rounded-2xl border border-slate-200 bg-white p-5">
-            <p className="text-sm text-slate-500">
-                {label}
-            </p>
+            <p className="text-sm text-slate-500">{label}</p>
 
-            <p className="mt-2 text-2xl font-bold text-slate-950">
-                {value}
-            </p>
+            <p className="mt-2 text-2xl font-bold text-slate-950">{value}</p>
         </div>
     );
 }
 
-function Th({
-    children,
-}: {
-    children: string;
-}) {
+function Th({ children }: { children: string }) {
     return (
         <th className="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
             {children}
@@ -736,23 +551,12 @@ function Th({
     );
 }
 
-function dateLabel(
-    value:
-        | string
-        | null
-): string {
+function dateLabel(value: string | null): string {
     if (!value) {
-        return '—';
+        return "—";
     }
 
-    return new Intl.DateTimeFormat(
-        'pt-PT'
-    ).format(
-        new Date(
-            `${value.slice(
-                0,
-                10
-            )}T12:00:00`
-        )
+    return new Intl.DateTimeFormat("pt-PT").format(
+        new Date(`${value.slice(0, 10)}T12:00:00`),
     );
 }
