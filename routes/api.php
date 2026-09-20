@@ -20,6 +20,7 @@ use App\Http\Controllers\ChecklistRecordController;
 use App\Http\Controllers\ChecklistProcessTemplateController;
 use App\Http\Controllers\ChecklistProcessRunController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DeclaracaoController;
 
 
 Route::get(
@@ -201,6 +202,53 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post(
                 '/contratos/{id}/pdf',
                 [ContratoController::class, 'generatePdf']
+            );
+        });
+        Route::middleware(
+            'permission:declaracoes,visualizar'
+        )->group(function () {
+            Route::get(
+                '/declaracoes',
+                [DeclaracaoController::class, 'index']
+            );
+
+            Route::get(
+                '/declaracoes/{id}',
+                [DeclaracaoController::class, 'show']
+            );
+
+            Route::get(
+                '/declaracoes/{id}/pdf',
+                [DeclaracaoController::class, 'pdf']
+            );
+
+            Route::get(
+                '/declaracoes/{id}/pdf/download',
+                [DeclaracaoController::class, 'downloadPdf']
+            );
+        });
+
+        Route::middleware(
+            'permission:declaracoes,configurar'
+        )->group(function () {
+            Route::post(
+                '/declaracoes',
+                [DeclaracaoController::class, 'store']
+            );
+
+            Route::patch(
+                '/declaracoes/{id}',
+                [DeclaracaoController::class, 'update']
+            );
+
+            Route::post(
+                '/declaracoes/{id}/emitir',
+                [DeclaracaoController::class, 'issue']
+            );
+
+            Route::delete(
+                '/declaracoes/{id}',
+                [DeclaracaoController::class, 'destroy']
             );
         });
         Route::middleware('permission:templates,visualizar')->group(function () {

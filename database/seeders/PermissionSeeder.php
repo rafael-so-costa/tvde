@@ -16,6 +16,7 @@ class PermissionSeeder extends Seeder
             'motoristas' => 'Motoristas',
             'veiculos' => 'Veículos',
             'contratos' => 'Contratos',
+            'declaracoes' => 'Declarações',
             'templates' => 'Templates',
             'alugueres' => 'Alugueres',
             'checklist' => 'Checklists',
