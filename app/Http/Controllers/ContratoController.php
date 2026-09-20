@@ -57,6 +57,8 @@ class ContratoController extends Controller
                 'motorista',
                 'proprietario',
                 'veiculo',
+                'template.checklistProcessTemplate',
+                'checklistProcessRun.items',
             ])
             ->latest('created_at');
 
@@ -93,9 +95,9 @@ class ContratoController extends Controller
 
         return response()->json([
             'message' =>
-                'Contrato criado com sucesso.',
+            'Contrato criado com sucesso.',
             'data' =>
-                $contrato,
+            $contrato,
         ], 201);
     }
 
@@ -109,17 +111,19 @@ class ContratoController extends Controller
                 'motorista',
                 'proprietario',
                 'veiculo',
+                'template.checklistProcessTemplate.items',
+                'checklistProcessRun.items',
                 'versoes' =>
-                    fn ($query) =>
-                        $query->orderByDesc(
-                            'versao_numero'
-                        ),
+                fn($query) =>
+                $query->orderByDesc(
+                    'versao_numero'
+                ),
                 'assinaturas',
                 'logsAuditoria' =>
-                    fn ($query) =>
-                        $query->latest(
-                            'created_at'
-                        ),
+                fn($query) =>
+                $query->latest(
+                    'created_at'
+                ),
             ])
             ->findOrFail($id);
 
@@ -143,9 +147,9 @@ class ContratoController extends Controller
 
         return response()->json([
             'message' =>
-                'Contrato atualizado com sucesso.',
+            'Contrato atualizado com sucesso.',
             'data' =>
-                $contrato,
+            $contrato,
         ]);
     }
 
@@ -166,9 +170,9 @@ class ContratoController extends Controller
 
         return response()->json([
             'message' =>
-                'Contrato encerrado com sucesso.',
+            'Contrato encerrado com sucesso.',
             'data' =>
-                $contrato,
+            $contrato,
         ]);
     }
 
@@ -200,12 +204,12 @@ class ContratoController extends Controller
 
         if (
             $this->permissionService
-                ->allows(
-                    $user,
-                    'contratos',
-                    'visualizar',
-                    $tenantId
-                )
+            ->allows(
+                $user,
+                'contratos',
+                'visualizar',
+                $tenantId
+            )
         ) {
             return $query;
         }
@@ -222,15 +226,15 @@ class ContratoController extends Controller
 
             $motoristaId =
                 Motorista::query()
-                    ->where(
-                        'tenant_id',
-                        $tenantId
-                    )
-                    ->where(
-                        'user_id',
-                        $user->id
-                    )
-                    ->value('id');
+                ->where(
+                    'tenant_id',
+                    $tenantId
+                )
+                ->where(
+                    'user_id',
+                    $user->id
+                )
+                ->value('id');
 
             if (!$motoristaId) {
                 $query->whereRaw(
@@ -254,15 +258,15 @@ class ContratoController extends Controller
 
             $proprietarioId =
                 Proprietario::query()
-                    ->where(
-                        'tenant_id',
-                        $tenantId
-                    )
-                    ->where(
-                        'user_id',
-                        $user->id
-                    )
-                    ->value('id');
+                ->where(
+                    'tenant_id',
+                    $tenantId
+                )
+                ->where(
+                    'user_id',
+                    $user->id
+                )
+                ->value('id');
 
             if (!$proprietarioId) {
                 $query->whereRaw(

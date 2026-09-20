@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Contrato extends Model
 {
@@ -123,6 +124,16 @@ class Contrato extends Model
         return $this->hasMany(
             ContratoAtivoVeiculo::class,
             'contrato_id'
+        );
+    }
+    public function checklistProcessRun(): HasOne
+    {
+        return $this->hasOne(
+            ChecklistProcessRun::class,
+            'entidade_id'
+        )->where(
+            'entidade_tipo',
+            'contrato'
         );
     }
 }

@@ -21,6 +21,7 @@ class TemplateContrato extends Model
 
     protected $fillable = [
         'perfil_id',
+        'checklist_process_template_id',
         'nome',
         'arquivo_url',
         'tipo_arquivo',
@@ -57,4 +58,11 @@ class TemplateContrato extends Model
             'template_id'
         );
     }
+    public function checklistProcessTemplate(): BelongsTo
+{
+    return $this->belongsTo(
+        ChecklistProcessTemplate::class,
+        'checklist_process_template_id'
+    );
+}
 }

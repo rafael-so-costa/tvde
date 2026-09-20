@@ -44,7 +44,7 @@ class ActivateAluguerRequest extends FormRequest
                 'uuid',
                 Rule::exists('motoristas', 'id')
                     ->where(
-                        fn ($query) => $query
+                        fn($query) => $query
                             ->where('tenant_id', $tenantId)
                     ),
             ],
@@ -54,7 +54,7 @@ class ActivateAluguerRequest extends FormRequest
                 'uuid',
                 Rule::exists('veiculos', 'id')
                     ->where(
-                        fn ($query) => $query
+                        fn($query) => $query
                             ->where('tenant_id', $tenantId)
                     ),
             ],
@@ -64,7 +64,7 @@ class ActivateAluguerRequest extends FormRequest
                 'uuid',
                 Rule::exists('proprietarios', 'id')
                     ->where(
-                        fn ($query) => $query
+                        fn($query) => $query
                             ->where('tenant_id', $tenantId)
                     ),
             ],
@@ -74,7 +74,7 @@ class ActivateAluguerRequest extends FormRequest
                 'uuid',
                 Rule::exists('contratos', 'id')
                     ->where(
-                        fn ($query) => $query
+                        fn($query) => $query
                             ->where('tenant_id', $tenantId)
                             ->where('tipo', 'aluguer')
                     ),
@@ -85,18 +85,18 @@ class ActivateAluguerRequest extends FormRequest
                 'uuid',
                 Rule::exists('contratos', 'id')
                     ->where(
-                        fn ($query) => $query
+                        fn($query) => $query
                             ->where('tenant_id', $tenantId)
                             ->where('tipo', 'prestacao_servico')
                     ),
             ],
 
             'checklist_entrega_id' => [
-                'nullable',
+                'required',
                 'uuid',
                 Rule::exists('checklist_records', 'id')
                     ->where(
-                        fn ($query) => $query
+                        fn($query) => $query
                             ->where('tenant_id', $tenantId)
                             ->where('tipo', 'entrega')
                             ->where('estado', 'finalizado')

@@ -42,7 +42,10 @@ class TemplateContratoController extends Controller
 
         $query = TemplateContrato::query()
             ->where('tenant_id', $tenantId)
-            ->with('perfil:id,nome')
+            ->with([
+                'perfil:id,nome',
+                'checklistProcessTemplate.items',
+            ])
             ->latest('created_at');
 
         if (
@@ -74,7 +77,10 @@ class TemplateContratoController extends Controller
             $this->tenantId();
 
         $template->save();
-        $template->load('perfil:id,nome');
+        $template->load([
+            'perfil:id,nome',
+            'checklistProcessTemplate.items',
+        ]);
 
         return response()->json([
             'message' =>
@@ -89,7 +95,10 @@ class TemplateContratoController extends Controller
         return response()->json([
             'data' => $this
                 ->findTemplate($id)
-                ->load('perfil:id,nome'),
+                ->load([
+                    'perfil:id,nome',
+                    'checklistProcessTemplate.items',
+                ])
         ]);
     }
 
@@ -104,7 +113,10 @@ class TemplateContratoController extends Controller
         );
 
         $template->save();
-        $template->load('perfil:id,nome');
+        $template->load([
+            'perfil:id,nome',
+            'checklistProcessTemplate.items',
+        ]);
 
         return response()->json([
             'message' =>

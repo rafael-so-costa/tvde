@@ -14,6 +14,10 @@ use Throwable;
 
 class AluguerService
 {
+
+    public function __construct(
+        private ChecklistProcessService $checklistProcessService
+    ) {}
     public function activate(
         string $id,
         string $tenantId,
@@ -33,7 +37,7 @@ class AluguerService
                 if ($aluguer->status !== 'rascunho') {
                     throw ValidationException::withMessages([
                         'status' =>
-                            'Apenas alugueres em rascunho podem ser ativados.',
+                        'Apenas alugueres em rascunho podem ser ativados.',
                     ]);
                 }
 
@@ -83,6 +87,20 @@ class AluguerService
                     'contrato_aluguer_id'
                 );
 
+                $this->assertContratoPronto(
+                    $tenantId,
+                    $contratoAluguer,
+                    'contrato_aluguer_id',
+                    'aluguer'
+                );
+
+                $this->assertContratoPronto(
+                    $tenantId,
+                    $contratoPrestacao,
+                    'contrato_prestacao_id',
+                    'prestação de serviços'
+                );
+
                 $this->validarContratoEntidades(
                     $contratoPrestacao,
                     $aluguer,
@@ -90,47 +108,54 @@ class AluguerService
                     false
                 );
 
-                if ($aluguer->checklist_entrega_id) {
-                    $checklist =
-                        ChecklistRecord::query()
-                            ->where(
-                                'tenant_id',
-                                $tenantId
-                            )
-                            ->where(
-                                'tipo',
-                                'entrega'
-                            )
-                            ->where(
-                                'estado',
-                                'finalizado'
-                            )
-                            ->lockForUpdate()
-                            ->findOrFail(
-                                $aluguer->checklist_entrega_id
-                            );
+                if (
+                    !$aluguer
+                        ->checklist_entrega_id
+                ) {
+                    throw ValidationException::withMessages([
+                        'checklist_entrega_id' =>
+                        'O checklist de entrega finalizado é obrigatório para ativar o aluguer.',
+                    ]);
+                }
 
-                    if (
-                        $checklist->motorista_id &&
-                        $checklist->motorista_id !==
-                            $aluguer->motorista_id
-                    ) {
-                        throw ValidationException::withMessages([
-                            'checklist_entrega_id' =>
-                                'O checklist de entrega pertence a outro motorista.',
-                        ]);
-                    }
+                $checklist =
+                    ChecklistRecord::query()
+                    ->where(
+                        'tenant_id',
+                        $tenantId
+                    )
+                    ->where(
+                        'tipo',
+                        'entrega'
+                    )
+                    ->where(
+                        'estado',
+                        'finalizado'
+                    )
+                    ->lockForUpdate()
+                    ->findOrFail(
+                        $aluguer
+                            ->checklist_entrega_id
+                    );
 
-                    if (
-                        $checklist->veiculo_id &&
-                        $checklist->veiculo_id !==
-                            $aluguer->veiculo_id
-                    ) {
-                        throw ValidationException::withMessages([
-                            'checklist_entrega_id' =>
-                                'O checklist de entrega pertence a outro veículo.',
-                        ]);
-                    }
+                if (
+                    $checklist->motorista_id !==
+                    $aluguer->motorista_id
+                ) {
+                    throw ValidationException::withMessages([
+                        'checklist_entrega_id' =>
+                        'O checklist de entrega pertence a outro motorista.',
+                    ]);
+                }
+
+                if (
+                    $checklist->veiculo_id !==
+                    $aluguer->veiculo_id
+                ) {
+                    throw ValidationException::withMessages([
+                        'checklist_entrega_id' =>
+                        'O checklist de entrega pertence a outro veículo.',
+                    ]);
                 }
 
                 $this->validarCronologia(
@@ -213,16 +238,12 @@ class AluguerService
     ): Aluguer {
         $signatureMotorista =
             $this->decodeSignature(
-                $data[
-                    'assinatura_motorista'
-                ]
+                $data['assinatura_motorista']
             );
 
         $signatureEmpresa =
             $this->decodeSignature(
-                $data[
-                    'assinatura_empresa'
-                ]
+                $data['assinatura_empresa']
             );
 
         $storedPaths = [];
@@ -249,24 +270,22 @@ class AluguerService
 
                     $recolha =
                         ChecklistRecord::query()
-                            ->where(
-                                'tenant_id',
-                                $tenantId
-                            )
-                            ->where(
-                                'tipo',
-                                'recolha'
-                            )
-                            ->where(
-                                'estado',
-                                'finalizado'
-                            )
-                            ->lockForUpdate()
-                            ->findOrFail(
-                                $data[
-                                    'checklist_devolucao_id'
-                                ]
-                            );
+                        ->where(
+                            'tenant_id',
+                            $tenantId
+                        )
+                        ->where(
+                            'tipo',
+                            'recolha'
+                        )
+                        ->where(
+                            'estado',
+                            'finalizado'
+                        )
+                        ->lockForUpdate()
+                        ->findOrFail(
+                            $data['checklist_devolucao_id']
+                        );
 
                     if (
                         $recolha->motorista_id !==
@@ -274,7 +293,7 @@ class AluguerService
                     ) {
                         throw ValidationException::withMessages([
                             'checklist_devolucao_id' =>
-                                'A recolha pertence a outro motorista.',
+                            'A recolha pertence a outro motorista.',
                         ]);
                     }
 
@@ -284,18 +303,18 @@ class AluguerService
                     ) {
                         throw ValidationException::withMessages([
                             'checklist_devolucao_id' =>
-                                'A recolha pertence a outro veículo.',
+                            'A recolha pertence a outro veículo.',
                         ]);
                     }
 
                     if (
                         $aluguer->checklist_entrega_id &&
                         $recolha->entrega_vinculada_id !==
-                            $aluguer->checklist_entrega_id
+                        $aluguer->checklist_entrega_id
                     ) {
                         throw ValidationException::withMessages([
                             'checklist_devolucao_id' =>
-                                'A recolha não corresponde ao checklist de entrega deste aluguer.',
+                            'A recolha não corresponde ao checklist de entrega deste aluguer.',
                         ]);
                     }
 
@@ -308,15 +327,13 @@ class AluguerService
                     }
 
                     $contratoPrestacaoId =
-                        $data[
-                            'contrato_prestacao_id'
-                        ] ??
+                        $data['contrato_prestacao_id'] ??
                         $aluguer->contrato_prestacao_id;
 
                     if (!$contratoPrestacaoId) {
                         throw ValidationException::withMessages([
                             'contrato_prestacao_id' =>
-                                'Selecione o contrato de prestação de serviço.',
+                            'Selecione o contrato de prestação de serviço.',
                         ]);
                     }
 
@@ -335,27 +352,21 @@ class AluguerService
                     );
 
                     $tipo =
-                        $data[
-                            'devolucao_tipo'
-                        ];
+                        $data['devolucao_tipo'];
 
                     $diasAtraso =
                         $tipo === 'atraso'
-                            ? (int) (
-                                $data[
-                                    'devolucao_dias_atraso'
-                                ] ?? 0
-                            )
-                            : 0;
+                        ? (int) (
+                            $data['devolucao_dias_atraso'] ?? 0
+                        )
+                        : 0;
 
                     $valorDia =
                         $tipo === 'atraso'
-                            ? (float) (
-                                $data[
-                                    'devolucao_valor_dia'
-                                ] ?? 0
-                            )
-                            : 0;
+                        ? (float) (
+                            $data['devolucao_valor_dia'] ?? 0
+                        )
+                        : 0;
 
                     if (
                         $tipo === 'atraso' &&
@@ -366,37 +377,33 @@ class AluguerService
                     ) {
                         throw ValidationException::withMessages([
                             'devolucao_dias_atraso' =>
-                                'Informe os dias de atraso e um valor por dia superior a zero.',
+                            'Informe os dias de atraso e um valor por dia superior a zero.',
                         ]);
                     }
 
                     $multaAtraso =
                         round(
                             $diasAtraso *
-                            $valorDia,
+                                $valorDia,
                             2
                         );
 
                     $multas =
                         array_values(
-                            $data[
-                                'devolucao_multas_adicionais'
-                            ] ?? []
+                            $data['devolucao_multas_adicionais'] ?? []
                         );
 
                     $totalMultas =
                         round(
                             array_reduce(
                                 $multas,
-                                fn (
+                                fn(
                                     float $total,
                                     array $multa
                                 ) =>
-                                    $total +
+                                $total +
                                     (float)
-                                    $multa[
-                                        'valor'
-                                    ],
+                                    $multa['valor'],
                                 0.0
                             ),
                             2
@@ -413,8 +420,8 @@ class AluguerService
                     $total =
                         round(
                             $multaAtraso +
-                            $totalMultas +
-                            $penalizacoesChecklist,
+                                $totalMultas +
+                                $penalizacoesChecklist,
                             2
                         );
 
@@ -534,9 +541,7 @@ class AluguerService
                         null;
 
                     $aluguer->devolucao_observacoes =
-                        $data[
-                            'devolucao_observacoes'
-                        ] ?? null;
+                        $data['devolucao_observacoes'] ?? null;
 
                     $aluguer->save();
 
@@ -577,7 +582,7 @@ class AluguerService
         if ($aluguer->status !== 'ativo') {
             throw ValidationException::withMessages([
                 'status' =>
-                    'Apenas alugueres ativos podem ser finalizados.',
+                'Apenas alugueres ativos podem ser finalizados.',
             ]);
         }
     }
@@ -590,28 +595,28 @@ class AluguerService
         if (!$id) {
             throw ValidationException::withMessages([
                 'contrato' =>
-                    'Contrato obrigatório.',
+                'Contrato obrigatório.',
             ]);
         }
 
         $contrato =
             Contrato::query()
-                ->where(
-                    'tenant_id',
-                    $tenantId
-                )
-                ->where(
-                    'tipo',
-                    $tipo
-                )
-                ->whereKey($id)
-                ->lockForUpdate()
-                ->first();
+            ->where(
+                'tenant_id',
+                $tenantId
+            )
+            ->where(
+                'tipo',
+                $tipo
+            )
+            ->whereKey($id)
+            ->lockForUpdate()
+            ->first();
 
         if (!$contrato) {
             throw ValidationException::withMessages([
                 'contrato' =>
-                    'Contrato inválido para esta organização.',
+                'Contrato inválido para esta organização.',
             ]);
         }
 
@@ -627,11 +632,11 @@ class AluguerService
         if (
             $contrato->motorista_id &&
             $contrato->motorista_id !==
-                $aluguer->motorista_id
+            $aluguer->motorista_id
         ) {
             throw ValidationException::withMessages([
                 $campo =>
-                    'O contrato pertence a outro motorista.',
+                'O contrato pertence a outro motorista.',
             ]);
         }
 
@@ -639,11 +644,11 @@ class AluguerService
             $validarVeiculo &&
             $contrato->veiculo_id &&
             $contrato->veiculo_id !==
-                $aluguer->veiculo_id
+            $aluguer->veiculo_id
         ) {
             throw ValidationException::withMessages([
                 $campo =>
-                    'O contrato pertence a outro veículo.',
+                'O contrato pertence a outro veículo.',
             ]);
         }
 
@@ -651,11 +656,11 @@ class AluguerService
             $contrato->proprietario_id &&
             $aluguer->proprietario_id &&
             $contrato->proprietario_id !==
-                $aluguer->proprietario_id
+            $aluguer->proprietario_id
         ) {
             throw ValidationException::withMessages([
                 $campo =>
-                    'O contrato pertence a outro proprietário.',
+                'O contrato pertence a outro proprietário.',
             ]);
         }
     }
@@ -677,7 +682,7 @@ class AluguerService
         ) {
             throw ValidationException::withMessages([
                 'data_fim' =>
-                    'A data de fim deve ser igual ou posterior à data de início.',
+                'A data de fim deve ser igual ou posterior à data de início.',
             ]);
         }
     }
@@ -693,13 +698,13 @@ class AluguerService
 
         $contrato =
             Contrato::query()
-                ->where(
-                    'tenant_id',
-                    $tenantId
-                )
-                ->whereKey($id)
-                ->lockForUpdate()
-                ->first();
+            ->where(
+                'tenant_id',
+                $tenantId
+            )
+            ->whereKey($id)
+            ->lockForUpdate()
+            ->first();
 
         if (
             !$contrato ||
@@ -792,11 +797,43 @@ class AluguerService
         ) {
             throw ValidationException::withMessages([
                 'assinatura' =>
-                    'Assinatura PNG inválida.',
+                'Assinatura PNG inválida.',
             ]);
         }
 
         return $binary;
+    }
+
+    private function assertContratoPronto(
+        string $tenantId,
+        Contrato $contrato,
+        string $field,
+        string $nome
+    ): void {
+        if (
+            $contrato->status !==
+            'assinado'
+        ) {
+            throw ValidationException::withMessages([
+                $field =>
+                "O contrato de {$nome} precisa estar assinado antes da ativação.",
+            ]);
+        }
+
+        if (
+            !$this
+                ->checklistProcessService
+                ->isComplete(
+                    $tenantId,
+                    ChecklistProcessService::ENTITY_CONTRATO,
+                    $contrato->id
+                )
+        ) {
+            throw ValidationException::withMessages([
+                $field =>
+                "O checklist de processo do contrato de {$nome} ainda não está concluído.",
+            ]);
+        }
     }
 
     private function carregar(

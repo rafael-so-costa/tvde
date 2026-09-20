@@ -17,6 +17,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\RemoteSignatureController;
 use App\Http\Controllers\TenantContextController;
 use App\Http\Controllers\ChecklistRecordController;
+use App\Http\Controllers\ChecklistProcessTemplateController;
+use App\Http\Controllers\ChecklistProcessRunController;
 
 
 Route::get(
@@ -170,11 +172,41 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::patch('/contratos/{id}', [ContratoController::class, 'update']);
             Route::patch('/contratos/{id}/encerrar', [ContratoController::class, 'encerrar']);
             Route::delete('/contratos/{id}', [ContratoController::class, 'destroy']);
+            Route::get(
+                '/contratos/{id}/checklist-processo',
+                [
+                    ChecklistProcessRunController::class,
+                    'showForContrato',
+                ]
+            );
+
+            Route::patch(
+                '/contratos/{id}/checklist-processo/items/{itemId}/concluir',
+                [
+                    ChecklistProcessRunController::class,
+                    'completeItem',
+                ]
+            );
         });
         Route::middleware('permission:templates,visualizar')->group(function () {
             Route::get('/perfis-template', [PerfilTemplateController::class, 'index']);
             Route::get('/templates-contrato', [TemplateContratoController::class, 'index']);
             Route::get('/templates-contrato/{id}', [TemplateContratoController::class, 'show']);
+            Route::get(
+                '/checklist-process-templates',
+                [
+                    ChecklistProcessTemplateController::class,
+                    'index',
+                ]
+            );
+
+            Route::get(
+                '/checklist-process-templates/{id}',
+                [
+                    ChecklistProcessTemplateController::class,
+                    'show',
+                ]
+            );
         });
 
         Route::middleware('permission:templates,configurar')->group(function () {
@@ -192,6 +224,29 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post(
                 '/templates-contrato/importar',
                 [TemplateImportController::class, 'store']
+            );
+            Route::post(
+                '/checklist-process-templates',
+                [
+                    ChecklistProcessTemplateController::class,
+                    'store',
+                ]
+            );
+
+            Route::patch(
+                '/checklist-process-templates/{id}',
+                [
+                    ChecklistProcessTemplateController::class,
+                    'update',
+                ]
+            );
+
+            Route::delete(
+                '/checklist-process-templates/{id}',
+                [
+                    ChecklistProcessTemplateController::class,
+                    'destroy',
+                ]
             );
         });
         Route::middleware(

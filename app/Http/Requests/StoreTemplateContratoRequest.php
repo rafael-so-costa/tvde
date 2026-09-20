@@ -25,9 +25,29 @@ class StoreTemplateContratoRequest extends FormRequest
                 'uuid',
                 Rule::exists('perfis_template', 'id')
                     ->where(
-                        fn ($query) => $query
+                        fn($query) => $query
                             ->where('tenant_id', $tenantId)
                     ),
+            ],
+
+            'checklist_process_template_id' => [
+                'nullable',
+                'uuid',
+                Rule::exists(
+                    'checklist_process_templates',
+                    'id'
+                )->where(
+                    fn($query) =>
+                    $query
+                        ->where(
+                            'tenant_id',
+                            $tenantId
+                        )
+                        ->where(
+                            'ativo',
+                            true
+                        )
+                ),
             ],
 
             'nome' => [

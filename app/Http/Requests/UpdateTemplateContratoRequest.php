@@ -22,11 +22,31 @@ class UpdateTemplateContratoRequest extends FormRequest
 
             'perfil_id' => [
                 'sometimes',
+                'checklist_process_template_id' => [
+                    'sometimes',
+                    'nullable',
+                    'uuid',
+                    Rule::exists(
+                        'checklist_process_templates',
+                        'id'
+                    )->where(
+                        fn($query) =>
+                        $query
+                            ->where(
+                                'tenant_id',
+                                $tenantId
+                            )
+                            ->where(
+                                'ativo',
+                                true
+                            )
+                    ),
+                ],
                 'nullable',
                 'uuid',
                 Rule::exists('perfis_template', 'id')
                     ->where(
-                        fn ($query) => $query
+                        fn($query) => $query
                             ->where('tenant_id', $tenantId)
                     ),
             ],

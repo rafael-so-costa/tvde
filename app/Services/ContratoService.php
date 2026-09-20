@@ -22,6 +22,12 @@ use Throwable;
 
 class ContratoService
 {
+
+    public function __construct(
+        private ChecklistProcessService $checklistProcessService
+    ) {}
+
+
     public const MAX_MOTORISTAS_ATIVOS_POR_VEICULO = 3;
 
     private const ASSINATURAS = [
@@ -155,7 +161,31 @@ class ContratoService
 
             $contrato->save();
 
-            foreach ($assinaturas as $dadosAssinatura) {
+            if (
+                $template
+                ?->checklistProcessTemplate
+            ) {
+                $this->checklistProcessService
+                    ->start(
+                        $tenantId,
+                        $template
+                            ->checklistProcessTemplate,
+                        ChecklistProcessService::ENTITY_CONTRATO,
+                        $contrato->id,
+                        [
+                            'contrato_tipo' =>
+                            $contrato->tipo,
+
+                            'template_contrato_id' =>
+                            $template->id,
+                        ]
+                    );
+            }
+
+            foreach (
+                $assinaturas as
+                $dadosAssinatura
+            ) {
                 $this->guardarAssinatura(
                     $contrato,
                     $dadosAssinatura,
@@ -163,6 +193,24 @@ class ContratoService
                     $ip,
                     $userAgent
                 );
+
+                if (
+                    $dadosAssinatura['modo'] ===
+                    'presencial'
+                ) {
+                    $this
+                        ->checklistProcessService
+                        ->completeSignature(
+                            $tenantId,
+                            $contrato->id,
+                            $dadosAssinatura['placeholder'],
+                            [
+                                'modo' =>
+                                'presencial',
+                            ],
+                            $actor->id
+                        );
+                }
             }
 
             $this->guardarVersao(
@@ -821,6 +869,22 @@ class ContratoService
                                 ->signatario_user_id
                         )
                         : null;
+
+                    $this
+                        ->checklistProcessService
+                        ->completeSignature(
+                            $contrato->tenant_id,
+                            $contrato->id,
+                            $assinatura->placeholder,
+                            [
+                                'modo' =>
+                                'remota',
+
+                                'assinatura_id' =>
+                                $assinatura->id,
+                            ],
+                            $actor?->id
+                        );
 
                     $this->auditar(
                         $contrato,
@@ -1889,7 +1953,13 @@ class ContratoService
         }
 
         $model = TemplateContrato::query()
-            ->where('tenant_id', $tenantId)
+            ->where(
+                'tenant_id',
+                $tenantId
+            )
+            ->with(
+                'checklistProcessTemplate.items'
+            )
             ->find($id);
 
         if (!$model) {
@@ -1994,12 +2064,13 @@ class ContratoService
         Contrato $contrato
     ): Contrato {
         return $contrato->load([
-            'template',
+            'template.checklistProcessTemplate.items',
             'motorista',
             'proprietario',
             'veiculo',
             'versoes',
             'assinaturas',
+            'checklistProcessRun.items',
         ]);
     }
 }
