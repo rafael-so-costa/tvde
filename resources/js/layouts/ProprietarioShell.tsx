@@ -1,6 +1,7 @@
 import {useState} from 'react';
 import {NavLink,Outlet,useNavigate} from 'react-router-dom';
 import {
+    AlertTriangle,
     LoaderCircle,
     LogOut,
     Menu,
@@ -16,6 +17,11 @@ const navigation=[
         to:'/portal/proprietario/multas',
         label:'Multas',
         icon:ReceiptText,
+    },
+    {
+        to:'/portal/proprietario/sinistros',
+        label:'Sinistros',
+        icon:AlertTriangle,
     },
 ];
 

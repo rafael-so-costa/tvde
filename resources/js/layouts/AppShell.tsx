@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
+    AlertTriangle,
     Building2,
     Car,
     Clock3,
@@ -62,6 +63,11 @@ const navigation = [
         label: "Multas",
         icon: ReceiptText,
     },
+    {
+    to:"/sinistros",
+    label:"Sinistros",
+    icon:AlertTriangle,
+},
     {
         to: "/veiculos",
         label: "Veículos",
