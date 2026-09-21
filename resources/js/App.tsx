@@ -1,41 +1,85 @@
-import { Navigate, Route, Routes } from "react-router-dom";
-import ProtectedRoute from "./components/ProtectedRoute";
-import AppShell from "./layouts/AppShell";
-import AlugueresPage from "./pages/AlugueresPage";
-import ChecklistsPage from "./pages/ChecklistsPage";
-import ContratosPage from "./pages/ContratosPage";
-import DashboardPage from "./pages/DashboardPage";
-import EmpresasPage from "./pages/EmpresasPage";
-import LoginPage from "./pages/LoginPage";
-import MotoristasPage from "./pages/MotoristasPage";
-import ProprietariosPage from "./pages/ProprietariosPage";
-import RemoteSignaturePage from "./pages/RemoteSignaturePage";
-import TemplatesPage from "./pages/TemplatesPage";
-import VeiculosPage from "./pages/VeiculosPage";
-import RegistosCriminaisPage from "./pages/RegistosCriminaisPage";
-import RecibosVerdesPage from "./pages/RecibosVerdesPage";
+import {Navigate,Route,Routes} from 'react-router-dom';
+import ProtectedRoute from './components/ProtectedRoute';
+import RoleRoute from './components/RoleRoute';
+import AppShell from './layouts/AppShell';
+import MotoristaShell from './layouts/MotoristaShell';
+import AlugueresPage from './pages/AlugueresPage';
+import ChecklistsPage from './pages/ChecklistsPage';
+import ContratosPage from './pages/ContratosPage';
+import DashboardPage from './pages/DashboardPage';
+import EmpresasPage from './pages/EmpresasPage';
+import ExpedientePage from './pages/ExpedientePage';
+import ExpedientePublicPage from './pages/ExpedientePublicPage';
+import LoginPage from './pages/LoginPage';
+import MotoristasPage from './pages/MotoristasPage';
+import ProprietariosPage from './pages/ProprietariosPage';
+import RemoteSignaturePage from './pages/RemoteSignaturePage';
+import TemplatesPage from './pages/TemplatesPage';
+import VeiculosPage from './pages/VeiculosPage';
+import RegistosCriminaisPage from './pages/RegistosCriminaisPage';
+import RecibosVerdesPage from './pages/RecibosVerdesPage';
 
-export default function App() {
+export default function App(){
     return (
         <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/assinaturas/remotas/:token" element={<RemoteSignaturePage />} />
-            <Route element={<ProtectedRoute />}>
-                <Route element={<AppShell />}>
-                    <Route index element={<DashboardPage />} />
-                    <Route path="empresas" element={<EmpresasPage />} />
-                    <Route path="proprietarios" element={<ProprietariosPage />} />
-                    <Route path="motoristas" element={<MotoristasPage />} />
-                    <Route path="registos-criminais" element={<RegistosCriminaisPage />} />
-                    <Route path="recibos-verdes" element={<RecibosVerdesPage />} />
-                    <Route path="veiculos" element={<VeiculosPage />} />
-                    <Route path="checklists" element={<ChecklistsPage />} />
-                    <Route path="alugueres" element={<AlugueresPage />} />
-                    <Route path="contratos" element={<ContratosPage />} />
-                    <Route path="templates" element={<TemplatesPage />} />
+            <Route path="/login" element={<LoginPage/>}/>
+            <Route path="/assinaturas/remotas/:token" element={<RemoteSignaturePage/>}/>
+            <Route path="/registo-expediente-publico" element={<ExpedientePublicPage/>}/>
+
+            <Route element={<ProtectedRoute/>}>
+                <Route element={<AppShell/>}>
+                    <Route index element={<DashboardPage/>}/>
+                    <Route path="empresas" element={<EmpresasPage/>}/>
+                    <Route path="proprietarios" element={<ProprietariosPage/>}/>
+                    <Route path="motoristas" element={<MotoristasPage/>}/>
+                    <Route path="registos-criminais" element={<RegistosCriminaisPage/>}/>
+                    <Route path="recibos-verdes" element={<RecibosVerdesPage/>}/>
+                    <Route path="expediente" element={<ExpedientePage mode="management"/>}/>
+                    <Route path="veiculos" element={<VeiculosPage/>}/>
+                    <Route path="checklists" element={<ChecklistsPage/>}/>
+                    <Route path="alugueres" element={<AlugueresPage/>}/>
+                    <Route path="contratos" element={<ContratosPage/>}/>
+                    <Route path="templates" element={<TemplatesPage/>}/>
+                </Route>
+
+                <Route
+                    element={
+                        <RoleRoute
+                            allowedRoles={['motorista']}
+                            redirectTo="/"
+                        />
+                    }
+                >
+                    <Route path="portal/motorista" element={<MotoristaShell/>}>
+                        <Route
+                            index
+                            element={
+                                <Navigate
+                                    to="/portal/motorista/expediente"
+                                    replace
+                                />
+                            }
+                        />
+
+                        <Route
+                            path="expediente"
+                            element={<ExpedientePage mode="motorista"/>}
+                        />
+
+                        <Route
+                            path="registo-criminal"
+                            element={<RegistosCriminaisPage/>}
+                        />
+
+                        <Route
+                            path="recibos-verdes"
+                            element={<RecibosVerdesPage/>}
+                        />
+                    </Route>
                 </Route>
             </Route>
-            <Route path="*" element={<Navigate to="/" replace />} />
+
+            <Route path="*" element={<Navigate to="/" replace/>}/>
         </Routes>
     );
 }

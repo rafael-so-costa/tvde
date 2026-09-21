@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
     Building2,
     Car,
+    Clock3,
     FileStack,
     FileText,
     LayoutDashboard,
@@ -51,6 +52,11 @@ const navigation = [
         label: "Recibos verdes",
         icon: ReceiptText,
     },
+    {
+    to: "/expediente",
+    label: "Expediente",
+    icon: Clock3,
+},
     {
         to: "/veiculos",
         label: "Veículos",
