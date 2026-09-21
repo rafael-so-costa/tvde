@@ -137,4 +137,8 @@ public function recibosVerdes(): HasMany
         ReciboVerde::class
     );
 }
+public function registosExpediente(): HasMany
+{
+    return $this->hasMany(RegistoExpediente::class);
+}
 }

@@ -23,6 +23,8 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeclaracaoController;
 use App\Http\Controllers\RegistoCriminalController;
 use App\Http\Controllers\ReciboVerdeController;
+use App\Http\Controllers\ExpedienteController;
+use App\Http\Controllers\ExpedientePublicController;
 
 
 Route::get(
@@ -38,6 +40,11 @@ Route::post(
 )
     ->whereUuid('token')
     ->middleware('throttle:5,1');
+
+Route::post(
+    '/expediente/publico/marcar',
+    [ExpedientePublicController::class, 'marcar']
+)->middleware('throttle:10,1');
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [AuthController::class, 'me']);
@@ -57,6 +64,17 @@ Route::middleware('auth:sanctum')->group(function () {
     );
 
     Route::middleware('tenant')->group(function () {
+        Route::get('/expediente', [ExpedienteController::class, 'index']);
+        Route::get('/expediente/estado', [ExpedienteController::class, 'estado']);
+        Route::post('/expediente/marcar', [ExpedienteController::class, 'marcar']);
+        Route::patch('/expediente/{id}', [ExpedienteController::class, 'corrigir']);
+
+        Route::middleware('permission:expediente,visualizar')->group(function () {
+            Route::get(
+                '/expediente-estatisticas',
+                [ExpedienteController::class, 'estatisticas']
+            );
+        });
         Route::get(
             '/recibos-verdes',
             [ReciboVerdeController::class, 'index']
