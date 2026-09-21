@@ -13,6 +13,7 @@ import RemoteSignaturePage from "./pages/RemoteSignaturePage";
 import TemplatesPage from "./pages/TemplatesPage";
 import VeiculosPage from "./pages/VeiculosPage";
 import RegistosCriminaisPage from "./pages/RegistosCriminaisPage";
+import RecibosVerdesPage from "./pages/RecibosVerdesPage";
 
 export default function App() {
     return (
@@ -26,6 +27,7 @@ export default function App() {
                     <Route path="proprietarios" element={<ProprietariosPage />} />
                     <Route path="motoristas" element={<MotoristasPage />} />
                     <Route path="registos-criminais" element={<RegistosCriminaisPage />} />
+                    <Route path="recibos-verdes" element={<RecibosVerdesPage />} />
                     <Route path="veiculos" element={<VeiculosPage />} />
                     <Route path="checklists" element={<ChecklistsPage />} />
                     <Route path="alugueres" element={<AlugueresPage />} />

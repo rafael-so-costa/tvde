@@ -47,6 +47,11 @@ const navigation = [
         icon: ShieldCheck,
     },
     {
+        to: "/recibos-verdes",
+        label: "Recibos verdes",
+        icon: ReceiptText,
+    },
+    {
         to: "/veiculos",
         label: "Veículos",
         icon: Car,
