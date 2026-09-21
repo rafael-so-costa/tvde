@@ -125,7 +125,13 @@ class Veiculo extends Model
         );
     }
     public function multas(): HasMany
-{
-    return $this->hasMany(Multa::class);
-}
+    {
+        return $this->hasMany(Multa::class);
+    }
+    public function sinistros(): HasMany
+    {
+        return $this->hasMany(
+            Sinistro::class
+        );
+    }
 }

@@ -126,23 +126,29 @@ class Motorista extends Model
         );
     }
     public function registosCriminais(): HasMany
-{
-    return $this->hasMany(
-        RegistoCriminal::class
-    );
-}
-public function recibosVerdes(): HasMany
-{
-    return $this->hasMany(
-        ReciboVerde::class
-    );
-}
-public function registosExpediente(): HasMany
-{
-    return $this->hasMany(RegistoExpediente::class);
-}
-public function multas(): HasMany
-{
-    return $this->hasMany(Multa::class);
-}
+    {
+        return $this->hasMany(
+            RegistoCriminal::class
+        );
+    }
+    public function recibosVerdes(): HasMany
+    {
+        return $this->hasMany(
+            ReciboVerde::class
+        );
+    }
+    public function registosExpediente(): HasMany
+    {
+        return $this->hasMany(RegistoExpediente::class);
+    }
+    public function multas(): HasMany
+    {
+        return $this->hasMany(Multa::class);
+    }
+    public function sinistros(): HasMany
+    {
+        return $this->hasMany(
+            Sinistro::class
+        );
+    }
 }

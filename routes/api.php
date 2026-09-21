@@ -26,7 +26,7 @@ use App\Http\Controllers\ReciboVerdeController;
 use App\Http\Controllers\ExpedienteController;
 use App\Http\Controllers\ExpedientePublicController;
 use App\Http\Controllers\MultaController;
-
+use App\Http\Controllers\SinistroController;
 
 Route::get(
     '/assinaturas/remotas/{token}',
@@ -480,6 +480,54 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::delete(
                 '/multas/{id}/documentos/{documentoId}',
                 [MultaController::class, 'destroyDocumento']
+            );
+        });
+        Route::get(
+            '/sinistros',
+            [SinistroController::class, 'index']
+        );
+
+        Route::get(
+            '/sinistros/{id}',
+            [SinistroController::class, 'show']
+        );
+
+        Route::get(
+            '/sinistros/{id}/documentos/{documentoId}/arquivo',
+            [SinistroController::class, 'arquivo']
+        );
+
+        Route::get(
+            '/sinistros/{id}/documentos/{documentoId}/arquivo/download',
+            [SinistroController::class, 'downloadArquivo']
+        );
+
+        Route::middleware(
+            'permission:sinistros,configurar'
+        )->group(function () {
+            Route::post(
+                '/sinistros',
+                [SinistroController::class, 'store']
+            );
+
+            Route::patch(
+                '/sinistros/{id}',
+                [SinistroController::class, 'update']
+            );
+
+            Route::delete(
+                '/sinistros/{id}',
+                [SinistroController::class, 'destroy']
+            );
+
+            Route::post(
+                '/sinistros/{id}/documentos',
+                [SinistroController::class, 'storeDocumento']
+            );
+
+            Route::delete(
+                '/sinistros/{id}/documentos/{documentoId}',
+                [SinistroController::class, 'destroyDocumento']
             );
         });
     });
