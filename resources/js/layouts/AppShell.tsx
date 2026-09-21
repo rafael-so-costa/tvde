@@ -53,10 +53,15 @@ const navigation = [
         icon: ReceiptText,
     },
     {
-    to: "/expediente",
-    label: "Expediente",
-    icon: Clock3,
-},
+        to: "/expediente",
+        label: "Expediente",
+        icon: Clock3,
+    },
+    {
+        to: "/multas",
+        label: "Multas",
+        icon: ReceiptText,
+    },
     {
         to: "/veiculos",
         label: "Veículos",

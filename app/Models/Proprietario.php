@@ -115,19 +115,26 @@ class Proprietario extends Model
     }
 
     public function sincronizarCadastro(): void
-{
-    if (!$this->cadastroCompleto()) {
-        $this->status_cadastro = 'incompleto';
-        $this->ativo = false;
+    {
+        if (!$this->cadastroCompleto()) {
+            $this->status_cadastro = 'incompleto';
+            $this->ativo = false;
 
-        return;
+            return;
+        }
+
+        $this->status_cadastro = 'ativo';
+        $this->ativo = true;
     }
-
-    $this->status_cadastro = 'ativo';
-    $this->ativo = true;
-}
-public function veiculos(): HasMany
-{
-    return $this->hasMany(Veiculo::class);
-}
+    public function veiculos(): HasMany
+    {
+        return $this->hasMany(Veiculo::class);
+    }
+    public function multas(): HasMany
+    {
+        return $this->hasManyThrough(
+            Multa::class,
+            Veiculo::class
+        );
+    }
 }

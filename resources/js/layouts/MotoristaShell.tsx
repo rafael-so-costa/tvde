@@ -20,6 +20,11 @@ const navigation=[
         icon:Clock3,
     },
     {
+    to:'/portal/motorista/multas',
+    label:'Multas',
+    icon:ReceiptText,
+},
+    {
         to:'/portal/motorista/registo-criminal',
         label:'Registo Criminal',
         icon:FileCheck2,
