@@ -124,4 +124,8 @@ class Veiculo extends Model
             ChecklistRecord::class
         );
     }
+    public function multas(): HasMany
+{
+    return $this->hasMany(Multa::class);
+}
 }

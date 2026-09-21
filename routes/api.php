@@ -25,6 +25,7 @@ use App\Http\Controllers\RegistoCriminalController;
 use App\Http\Controllers\ReciboVerdeController;
 use App\Http\Controllers\ExpedienteController;
 use App\Http\Controllers\ExpedientePublicController;
+use App\Http\Controllers\MultaController;
 
 
 Route::get(
@@ -443,6 +444,42 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::delete(
                 '/checklists/{id}',
                 [ChecklistRecordController::class, 'destroy']
+            );
+        });
+        Route::get('/multas', [MultaController::class, 'index']);
+        Route::get('/multas/{id}', [MultaController::class, 'show']);
+
+        Route::get(
+            '/multas/{id}/documentos/{documentoId}/arquivo',
+            [MultaController::class, 'arquivo']
+        );
+
+        Route::get(
+            '/multas/{id}/documentos/{documentoId}/arquivo/download',
+            [MultaController::class, 'downloadArquivo']
+        );
+
+        Route::middleware('permission:multas,configurar')->group(function () {
+            Route::post('/multas', [MultaController::class, 'store']);
+
+            Route::patch(
+                '/multas/{id}',
+                [MultaController::class, 'update']
+            );
+
+            Route::delete(
+                '/multas/{id}',
+                [MultaController::class, 'destroy']
+            );
+
+            Route::post(
+                '/multas/{id}/documentos',
+                [MultaController::class, 'storeDocumento']
+            );
+
+            Route::delete(
+                '/multas/{id}/documentos/{documentoId}',
+                [MultaController::class, 'destroyDocumento']
             );
         });
     });

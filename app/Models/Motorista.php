@@ -141,4 +141,8 @@ public function registosExpediente(): HasMany
 {
     return $this->hasMany(RegistoExpediente::class);
 }
+public function multas(): HasMany
+{
+    return $this->hasMany(Multa::class);
+}
 }
