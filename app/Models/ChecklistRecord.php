@@ -5,7 +5,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+
 
 class ChecklistRecord extends Model
 {
@@ -117,6 +119,13 @@ class ChecklistRecord extends Model
         return $this->hasOne(
             Aluguer::class,
             'checklist_devolucao_id'
+        );
+    }
+    public function manutencoes(): HasMany
+    {
+        return $this->hasMany(
+            Manutencao::class,
+            'checklist_record_id'
         );
     }
 }

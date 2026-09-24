@@ -11,6 +11,7 @@ import {
     LoaderCircle,
     LogOut,
     Menu,
+    Wrench,
     ReceiptText,
     ShieldCheck,
     Truck,
@@ -64,10 +65,15 @@ const navigation = [
         icon: ReceiptText,
     },
     {
-    to:"/sinistros",
-    label:"Sinistros",
-    icon:AlertTriangle,
-},
+        to: "/sinistros",
+        label: "Sinistros",
+        icon: AlertTriangle,
+    },
+    {
+        to: "/manutencao",
+        label: "Manutenção",
+        icon: Wrench,
+    },
     {
         to: "/veiculos",
         label: "Veículos",

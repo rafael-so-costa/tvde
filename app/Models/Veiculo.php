@@ -61,6 +61,8 @@ class Veiculo extends Model
             'lugares' => 'integer',
             'portas' => 'integer',
             'ativo' => 'boolean',
+            'km_atual' => 'integer',
+            'km_atualizado_em' => 'datetime',
         ];
     }
 
@@ -132,6 +134,26 @@ class Veiculo extends Model
     {
         return $this->hasMany(
             Sinistro::class
+        );
+    }
+    public function manutencoes(): HasMany
+    {
+        return $this->hasMany(
+            Manutencao::class
+        );
+    }
+
+    public function planosManutencao(): HasMany
+    {
+        return $this->hasMany(
+            ManutencaoPlanoVeiculo::class
+        );
+    }
+
+    public function diagnosticos(): HasMany
+    {
+        return $this->hasMany(
+            VeiculoDiagnostico::class
         );
     }
 }

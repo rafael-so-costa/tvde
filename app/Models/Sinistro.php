@@ -11,14 +11,14 @@ class Sinistro extends Model
 {
     use HasUuids;
 
-    protected $attributes=[
-        'status'=>'aberto',
-        'itens_danificados'=>'[]',
-        'peritagem_realizada'=>false,
-        'teve_testemunha'=>false,
+    protected $attributes = [
+        'status' => 'aberto',
+        'itens_danificados' => '[]',
+        'peritagem_realizada' => false,
+        'teve_testemunha' => false,
     ];
 
-    protected $fillable=[
+    protected $fillable = [
         'veiculo_id',
         'motorista_id',
         'data_sinistro',
@@ -38,11 +38,11 @@ class Sinistro extends Model
     protected function casts(): array
     {
         return [
-            'data_sinistro'=>'date:Y-m-d',
-            'data_peritagem'=>'date:Y-m-d',
-            'peritagem_realizada'=>'boolean',
-            'itens_danificados'=>'array',
-            'teve_testemunha'=>'boolean',
+            'data_sinistro' => 'date:Y-m-d',
+            'data_peritagem' => 'date:Y-m-d',
+            'peritagem_realizada' => 'boolean',
+            'itens_danificados' => 'array',
+            'teve_testemunha' => 'boolean',
         ];
     }
 
@@ -81,6 +81,12 @@ class Sinistro extends Model
         return $this->belongsTo(
             User::class,
             'updated_by'
+        );
+    }
+    public function manutencoes(): HasMany
+    {
+        return $this->hasMany(
+            Manutencao::class
         );
     }
 }

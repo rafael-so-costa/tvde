@@ -21,6 +21,8 @@ import VeiculosPage from "./pages/VeiculosPage";
 import RegistosCriminaisPage from "./pages/RegistosCriminaisPage";
 import RecibosVerdesPage from "./pages/RecibosVerdesPage";
 import SinistrosPage from "./pages/SinistrosPage";
+import ManutencaoPage from "./pages/ManutencaoPage";
+import AprovacaoManutencaoPublicaPage from "./pages/AprovacaoManutencaoPublicaPage";
 
 export default function App() {
     return (
@@ -35,6 +37,10 @@ export default function App() {
             <Route
                 path="/registo-expediente-publico"
                 element={<ExpedientePublicPage />}
+            />
+            <Route
+                path="/aprovacao-manutencao/:token"
+                element={<AprovacaoManutencaoPublicaPage />}
             />
 
             <Route element={<ProtectedRoute />}>
@@ -73,6 +79,8 @@ export default function App() {
                         path="sinistros"
                         element={<SinistrosPage mode="management" />}
                     />
+
+                    <Route path="manutencao" element={<ManutencaoPage />} />
 
                     <Route path="veiculos" element={<VeiculosPage />} />
 

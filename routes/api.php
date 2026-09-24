@@ -27,6 +27,13 @@ use App\Http\Controllers\ExpedienteController;
 use App\Http\Controllers\ExpedientePublicController;
 use App\Http\Controllers\MultaController;
 use App\Http\Controllers\SinistroController;
+use App\Http\Controllers\ManutencaoController;
+use App\Http\Controllers\CompraController;
+use App\Http\Controllers\EstoqueController;
+use App\Http\Controllers\FornecedorController;
+use App\Http\Controllers\ManutencaoPlanoController;
+use App\Http\Controllers\PecaController;
+use App\Http\Controllers\VeiculoDiagnosticoController;
 
 Route::get(
     '/assinaturas/remotas/{token}',
@@ -47,6 +54,22 @@ Route::post(
     [ExpedientePublicController::class, 'marcar']
 )->middleware('throttle:10,1');
 
+Route::get(
+    '/manutencoes/aprovacoes/{token}',
+    [
+        ManutencaoController::class,
+        'showAprovacaoPublica',
+    ]
+)->middleware('throttle:30,1');
+
+Route::post(
+    '/manutencoes/aprovacoes/{token}/responder',
+    [
+        ManutencaoController::class,
+        'responderAprovacaoPublica',
+    ]
+)->middleware('throttle:10,1');
+
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [AuthController::class, 'me']);
     Route::get(
@@ -65,6 +88,311 @@ Route::middleware('auth:sanctum')->group(function () {
     );
 
     Route::middleware('tenant')->group(function () {
+
+        Route::middleware(
+            'permission:manutencao,visualizar'
+        )->group(function () {
+            Route::get(
+                '/manutencao-planos',
+                [
+                    ManutencaoPlanoController::class,
+                    'index',
+                ]
+            );
+
+            Route::get(
+                '/manutencao-planos/{id}',
+                [
+                    ManutencaoPlanoController::class,
+                    'show',
+                ]
+            );
+        });
+
+        Route::middleware(
+            'permission:manutencao,configurar'
+        )->group(function () {
+            Route::post(
+                '/manutencao-planos',
+                [
+                    ManutencaoPlanoController::class,
+                    'store',
+                ]
+            );
+
+            Route::patch(
+                '/manutencao-planos/{id}',
+                [
+                    ManutencaoPlanoController::class,
+                    'update',
+                ]
+            );
+
+            Route::post(
+                '/manutencao-planos/{id}/veiculos',
+                [
+                    ManutencaoPlanoController::class,
+                    'associarVeiculo',
+                ]
+            );
+
+            Route::delete(
+                '/manutencao-planos/{id}',
+                [
+                    ManutencaoPlanoController::class,
+                    'destroy',
+                ]
+            );
+        });
+
+        Route::middleware(
+            'permission:manutencao,visualizar'
+        )->group(function () {
+            Route::get(
+                '/fornecedores',
+                [
+                    FornecedorController::class,
+                    'index',
+                ]
+            );
+
+            Route::get(
+                '/fornecedores/{id}',
+                [
+                    FornecedorController::class,
+                    'show',
+                ]
+            );
+        });
+
+        Route::middleware(
+            'permission:manutencao,configurar'
+        )->group(function () {
+            Route::post(
+                '/fornecedores',
+                [
+                    FornecedorController::class,
+                    'store',
+                ]
+            );
+
+            Route::patch(
+                '/fornecedores/{id}',
+                [
+                    FornecedorController::class,
+                    'update',
+                ]
+            );
+
+            Route::delete(
+                '/fornecedores/{id}',
+                [
+                    FornecedorController::class,
+                    'destroy',
+                ]
+            );
+        });
+
+        Route::middleware(
+            'permission:manutencao,visualizar'
+        )->group(function () {
+            Route::get(
+                '/pecas',
+                [
+                    PecaController::class,
+                    'index',
+                ]
+            );
+
+            Route::get(
+                '/pecas/{id}',
+                [
+                    PecaController::class,
+                    'show',
+                ]
+            );
+        });
+
+        Route::middleware(
+            'permission:manutencao,configurar'
+        )->group(function () {
+            Route::post(
+                '/pecas',
+                [
+                    PecaController::class,
+                    'store',
+                ]
+            );
+
+            Route::patch(
+                '/pecas/{id}',
+                [
+                    PecaController::class,
+                    'update',
+                ]
+            );
+
+            Route::delete(
+                '/pecas/{id}',
+                [
+                    PecaController::class,
+                    'destroy',
+                ]
+            );
+        });
+
+        Route::middleware(
+            'permission:manutencao,visualizar'
+        )->group(function () {
+            Route::get(
+                '/compras',
+                [
+                    CompraController::class,
+                    'index',
+                ]
+            );
+
+            Route::get(
+                '/compras/{id}',
+                [
+                    CompraController::class,
+                    'show',
+                ]
+            );
+        });
+
+        Route::middleware(
+            'permission:manutencao,configurar'
+        )->group(function () {
+            Route::post(
+                '/compras',
+                [
+                    CompraController::class,
+                    'store',
+                ]
+            );
+
+            Route::patch(
+                '/compras/{id}',
+                [
+                    CompraController::class,
+                    'update',
+                ]
+            );
+
+            Route::post(
+                '/compras/{id}/encomendar',
+                [
+                    CompraController::class,
+                    'encomendar',
+                ]
+            );
+
+            Route::post(
+                '/compras/{id}/receber',
+                [
+                    CompraController::class,
+                    'receber',
+                ]
+            );
+
+            Route::post(
+                '/compras/{id}/cancelar',
+                [
+                    CompraController::class,
+                    'cancelar',
+                ]
+            );
+
+            Route::delete(
+                '/compras/{id}',
+                [
+                    CompraController::class,
+                    'destroy',
+                ]
+            );
+        });
+
+        Route::middleware(
+            'permission:manutencao,visualizar'
+        )->group(function () {
+            Route::get(
+                '/estoque',
+                [
+                    EstoqueController::class,
+                    'index',
+                ]
+            );
+
+            Route::get(
+                '/estoque/movimentos',
+                [
+                    EstoqueController::class,
+                    'movimentos',
+                ]
+            );
+        });
+
+        Route::middleware(
+            'permission:manutencao,configurar'
+        )->group(function () {
+            Route::post(
+                '/estoque/{pecaId}/ajustar',
+                [
+                    EstoqueController::class,
+                    'ajustar',
+                ]
+            );
+        });
+
+        Route::middleware(
+            'permission:manutencao,visualizar'
+        )->group(function () {
+            Route::get(
+                '/diagnosticos',
+                [
+                    VeiculoDiagnosticoController::class,
+                    'index',
+                ]
+            );
+
+            Route::get(
+                '/diagnosticos/{id}',
+                [
+                    VeiculoDiagnosticoController::class,
+                    'show',
+                ]
+            );
+        });
+
+        Route::middleware(
+            'permission:manutencao,configurar'
+        )->group(function () {
+            Route::post(
+                '/diagnosticos',
+                [
+                    VeiculoDiagnosticoController::class,
+                    'store',
+                ]
+            );
+
+            Route::post(
+                '/diagnosticos/{id}/resolver',
+                [
+                    VeiculoDiagnosticoController::class,
+                    'resolver',
+                ]
+            );
+            Route::post(
+                '/diagnosticos/{id}/ignorar',
+                [
+                    VeiculoDiagnosticoController::class,
+                    'ignorar',
+                ]
+            );
+        });
+
+
         Route::get('/expediente', [ExpedienteController::class, 'index']);
         Route::get('/expediente/estado', [ExpedienteController::class, 'estado']);
         Route::post('/expediente/marcar', [ExpedienteController::class, 'marcar']);
@@ -501,6 +829,218 @@ Route::middleware('auth:sanctum')->group(function () {
             '/sinistros/{id}/documentos/{documentoId}/arquivo/download',
             [SinistroController::class, 'downloadArquivo']
         );
+
+        Route::get(
+            '/manutencoes',
+            [
+                ManutencaoController::class,
+                'index',
+            ]
+        );
+
+        Route::get(
+            '/manutencoes/{id}',
+            [
+                ManutencaoController::class,
+                'show',
+            ]
+        );
+
+        Route::get(
+            '/manutencoes/{id}/documentos/{documentoId}/arquivo',
+            [
+                ManutencaoController::class,
+                'arquivo',
+            ]
+        );
+
+        Route::get(
+            '/manutencoes/{id}/documentos/{documentoId}/arquivo/download',
+            [
+                ManutencaoController::class,
+                'downloadArquivo',
+            ]
+        );
+
+        Route::middleware(
+            'permission:manutencao,configurar'
+        )->group(function () {
+            Route::post(
+                '/manutencoes',
+                [
+                    ManutencaoController::class,
+                    'store',
+                ]
+            );
+
+            Route::patch(
+                '/manutencoes/{id}',
+                [
+                    ManutencaoController::class,
+                    'update',
+                ]
+            );
+
+            Route::delete(
+                '/manutencoes/{id}',
+                [
+                    ManutencaoController::class,
+                    'destroy',
+                ]
+            );
+
+            Route::post(
+                '/manutencoes/{id}/itens',
+                [
+                    ManutencaoController::class,
+                    'storeItem',
+                ]
+            );
+
+            Route::patch(
+                '/manutencoes/{id}/itens/{itemId}',
+                [
+                    ManutencaoController::class,
+                    'updateItem',
+                ]
+            );
+
+            Route::delete(
+                '/manutencoes/{id}/itens/{itemId}',
+                [
+                    ManutencaoController::class,
+                    'destroyItem',
+                ]
+            );
+
+            Route::post(
+                '/manutencoes/{id}/agendar',
+                [
+                    ManutencaoController::class,
+                    'agendar',
+                ]
+            );
+
+            Route::post(
+                '/manutencoes/{id}/iniciar',
+                [
+                    ManutencaoController::class,
+                    'iniciar',
+                ]
+            );
+
+            Route::post(
+                '/manutencoes/{id}/aguardar-pecas',
+                [
+                    ManutencaoController::class,
+                    'aguardarPecas',
+                ]
+            );
+
+            Route::post(
+                '/manutencoes/{id}/retomar',
+                [
+                    ManutencaoController::class,
+                    'retomar',
+                ]
+            );
+
+            Route::post(
+                '/manutencoes/{id}/concluir',
+                [
+                    ManutencaoController::class,
+                    'concluir',
+                ]
+            );
+
+            Route::post(
+                '/manutencoes/{id}/cancelar',
+                [
+                    ManutencaoController::class,
+                    'cancelar',
+                ]
+            );
+
+            Route::post(
+                '/checklists/{checklistId}/manutencao',
+                [
+                    ManutencaoController::class,
+                    'fromChecklist',
+                ]
+            );
+
+            Route::post(
+                '/sinistros/{sinistroId}/manutencao',
+                [
+                    ManutencaoController::class,
+                    'fromSinistro',
+                ]
+            );
+
+            Route::post(
+                '/diagnosticos/{diagnosticoId}/manutencao',
+                [
+                    ManutencaoController::class,
+                    'fromDiagnostico',
+                ]
+            );
+
+            Route::post(
+                '/manutencoes/{id}/documentos',
+                [
+                    ManutencaoController::class,
+                    'storeDocumento',
+                ]
+            );
+
+            Route::post(
+                '/manutencoes/{id}/documentos/{documentoId}/processar',
+                [
+                    ManutencaoController::class,
+                    'processarDocumento',
+                ]
+            );
+
+            Route::post(
+                '/manutencoes/{id}/documentos/{documentoId}/ocr',
+                [
+                    ManutencaoController::class,
+                    'registrarOcr',
+                ]
+            );
+
+            Route::delete(
+                '/manutencoes/{id}/documentos/{documentoId}',
+                [
+                    ManutencaoController::class,
+                    'destroyDocumento',
+                ]
+            );
+
+            Route::post(
+                '/manutencoes/{id}/aprovacoes',
+                [
+                    ManutencaoController::class,
+                    'solicitarAprovacao',
+                ]
+            );
+
+            Route::post(
+                '/manutencoes/{id}/aprovacoes/{aprovacaoId}/responder',
+                [
+                    ManutencaoController::class,
+                    'responderAprovacaoInterna',
+                ]
+            );
+
+            Route::post(
+                '/manutencoes/{id}/garantias/{garantiaId}/utilizar',
+                [
+                    ManutencaoController::class,
+                    'utilizarGarantia',
+                ]
+            );
+        });
 
         Route::middleware(
             'permission:sinistros,configurar'

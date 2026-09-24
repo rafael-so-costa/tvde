@@ -151,4 +151,10 @@ class Motorista extends Model
             Sinistro::class
         );
     }
+    public function manutencoes(): HasMany
+    {
+        return $this->hasMany(
+            Manutencao::class
+        );
+    }
 }
