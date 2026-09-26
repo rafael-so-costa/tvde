@@ -2,6 +2,7 @@ import { useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
     AlertTriangle,
+    BellRing,
     Building2,
     Car,
     Clock3,
@@ -22,12 +23,18 @@ import {
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useTenant } from "../contexts/TenantContext";
+import AlertBell from "../components/alerts/AlertBell";
 
 const navigation = [
     {
         to: "/",
         label: "Dashboard",
         icon: LayoutDashboard,
+    },
+    {
+        to: "/alertas",
+        label: "Alertas",
+        icon: BellRing,
     },
     {
         to: "/empresas",
@@ -295,21 +302,25 @@ export default function AppShell() {
                         </div>
                     </div>
 
-                    <div className="hidden sm:flex items-center gap-3 shrink-0">
-                        <div className="text-right">
-                            <div className="text-sm font-medium text-slate-900">
-                                {user?.name}
+                    <div className="flex items-center gap-3 shrink-0">
+                        <AlertBell />
+
+                        <div className="hidden sm:flex items-center gap-3">
+                            <div className="text-right">
+                                <div className="text-sm font-medium text-slate-900">
+                                    {user?.name}
+                                </div>
+
+                                <div className="text-xs text-slate-500">
+                                    {user?.roles
+                                        ?.map((role) => role.nome)
+                                        .join(" · ")}
+                                </div>
                             </div>
 
-                            <div className="text-xs text-slate-500">
-                                {user?.roles
-                                    ?.map((role) => role.nome)
-                                    .join(" · ")}
+                            <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-semibold">
+                                {user?.name?.charAt(0).toUpperCase()}
                             </div>
-                        </div>
-
-                        <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-semibold">
-                            {user?.name?.charAt(0).toUpperCase()}
                         </div>
                     </div>
                 </header>

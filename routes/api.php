@@ -34,6 +34,8 @@ use App\Http\Controllers\FornecedorController;
 use App\Http\Controllers\ManutencaoPlanoController;
 use App\Http\Controllers\PecaController;
 use App\Http\Controllers\VeiculoDiagnosticoController;
+use App\Http\Controllers\AlertController;
+use App\Http\Controllers\NotificationPreferenceController;
 
 Route::get(
     '/assinaturas/remotas/{token}',
@@ -88,6 +90,106 @@ Route::middleware('auth:sanctum')->group(function () {
     );
 
     Route::middleware('tenant')->group(function () {
+
+        Route::get(
+            '/alertas/preferencias',
+            [
+                NotificationPreferenceController::class,
+                'index',
+            ]
+        );
+
+        Route::put(
+            '/alertas/preferencias/email',
+            [
+                NotificationPreferenceController::class,
+                'upsertEmail',
+            ]
+        );
+
+        Route::delete(
+            '/alertas/preferencias/email',
+            [
+                NotificationPreferenceController::class,
+                'destroyEmail',
+            ]
+        );
+
+        Route::get(
+            '/alertas/entregas',
+            [
+                NotificationPreferenceController::class,
+                'deliveries',
+            ]
+        );
+
+        Route::get(
+            '/alertas/resumo',
+            [
+                AlertController::class,
+                'summary',
+            ]
+        );
+
+        Route::post(
+            '/alertas/marcar-todos-lidos',
+            [
+                AlertController::class,
+                'markAllRead',
+            ]
+        );
+
+        Route::get(
+            '/alertas',
+            [
+                AlertController::class,
+                'index',
+            ]
+        );
+
+        Route::get(
+            '/alertas/{id}',
+            [
+                AlertController::class,
+                'show',
+            ]
+        )->whereUuid('id');
+
+        Route::post(
+            '/alertas/{id}/lido',
+            [
+                AlertController::class,
+                'markRead',
+            ]
+        )->whereUuid('id');
+
+        Route::post(
+            '/alertas/{id}/reconhecer',
+            [
+                AlertController::class,
+                'acknowledge',
+            ]
+        )->whereUuid('id');
+
+        Route::post(
+            '/alertas/{id}/adiar',
+            [
+                AlertController::class,
+                'snooze',
+            ]
+        )->whereUuid('id');
+
+        Route::post(
+            '/alertas/{id}/resolver',
+            [
+                AlertController::class,
+                'resolve',
+            ]
+        )
+            ->whereUuid('id')
+            ->middleware(
+                'permission:alertas,configurar'
+            );
 
         Route::middleware(
             'permission:manutencao,visualizar'

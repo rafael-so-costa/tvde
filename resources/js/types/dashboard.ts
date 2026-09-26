@@ -14,19 +14,6 @@ export interface DashboardPermissions {
     alugueres: boolean;
     contratos: boolean;
     checklist: boolean;
-    empresas: boolean;
-}
-
-export interface DashboardAlert {
-    id: string;
-    entity_type: string;
-    entity_id: string;
-    entity_name: string;
-    document: string;
-    expires_at: string;
-    days: number;
-    status: "expired" | "today" | "upcoming";
-    href: string;
 }
 
 export interface DashboardContract {
@@ -37,8 +24,17 @@ export interface DashboardContract {
     data_fim: string | null;
     valor_semanal: string | number | null;
     updated_at: string;
-    template?: { id: string; nome: string } | null;
-    motorista?: { id: string; nome_completo: string } | null;
+
+    template?: {
+        id: string;
+        nome: string;
+    } | null;
+
+    motorista?: {
+        id: string;
+        nome_completo: string;
+    } | null;
+
     veiculo?: {
         id: string;
         matricula: string;
@@ -54,7 +50,12 @@ export interface DashboardRental {
     data_fim: string | null;
     rascunho_passo: number;
     updated_at: string;
-    motorista?: { id: string; nome_completo: string } | null;
+
+    motorista?: {
+        id: string;
+        nome_completo: string;
+    } | null;
+
     veiculo?: {
         id: string;
         matricula: string;
@@ -65,8 +66,13 @@ export interface DashboardRental {
 
 export interface DashboardData {
     metrics: DashboardMetrics;
-    recent_contracts: DashboardContract[];
-    recent_rentals: DashboardRental[];
-    alerts: DashboardAlert[];
-    permissions: DashboardPermissions;
+
+    recent_contracts:
+        DashboardContract[];
+
+    recent_rentals:
+        DashboardRental[];
+
+    permissions:
+        DashboardPermissions;
 }

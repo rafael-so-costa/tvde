@@ -23,6 +23,7 @@ import RecibosVerdesPage from "./pages/RecibosVerdesPage";
 import SinistrosPage from "./pages/SinistrosPage";
 import ManutencaoPage from "./pages/ManutencaoPage";
 import AprovacaoManutencaoPublicaPage from "./pages/AprovacaoManutencaoPublicaPage";
+import AlertsPage from "./pages/AlertsPage";
 
 export default function App() {
     return (
@@ -45,6 +46,7 @@ export default function App() {
 
             <Route element={<ProtectedRoute />}>
                 <Route element={<AppShell />}>
+                    <Route path="alertas" element={<AlertsPage />} />
                     <Route index element={<DashboardPage />} />
 
                     <Route path="empresas" element={<EmpresasPage />} />

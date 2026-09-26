@@ -109,7 +109,6 @@ class DashboardController extends Controller
                 'metrics' => $metrics,
                 'recent_contracts' => $recentContracts,
                 'recent_rentals' => $recentRentals,
-                'alerts' => $this->alerts($tenantId, $permissions),
                 'permissions' => $permissions,
             ],
         ]);
