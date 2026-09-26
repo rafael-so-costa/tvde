@@ -10,6 +10,7 @@ class PermissionSeeder extends Seeder
     public function run(): void
     {
         $modulos = [
+            'alertas' => 'Alertas',
             'dashboard' => 'Dashboard',
             'empresas' => 'Empresas',
             'proprietarios' => 'Proprietários',
