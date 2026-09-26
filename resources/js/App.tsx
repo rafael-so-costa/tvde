@@ -24,6 +24,8 @@ import SinistrosPage from "./pages/SinistrosPage";
 import ManutencaoPage from "./pages/ManutencaoPage";
 import AprovacaoManutencaoPublicaPage from "./pages/AprovacaoManutencaoPublicaPage";
 import AlertsPage from "./pages/AlertsPage";
+import FuncionariosPage from "./pages/FuncionariosPage";
+import FuncionarioInvitePage from "./pages/FuncionarioInvitePage";
 
 export default function App() {
     return (
@@ -44,16 +46,20 @@ export default function App() {
                 element={<AprovacaoManutencaoPublicaPage />}
             />
 
+            <Route
+                path="/convites/funcionario/:token"
+                element={<FuncionarioInvitePage />}
+            />
+
             <Route element={<ProtectedRoute />}>
                 <Route element={<AppShell />}>
                     <Route path="alertas" element={<AlertsPage />} />
                     <Route index element={<DashboardPage />} />
 
                     <Route path="empresas" element={<EmpresasPage />} />
+                    <Route path="funcionarios" element={<FuncionariosPage />} />
 
-                    <Route
-                        path="proprietarios"
-                        element={<ProprietariosPage />}
+                    <Route path="proprietarios" element={<ProprietariosPage />}
                     />
 
                     <Route path="motoristas" element={<MotoristasPage />} />

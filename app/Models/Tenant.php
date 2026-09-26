@@ -49,11 +49,17 @@ class Tenant extends Model
         return $this->hasMany(Proprietario::class);
     }
     public function veiculos(): HasMany
-{
-    return $this->hasMany(Veiculo::class);
-}
-public function motoristas(): HasMany
-{
-    return $this->hasMany(Motorista::class);
-}
+    {
+        return $this->hasMany(Veiculo::class);
+    }
+    public function motoristas(): HasMany
+    {
+        return $this->hasMany(Motorista::class);
+    }
+    public function funcionarios(): HasMany
+    {
+        return $this->hasMany(
+            Funcionario::class
+        );
+    }
 }

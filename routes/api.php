@@ -36,6 +36,9 @@ use App\Http\Controllers\PecaController;
 use App\Http\Controllers\VeiculoDiagnosticoController;
 use App\Http\Controllers\AlertController;
 use App\Http\Controllers\NotificationPreferenceController;
+use App\Http\Controllers\CurrentPermissionController;
+use App\Http\Controllers\FuncionarioController;
+use App\Http\Controllers\FuncionarioInvitationController;
 
 Route::get(
     '/assinaturas/remotas/{token}',
@@ -72,6 +75,36 @@ Route::post(
     ]
 )->middleware('throttle:10,1');
 
+Route::get(
+    '/funcionario-convites/{token}',
+    [
+        FuncionarioInvitationController::class,
+        'show',
+    ]
+)
+    ->where(
+        'token',
+        '[A-Za-z0-9]{64}'
+    )
+    ->middleware(
+        'throttle:30,1'
+    );
+
+Route::post(
+    '/funcionario-convites/{token}/aceitar',
+    [
+        FuncionarioInvitationController::class,
+        'accept',
+    ]
+)
+    ->where(
+        'token',
+        '[A-Za-z0-9]{64}'
+    )
+    ->middleware(
+        'throttle:5,1'
+    );
+
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [AuthController::class, 'me']);
     Route::get(
@@ -91,6 +124,102 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::middleware('tenant')->group(function () {
 
+
+        Route::get(
+            '/permissoes-atuais',
+            [
+                CurrentPermissionController::class,
+                'index',
+            ]
+        );
+
+        Route::middleware(
+            'permission:funcionarios,visualizar'
+        )->group(function () {
+            Route::get(
+                '/funcionarios',
+                [
+                    FuncionarioController::class,
+                    'index',
+                ]
+            );
+
+            Route::get(
+                '/funcionarios/{id}',
+                [
+                    FuncionarioController::class,
+                    'show',
+                ]
+            )->whereUuid('id');
+        });
+
+        Route::middleware(
+            'permission:funcionarios,configurar'
+        )->group(function () {
+            Route::post(
+                '/funcionarios',
+                [
+                    FuncionarioController::class,
+                    'store',
+                ]
+            );
+
+            Route::patch(
+                '/funcionarios/{id}',
+                [
+                    FuncionarioController::class,
+                    'update',
+                ]
+            )->whereUuid('id');
+
+            Route::patch(
+                '/funcionarios/{id}/estado',
+                [
+                    FuncionarioController::class,
+                    'status',
+                ]
+            )->whereUuid('id');
+
+            Route::post(
+                '/funcionarios/{id}/acesso',
+                [
+                    FuncionarioController::class,
+                    'provisionAccess',
+                ]
+            )->whereUuid('id');
+
+            Route::post(
+                '/funcionarios/{id}/acesso/reenviar',
+                [
+                    FuncionarioController::class,
+                    'resendInvite',
+                ]
+            )->whereUuid('id');
+
+            Route::patch(
+                '/funcionarios/{id}/acesso',
+                [
+                    FuncionarioController::class,
+                    'accessStatus',
+                ]
+            )->whereUuid('id');
+
+            Route::get(
+                '/funcionarios/{id}/permissoes',
+                [
+                    FuncionarioController::class,
+                    'permissions',
+                ]
+            )->whereUuid('id');
+
+            Route::put(
+                '/funcionarios/{id}/permissoes',
+                [
+                    FuncionarioController::class,
+                    'updatePermissions',
+                ]
+            )->whereUuid('id');
+        });
         Route::get(
             '/alertas/preferencias',
             [

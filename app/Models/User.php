@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class User extends Authenticatable
 {
@@ -62,15 +63,21 @@ class User extends Authenticatable
             ->where('user_id', $this->id)
             ->when(
                 $tenantId,
-                fn ($query) => $query->where('tenant_id', $tenantId),
-                fn ($query) => $query->whereNull('tenant_id')
+                fn($query) => $query->where('tenant_id', $tenantId),
+                fn($query) => $query->whereNull('tenant_id')
             )
-            ->whereHas('role', fn ($query) => $query->where('codigo', $role))
+            ->whereHas('role', fn($query) => $query->where('codigo', $role))
             ->exists();
     }
 
     public function isSuperAdmin(): bool
     {
         return $this->hasRole('super_admin');
+    }
+    public function funcionarios(): HasMany
+    {
+        return $this->hasMany(
+            Funcionario::class
+        );
     }
 }

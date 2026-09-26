@@ -1,6 +1,19 @@
-import {Navigate,Outlet} from 'react-router-dom';
-import {LoaderCircle} from 'lucide-react';
-import {useAuth} from '../contexts/AuthContext';
+import {
+    Navigate,
+    Outlet,
+} from "react-router-dom";
+
+import {
+    LoaderCircle,
+} from "lucide-react";
+
+import {
+    useAuth,
+} from "../contexts/AuthContext";
+
+import {
+    useTenant,
+} from "../contexts/TenantContext";
 
 interface Props {
     allowedRoles:string[];
@@ -9,11 +22,22 @@ interface Props {
 
 export default function RoleRoute({
     allowedRoles,
-    redirectTo='/',
+    redirectTo="/",
 }:Props){
-    const {user,loading}=useAuth();
+    const {
+        user,
+        loading,
+    }=useAuth();
 
-    if(loading){
+    const {
+        tenant,
+        loading:tenantLoading,
+    }=useTenant();
+
+    if(
+        loading ||
+        tenantLoading
+    ){
         return (
             <div className="min-h-screen flex items-center justify-center bg-slate-50">
                 <LoaderCircle className="w-8 h-8 animate-spin text-indigo-600"/>
@@ -22,15 +46,37 @@ export default function RoleRoute({
     }
 
     if(!user){
-        return <Navigate to="/login" replace/>;
+        return (
+            <Navigate
+                to="/login"
+                replace
+            />
+        );
     }
 
     const allowed=
-        (user.super_admin && allowedRoles.includes('super_admin')) ||
-        user.roles?.some(role=>allowedRoles.includes(role.codigo));
+        (
+            user.super_admin &&
+            allowedRoles.includes(
+                "super_admin"
+            )
+        ) ||
+        user.roles?.some(
+            role=>
+                allowedRoles.includes(
+                    role.codigo
+                ) &&
+                role.pivot?.tenant_id===
+                    tenant?.id
+        );
 
     if(!allowed){
-        return <Navigate to={redirectTo} replace/>;
+        return (
+            <Navigate
+                to={redirectTo}
+                replace
+            />
+        );
     }
 
     return <Outlet/>;
