@@ -28,3 +28,83 @@ export interface BackofficeDashboardData {
     metrics: BackofficeMetrics;
     recent_tenants: BackofficeRecentTenant[];
 }
+
+export interface BackofficeClient {
+    id: string;
+    nome: string;
+    slug: string;
+    nif: string | null;
+    email: string | null;
+    telefone: string | null;
+    ativo: boolean;
+    created_at: string;
+    updated_at: string;
+    onboarding_required: boolean;
+    onboarding_completed_at: string | null;
+    multi_company_enabled: boolean;
+    users_count: number;
+    empresas_count: number;
+    proprietarios_count: number;
+    veiculos_count: number;
+    motoristas_count: number;
+    funcionarios_count: number;
+}
+
+export interface BackofficePagination {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+    from: number | null;
+    to: number | null;
+}
+
+export interface BackofficeClientListResponse {
+    data: BackofficeClient[];
+    meta: BackofficePagination;
+}
+
+export interface BackofficeClientCompany {
+    id: string;
+    tenant_id: string;
+    nome_empresa: string;
+    nif: string;
+    email: string | null;
+    telemovel: string | null;
+    nome_gerente: string | null;
+    endereco_cidade: string | null;
+    ativo: boolean;
+    status_cadastro: string;
+    created_at: string;
+}
+
+export interface BackofficeClientUserRole {
+    codigo: string;
+    nome: string;
+}
+
+export interface BackofficeClientUser {
+    id: string;
+    name: string;
+    email: string;
+    ativo: boolean;
+    membership_status: string;
+    principal: boolean;
+    last_login_at: string | null;
+    created_at: string;
+    roles: BackofficeClientUserRole[];
+}
+
+export interface BackofficeClientDetail
+    extends BackofficeClient {
+    settings: Record<
+        string,
+        unknown
+    >;
+
+    companies:
+        BackofficeClientCompany[];
+
+    users:
+        BackofficeClientUser[];
+}

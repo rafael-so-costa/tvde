@@ -4,22 +4,14 @@ import {
     LogOut,
     ShieldCheck,
     Truck,
+    UsersRound,
 } from "lucide-react";
-import {
-    Link,
-    NavLink,
-    Outlet,
-} from "react-router-dom";
+import { Link, NavLink, Outlet } from "react-router-dom";
 
-import {
-    useAuth,
-} from "../contexts/AuthContext";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function BackofficeShell() {
-    const {
-        user,
-        logout,
-    } = useAuth();
+    const { user, logout } = useAuth();
 
     return (
         <div className="min-h-screen bg-slate-100">
@@ -50,9 +42,7 @@ export default function BackofficeShell() {
                     <NavLink
                         to="/backoffice"
                         end
-                        className={({
-                            isActive,
-                        }) =>
+                        className={({ isActive }) =>
                             [
                                 "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition",
                                 isActive
@@ -62,8 +52,21 @@ export default function BackofficeShell() {
                         }
                     >
                         <LayoutDashboard className="h-5 w-5" />
-
                         Dashboard
+                    </NavLink>
+                    <NavLink
+                        to="/backoffice/clientes"
+                        className={({ isActive }) =>
+                            [
+                                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition",
+                                isActive
+                                    ? "bg-indigo-500 text-white"
+                                    : "text-slate-400 hover:bg-white/5 hover:text-white",
+                            ].join(" ")
+                        }
+                    >
+                        <UsersRound className="h-5 w-5" />
+                        Clientes
                     </NavLink>
                 </nav>
 
@@ -81,9 +84,7 @@ export default function BackofficeShell() {
 
                     <button
                         type="button"
-                        onClick={() =>
-                            logout()
-                        }
+                        onClick={() => logout()}
                         className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-400 transition hover:bg-red-500/10 hover:text-red-300"
                     >
                         <LogOut className="h-5 w-5" />

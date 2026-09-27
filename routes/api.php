@@ -3,6 +3,7 @@
 use App\Http\Controllers\AlertController;
 use App\Http\Controllers\AluguerController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BackofficeClientController;
 use App\Http\Controllers\BackofficeDashboardController;
 use App\Http\Controllers\ChecklistProcessRunController;
 use App\Http\Controllers\ChecklistProcessTemplateController;
@@ -66,10 +67,36 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('super_admin')
         ->prefix('backoffice')
         ->group(function () {
+            Route::patch(
+                '/clientes/{id}/multiempresa',
+                [BackofficeClientController::class, 'multiCompany']
+            )
+                ->whereUuid('id');
             Route::get(
                 '/dashboard',
                 [BackofficeDashboardController::class, 'show']
             );
+
+            Route::get(
+                '/clientes',
+                [BackofficeClientController::class, 'index']
+            );
+
+            Route::get(
+                '/clientes/{id}',
+                [BackofficeClientController::class, 'show']
+            )
+                ->whereUuid(
+                    'id'
+                );
+
+            Route::patch(
+                '/clientes/{id}/estado',
+                [BackofficeClientController::class, 'status']
+            )
+                ->whereUuid(
+                    'id'
+                );
         });
     Route::get('/minha-conta', [MyAccountController::class, 'show']);
     Route::patch('/minha-conta', [MyAccountController::class, 'update']);

@@ -38,6 +38,8 @@ import VeiculosPage from "./pages/VeiculosPage";
 import SuperAdminRoute from "./components/SuperAdminRoute";
 import BackofficeShell from "./layouts/BackofficeShell";
 import BackofficeDashboardPage from "./pages/BackofficeDashboardPage";
+import BackofficeClientsPage from "./pages/BackofficeClientsPage";
+import BackofficeClientPage from "./pages/BackofficeClientPage";
 
 export default function App() {
     return (
@@ -68,6 +70,14 @@ export default function App() {
                 <Route element={<SuperAdminRoute />}>
                     <Route path="backoffice" element={<BackofficeShell />}>
                         <Route index element={<BackofficeDashboardPage />} />
+                        <Route
+                            path="clientes"
+                            element={<BackofficeClientsPage />}
+                        />
+                        <Route
+                            path="clientes/:id"
+                            element={<BackofficeClientPage />}
+                        />
                     </Route>
                 </Route>
                 <Route element={<ManagementRoute />}>
