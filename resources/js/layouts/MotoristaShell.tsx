@@ -3,6 +3,7 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import {
     AlertTriangle,
     Clock3,
+    CircleUserRound,
     FileCheck2,
     LoaderCircle,
     LogOut,
@@ -10,11 +11,19 @@ import {
     ReceiptText,
     Truck,
     X,
+    LayoutDashboard,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useTenant } from "../contexts/TenantContext";
+import { resolvePortalDestination } from "../lib/portal";
 
 const navigation = [
+    {
+        to: "/portal/motorista",
+        label: "Início",
+        icon: LayoutDashboard,
+        end: true,
+    },
     {
         to: "/portal/motorista/expediente",
         label: "Expediente",
@@ -40,6 +49,11 @@ const navigation = [
         label: "Recibos Verdes",
         icon: ReceiptText,
     },
+    {
+        to: "/portal/motorista/minha-conta",
+        label: "Minha Conta",
+        icon: CircleUserRound,
+    },
 ];
 
 export default function MotoristaShell() {
@@ -59,7 +73,10 @@ export default function MotoristaShell() {
 
         try {
             await selectTenant(id);
-            navigate("/portal/motorista/expediente");
+
+            const destination = await resolvePortalDestination("/");
+
+            navigate(destination);
         } finally {
             setSwitching(false);
         }

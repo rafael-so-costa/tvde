@@ -3,6 +3,9 @@ import {
     useState,
 } from 'react';
 import {
+    resolvePortalDestination,
+} from '../lib/portal';
+import {
     Navigate,
     useNavigate,
 } from 'react-router-dom';
@@ -52,42 +55,50 @@ export default function LoginPage() {
     }
 
     async function handleSubmit(
-        event: FormEvent
-    ) {
-        event.preventDefault();
-        setError('');
-        setSubmitting(true);
+    event: FormEvent
+) {
+    event.preventDefault();
+    setError('');
+    setSubmitting(true);
 
-        try {
-            await login({
-                email,
-                password,
-                remember,
-            });
+    try {
+        await login({
+            email,
+            password,
+            remember,
+        });
 
-            navigate('/', {
+        const destination =
+            await resolvePortalDestination(
+                '/'
+            );
+
+        navigate(
+            destination,
+            {
                 replace: true,
-            });
-        } catch (exception) {
-            if (
-                axios.isAxiosError(
-                    exception
-                )
-            ) {
-                setError(
-                    exception.response
-                        ?.data?.message ??
-                    'Não foi possível iniciar sessão.'
-                );
-            } else {
-                setError(
-                    'Não foi possível iniciar sessão.'
-                );
             }
-        } finally {
-            setSubmitting(false);
+        );
+    } catch (exception) {
+        if (
+            axios.isAxiosError(
+                exception
+            )
+        ) {
+            setError(
+                exception.response
+                    ?.data?.message ??
+                'Não foi possível iniciar sessão.'
+            );
+        } else {
+            setError(
+                'Não foi possível iniciar sessão.'
+            );
         }
+    } finally {
+        setSubmitting(false);
     }
+}
 
     return (
         <main className="min-h-screen bg-slate-950 lg:grid lg:grid-cols-2">

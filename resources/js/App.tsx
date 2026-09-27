@@ -1,9 +1,13 @@
 import { Navigate, Route, Routes } from "react-router-dom";
+
 import ProtectedRoute from "./components/ProtectedRoute";
-import RoleRoute from "./components/RoleRoute";
+import ManagementRoute from "./components/ManagementRoute";
+import PortalAreaRoute from "./components/PortalAreaRoute";
+
 import AppShell from "./layouts/AppShell";
 import MotoristaShell from "./layouts/MotoristaShell";
 import ProprietarioShell from "./layouts/ProprietarioShell";
+
 import AlugueresPage from "./pages/AlugueresPage";
 import ChecklistsPage from "./pages/ChecklistsPage";
 import ContratosPage from "./pages/ContratosPage";
@@ -26,6 +30,9 @@ import AprovacaoManutencaoPublicaPage from "./pages/AprovacaoManutencaoPublicaPa
 import AlertsPage from "./pages/AlertsPage";
 import FuncionariosPage from "./pages/FuncionariosPage";
 import FuncionarioInvitePage from "./pages/FuncionarioInvitePage";
+import MyAccountPage from "./pages/MyAccountPage";
+import MotoristaDashboardPage from "./pages/MotoristaDashboardPage";
+import ProprietarioDashboardPage from "./pages/ProprietarioDashboardPage";
 
 export default function App() {
     return (
@@ -41,6 +48,7 @@ export default function App() {
                 path="/registo-expediente-publico"
                 element={<ExpedientePublicPage />}
             />
+
             <Route
                 path="/aprovacao-manutencao/:token"
                 element={<AprovacaoManutencaoPublicaPage />}
@@ -52,73 +60,71 @@ export default function App() {
             />
 
             <Route element={<ProtectedRoute />}>
-                <Route element={<AppShell />}>
-                    <Route path="alertas" element={<AlertsPage />} />
-                    <Route index element={<DashboardPage />} />
+                <Route element={<ManagementRoute />}>
+                    <Route element={<AppShell />}>
+                        <Route index element={<DashboardPage />} />
 
-                    <Route path="empresas" element={<EmpresasPage />} />
-                    <Route path="funcionarios" element={<FuncionariosPage />} />
+                        <Route path="minha-conta" element={<MyAccountPage />} />
 
-                    <Route path="proprietarios" element={<ProprietariosPage />}
-                    />
+                        <Route path="alertas" element={<AlertsPage />} />
 
-                    <Route path="motoristas" element={<MotoristasPage />} />
+                        <Route path="empresas" element={<EmpresasPage />} />
 
-                    <Route
-                        path="registos-criminais"
-                        element={<RegistosCriminaisPage />}
-                    />
+                        <Route
+                            path="funcionarios"
+                            element={<FuncionariosPage />}
+                        />
 
-                    <Route
-                        path="recibos-verdes"
-                        element={<RecibosVerdesPage />}
-                    />
+                        <Route
+                            path="proprietarios"
+                            element={<ProprietariosPage />}
+                        />
 
-                    <Route
-                        path="expediente"
-                        element={<ExpedientePage mode="management" />}
-                    />
+                        <Route path="motoristas" element={<MotoristasPage />} />
 
-                    <Route
-                        path="multas"
-                        element={<MultasPage mode="management" />}
-                    />
-                    <Route
-                        path="sinistros"
-                        element={<SinistrosPage mode="management" />}
-                    />
+                        <Route
+                            path="registos-criminais"
+                            element={<RegistosCriminaisPage />}
+                        />
 
-                    <Route path="manutencao" element={<ManutencaoPage />} />
+                        <Route
+                            path="recibos-verdes"
+                            element={<RecibosVerdesPage />}
+                        />
 
-                    <Route path="veiculos" element={<VeiculosPage />} />
+                        <Route
+                            path="expediente"
+                            element={<ExpedientePage mode="management" />}
+                        />
 
-                    <Route path="checklists" element={<ChecklistsPage />} />
+                        <Route
+                            path="multas"
+                            element={<MultasPage mode="management" />}
+                        />
 
-                    <Route path="alugueres" element={<AlugueresPage />} />
+                        <Route
+                            path="sinistros"
+                            element={<SinistrosPage mode="management" />}
+                        />
 
-                    <Route path="contratos" element={<ContratosPage />} />
+                        <Route path="manutencao" element={<ManutencaoPage />} />
 
-                    <Route path="templates" element={<TemplatesPage />} />
+                        <Route path="veiculos" element={<VeiculosPage />} />
+
+                        <Route path="checklists" element={<ChecklistsPage />} />
+
+                        <Route path="alugueres" element={<AlugueresPage />} />
+
+                        <Route path="contratos" element={<ContratosPage />} />
+
+                        <Route path="templates" element={<TemplatesPage />} />
+                    </Route>
                 </Route>
 
-                <Route
-                    element={
-                        <RoleRoute
-                            allowedRoles={["motorista"]}
-                            redirectTo="/"
-                        />
-                    }
-                >
+                <Route element={<PortalAreaRoute area="motorista" />}>
                     <Route path="portal/motorista" element={<MotoristaShell />}>
-                        <Route
-                            index
-                            element={
-                                <Navigate
-                                    to="/portal/motorista/expediente"
-                                    replace
-                                />
-                            }
-                        />
+                        <Route index element={<MotoristaDashboardPage />} />
+                        <Route path="minha-conta" element={<MyAccountPage />} />
 
                         <Route
                             path="expediente"
@@ -129,6 +135,7 @@ export default function App() {
                             path="multas"
                             element={<MultasPage mode="readonly" />}
                         />
+
                         <Route
                             path="sinistros"
                             element={<SinistrosPage mode="readonly" />}
@@ -146,32 +153,19 @@ export default function App() {
                     </Route>
                 </Route>
 
-                <Route
-                    element={
-                        <RoleRoute
-                            allowedRoles={["proprietario"]}
-                            redirectTo="/"
-                        />
-                    }
-                >
+                <Route element={<PortalAreaRoute area="proprietario" />}>
                     <Route
                         path="portal/proprietario"
                         element={<ProprietarioShell />}
                     >
-                        <Route
-                            index
-                            element={
-                                <Navigate
-                                    to="/portal/proprietario/multas"
-                                    replace
-                                />
-                            }
-                        />
+                        <Route path="minha-conta" element={<MyAccountPage />} />
+                        <Route index element={<ProprietarioDashboardPage/>}/>
 
                         <Route
                             path="multas"
                             element={<MultasPage mode="readonly" />}
                         />
+
                         <Route
                             path="sinistros"
                             element={<SinistrosPage mode="readonly" />}
