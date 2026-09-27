@@ -35,6 +35,9 @@ import RemoteSignaturePage from "./pages/RemoteSignaturePage";
 import SinistrosPage from "./pages/SinistrosPage";
 import TemplatesPage from "./pages/TemplatesPage";
 import VeiculosPage from "./pages/VeiculosPage";
+import SuperAdminRoute from "./components/SuperAdminRoute";
+import BackofficeShell from "./layouts/BackofficeShell";
+import BackofficeDashboardPage from "./pages/BackofficeDashboardPage";
 
 export default function App() {
     return (
@@ -62,6 +65,11 @@ export default function App() {
             />
 
             <Route element={<ProtectedRoute />}>
+                <Route element={<SuperAdminRoute />}>
+                    <Route path="backoffice" element={<BackofficeShell />}>
+                        <Route index element={<BackofficeDashboardPage />} />
+                    </Route>
+                </Route>
                 <Route element={<ManagementRoute />}>
                     <Route element={<TenantOnboardingGate />}>
                         <Route path="onboarding" element={<OnboardingPage />} />

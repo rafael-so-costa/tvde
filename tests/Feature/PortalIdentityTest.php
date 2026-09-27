@@ -745,7 +745,7 @@ test(
 );
 
 test(
-    'super admin sem tenant mantém acesso à gestão',
+    'super admin sem tenant recebe backoffice como área padrão',
     function () {
         $user =
             criarPortalUser(
@@ -791,7 +791,7 @@ test(
             )
             ->assertJsonPath(
                 'data.default_path',
-                '/painel'
+                '/backoffice'
             );
     }
 );

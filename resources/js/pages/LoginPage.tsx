@@ -1,14 +1,6 @@
-import {
-    FormEvent,
-    useState,
-} from 'react';
-import {
-    resolvePortalDestination,
-} from '../lib/portal';
-import {
-    Navigate,
-    useNavigate,
-} from 'react-router-dom';
+import { FormEvent, useState } from "react";
+import { resolvePortalDestination } from "../lib/portal";
+import { Navigate, useNavigate } from "react-router-dom";
 import {
     CheckCircle2,
     LoaderCircle,
@@ -16,89 +8,64 @@ import {
     Mail,
     ShieldCheck,
     Truck,
-} from 'lucide-react';
-import axios from 'axios';
-import { useAuth } from '../contexts/AuthContext';
+} from "lucide-react";
+import axios from "axios";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function LoginPage() {
-    const {
-        user,
-        loading,
-        login,
-    } = useAuth();
+    const { user, loading, login } = useAuth();
 
-    const navigate =
-        useNavigate();
+    const navigate = useNavigate();
 
-    const [email, setEmail] =
-        useState('');
+    const [email, setEmail] = useState("");
 
-    const [password, setPassword] =
-        useState('');
+    const [password, setPassword] = useState("");
 
-    const [remember, setRemember] =
-        useState(false);
+    const [remember, setRemember] = useState(false);
 
-    const [submitting, setSubmitting] =
-        useState(false);
+    const [submitting, setSubmitting] = useState(false);
 
-    const [error, setError] =
-        useState('');
+    const [error, setError] = useState("");
 
     if (!loading && user) {
         return (
             <Navigate
-                to="/painel"
+                to={user.super_admin ? "/backoffice" : "/painel"}
                 replace
             />
         );
     }
 
-    async function handleSubmit(
-    event: FormEvent
-) {
-    event.preventDefault();
-    setError('');
-    setSubmitting(true);
+    async function handleSubmit(event: FormEvent) {
+        event.preventDefault();
+        setError("");
+        setSubmitting(true);
 
-    try {
-        await login({
-            email,
-            password,
-            remember,
-        });
+        try {
+            await login({
+                email,
+                password,
+                remember,
+            });
 
-        const destination =
-            await resolvePortalDestination(
-                '/painel'
-            );
+            const destination = await resolvePortalDestination("/painel");
 
-        navigate(
-            destination,
-            {
+            navigate(destination, {
                 replace: true,
+            });
+        } catch (exception) {
+            if (axios.isAxiosError(exception)) {
+                setError(
+                    exception.response?.data?.message ??
+                        "Não foi possível iniciar sessão.",
+                );
+            } else {
+                setError("Não foi possível iniciar sessão.");
             }
-        );
-    } catch (exception) {
-        if (
-            axios.isAxiosError(
-                exception
-            )
-        ) {
-            setError(
-                exception.response
-                    ?.data?.message ??
-                'Não foi possível iniciar sessão.'
-            );
-        } else {
-            setError(
-                'Não foi possível iniciar sessão.'
-            );
+        } finally {
+            setSubmitting(false);
         }
-    } finally {
-        setSubmitting(false);
     }
-}
 
     return (
         <main className="min-h-screen bg-slate-950 lg:grid lg:grid-cols-2">
@@ -135,27 +102,22 @@ export default function LoginPage() {
                     </h1>
 
                     <p className="mt-6 text-lg leading-relaxed text-slate-300 max-w-lg">
-                        Motoristas, veículos,
-                        proprietários, contratos e
-                        alugueres numa plataforma
-                        desenhada para operações
-                        TVDE.
+                        Motoristas, veículos, proprietários, contratos e
+                        alugueres numa plataforma desenhada para operações TVDE.
                     </p>
 
                     <div className="mt-10 grid gap-4">
                         {[
-                            'Gestão multiempresa e multiutilizador',
-                            'Contratos e assinaturas digitais',
-                            'Controlo operacional por organização',
+                            "Gestão multiempresa e multiutilizador",
+                            "Contratos e assinaturas digitais",
+                            "Controlo operacional por organização",
                         ].map((item) => (
                             <div
                                 key={item}
                                 className="flex items-center gap-3 text-slate-300"
                             >
                                 <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                                <span>
-                                    {item}
-                                </span>
+                                <span>{item}</span>
                             </div>
                         ))}
                     </div>
@@ -189,17 +151,11 @@ export default function LoginPage() {
                         </h2>
 
                         <p className="mt-2 text-slate-500">
-                            Utilize as credenciais da
-                            sua conta FrotaPRO.
+                            Utilize as credenciais da sua conta FrotaPRO.
                         </p>
                     </div>
 
-                    <form
-                        onSubmit={
-                            handleSubmit
-                        }
-                        className="space-y-5"
-                    >
+                    <form onSubmit={handleSubmit} className="space-y-5">
                         <div>
                             <label
                                 htmlFor="email"
@@ -215,14 +171,8 @@ export default function LoginPage() {
                                     id="email"
                                     type="email"
                                     value={email}
-                                    onChange={(
-                                        event
-                                    ) =>
-                                        setEmail(
-                                            event
-                                                .target
-                                                .value
-                                        )
+                                    onChange={(event) =>
+                                        setEmail(event.target.value)
                                     }
                                     autoComplete="email"
                                     required
@@ -246,17 +196,9 @@ export default function LoginPage() {
                                 <input
                                     id="password"
                                     type="password"
-                                    value={
-                                        password
-                                    }
-                                    onChange={(
-                                        event
-                                    ) =>
-                                        setPassword(
-                                            event
-                                                .target
-                                                .value
-                                        )
+                                    value={password}
+                                    onChange={(event) =>
+                                        setPassword(event.target.value)
                                     }
                                     autoComplete="current-password"
                                     required
@@ -269,17 +211,9 @@ export default function LoginPage() {
                         <label className="flex items-center gap-3 text-sm text-slate-600 cursor-pointer">
                             <input
                                 type="checkbox"
-                                checked={
-                                    remember
-                                }
-                                onChange={(
-                                    event
-                                ) =>
-                                    setRemember(
-                                        event
-                                            .target
-                                            .checked
-                                    )
+                                checked={remember}
+                                onChange={(event) =>
+                                    setRemember(event.target.checked)
                                 }
                                 className="w-4 h-4 rounded border-slate-300 text-indigo-600"
                             />
@@ -294,9 +228,7 @@ export default function LoginPage() {
 
                         <button
                             type="submit"
-                            disabled={
-                                submitting
-                            }
+                            disabled={submitting}
                             className="w-full h-12 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-semibold transition flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20"
                         >
                             {submitting ? (
@@ -305,7 +237,7 @@ export default function LoginPage() {
                                     A entrar...
                                 </>
                             ) : (
-                                'Entrar'
+                                "Entrar"
                             )}
                         </button>
                     </form>

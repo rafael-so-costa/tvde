@@ -192,7 +192,7 @@ class PortalIdentityService
                 $this->area(
                     'gestao',
                     'Gestão',
-                    '/painel'
+                    '/backoffice'
                 );
         }
 

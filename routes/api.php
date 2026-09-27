@@ -3,6 +3,7 @@
 use App\Http\Controllers\AlertController;
 use App\Http\Controllers\AluguerController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BackofficeDashboardController;
 use App\Http\Controllers\ChecklistProcessRunController;
 use App\Http\Controllers\ChecklistProcessTemplateController;
 use App\Http\Controllers\ChecklistRecordController;
@@ -62,6 +63,14 @@ Route::post('/funcionario-convites/{token}/aceitar', [FuncionarioInvitationContr
     ->middleware('throttle:5,1');
 
 Route::middleware('auth:sanctum')->group(function () {
+    Route::middleware('super_admin')
+        ->prefix('backoffice')
+        ->group(function () {
+            Route::get(
+                '/dashboard',
+                [BackofficeDashboardController::class, 'show']
+            );
+        });
     Route::get('/minha-conta', [MyAccountController::class, 'show']);
     Route::patch('/minha-conta', [MyAccountController::class, 'update']);
     Route::patch('/minha-conta/senha', [MyAccountController::class, 'password']);
@@ -73,10 +82,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/tenant-context', [TenantContextController::class, 'clear']);
 
     Route::middleware('tenant')->group(function () {
-        Route::get('/onboarding', [SaasOnboardingController::class, 'show']
+        Route::get(
+            '/onboarding',
+            [SaasOnboardingController::class, 'show']
         );
 
-        Route::patch('/onboarding', [SaasOnboardingController::class, 'update']
+        Route::patch(
+            '/onboarding',
+            [SaasOnboardingController::class, 'update']
         )->middleware('permission:empresas,configurar');
         Route::get('/portal/proprietario/dashboard', [ProprietarioDashboardController::class, 'show']);
         Route::get('/portal/motorista/dashboard', [MotoristaDashboardController::class, 'show']);
