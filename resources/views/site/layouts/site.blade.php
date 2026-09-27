@@ -9,7 +9,7 @@
     <title>@yield('title','FrotaPRO — Gestão completa para operadores TVDE')</title>
 
     <meta name="description" content="@yield('description','Centralize motoristas, veículos, contratos, alugueres, documentação, manutenção e operação da sua frota TVDE no FrotaPRO.')">
-    <meta name="robots" content="index,follow">
+    <meta name="robots" content="@yield('robots','index,follow')">
 
     <meta property="og:type" content="website">
     <meta property="og:title" content="@yield('title','FrotaPRO — Gestão completa para operadores TVDE')">
