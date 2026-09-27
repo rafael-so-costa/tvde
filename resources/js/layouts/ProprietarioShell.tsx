@@ -53,7 +53,7 @@ export default function ProprietarioShell() {
         try {
             await selectTenant(id);
 
-            const destination = await resolvePortalDestination("/");
+            const destination = await resolvePortalDestination("/portal/proprietario");
 
             navigate(destination);
         } finally {

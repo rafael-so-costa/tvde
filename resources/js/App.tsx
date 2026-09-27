@@ -62,7 +62,12 @@ export default function App() {
             <Route element={<ProtectedRoute />}>
                 <Route element={<ManagementRoute />}>
                     <Route element={<AppShell />}>
-                        <Route index element={<DashboardPage />} />
+                        <Route
+                            index
+                            element={<Navigate to="/painel" replace />}
+                        />
+
+                        <Route path="painel" element={<DashboardPage />} />
 
                         <Route path="minha-conta" element={<MyAccountPage />} />
 
@@ -159,7 +164,7 @@ export default function App() {
                         element={<ProprietarioShell />}
                     >
                         <Route path="minha-conta" element={<MyAccountPage />} />
-                        <Route index element={<ProprietarioDashboardPage/>}/>
+                        <Route index element={<ProprietarioDashboardPage />} />
 
                         <Route
                             path="multas"
@@ -174,7 +179,7 @@ export default function App() {
                 </Route>
             </Route>
 
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<Navigate to="/painel" replace />} />
         </Routes>
     );
 }

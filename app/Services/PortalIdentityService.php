@@ -17,7 +17,7 @@ class PortalIdentityService
         User $user,
         ?string $tenantId
     ): array {
-        if (!$tenantId) {
+        if (! $tenantId) {
             return $this->withoutTenant(
                 $user
             );
@@ -37,7 +37,7 @@ class PortalIdentityService
 
         if (
             $user->isSuperAdmin() &&
-            !in_array(
+            ! in_array(
                 'super_admin',
                 $roles,
                 true
@@ -109,7 +109,7 @@ class PortalIdentityService
                 $this->area(
                     'gestao',
                     'Gestão',
-                    '/'
+                    '/painel'
                 );
         }
 
@@ -138,63 +138,47 @@ class PortalIdentityService
         }
 
         return [
-            'tenant_id' =>
-                $tenantId,
+            'tenant_id' => $tenantId,
 
-            'roles' =>
-                $roles,
+            'roles' => $roles,
 
             'links' => [
                 'motorista' => [
-                    'has_role' =>
-                        $hasMotoristaRole,
+                    'has_role' => $hasMotoristaRole,
 
-                    'linked' =>
-                        $motorista !== null,
+                    'linked' => $motorista !== null,
 
-                    'id' =>
-                        $motorista?->id,
+                    'id' => $motorista?->id,
 
-                    'ativo' =>
-                        $motorista?->ativo,
+                    'ativo' => $motorista?->ativo,
 
-                    'status_cadastro' =>
-                        $motorista
-                            ?->status_cadastro,
+                    'status_cadastro' => $motorista
+                        ?->status_cadastro,
                 ],
 
                 'proprietario' => [
-                    'has_role' =>
-                        $hasProprietarioRole,
+                    'has_role' => $hasProprietarioRole,
 
-                    'linked' =>
-                        $proprietario !== null,
+                    'linked' => $proprietario !== null,
 
-                    'id' =>
-                        $proprietario?->id,
+                    'id' => $proprietario?->id,
 
-                    'tipo' =>
-                        $proprietario?->tipo,
+                    'tipo' => $proprietario?->tipo,
 
-                    'ativo' =>
-                        $proprietario?->ativo,
+                    'ativo' => $proprietario?->ativo,
 
-                    'status_cadastro' =>
-                        $proprietario
-                            ?->status_cadastro,
+                    'status_cadastro' => $proprietario
+                        ?->status_cadastro,
                 ],
             ],
 
-            'areas' =>
-                $areas,
+            'areas' => $areas,
 
-            'default_area' =>
-                $areas[0]['code']
-                    ?? null,
+            'default_area' => $areas[0]['code']
+                ?? null,
 
-            'default_path' =>
-                $areas[0]['path']
-                    ?? null,
+            'default_path' => $areas[0]['path']
+                ?? null,
         ];
     }
 
@@ -208,18 +192,16 @@ class PortalIdentityService
                 $this->area(
                     'gestao',
                     'Gestão',
-                    '/'
+                    '/painel'
                 );
         }
 
         return [
-            'tenant_id' =>
-                null,
+            'tenant_id' => null,
 
-            'roles' =>
-                $user->isSuperAdmin()
-                    ? ['super_admin']
-                    : [],
+            'roles' => $user->isSuperAdmin()
+                ? ['super_admin']
+                : [],
 
             'links' => [
                 'motorista' => [
@@ -240,16 +222,13 @@ class PortalIdentityService
                 ],
             ],
 
-            'areas' =>
-                $areas,
+            'areas' => $areas,
 
-            'default_area' =>
-                $areas[0]['code']
-                    ?? null,
+            'default_area' => $areas[0]['code']
+                ?? null,
 
-            'default_path' =>
-                $areas[0]['path']
-                    ?? null,
+            'default_path' => $areas[0]['path']
+                ?? null,
         ];
     }
 
@@ -273,7 +252,7 @@ class PortalIdentityService
         }
 
         if (
-            !in_array(
+            ! in_array(
                 'funcionario',
                 $roles,
                 true
@@ -287,8 +266,7 @@ class PortalIdentityService
                 ->pluck('codigo');
 
         foreach (
-            $permissionCodes
-            as $permissionCode
+            $permissionCodes as $permissionCode
         ) {
             if (
                 $this

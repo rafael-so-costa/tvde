@@ -48,7 +48,7 @@ export default function LoginPage() {
     if (!loading && user) {
         return (
             <Navigate
-                to="/"
+                to="/painel"
                 replace
             />
         );
@@ -70,7 +70,7 @@ export default function LoginPage() {
 
         const destination =
             await resolvePortalDestination(
-                '/'
+                '/painel'
             );
 
         navigate(

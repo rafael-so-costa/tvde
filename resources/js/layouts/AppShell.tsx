@@ -31,7 +31,7 @@ import { resolvePortalDestination } from "../lib/portal";
 
 const navigation = [
     {
-        to: "/",
+        to: "/painel",
         label: "Dashboard",
         icon: LayoutDashboard,
     },
@@ -171,7 +171,7 @@ export default function AppShell() {
                 await selectTenant(tenantId);
             }
 
-            const destination = await resolvePortalDestination("/");
+            const destination = await resolvePortalDestination("/painel");
 
             navigate(destination);
         } finally {
@@ -228,7 +228,7 @@ export default function AppShell() {
                     <NavLink
                         key={to}
                         to={to}
-                        end={to === "/"}
+                        end={to === "/painel"}
                         onClick={() => setMobileOpen(false)}
                         className={({ isActive }) =>
                             [

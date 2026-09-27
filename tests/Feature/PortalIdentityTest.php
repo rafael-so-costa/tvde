@@ -26,14 +26,11 @@ beforeEach(function () {
 function portalIdentityHeaders(): array
 {
     return [
-        'Origin' =>
-            'http://localhost:8000',
+        'Origin' => 'http://localhost:8000',
 
-        'Referer' =>
-            'http://localhost:8000/',
+        'Referer' => 'http://localhost:8000/',
 
-        'Accept' =>
-            'application/json',
+        'Accept' => 'application/json',
     ];
 }
 
@@ -42,14 +39,11 @@ function criarPortalTenant(
     string $slug
 ): Tenant {
     return Tenant::create([
-        'nome' =>
-            $nome,
+        'nome' => $nome,
 
-        'slug' =>
-            $slug,
+        'slug' => $slug,
 
-        'ativo' =>
-            true,
+        'ativo' => true,
     ]);
 }
 
@@ -57,19 +51,15 @@ function criarPortalUser(
     string $email
 ): User {
     return User::factory()->create([
-        'name' =>
-            'Utilizador Portal',
+        'name' => 'Utilizador Portal',
 
-        'email' =>
-            $email,
+        'email' => $email,
 
-        'password' =>
-            Hash::make(
-                'SenhaTeste123!'
-            ),
+        'password' => Hash::make(
+            'SenhaTeste123!'
+        ),
 
-        'ativo' =>
-            true,
+        'ativo' => true,
     ]);
 }
 
@@ -79,17 +69,13 @@ function associarPortalTenant(
     bool $principal = true
 ): void {
     TenantUser::create([
-        'tenant_id' =>
-            $tenant->id,
+        'tenant_id' => $tenant->id,
 
-        'user_id' =>
-            $user->id,
+        'user_id' => $user->id,
 
-        'status' =>
-            'ativo',
+        'status' => 'ativo',
 
-        'principal' =>
-            $principal,
+        'principal' => $principal,
     ]);
 }
 
@@ -107,14 +93,11 @@ function atribuirPortalRole(
             ->firstOrFail();
 
     UserRole::create([
-        'user_id' =>
-            $user->id,
+        'user_id' => $user->id,
 
-        'role_id' =>
-            $role->id,
+        'role_id' => $role->id,
 
-        'tenant_id' =>
-            $tenant->id,
+        'tenant_id' => $tenant->id,
     ]);
 }
 
@@ -125,11 +108,9 @@ function criarPortalMotorista(
 ): Motorista {
     $motorista =
         new Motorista([
-            'nome_completo' =>
-                $nome,
+            'nome_completo' => $nome,
 
-            'email' =>
-                $user->email,
+            'email' => $user->email,
         ]);
 
     $motorista->tenant_id =
@@ -156,14 +137,11 @@ function criarPortalProprietario(
 ): Proprietario {
     $proprietario =
         new Proprietario([
-            'tipo' =>
-                'pessoa_fisica',
+            'tipo' => 'pessoa_fisica',
 
-            'nome_completo' =>
-                $nome,
+            'nome_completo' => $nome,
 
-            'email' =>
-                $user->email,
+            'email' => $user->email,
         ]);
 
     $proprietario->tenant_id =
@@ -194,11 +172,9 @@ function loginPortalIdentity(
         ->postJson(
             '/login',
             [
-                'email' =>
-                    $user->email,
+                'email' => $user->email,
 
-                'password' =>
-                    'SenhaTeste123!',
+                'password' => 'SenhaTeste123!',
             ]
         )
         ->assertOk();
@@ -266,7 +242,7 @@ test(
             )
             ->assertJsonPath(
                 'data.default_path',
-                '/'
+                '/painel'
             )
             ->assertJsonPath(
                 'data.areas.0.code',
@@ -575,17 +551,13 @@ test(
                 ->firstOrFail();
 
         UserPermission::create([
-            'user_id' =>
-                $user->id,
+            'user_id' => $user->id,
 
-            'permission_id' =>
-                $permission->id,
+            'permission_id' => $permission->id,
 
-            'tenant_id' =>
-                $tenant->id,
+            'tenant_id' => $tenant->id,
 
-            'nivel' =>
-                'visualizar',
+            'nivel' => 'visualizar',
         ]);
 
         loginPortalIdentity(
@@ -738,9 +710,8 @@ test(
             ->postJson(
                 '/api/tenant-context',
                 [
-                    'tenant_id' =>
-                        $tenantProprietario
-                            ->id,
+                    'tenant_id' => $tenantProprietario
+                        ->id,
                 ]
             )
             ->assertOk();
@@ -790,14 +761,11 @@ test(
                 ->firstOrFail();
 
         UserRole::create([
-            'user_id' =>
-                $user->id,
+            'user_id' => $user->id,
 
-            'role_id' =>
-                $role->id,
+            'role_id' => $role->id,
 
-            'tenant_id' =>
-                null,
+            'tenant_id' => null,
         ]);
 
         loginPortalIdentity(
@@ -823,7 +791,7 @@ test(
             )
             ->assertJsonPath(
                 'data.default_path',
-                '/'
+                '/painel'
             );
     }
 );

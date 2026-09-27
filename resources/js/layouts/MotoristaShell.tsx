@@ -74,7 +74,7 @@ export default function MotoristaShell() {
         try {
             await selectTenant(id);
 
-            const destination = await resolvePortalDestination("/");
+            const destination = await resolvePortalDestination("/portal/motorista");
 
             navigate(destination);
         } finally {
