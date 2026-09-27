@@ -47,3 +47,15 @@ export interface EmpresaPayload {
     ativo: boolean;
     status_cadastro: EmpresaStatus;
 }
+
+
+export interface EmpresaListMeta {
+    multi_company_enabled: boolean;
+    can_create: boolean;
+    can_delete: boolean;
+}
+
+export interface EmpresaListResponse {
+    data: Empresa[];
+    meta: EmpresaListMeta;
+}

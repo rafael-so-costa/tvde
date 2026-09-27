@@ -64,6 +64,9 @@ class SaasRegistrationService
                             'required' => true,
                             'completed_at' => null,
                         ],
+                        'features' => [
+                            'multi_company' => false,
+                        ],
                     ],
                 ]);
 

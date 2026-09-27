@@ -2,6 +2,7 @@
 
 use App\Models\Aluguer;
 use App\Models\Contrato;
+use App\Models\Empresa;
 use App\Models\Motorista;
 use App\Models\Proprietario;
 use App\Models\Role;
@@ -18,9 +19,9 @@ uses(RefreshDatabase::class);
 function dashboardHeaders(): array
 {
     return [
-        'Origin'=>'http://localhost:8000',
-        'Referer'=>'http://localhost:8000/',
-        'Accept'=>'application/json',
+        'Origin' => 'http://localhost:8000',
+        'Referer' => 'http://localhost:8000/',
+        'Accept' => 'application/json',
     ];
 }
 
@@ -29,9 +30,9 @@ function dashboardTenant(
     string $slug
 ): Tenant {
     return Tenant::create([
-        'nome'=>$nome,
-        'slug'=>$slug,
-        'ativo'=>true,
+        'nome' => $nome,
+        'slug' => $slug,
+        'ativo' => true,
     ]);
 }
 
@@ -39,36 +40,35 @@ function dashboardUser(
     Tenant $tenant,
     string $email
 ): User {
-    $user=User::factory()->create([
-        'email'=>$email,
-        'password'=>Hash::make(
+    $user = User::factory()->create([
+        'email' => $email,
+        'password' => Hash::make(
             'SenhaTeste123!'
         ),
-        'ativo'=>true,
+        'ativo' => true,
     ]);
 
     TenantUser::create([
-        'tenant_id'=>$tenant->id,
-        'user_id'=>$user->id,
-        'status'=>'ativo',
-        'principal'=>true,
+        'tenant_id' => $tenant->id,
+        'user_id' => $user->id,
+        'status' => 'ativo',
+        'principal' => true,
     ]);
 
-    $role=Role::firstOrCreate(
+    $role = Role::firstOrCreate(
         [
-            'codigo'=>'admin_empresa',
+            'codigo' => 'admin_empresa',
         ],
         [
-            'nome'=>
-                'Administrador da Empresa',
-            'sistema'=>true,
+            'nome' => 'Administrador da Empresa',
+            'sistema' => true,
         ]
     );
 
     UserRole::create([
-        'user_id'=>$user->id,
-        'role_id'=>$role->id,
-        'tenant_id'=>$tenant->id,
+        'user_id' => $user->id,
+        'role_id' => $role->id,
+        'tenant_id' => $tenant->id,
     ]);
 
     return $user;
@@ -82,8 +82,8 @@ function dashboardLogin(
         ->postJson(
             '/login',
             [
-                'email'=>$user->email,
-                'password'=>'SenhaTeste123!',
+                'email' => $user->email,
+                'password' => 'SenhaTeste123!',
             ]
         )
         ->assertOk();
@@ -91,7 +91,7 @@ function dashboardLogin(
 
 test(
     'dashboard exige autenticação',
-    function(){
+    function () {
         $this
             ->withHeaders(
                 dashboardHeaders()
@@ -105,133 +105,122 @@ test(
 
 test(
     'dashboard retorna indicadores isolados pelo tenant',
-    function(){
-        $tenant=dashboardTenant(
+    function () {
+        $tenant = dashboardTenant(
             'Dashboard A',
             'dashboard-a'
         );
 
-        $other=dashboardTenant(
+        $other = dashboardTenant(
             'Dashboard B',
             'dashboard-b'
         );
 
-        $user=dashboardUser(
+        $user = dashboardUser(
             $tenant,
             'dashboard@frotapro.test'
         );
 
-        $motorista=
+        $motorista =
             new Motorista([
-                'nome_completo'=>
-                    'Motorista Dashboard',
+                'nome_completo' => 'Motorista Dashboard',
 
-                'email'=>
-                    'motorista.dashboard@test.pt',
+                'email' => 'motorista.dashboard@test.pt',
 
                 /*
                  * Mesmo com vencimento próximo,
                  * Dashboard não calcula alertas.
                  */
-                'carta_valid_until'=>
-                    now()
-                        ->addDays(10)
-                        ->toDateString(),
+                'carta_valid_until' => now()
+                    ->addDays(10)
+                    ->toDateString(),
             ]);
 
-        $motorista->tenant_id=
+        $motorista->tenant_id =
             $tenant->id;
 
-        $motorista->ativo=true;
+        $motorista->ativo = true;
         $motorista->save();
 
-        $veiculo=
+        $veiculo =
             new Veiculo([
-                'matricula'=>'DB-10-AA',
-                'marca'=>'Tesla',
-                'modelo'=>'Model 3',
+                'matricula' => 'DB-10-AA',
+                'marca' => 'Tesla',
+                'modelo' => 'Model 3',
 
-                'carta_verde_valid_until'=>
-                    now()
-                        ->addDays(15)
-                        ->toDateString(),
+                'carta_verde_valid_until' => now()
+                    ->addDays(15)
+                    ->toDateString(),
             ]);
 
-        $veiculo->tenant_id=
+        $veiculo->tenant_id =
             $tenant->id;
 
-        $veiculo->ativo=true;
+        $veiculo->ativo = true;
         $veiculo->save();
 
-        $proprietario=
+        $proprietario =
             new Proprietario([
-                'tipo'=>'pessoa_fisica',
+                'tipo' => 'pessoa_fisica',
 
-                'nome_completo'=>
-                    'Proprietário Dashboard',
+                'nome_completo' => 'Proprietário Dashboard',
 
-                'email'=>
-                    'proprietario.dashboard@test.pt',
+                'email' => 'proprietario.dashboard@test.pt',
             ]);
 
-        $proprietario->tenant_id=
+        $proprietario->tenant_id =
             $tenant->id;
 
-        $proprietario->ativo=true;
+        $proprietario->ativo = true;
         $proprietario->save();
 
-        $contrato=
+        $contrato =
             new Contrato([
-                'tipo'=>'aluguer',
+                'tipo' => 'aluguer',
 
-                'motorista_id'=>
-                    $motorista->id,
+                'motorista_id' => $motorista->id,
 
-                'veiculo_id'=>
-                    $veiculo->id,
+                'veiculo_id' => $veiculo->id,
             ]);
 
-        $contrato->tenant_id=
+        $contrato->tenant_id =
             $tenant->id;
 
-        $contrato->status=
+        $contrato->status =
             'enviado';
 
         $contrato->save();
 
-        $aluguer=
+        $aluguer =
             new Aluguer([
-                'motorista_id'=>
-                    $motorista->id,
+                'motorista_id' => $motorista->id,
 
-                'veiculo_id'=>
-                    $veiculo->id,
+                'veiculo_id' => $veiculo->id,
 
-                'proprietario_id'=>
-                    $proprietario->id,
+                'proprietario_id' => $proprietario->id,
             ]);
 
-        $aluguer->tenant_id=
+        $aluguer->tenant_id =
             $tenant->id;
 
-        $aluguer->status='ativo';
+        $aluguer->status = 'ativo';
 
-        $aluguer->created_by=
+        $aluguer->created_by =
             $user->id;
 
         $aluguer->save();
 
-        $otherVehicle=
+        $otherVehicle =
             new Veiculo([
-                'matricula'=>'DB-99-ZZ',
-                'marca'=>'BMW',
-                'modelo'=>'i4',
+                'matricula' => 'DB-99-ZZ',
+                'marca' => 'BMW',
+                'modelo' => 'i4',
             ]);
 
-        $otherVehicle->tenant_id=
+        $otherVehicle->tenant_id =
             $other->id;
 
-        $otherVehicle->ativo=true;
+        $otherVehicle->ativo = true;
         $otherVehicle->save();
 
         dashboardLogin(
@@ -239,7 +228,7 @@ test(
             $user
         );
 
-        $response=$this
+        $response = $this
             ->withHeaders(
                 dashboardHeaders()
             )
@@ -288,35 +277,32 @@ test(
 
 test(
     'dashboard nao calcula alertas a partir de datas das entidades',
-    function(){
-        $tenant=dashboardTenant(
+    function () {
+        $tenant = dashboardTenant(
             'Dashboard Sem Alertas Sintéticos',
             'dashboard-sem-alertas'
         );
 
-        $user=dashboardUser(
+        $user = dashboardUser(
             $tenant,
             'dashboard.no.synthetic@frotapro.test'
         );
 
-        $motorista=
+        $motorista =
             new Motorista([
-                'nome_completo'=>
-                    'Motorista com documento vencido',
+                'nome_completo' => 'Motorista com documento vencido',
 
-                'email'=>
-                    'expired@dashboard.test',
+                'email' => 'expired@dashboard.test',
 
-                'carta_valid_until'=>
-                    now()
-                        ->subDays(5)
-                        ->toDateString(),
+                'carta_valid_until' => now()
+                    ->subDays(5)
+                    ->toDateString(),
             ]);
 
-        $motorista->tenant_id=
+        $motorista->tenant_id =
             $tenant->id;
 
-        $motorista->ativo=true;
+        $motorista->ativo = true;
         $motorista->save();
 
         dashboardLogin(
@@ -324,7 +310,7 @@ test(
             $user
         );
 
-        $response=$this
+        $response = $this
             ->withHeaders(
                 dashboardHeaders()
             )
@@ -348,5 +334,81 @@ test(
             'alerts',
             0
         );
+    }
+);
+
+test(
+    'dashboard orienta administrador novo pelos primeiros passos',
+    function () {
+        $tenant = dashboardTenant(
+            'Nova Frota',
+            'nova-frota'
+        );
+
+        $user = dashboardUser(
+            $tenant,
+            'novo.dashboard@frotapro.test'
+        );
+
+        $empresa = new Empresa([
+            'nome_empresa' => 'Nova Frota Lda',
+
+            'nif' => '500999111',
+
+            'ativo' => true,
+
+            'status_cadastro' => 'ativo',
+        ]);
+
+        $empresa->tenant_id =
+            $tenant->id;
+
+        $empresa->save();
+
+        dashboardLogin(
+            $this,
+            $user
+        );
+
+        $this
+            ->withHeaders(
+                dashboardHeaders()
+            )
+            ->getJson(
+                '/api/dashboard'
+            )
+            ->assertOk()
+            ->assertJsonPath(
+                'data.setup.completed',
+                1
+            )
+            ->assertJsonPath(
+                'data.setup.total',
+                7
+            )
+            ->assertJsonPath(
+                'data.setup.percentage',
+                14
+            )
+            ->assertJsonPath(
+                'data.setup.complete',
+                false
+            )
+            ->assertJsonPath(
+                'data.setup.steps.0.key',
+                'empresa'
+            )
+            ->assertJsonPath(
+                'data.setup.steps.0.completed',
+                true
+            )
+            ->assertJsonPath(
+                'data.setup.next_step.key',
+                'proprietario'
+            )
+            ->assertJsonPath(
+                'data.setup.next_step.href',
+                '/proprietarios'
+            );
     }
 );

@@ -8,6 +8,8 @@ use App\Models\Contrato;
 use App\Models\Empresa;
 use App\Models\Motorista;
 use App\Models\Proprietario;
+use App\Models\TemplateContrato;
+use App\Models\User;
 use App\Models\Veiculo;
 use App\Services\PermissionService;
 use App\Services\TenantContext;
@@ -61,48 +63,53 @@ class DashboardController extends Controller
 
         $recentContracts = $permissions['contratos']
             ? Contrato::query()
-            ->where('tenant_id', $tenantId)
-            ->with([
-                'template:id,nome',
-                'motorista:id,nome_completo',
-                'veiculo:id,matricula,marca,modelo',
-            ])
-            ->latest('updated_at')
-            ->limit(5)
-            ->get([
-                'id',
-                'template_id',
-                'motorista_id',
-                'veiculo_id',
-                'tipo',
-                'status',
-                'data_inicio',
-                'data_fim',
-                'valor_semanal',
-                'updated_at',
-            ])
+                ->where('tenant_id', $tenantId)
+                ->with([
+                    'template:id,nome',
+                    'motorista:id,nome_completo',
+                    'veiculo:id,matricula,marca,modelo',
+                ])
+                ->latest('updated_at')
+                ->limit(5)
+                ->get([
+                    'id',
+                    'template_id',
+                    'motorista_id',
+                    'veiculo_id',
+                    'tipo',
+                    'status',
+                    'data_inicio',
+                    'data_fim',
+                    'valor_semanal',
+                    'updated_at',
+                ])
             : collect();
 
         $recentRentals = $permissions['alugueres']
             ? Aluguer::query()
-            ->where('tenant_id', $tenantId)
-            ->with([
-                'motorista:id,nome_completo',
-                'veiculo:id,matricula,marca,modelo',
-            ])
-            ->latest('updated_at')
-            ->limit(5)
-            ->get([
-                'id',
-                'motorista_id',
-                'veiculo_id',
-                'status',
-                'data_inicio',
-                'data_fim',
-                'rascunho_passo',
-                'updated_at',
-            ])
+                ->where('tenant_id', $tenantId)
+                ->with([
+                    'motorista:id,nome_completo',
+                    'veiculo:id,matricula,marca,modelo',
+                ])
+                ->latest('updated_at')
+                ->limit(5)
+                ->get([
+                    'id',
+                    'motorista_id',
+                    'veiculo_id',
+                    'status',
+                    'data_inicio',
+                    'data_fim',
+                    'rascunho_passo',
+                    'updated_at',
+                ])
             : collect();
+
+        $setup = $this->setup(
+            $user,
+            $tenantId
+        );
 
         return response()->json([
             'data' => [
@@ -110,8 +117,114 @@ class DashboardController extends Controller
                 'recent_contracts' => $recentContracts,
                 'recent_rentals' => $recentRentals,
                 'permissions' => $permissions,
+                'setup' => $setup,
             ],
         ]);
+    }
+
+    private function setup(
+        User $user,
+        string $tenantId
+    ): ?array {
+        if (
+            ! $user->hasRole(
+                'admin_empresa',
+                $tenantId
+            )
+        ) {
+            return null;
+        }
+
+        $steps = [
+            [
+                'key' => 'empresa',
+                'label' => 'Empresa configurada',
+                'description' => 'Dados principais da empresa concluídos.',
+                'href' => '/empresas',
+                'completed' => Empresa::query()
+                    ->where('tenant_id', $tenantId)
+                    ->where('status_cadastro', 'ativo')
+                    ->exists(),
+            ],
+            [
+                'key' => 'proprietario',
+                'label' => 'Adicionar proprietário',
+                'description' => 'Registe o proprietário de pelo menos um veículo.',
+                'href' => '/proprietarios',
+                'completed' => Proprietario::query()
+                    ->where('tenant_id', $tenantId)
+                    ->exists(),
+            ],
+            [
+                'key' => 'veiculo',
+                'label' => 'Adicionar veículo',
+                'description' => 'Cadastre o primeiro veículo da frota.',
+                'href' => '/veiculos',
+                'completed' => Veiculo::query()
+                    ->where('tenant_id', $tenantId)
+                    ->exists(),
+            ],
+            [
+                'key' => 'motorista',
+                'label' => 'Adicionar motorista',
+                'description' => 'Cadastre o primeiro motorista da operação.',
+                'href' => '/motoristas',
+                'completed' => Motorista::query()
+                    ->where('tenant_id', $tenantId)
+                    ->exists(),
+            ],
+            [
+                'key' => 'template',
+                'label' => 'Preparar template',
+                'description' => 'Configure o primeiro modelo de contrato.',
+                'href' => '/templates',
+                'completed' => TemplateContrato::query()
+                    ->where('tenant_id', $tenantId)
+                    ->exists(),
+            ],
+            [
+                'key' => 'contrato',
+                'label' => 'Criar contrato',
+                'description' => 'Formalize o primeiro contrato da operação.',
+                'href' => '/contratos',
+                'completed' => Contrato::query()
+                    ->where('tenant_id', $tenantId)
+                    ->exists(),
+            ],
+            [
+                'key' => 'aluguer',
+                'label' => 'Iniciar operação',
+                'description' => 'Crie o primeiro aluguer da frota.',
+                'href' => '/alugueres',
+                'completed' => Aluguer::query()
+                    ->where('tenant_id', $tenantId)
+                    ->exists(),
+            ],
+        ];
+
+        $completed = collect($steps)
+            ->where(
+                'completed',
+                true
+            )
+            ->count();
+
+        $total = count($steps);
+
+        return [
+            'completed' => $completed,
+            'total' => $total,
+            'percentage' => (int) round(
+                ($completed / $total) * 100
+            ),
+            'complete' => $completed === $total,
+            'next_step' => collect($steps)
+                ->firstWhere(
+                    'completed',
+                    false
+                ),
+            'steps' => $steps,
+        ];
     }
 
     private function alerts(string $tenantId, array $permissions): array
@@ -134,7 +247,7 @@ class DashboardController extends Controller
                     'certificado_tvde_valid_until',
                 ]);
 
-            $this->appendAlerts($alerts, $rows, 'motorista', '/motoristas', fn($row) => $row->nome_completo, [
+            $this->appendAlerts($alerts, $rows, 'motorista', '/motoristas', fn ($row) => $row->nome_completo, [
                 'documento_valid_until' => 'Documento de identificação',
                 'carta_valid_until' => 'Carta de condução',
                 'registo_criminal_valid_until' => 'Registo criminal',
@@ -158,7 +271,7 @@ class DashboardController extends Controller
                     'extintor_valid_until',
                 ]);
 
-            $this->appendAlerts($alerts, $rows, 'veiculo', '/veiculos', fn($row) => trim("{$row->matricula} · {$row->marca} {$row->modelo}"), [
+            $this->appendAlerts($alerts, $rows, 'veiculo', '/veiculos', fn ($row) => trim("{$row->matricula} · {$row->marca} {$row->modelo}"), [
                 'carta_verde_valid_until' => 'Carta verde / seguro',
                 'inspecao_tvde_valid_until' => 'Inspeção TVDE',
                 'uber_valid_until' => 'Uber',
@@ -181,7 +294,7 @@ class DashboardController extends Controller
                     'certificado_tvde_valid_until',
                 ]);
 
-            $this->appendAlerts($alerts, $rows, 'proprietario', '/proprietarios', fn($row) => $row->nome_empresa ?: $row->nome_completo ?: 'Proprietário', [
+            $this->appendAlerts($alerts, $rows, 'proprietario', '/proprietarios', fn ($row) => $row->nome_empresa ?: $row->nome_completo ?: 'Proprietário', [
                 'documento_valid_until' => 'Documento de identificação',
                 'certidao_valid_until' => 'Certidão permanente',
                 'certificado_tvde_valid_until' => 'Certificado TVDE',
@@ -194,13 +307,13 @@ class DashboardController extends Controller
                 ->where('ativo', true)
                 ->get(['id', 'nome_empresa', 'certificado_tvde_valid_until']);
 
-            $this->appendAlerts($alerts, $rows, 'empresa', '/empresas', fn($row) => $row->nome_empresa, [
+            $this->appendAlerts($alerts, $rows, 'empresa', '/empresas', fn ($row) => $row->nome_empresa, [
                 'certificado_tvde_valid_until' => 'Certificado TVDE',
             ], $today, $from, $to);
         }
 
         return $alerts
-            ->sortBy(fn(array $alert) => abs($alert['days']))
+            ->sortBy(fn (array $alert) => abs($alert['days']))
             ->take(12)
             ->values()
             ->all();
@@ -220,12 +333,16 @@ class DashboardController extends Controller
         foreach ($rows as $row) {
             foreach ($fields as $field => $label) {
                 $value = $row->getAttribute($field);
-                if (!$value) continue;
+                if (! $value) {
+                    continue;
+                }
 
                 $date = Carbon::parse($value)->startOfDay();
-                if ($date->lt($from) || $date->gt($to)) continue;
+                if ($date->lt($from) || $date->gt($to)) {
+                    continue;
+                }
 
-                $days = (int)$today->diffInDays($date, false);
+                $days = (int) $today->diffInDays($date, false);
 
                 $alerts->push([
                     'id' => "{$entityType}:{$row->id}:{$field}",
@@ -244,7 +361,7 @@ class DashboardController extends Controller
 
     private function tenantId(): string
     {
-        if (!$this->tenantContext->hasTenant()) {
+        if (! $this->tenantContext->hasTenant()) {
             abort(403, 'Selecione uma organização para aceder a este recurso.');
         }
 

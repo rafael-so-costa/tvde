@@ -68,11 +68,29 @@ export interface DashboardData {
     metrics: DashboardMetrics;
 
     recent_contracts:
-        DashboardContract[];
+    DashboardContract[];
 
     recent_rentals:
-        DashboardRental[];
+    DashboardRental[];
 
     permissions:
-        DashboardPermissions;
+    DashboardPermissions;
+    setup: DashboardSetup | null;
+}
+
+export interface DashboardSetupStep {
+    key: string;
+    label: string;
+    description: string;
+    href: string;
+    completed: boolean;
+}
+
+export interface DashboardSetup {
+    completed: number;
+    total: number;
+    percentage: number;
+    complete: boolean;
+    next_step: DashboardSetupStep | null;
+    steps: DashboardSetupStep[];
 }

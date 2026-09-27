@@ -1,13 +1,10 @@
-import axios from 'axios';
-import {
-    useMemo,
-    useState,
-} from 'react';
+import axios from "axios";
+import { useMemo, useState } from "react";
 import {
     useMutation,
     useQuery,
     useQueryClient,
-} from '@tanstack/react-query';
+} from "@tanstack/react-query";
 import {
     AlertCircle,
     Building2,
@@ -20,26 +17,27 @@ import {
     RefreshCw,
     Search,
     Trash2,
-} from 'lucide-react';
-import api from '../lib/api';
-import {
-    useTenant,
-} from '../contexts/TenantContext';
-import EmpresaFormModal from '../components/empresas/EmpresaFormModal';
+} from "lucide-react";
+
+import EmpresaFormModal from "../components/empresas/EmpresaFormModal";
+import { useTenant } from "../contexts/TenantContext";
+import api from "../lib/api";
+
 import type {
     Empresa,
+    EmpresaListResponse,
     EmpresaPayload,
     EmpresaStatus,
-} from '../types/empresa';
+} from "../types/empresa";
 
 const statusLabels: Record<
     EmpresaStatus,
     string
 > = {
-    pendente: 'Pendente',
-    ativo: 'Ativo',
-    incompleto: 'Incompleto',
-    inativo: 'Inativo',
+    pendente: "Pendente",
+    ativo: "Ativo",
+    incompleto: "Incompleto",
+    inativo: "Inativo",
 };
 
 const statusClasses: Record<
@@ -47,13 +45,13 @@ const statusClasses: Record<
     string
 > = {
     pendente:
-        'bg-amber-50 text-amber-700 ring-amber-600/20',
+        "bg-amber-50 text-amber-700 ring-amber-600/20",
     ativo:
-        'bg-emerald-50 text-emerald-700 ring-emerald-600/20',
+        "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
     incompleto:
-        'bg-orange-50 text-orange-700 ring-orange-600/20',
+        "bg-orange-50 text-orange-700 ring-orange-600/20",
     inativo:
-        'bg-slate-100 text-slate-600 ring-slate-500/20',
+        "bg-slate-100 text-slate-600 ring-slate-500/20",
 };
 
 function errorMessage(
@@ -67,11 +65,11 @@ function errorMessage(
         return (
             error.response?.data
                 ?.message ??
-            'Não foi possível carregar as empresas.'
+            "Não foi possível carregar as empresas."
         );
     }
 
-    return 'Não foi possível carregar as empresas.';
+    return "Não foi possível carregar as empresas.";
 }
 
 export default function EmpresasPage() {
@@ -82,8 +80,10 @@ export default function EmpresasPage() {
     const queryClient =
         useQueryClient();
 
-    const [search, setSearch] =
-        useState('');
+    const [
+        search,
+        setSearch,
+    ] = useState("");
 
     const [
         formOpen,
@@ -107,20 +107,22 @@ export default function EmpresasPage() {
     const empresasQuery =
         useQuery({
             queryKey: [
-                'empresas',
+                "empresas",
                 tenant?.id,
             ],
+
             enabled: Boolean(
                 tenant?.id
             ),
+
             queryFn: async () => {
                 const response =
                     await api.get(
-                        '/api/empresas'
+                        "/api/empresas"
                     );
 
-                return response.data
-                    .data as Empresa[];
+                return response
+                    .data as EmpresaListResponse;
             },
         });
 
@@ -131,11 +133,12 @@ export default function EmpresasPage() {
             ) => {
                 const response =
                     await api.post(
-                        '/api/empresas',
+                        "/api/empresas",
                         payload
                     );
 
-                return response.data
+                return response
+                    .data
                     .data as Empresa;
             },
         });
@@ -155,7 +158,8 @@ export default function EmpresasPage() {
                         payload
                     );
 
-                return response.data
+                return response
+                    .data
                     .data as Empresa;
             },
         });
@@ -169,30 +173,35 @@ export default function EmpresasPage() {
                     `/api/empresas/${id}`
                 );
             },
+
             onSuccess: async () => {
                 await queryClient
                     .invalidateQueries({
                         queryKey: [
-                            'empresas',
+                            "empresas",
                             tenant?.id,
                         ],
                     });
 
-                setDeleting(null);
+                setDeleting(
+                    null
+                );
             },
         });
 
     const empresas =
         useMemo(() => {
             const data =
-                empresasQuery.data ??
+                empresasQuery
+                    .data
+                    ?.data ??
                 [];
 
             const term =
                 search
                     .trim()
                     .toLocaleLowerCase(
-                        'pt-PT'
+                        "pt-PT"
                     );
 
             if (!term) {
@@ -204,39 +213,125 @@ export default function EmpresasPage() {
                     [
                         empresa
                             .nome_empresa,
+
                         empresa.nif,
+
                         empresa.email,
+
                         empresa
                             .nome_gerente,
+
                         empresa
                             .endereco_cidade,
                     ]
-                        .filter(Boolean)
-                        .some((value) =>
-                            String(value)
-                                .toLocaleLowerCase(
-                                    'pt-PT'
+                        .filter(
+                            Boolean
+                        )
+                        .some(
+                            (
+                                value
+                            ) =>
+                                String(
+                                    value
                                 )
-                                .includes(
-                                    term
-                                )
+                                    .toLocaleLowerCase(
+                                        "pt-PT"
+                                    )
+                                    .includes(
+                                        term
+                                    )
                         )
             );
         }, [
-            empresasQuery.data,
+            empresasQuery
+                .data
+                ?.data,
             search,
         ]);
 
+    const empresaMeta =
+        empresasQuery
+            .data
+            ?.meta;
+
+    const canCreate =
+        empresaMeta
+            ?.can_create ??
+        false;
+
+    const canDelete =
+        empresaMeta
+            ?.can_delete ??
+        false;
+
+    const total =
+        empresasQuery
+            .data
+            ?.data
+            .length ??
+        0;
+
+    const activeCount =
+        empresasQuery
+            .data
+            ?.data
+            .filter(
+                (empresa) =>
+                    empresa.ativo
+            )
+            .length ??
+        0;
+
+    const pendingCount =
+        empresasQuery
+            .data
+            ?.data
+            .filter(
+                (empresa) =>
+                    empresa
+                        .status_cadastro ===
+                    "pendente"
+            )
+            .length ??
+        0;
+
+    const incompleteCount =
+        empresasQuery
+            .data
+            ?.data
+            .filter(
+                (empresa) =>
+                    empresa
+                        .status_cadastro ===
+                    "incompleto"
+            )
+            .length ??
+        0;
+
     function openCreate() {
-        setEditing(null);
-        setFormOpen(true);
+        if (!canCreate) {
+            return;
+        }
+
+        setEditing(
+            null
+        );
+
+        setFormOpen(
+            true
+        );
     }
 
     function openEdit(
         empresa: Empresa
     ) {
-        setEditing(empresa);
-        setFormOpen(true);
+        setEditing(
+            empresa
+        );
+
+        setFormOpen(
+            true
+        );
     }
 
     async function handleSave(
@@ -245,31 +340,52 @@ export default function EmpresasPage() {
         if (editing) {
             await updateMutation
                 .mutateAsync({
-                    id: editing.id,
+                    id:
+                        editing.id,
+
                     payload,
                 });
         } else {
+            if (!canCreate) {
+                return;
+            }
+
             await createMutation
-                .mutateAsync(payload);
+                .mutateAsync(
+                    payload
+                );
         }
 
         await queryClient
             .invalidateQueries({
                 queryKey: [
-                    'empresas',
+                    "empresas",
                     tenant?.id,
                 ],
             });
 
-        setFormOpen(false);
-        setEditing(null);
+        await queryClient
+            .invalidateQueries({
+                queryKey: [
+                    "dashboard",
+                    tenant?.id,
+                ],
+            });
+
+        setFormOpen(
+            false
+        );
+
+        setEditing(
+            null
+        );
     }
 
     if (!tenant) {
         return (
-            <div className="max-w-7xl mx-auto">
-                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 flex gap-4">
-                    <AlertCircle className="w-6 h-6 text-amber-600 shrink-0" />
+            <div className="mx-auto max-w-7xl">
+                <div className="flex gap-4 rounded-2xl border border-amber-200 bg-amber-50 p-6">
+                    <AlertCircle className="h-6 w-6 shrink-0 text-amber-600" />
 
                     <div>
                         <h1 className="font-semibold text-amber-900">
@@ -286,10 +402,10 @@ export default function EmpresasPage() {
     }
 
     return (
-        <div className="max-w-7xl mx-auto">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+        <div className="mx-auto max-w-7xl">
+            <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <p className="text-sm font-medium text-indigo-600 mb-2">
+                    <p className="mb-2 text-sm font-medium text-indigo-600">
                         Organização
                     </p>
 
@@ -298,7 +414,7 @@ export default function EmpresasPage() {
                     </h1>
 
                     <p className="mt-2 text-slate-500">
-                        Empresas cadastradas em{' '}
+                        Empresas cadastradas em{" "}
                         <span className="font-medium text-slate-700">
                             {tenant.nome}
                         </span>
@@ -306,29 +422,48 @@ export default function EmpresasPage() {
                     </p>
                 </div>
 
-                <button
-                    type="button"
-                    onClick={
-                        openCreate
-                    }
-                    className="h-11 px-5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20"
-                >
-                    <Plus className="w-5 h-5" />
-                    Nova empresa
-                </button>
+                {canCreate && (
+                    <button
+                        type="button"
+                        onClick={
+                            openCreate
+                        }
+                        className="flex h-11 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 text-sm font-semibold text-white shadow-lg shadow-indigo-600/20 transition hover:bg-indigo-700"
+                    >
+                        <Plus className="h-5 w-5" />
+
+                        Nova empresa
+                    </button>
+                )}
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            {!canCreate &&
+                empresaMeta &&
+                !empresaMeta
+                    .multi_company_enabled && (
+                    <div className="mb-6 flex items-start gap-3 rounded-2xl border border-indigo-100 bg-indigo-50/60 px-5 py-4">
+                        <Building2 className="mt-0.5 h-5 w-5 shrink-0 text-indigo-600" />
+
+                        <div>
+                            <p className="text-sm font-semibold text-indigo-950">
+                                Empresa principal
+                            </p>
+
+                            <p className="mt-1 text-sm leading-6 text-indigo-700">
+                                Esta organização está configurada para operar com uma única empresa. Pode atualizar os dados da empresa principal sempre que necessário.
+                            </p>
+                        </div>
+                    </div>
+                )}
+
+            <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
                 <div className="rounded-2xl border border-slate-200 bg-white p-5">
                     <p className="text-sm text-slate-500">
                         Total
                     </p>
 
                     <p className="mt-2 text-2xl font-bold text-slate-950">
-                        {empresasQuery
-                            .data
-                            ?.length ??
-                            0}
+                        {total}
                     </p>
                 </div>
 
@@ -338,16 +473,7 @@ export default function EmpresasPage() {
                     </p>
 
                     <p className="mt-2 text-2xl font-bold text-emerald-600">
-                        {empresasQuery.data
-                            ?.filter(
-                                (
-                                    empresa
-                                ) =>
-                                    empresa
-                                        .ativo
-                            )
-                            .length ??
-                            0}
+                        {activeCount}
                     </p>
                 </div>
 
@@ -357,17 +483,7 @@ export default function EmpresasPage() {
                     </p>
 
                     <p className="mt-2 text-2xl font-bold text-amber-600">
-                        {empresasQuery.data
-                            ?.filter(
-                                (
-                                    empresa
-                                ) =>
-                                    empresa
-                                        .status_cadastro ===
-                                    'pendente'
-                            )
-                            .length ??
-                            0}
+                        {pendingCount}
                     </p>
                 </div>
 
@@ -377,25 +493,15 @@ export default function EmpresasPage() {
                     </p>
 
                     <p className="mt-2 text-2xl font-bold text-orange-600">
-                        {empresasQuery.data
-                            ?.filter(
-                                (
-                                    empresa
-                                ) =>
-                                    empresa
-                                        .status_cadastro ===
-                                    'incompleto'
-                            )
-                            .length ??
-                            0}
+                        {incompleteCount}
                     </p>
                 </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
-                <div className="p-4 sm:p-5 border-b border-slate-200 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                <div className="flex flex-col gap-3 border-b border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
                     <div className="relative w-full sm:max-w-sm">
-                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
 
                         <input
                             value={
@@ -411,47 +517,52 @@ export default function EmpresasPage() {
                                 )
                             }
                             placeholder="Pesquisar empresa, NIF, e-mail..."
-                            className="w-full h-11 rounded-xl border border-slate-200 pl-10 pr-4 text-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
+                            className="h-11 w-full rounded-xl border border-slate-200 pl-10 pr-4 text-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
                         />
                     </div>
 
                     <button
                         type="button"
                         onClick={() =>
-                            empresasQuery.refetch()
+                            empresasQuery
+                                .refetch()
                         }
                         disabled={
                             empresasQuery
                                 .isFetching
                         }
-                        className="h-11 px-4 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 transition flex items-center justify-center gap-2 disabled:opacity-50"
+                        className="flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
                     >
                         <RefreshCw
                             className={[
-                                'w-4 h-4',
+                                "h-4 w-4",
+
                                 empresasQuery
                                     .isFetching
-                                    ? 'animate-spin'
-                                    : '',
+                                    ? "animate-spin"
+                                    : "",
                             ].join(
-                                ' '
+                                " "
                             )}
                         />
+
                         Atualizar
                     </button>
                 </div>
 
-                {empresasQuery.isLoading ? (
-                    <div className="py-20 flex flex-col items-center justify-center text-slate-500">
-                        <LoaderCircle className="w-8 h-8 animate-spin text-indigo-600 mb-3" />
+                {empresasQuery
+                    .isLoading ? (
+                    <div className="flex flex-col items-center justify-center py-20 text-slate-500">
+                        <LoaderCircle className="mb-3 h-8 w-8 animate-spin text-indigo-600" />
 
                         <p className="text-sm">
                             A carregar empresas...
                         </p>
                     </div>
-                ) : empresasQuery.isError ? (
-                    <div className="py-16 px-6 text-center">
-                        <AlertCircle className="w-10 h-10 mx-auto text-red-500 mb-3" />
+                ) : empresasQuery
+                      .isError ? (
+                    <div className="px-6 py-16 text-center">
+                        <AlertCircle className="mx-auto mb-3 h-10 w-10 text-red-500" />
 
                         <h3 className="font-semibold text-slate-900">
                             Não foi possível carregar as empresas
@@ -459,55 +570,60 @@ export default function EmpresasPage() {
 
                         <p className="mt-2 text-sm text-slate-500">
                             {errorMessage(
-                                empresasQuery.error
+                                empresasQuery
+                                    .error
                             )}
                         </p>
 
                         <button
                             type="button"
                             onClick={() =>
-                                empresasQuery.refetch()
+                                empresasQuery
+                                    .refetch()
                             }
-                            className="mt-5 h-10 px-4 rounded-xl bg-slate-900 text-white text-sm font-medium"
+                            className="mt-5 h-10 rounded-xl bg-slate-900 px-4 text-sm font-medium text-white"
                         >
                             Tentar novamente
                         </button>
                     </div>
                 ) : empresas.length ===
                   0 ? (
-                    <div className="py-20 px-6 text-center">
-                        <div className="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-4">
-                            <Building2 className="w-7 h-7" />
+                    <div className="px-6 py-20 text-center">
+                        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
+                            <Building2 className="h-7 w-7" />
                         </div>
 
                         <h3 className="font-semibold text-slate-900">
                             {search
-                                ? 'Nenhuma empresa encontrada'
-                                : 'Ainda não existem empresas'}
+                                ? "Nenhuma empresa encontrada"
+                                : "Ainda não existem empresas"}
                         </h3>
 
-                        <p className="mt-2 text-sm text-slate-500 max-w-sm mx-auto">
+                        <p className="mx-auto mt-2 max-w-sm text-sm text-slate-500">
                             {search
-                                ? 'Tente pesquisar por outro nome, NIF ou e-mail.'
-                                : 'Cadastre a primeira empresa desta organização.'}
+                                ? "Tente pesquisar por outro nome, NIF ou e-mail."
+                                : canCreate
+                                  ? "Cadastre a primeira empresa desta organização."
+                                  : "Não existe uma empresa disponível nesta organização."}
                         </p>
 
-                        {!search && (
-                            <button
-                                type="button"
-                                onClick={
-                                    openCreate
-                                }
-                                className="mt-5 h-10 px-4 rounded-xl bg-indigo-600 text-white text-sm font-semibold"
-                            >
-                                Criar empresa
-                            </button>
-                        )}
+                        {!search &&
+                            canCreate && (
+                                <button
+                                    type="button"
+                                    onClick={
+                                        openCreate
+                                    }
+                                    className="mt-5 h-10 rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white"
+                                >
+                                    Criar empresa
+                                </button>
+                            )}
                     </div>
                 ) : (
                     <div className="overflow-x-auto">
                         <table className="w-full text-left">
-                            <thead className="bg-slate-50 border-b border-slate-200">
+                            <thead className="border-b border-slate-200 bg-slate-50">
                                 <tr>
                                     <th className="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
                                         Empresa
@@ -525,7 +641,7 @@ export default function EmpresasPage() {
                                         Estado
                                     </th>
 
-                                    <th className="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500 text-right">
+                                    <th className="px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">
                                         Ações
                                     </th>
                                 </tr>
@@ -540,33 +656,33 @@ export default function EmpresasPage() {
                                             key={
                                                 empresa.id
                                             }
-                                            className="hover:bg-slate-50/70 transition"
+                                            className="transition hover:bg-slate-50/70"
                                         >
                                             <td className="px-5 py-4">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 overflow-hidden">
+                                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-indigo-50 text-indigo-600">
                                                         {empresa.logo_url ? (
                                                             <img
                                                                 src={
                                                                     empresa.logo_url
                                                                 }
                                                                 alt=""
-                                                                className="w-full h-full object-cover"
+                                                                className="h-full w-full object-cover"
                                                             />
                                                         ) : (
-                                                            <Building2 className="w-5 h-5" />
+                                                            <Building2 className="h-5 w-5" />
                                                         )}
                                                     </div>
 
                                                     <div>
-                                                        <div className="font-semibold text-sm text-slate-900">
+                                                        <div className="text-sm font-semibold text-slate-900">
                                                             {
                                                                 empresa.nome_empresa
                                                             }
                                                         </div>
 
                                                         <div className="mt-0.5 text-xs text-slate-500">
-                                                            NIF{' '}
+                                                            NIF{" "}
                                                             {
                                                                 empresa.nif
                                                             }
@@ -579,7 +695,8 @@ export default function EmpresasPage() {
                                                 <div className="space-y-1">
                                                     {empresa.email && (
                                                         <div className="flex items-center gap-2 text-sm text-slate-600">
-                                                            <Mail className="w-4 h-4 text-slate-400" />
+                                                            <Mail className="h-4 w-4 text-slate-400" />
+
                                                             {
                                                                 empresa.email
                                                             }
@@ -588,7 +705,8 @@ export default function EmpresasPage() {
 
                                                     {empresa.telemovel && (
                                                         <div className="flex items-center gap-2 text-sm text-slate-600">
-                                                            <Phone className="w-4 h-4 text-slate-400" />
+                                                            <Phone className="h-4 w-4 text-slate-400" />
+
                                                             {
                                                                 empresa.telemovel
                                                             }
@@ -607,7 +725,8 @@ export default function EmpresasPage() {
                                             <td className="px-5 py-4">
                                                 {empresa.endereco_cidade ? (
                                                     <div className="flex items-center gap-2 text-sm text-slate-600">
-                                                        <MapPin className="w-4 h-4 text-slate-400" />
+                                                        <MapPin className="h-4 w-4 text-slate-400" />
+
                                                         {
                                                             empresa.endereco_cidade
                                                         }
@@ -623,13 +742,14 @@ export default function EmpresasPage() {
                                                 <div className="flex flex-col items-start gap-1.5">
                                                     <span
                                                         className={[
-                                                            'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset',
+                                                            "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset",
+
                                                             statusClasses[
                                                                 empresa
                                                                     .status_cadastro
                                                             ],
                                                         ].join(
-                                                            ' '
+                                                            " "
                                                         )}
                                                     >
                                                         {
@@ -658,23 +778,25 @@ export default function EmpresasPage() {
                                                                 empresa
                                                             )
                                                         }
-                                                        className="w-9 h-9 rounded-lg border border-slate-200 text-slate-500 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition flex items-center justify-center"
+                                                        className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600"
                                                     >
-                                                        <Pencil className="w-4 h-4" />
+                                                        <Pencil className="h-4 w-4" />
                                                     </button>
 
-                                                    <button
-                                                        type="button"
-                                                        title="Eliminar"
-                                                        onClick={() =>
-                                                            setDeleting(
-                                                                empresa
-                                                            )
-                                                        }
-                                                        className="w-9 h-9 rounded-lg border border-slate-200 text-slate-500 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition flex items-center justify-center"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
+                                                    {canDelete && (
+                                                        <button
+                                                            type="button"
+                                                            title="Eliminar"
+                                                            onClick={() =>
+                                                                setDeleting(
+                                                                    empresa
+                                                                )
+                                                            }
+                                                            className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>
@@ -687,12 +809,17 @@ export default function EmpresasPage() {
             </div>
 
             <EmpresaFormModal
-                open={formOpen}
-                empresa={editing}
+                open={
+                    formOpen
+                }
+                empresa={
+                    editing
+                }
                 onClose={() => {
                     setFormOpen(
                         false
                     );
+
                     setEditing(
                         null
                     );
@@ -702,85 +829,91 @@ export default function EmpresasPage() {
                 }
             />
 
-            {deleting && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                    <button
-                        type="button"
-                        aria-label="Cancelar"
-                        onClick={() =>
-                            setDeleting(
-                                null
-                            )
-                        }
-                        className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm"
-                    />
+            {deleting &&
+                canDelete && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        <button
+                            type="button"
+                            aria-label="Cancelar"
+                            onClick={() =>
+                                setDeleting(
+                                    null
+                                )
+                            }
+                            className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm"
+                        />
 
-                    <div className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
-                        <div className="w-12 h-12 rounded-xl bg-red-50 text-red-600 flex items-center justify-center mb-5">
-                            <Trash2 className="w-5 h-5" />
-                        </div>
-
-                        <h2 className="text-xl font-semibold text-slate-950">
-                            Eliminar empresa?
-                        </h2>
-
-                        <p className="mt-2 text-sm leading-relaxed text-slate-500">
-                            A empresa{' '}
-                            <span className="font-semibold text-slate-700">
-                                {
-                                    deleting.nome_empresa
-                                }
-                            </span>{' '}
-                            será removida permanentemente.
-                        </p>
-
-                        {deleteMutation.isError && (
-                            <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                                {errorMessage(
-                                    deleteMutation.error
-                                )}
+                        <div className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+                            <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-red-50 text-red-600">
+                                <Trash2 className="h-5 w-5" />
                             </div>
-                        )}
 
-                        <div className="mt-6 flex justify-end gap-3">
-                            <button
-                                type="button"
-                                disabled={
-                                    deleteMutation
-                                        .isPending
-                                }
-                                onClick={() =>
-                                    setDeleting(
-                                        null
-                                    )
-                                }
-                                className="h-10 px-4 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700"
-                            >
-                                Cancelar
-                            </button>
+                            <h2 className="text-xl font-semibold text-slate-950">
+                                Eliminar empresa?
+                            </h2>
 
-                            <button
-                                type="button"
-                                disabled={
-                                    deleteMutation
-                                        .isPending
-                                }
-                                onClick={() =>
-                                    deleteMutation.mutate(
-                                        deleting.id
-                                    )
-                                }
-                                className="h-10 px-4 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold flex items-center gap-2 disabled:opacity-60"
-                            >
-                                {deleteMutation.isPending && (
-                                    <LoaderCircle className="w-4 h-4 animate-spin" />
-                                )}
-                                Eliminar
-                            </button>
+                            <p className="mt-2 text-sm leading-relaxed text-slate-500">
+                                A empresa{" "}
+                                <span className="font-semibold text-slate-700">
+                                    {
+                                        deleting.nome_empresa
+                                    }
+                                </span>{" "}
+                                será removida permanentemente.
+                            </p>
+
+                            {deleteMutation
+                                .isError && (
+                                <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                                    {errorMessage(
+                                        deleteMutation
+                                            .error
+                                    )}
+                                </div>
+                            )}
+
+                            <div className="mt-6 flex justify-end gap-3">
+                                <button
+                                    type="button"
+                                    disabled={
+                                        deleteMutation
+                                            .isPending
+                                    }
+                                    onClick={() =>
+                                        setDeleting(
+                                            null
+                                        )
+                                    }
+                                    className="h-10 rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-700"
+                                >
+                                    Cancelar
+                                </button>
+
+                                <button
+                                    type="button"
+                                    disabled={
+                                        deleteMutation
+                                            .isPending
+                                    }
+                                    onClick={() =>
+                                        deleteMutation
+                                            .mutate(
+                                                deleting.id
+                                            )
+                                    }
+                                    className="flex h-10 items-center gap-2 rounded-xl bg-red-600 px-4 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-60"
+                                >
+                                    {deleteMutation
+                                        .isPending && (
+                                        <LoaderCircle className="h-4 w-4 animate-spin" />
+                                    )}
+
+                                    Eliminar
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )}
         </div>
     );
 }

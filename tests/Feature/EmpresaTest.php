@@ -395,3 +395,189 @@ test('nível configurar permite criar atualizar e apagar empresa do próprio ten
         'id' => $empresaId,
     ]);
 });
+test(
+    'tenant saas single company não pode criar segunda empresa',
+    function () {
+        $tenant =
+            criarTenantEmpresa(
+                'Tenant SaaS',
+                'tenant-saas-single'
+            );
+
+        $tenant->settings = [
+            'onboarding' => [
+                'required' => false,
+                'completed_at' => now()->toISOString(),
+            ],
+            'features' => [
+                'multi_company' => false,
+            ],
+        ];
+
+        $tenant->save();
+
+        criarEmpresaNoTenant(
+            $tenant,
+            'Empresa Principal',
+            '500100001'
+        );
+
+        $user =
+            criarUsuarioEmpresa(
+                'single.company@frotapro.test',
+                $tenant,
+                'configurar'
+            );
+
+        autenticarUsuarioEmpresa(
+            $this,
+            $user
+        );
+
+        $this
+            ->withHeaders(
+                empresaSpaHeaders()
+            )
+            ->postJson(
+                '/api/empresas',
+                [
+                    'nome_empresa' => 'Segunda Empresa',
+
+                    'nif' => '500100002',
+                ]
+            )
+            ->assertForbidden()
+            ->assertJsonPath(
+                'message',
+                'O plano atual permite apenas uma empresa.'
+            );
+
+        $this->assertDatabaseMissing(
+            'empresas',
+            [
+                'tenant_id' => $tenant->id,
+
+                'nome_empresa' => 'Segunda Empresa',
+            ]
+        );
+    }
+);
+
+test(
+    'tenant saas single company não pode eliminar empresa principal',
+    function () {
+        $tenant =
+            criarTenantEmpresa(
+                'Tenant SaaS Protegido',
+                'tenant-saas-protegido'
+            );
+
+        $tenant->settings = [
+            'onboarding' => [
+                'required' => false,
+            ],
+            'features' => [
+                'multi_company' => false,
+            ],
+        ];
+
+        $tenant->save();
+
+        $empresa =
+            criarEmpresaNoTenant(
+                $tenant,
+                'Empresa Principal',
+                '500100003'
+            );
+
+        $user =
+            criarUsuarioEmpresa(
+                'protected.company@frotapro.test',
+                $tenant,
+                'configurar'
+            );
+
+        autenticarUsuarioEmpresa(
+            $this,
+            $user
+        );
+
+        $this
+            ->withHeaders(
+                empresaSpaHeaders()
+            )
+            ->deleteJson(
+                "/api/empresas/{$empresa->id}"
+            )
+            ->assertForbidden()
+            ->assertJsonPath(
+                'message',
+                'A empresa principal não pode ser eliminada.'
+            );
+
+        $this->assertDatabaseHas(
+            'empresas',
+            [
+                'id' => $empresa->id,
+            ]
+        );
+    }
+);
+
+test(
+    'tenant legado mantém suporte multiempresa',
+    function () {
+        $tenant =
+            criarTenantEmpresa(
+                'Tenant Legado',
+                'tenant-legado-multi'
+            );
+
+        criarEmpresaNoTenant(
+            $tenant,
+            'Empresa Um',
+            '500100004'
+        );
+
+        $user =
+            criarUsuarioEmpresa(
+                'legacy.multi@frotapro.test',
+                $tenant,
+                'configurar'
+            );
+
+        autenticarUsuarioEmpresa(
+            $this,
+            $user
+        );
+
+        $response =
+            $this
+                ->withHeaders(
+                    empresaSpaHeaders()
+                )
+                ->postJson(
+                    '/api/empresas',
+                    [
+                        'nome_empresa' => 'Empresa Dois',
+
+                        'nif' => '500100005',
+                    ]
+                )
+                ->assertCreated();
+
+        $empresaId =
+            $response->json(
+                'data.id'
+            );
+
+        $this
+            ->withHeaders(
+                empresaSpaHeaders()
+            )
+            ->deleteJson(
+                "/api/empresas/{$empresaId}"
+            )
+            ->assertNoContent();
+    }
+);
