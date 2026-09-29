@@ -3,12 +3,16 @@
 use App\Models\Empresa;
 use App\Models\Tenant;
 use Database\Seeders\RoleSeeder;
+use Database\Seeders\SaasPlanSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    $this->seed(RoleSeeder::class);
+    $this->seed([
+        RoleSeeder::class,
+        SaasPlanSeeder::class,
+    ]);
 });
 
 function saasOnboardingTestHeaders(): array

@@ -6,6 +6,7 @@ use App\Http\Requests\StoreEmpresaRequest;
 use App\Http\Requests\UpdateEmpresaRequest;
 use App\Models\Empresa;
 use App\Models\Tenant;
+use App\Services\SaasEntitlementService;
 use App\Services\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
@@ -13,7 +14,8 @@ use Illuminate\Http\Response;
 class EmpresaController extends Controller
 {
     public function __construct(
-        private TenantContext $tenantContext
+        private TenantContext $tenantContext,
+        private SaasEntitlementService $entitlements
     ) {}
 
     public function index(): JsonResponse
@@ -29,9 +31,10 @@ class EmpresaController extends Controller
             ->get();
 
         $multiCompanyEnabled =
-            $this->multiCompanyEnabled(
-                $tenant
-            );
+            $this->entitlements
+                ->multiCompanyEnabled(
+                    $tenant
+                );
 
         return response()->json([
             'data' => $empresas,
@@ -52,9 +55,10 @@ class EmpresaController extends Controller
         $tenant = $this->tenant();
 
         if (
-            ! $this->multiCompanyEnabled(
-                $tenant
-            ) &&
+            ! $this->entitlements
+                ->multiCompanyEnabled(
+                    $tenant
+                ) &&
             Empresa::query()
                 ->where(
                     'tenant_id',
@@ -84,10 +88,13 @@ class EmpresaController extends Controller
         ], 201);
     }
 
-    public function show(string $id): JsonResponse
-    {
+    public function show(
+        string $id
+    ): JsonResponse {
         return response()->json([
-            'data' => $this->findEmpresa($id),
+            'data' => $this->findEmpresa(
+                $id
+            ),
         ]);
     }
 
@@ -95,13 +102,20 @@ class EmpresaController extends Controller
         UpdateEmpresaRequest $request,
         string $id
     ): JsonResponse {
-        $empresa = $this->findEmpresa($id);
+        $empresa =
+            $this->findEmpresa(
+                $id
+            );
 
-        $empresa->fill($request->validated());
+        $empresa->fill(
+            $request->validated()
+        );
+
         $empresa->save();
 
         return response()->json([
             'message' => 'Empresa atualizada com sucesso.',
+
             'data' => $empresa,
         ]);
     }
@@ -109,21 +123,24 @@ class EmpresaController extends Controller
     public function destroy(
         string $id
     ): Response {
-        $tenant = $this->tenant();
+        $tenant =
+            $this->tenant();
 
-        $empresa = Empresa::query()
-            ->where(
-                'tenant_id',
-                $tenant->id
-            )
-            ->findOrFail(
-                $id
-            );
+        $empresa =
+            Empresa::query()
+                ->where(
+                    'tenant_id',
+                    $tenant->id
+                )
+                ->findOrFail(
+                    $id
+                );
 
         if (
-            ! $this->multiCompanyEnabled(
-                $tenant
-            )
+            ! $this->entitlements
+                ->multiCompanyEnabled(
+                    $tenant
+                )
         ) {
             abort(
                 403,
@@ -133,14 +150,21 @@ class EmpresaController extends Controller
 
         $empresa->delete();
 
-        return response()->noContent();
+        return response()
+            ->noContent();
     }
 
-    private function findEmpresa(string $id): Empresa
-    {
+    private function findEmpresa(
+        string $id
+    ): Empresa {
         return Empresa::query()
-            ->where('tenant_id', $this->tenantId())
-            ->findOrFail($id);
+            ->where(
+                'tenant_id',
+                $this->tenantId()
+            )
+            ->findOrFail(
+                $id
+            );
     }
 
     private function tenant(): Tenant
@@ -162,44 +186,19 @@ class EmpresaController extends Controller
             );
     }
 
-    private function multiCompanyEnabled(
-        Tenant $tenant
-    ): bool {
-        $settings =
-            $tenant->settings ?? [];
-
-        $configured =
-            data_get(
-                $settings,
-                'features.multi_company'
-            );
-
-        if ($configured !== null) {
-            return (bool) $configured;
-        }
-
-        /*
-     * Compatibilidade com tenants antigos:
-     * tenants sem onboarding pertencem ao
-     * modelo anterior e mantêm multiempresa.
-     *
-     * Tenants criados pelo cadastro SaaS já
-     * possuem a chave onboarding e ficam
-     * single-company mesmo se forem anteriores
-     * à introdução de features.multi_company.
-     */
-        return ! array_key_exists(
-            'onboarding',
-            $settings
-        );
-    }
-
     private function tenantId(): string
     {
-        if (! $this->tenantContext->hasTenant()) {
-            abort(403, 'Selecione uma organização para aceder a este recurso.');
+        if (
+            ! $this->tenantContext
+                ->hasTenant()
+        ) {
+            abort(
+                403,
+                'Selecione uma organização para aceder a este recurso.'
+            );
         }
 
-        return $this->tenantContext->requireId();
+        return $this->tenantContext
+            ->requireId();
     }
 }

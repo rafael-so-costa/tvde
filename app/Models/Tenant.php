@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -19,6 +20,7 @@ class Tenant extends Model
         'telefone',
         'ativo',
         'settings',
+        'saas_plan_id',
     ];
 
     protected function casts(): array
@@ -40,26 +42,38 @@ class Tenant extends Model
     {
         return $this->hasMany(TenantUser::class);
     }
+
     public function empresas(): HasMany
     {
         return $this->hasMany(Empresa::class);
     }
+
     public function proprietarios(): HasMany
     {
         return $this->hasMany(Proprietario::class);
     }
+
     public function veiculos(): HasMany
     {
         return $this->hasMany(Veiculo::class);
     }
+
     public function motoristas(): HasMany
     {
         return $this->hasMany(Motorista::class);
     }
+
     public function funcionarios(): HasMany
     {
         return $this->hasMany(
             Funcionario::class
+        );
+    }
+
+    public function saasPlan(): BelongsTo
+    {
+        return $this->belongsTo(
+            SaasPlan::class
         );
     }
 }

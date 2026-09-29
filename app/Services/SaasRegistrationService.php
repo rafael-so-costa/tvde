@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Empresa;
 use App\Models\Profile;
 use App\Models\Role;
+use App\Models\SaasPlan;
 use App\Models\Tenant;
 use App\Models\TenantUser;
 use App\Models\User;
@@ -30,10 +31,28 @@ class SaasRegistrationService
             );
         }
 
+        $starterPlan = SaasPlan::query()
+            ->where(
+                'codigo',
+                'starter'
+            )
+            ->where(
+                'ativo',
+                true
+            )
+            ->first();
+
+        if (! $starterPlan) {
+            throw new RuntimeException(
+                'O plano starter não está configurado.'
+            );
+        }
+
         return DB::transaction(
             function () use (
                 $data,
-                $adminRole
+                $adminRole,
+                $starterPlan
             ): array {
                 $user = User::create([
                     'name' => $data['name'],
@@ -48,22 +67,32 @@ class SaasRegistrationService
                     'timezone' => 'Europe/Lisbon',
                     'locale' => 'pt_PT',
                 ]);
+
                 $tenant = Tenant::create([
+                    'saas_plan_id' => $starterPlan->id,
+
                     'nome' => $data['company_name'],
+
                     'slug' => $this->uniqueSlug(
                         $data['company_name']
                     ),
+
                     'nif' => $data['company_nif'],
+
                     'email' => $data['company_email']
                         ?? $data['email'],
+
                     'telefone' => $data['company_phone']
                         ?? $data['phone'],
+
                     'ativo' => true,
+
                     'settings' => [
                         'onboarding' => [
                             'required' => true,
                             'completed_at' => null,
                         ],
+
                         'features' => [
                             'multi_company' => false,
                         ],
@@ -88,8 +117,7 @@ class SaasRegistrationService
                     'status_cadastro' => 'pendente',
                 ]);
 
-                $empresa->tenant_id =
-                    $tenant->id;
+                $empresa->tenant_id = $tenant->id;
 
                 $empresa->save();
 
@@ -118,7 +146,9 @@ class SaasRegistrationService
     private function uniqueSlug(
         string $name
     ): string {
-        $base = Str::slug($name);
+        $base = Str::slug(
+            $name
+        );
 
         if ($base === '') {
             $base = 'empresa';
@@ -135,8 +165,7 @@ class SaasRegistrationService
                 )
                 ->exists()
         ) {
-            $slug =
-                "{$base}-{$suffix}";
+            $slug = "{$base}-{$suffix}";
 
             $suffix++;
         }

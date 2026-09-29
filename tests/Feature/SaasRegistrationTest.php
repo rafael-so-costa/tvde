@@ -3,17 +3,20 @@
 use App\Models\Empresa;
 use App\Models\Profile;
 use App\Models\Role;
+use App\Models\SaasPlan;
 use App\Models\Tenant;
 use App\Models\User;
 use Database\Seeders\RoleSeeder;
+use Database\Seeders\SaasPlanSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    $this->seed(
-        RoleSeeder::class
-    );
+    $this->seed([
+        RoleSeeder::class,
+        SaasPlanSeeder::class,
+    ]);
 });
 
 function saasRegistrationTestPayload(
@@ -40,10 +43,9 @@ test(
             saasRegistrationTestPayload()
         );
 
-        $response
-            ->assertRedirect(
-                '/onboarding'
-            );
+        $response->assertRedirect(
+            '/onboarding'
+        );
 
         $user = User::query()
             ->where(
@@ -56,6 +58,17 @@ test(
             ->where(
                 'nif',
                 '500123456'
+            )
+            ->firstOrFail();
+
+        $starterPlan = SaasPlan::query()
+            ->where(
+                'codigo',
+                'starter'
+            )
+            ->where(
+                'ativo',
+                true
             )
             ->firstOrFail();
 
@@ -109,6 +122,14 @@ test(
             ]
         );
 
+        $this->assertDatabaseHas(
+            'tenants',
+            [
+                'id' => $tenant->id,
+                'saas_plan_id' => $starterPlan->id,
+            ]
+        );
+
         expect(
             $tenant->nome
         )->toBe(
@@ -150,6 +171,22 @@ test(
                 'onboarding.completed_at'
             )
         )->toBeNull();
+
+        expect(
+            $tenant->saas_plan_id
+        )->toBe(
+            $starterPlan->id
+        );
+
+        expect(
+            $tenant->saasPlan
+        )->not->toBeNull();
+
+        expect(
+            $tenant->saasPlan->codigo
+        )->toBe(
+            'starter'
+        );
     }
 );
 
@@ -186,11 +223,8 @@ test(
     function () {
         Tenant::create([
             'nome' => 'Empresa Existente',
-
             'slug' => 'empresa-existente',
-
             'nif' => '500123456',
-
             'ativo' => true,
         ]);
 
@@ -222,11 +256,8 @@ test(
             '/registar',
             saasRegistrationTestPayload([
                 'email' => 'email-invalido',
-
                 'company_nif' => '123',
-
                 'password' => 'abc',
-
                 'password_confirmation' => 'xyz',
             ])
         )
@@ -275,9 +306,7 @@ test(
             '/registar',
             saasRegistrationTestPayload([
                 'email' => 'segundo@frotateste.pt',
-
                 'company_nif' => '500123457',
-
                 'company_email' => 'segunda@frotateste.pt',
             ])
         )
