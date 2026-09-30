@@ -7,11 +7,16 @@ use App\Http\Requests\UpdateBackofficeClientMultiCompanyRequest;
 use App\Http\Requests\UpdateBackofficeClientStatusRequest;
 use App\Models\Tenant;
 use App\Models\UserRole;
+use App\Services\SaasEntitlementService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 
 class BackofficeClientController extends Controller
 {
+    public function __construct(
+        private SaasEntitlementService $entitlements
+    ) {}
+
     public function index(
         ListBackofficeClientsRequest $request
     ): JsonResponse {
@@ -32,6 +37,7 @@ class BackofficeClientController extends Controller
         $query = Tenant::query()
             ->select([
                 'id',
+                'saas_plan_id',
                 'nome',
                 'slug',
                 'nif',
@@ -41,6 +47,9 @@ class BackofficeClientController extends Controller
                 'settings',
                 'created_at',
                 'updated_at',
+            ])
+            ->with([
+                'saasPlan:id,codigo,nome,descricao,ativo,limits,features',
             ])
             ->withCount([
                 'users',
@@ -183,6 +192,8 @@ class BackofficeClientController extends Controller
                 'funcionarios',
             ])
             ->with([
+                'saasPlan:id,codigo,nome,descricao,ativo,limits,features',
+
                 'empresas' => function ($query): void {
                     $query
                         ->select([
@@ -306,7 +317,81 @@ class BackofficeClientController extends Controller
                 'settings' => $tenant->settings
                     ?? [],
 
-                'companies' => $tenant->empresas,
+                'plan' => $tenant->saasPlan
+                    ? [
+                        'id' => $tenant
+                            ->saasPlan
+                            ->id,
+
+                        'codigo' => $tenant
+                            ->saasPlan
+                            ->codigo,
+
+                        'nome' => $tenant
+                            ->saasPlan
+                            ->nome,
+
+                        'descricao' => $tenant
+                            ->saasPlan
+                            ->descricao,
+
+                        'ativo' => $tenant
+                            ->saasPlan
+                            ->ativo,
+                    ]
+                    : null,
+
+                'usage' => [
+                    'empresas' => $this
+                        ->resourceUsage(
+                            $tenant,
+                            'empresas'
+                        ),
+
+                    'veiculos' => $this
+                        ->resourceUsage(
+                            $tenant,
+                            'veiculos'
+                        ),
+
+                    'motoristas' => $this
+                        ->resourceUsage(
+                            $tenant,
+                            'motoristas'
+                        ),
+
+                    'utilizadores' => $this
+                        ->resourceUsage(
+                            $tenant,
+                            'utilizadores'
+                        ),
+                ],
+
+                'features' => [
+                    'multi_company' => $this
+                        ->entitlements
+                        ->feature(
+                            $tenant,
+                            'multi_company'
+                        ),
+
+                    'integracoes' => $this
+                        ->entitlements
+                        ->feature(
+                            $tenant,
+                            'integracoes'
+                        ),
+
+                    'relatorios_avancados' => $this
+                        ->entitlements
+                        ->feature(
+                            $tenant,
+                            'relatorios_avancados'
+                        ),
+                ],
+
+                'companies' => $tenant
+                    ->empresas,
 
                 'users' => $users,
             ],
@@ -317,11 +402,10 @@ class BackofficeClientController extends Controller
         UpdateBackofficeClientStatusRequest $request,
         string $id
     ): JsonResponse {
-        $tenant =
-            Tenant::query()
-                ->findOrFail(
-                    $id
-                );
+        $tenant = Tenant::query()
+            ->findOrFail(
+                $id
+            );
 
         $tenant->ativo =
             $request->boolean(
@@ -348,30 +432,81 @@ class BackofficeClientController extends Controller
         string $id
     ): JsonResponse {
         $tenant = Tenant::query()
-            ->findOrFail($id);
+            ->findOrFail(
+                $id
+            );
 
-        $settings = $tenant->settings ?? [];
+        $settings =
+            $tenant->settings
+            ?? [];
 
         data_set(
             $settings,
             'features.multi_company',
-            $request->boolean('enabled')
+            $request->boolean(
+                'enabled'
+            )
         );
 
-        $tenant->settings = $settings;
+        $tenant->settings =
+            $settings;
+
         $tenant->save();
 
         return response()->json([
-            'message' => $request->boolean('enabled')
+            'message' => $request->boolean(
+                'enabled'
+            )
                 ? 'Multiempresa ativada com sucesso.'
                 : 'Multiempresa desativada com sucesso.',
 
             'data' => [
                 'id' => $tenant->id,
 
-                'multi_company_enabled' => $request->boolean('enabled'),
+                'multi_company_enabled' => $request->boolean(
+                    'enabled'
+                ),
             ],
         ]);
+    }
+
+    private function resourceUsage(
+        Tenant $tenant,
+        string $resource
+    ): array {
+        $limit = $this
+            ->entitlements
+            ->limit(
+                $tenant,
+                $resource
+            );
+
+        $used = $this
+            ->entitlements
+            ->usage(
+                $tenant,
+                $resource
+            );
+
+        return [
+            'used' => $used,
+
+            'limit' => $limit,
+
+            'remaining' => $limit === null
+                ? null
+                : max(
+                    0,
+                    $limit - $used
+                ),
+
+            'can_create' => $this
+                ->entitlements
+                ->canCreate(
+                    $tenant,
+                    $resource
+                ),
+        ];
     }
 
     private function summary(
@@ -380,20 +515,6 @@ class BackofficeClientController extends Controller
         $settings =
             $tenant->settings
             ?? [];
-
-        $multiCompany =
-            data_get(
-                $settings,
-                'features.multi_company'
-            );
-
-        if ($multiCompany === null) {
-            $multiCompany =
-                ! array_key_exists(
-                    'onboarding',
-                    $settings
-                );
-        }
 
         return [
             'id' => $tenant->id,
@@ -410,9 +531,11 @@ class BackofficeClientController extends Controller
 
             'ativo' => $tenant->ativo,
 
-            'created_at' => $tenant->created_at,
+            'created_at' => $tenant
+                ->created_at,
 
-            'updated_at' => $tenant->updated_at,
+            'updated_at' => $tenant
+                ->updated_at,
 
             'onboarding_required' => (bool) data_get(
                 $settings,
@@ -425,24 +548,34 @@ class BackofficeClientController extends Controller
                 'onboarding.completed_at'
             ),
 
-            'multi_company_enabled' => (bool) $multiCompany,
+            'multi_company_enabled' => $this
+                ->entitlements
+                ->multiCompanyEnabled(
+                    $tenant
+                ),
 
-            'users_count' => $tenant->users_count
+            'users_count' => $tenant
+                ->users_count
                 ?? 0,
 
-            'empresas_count' => $tenant->empresas_count
+            'empresas_count' => $tenant
+                ->empresas_count
                 ?? 0,
 
-            'proprietarios_count' => $tenant->proprietarios_count
+            'proprietarios_count' => $tenant
+                ->proprietarios_count
                 ?? 0,
 
-            'veiculos_count' => $tenant->veiculos_count
+            'veiculos_count' => $tenant
+                ->veiculos_count
                 ?? 0,
 
-            'motoristas_count' => $tenant->motoristas_count
+            'motoristas_count' => $tenant
+                ->motoristas_count
                 ?? 0,
 
-            'funcionarios_count' => $tenant->funcionarios_count
+            'funcionarios_count' => $tenant
+                ->funcionarios_count
                 ?? 0,
         ];
     }

@@ -165,6 +165,16 @@ export default function BackofficeClientPage() {
         await statusMutation.mutateAsync(nextStatus);
     }
 
+    function changeMultiCompany(): void {
+    if (multiCompanyMutation.isPending) {
+        return;
+    }
+
+    multiCompanyMutation.mutate(
+        !client.multi_company_enabled,
+    );
+}
+
     return (
         <div className="mx-auto max-w-7xl space-y-7">
             <section>
@@ -658,13 +668,7 @@ function Info({
     );
 }
 
-function changeMultiCompany(): void {
-    if (multiCompanyMutation.isPending) {
-        return;
-    }
 
-    multiCompanyMutation.mutate(!client.multi_company_enabled);
-}
 
 function ConfigurationRow({
     title,

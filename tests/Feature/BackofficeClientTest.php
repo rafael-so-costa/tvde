@@ -3,6 +3,7 @@
 use App\Models\Empresa;
 use App\Models\Motorista;
 use App\Models\Role;
+use App\Models\SaasPlan;
 use App\Models\Tenant;
 use App\Models\TenantUser;
 use App\Models\User;
@@ -348,11 +349,41 @@ test(
 test(
     'super admin consulta ficha completa do cliente',
     function () {
+        $plan = SaasPlan::create([
+            'codigo' => 'teste-backoffice',
+
+            'nome' => 'Plano Teste',
+
+            'descricao' => 'Plano utilizado nos testes do backoffice.',
+
+            'ativo' => true,
+
+            'limits' => [
+                'empresas' => 3,
+                'veiculos' => 20,
+                'motoristas' => 25,
+                'utilizadores' => 5,
+            ],
+
+            'features' => [
+                'multi_company' => false,
+                'integracoes' => true,
+                'relatorios_avancados' => false,
+            ],
+
+            'ordem' => 10,
+        ]);
+
         $tenant =
             backofficeClientTenant(
                 'Cliente Detalhe',
                 'cliente-detalhe'
             );
+
+        $tenant->saas_plan_id =
+            $plan->id;
+
+        $tenant->save();
 
         $empresa = new Empresa([
             'nome_empresa' => 'Cliente Detalhe Lda',
@@ -430,6 +461,74 @@ test(
             )
             ->assertJsonPath(
                 'data.multi_company_enabled',
+                false
+            )
+            ->assertJsonPath(
+                'data.plan.codigo',
+                'teste-backoffice'
+            )
+            ->assertJsonPath(
+                'data.plan.nome',
+                'Plano Teste'
+            )
+            ->assertJsonPath(
+                'data.plan.descricao',
+                'Plano utilizado nos testes do backoffice.'
+            )
+            ->assertJsonPath(
+                'data.plan.ativo',
+                true
+            )
+            ->assertJsonPath(
+                'data.usage.empresas.used',
+                1
+            )
+            ->assertJsonPath(
+                'data.usage.empresas.limit',
+                3
+            )
+            ->assertJsonPath(
+                'data.usage.empresas.remaining',
+                2
+            )
+            ->assertJsonPath(
+                'data.usage.empresas.can_create',
+                true
+            )
+            ->assertJsonPath(
+                'data.usage.veiculos.used',
+                0
+            )
+            ->assertJsonPath(
+                'data.usage.veiculos.limit',
+                20
+            )
+            ->assertJsonPath(
+                'data.usage.motoristas.used',
+                0
+            )
+            ->assertJsonPath(
+                'data.usage.motoristas.limit',
+                25
+            )
+            ->assertJsonPath(
+                'data.usage.utilizadores.used',
+                1
+            )
+            ->assertJsonPath(
+                'data.usage.utilizadores.limit',
+                5
+            )
+            ->assertJsonPath(
+                'data.features.multi_company',
+                false
+            )
+            ->assertJsonPath(
+                'data.features.integracoes',
+                true
+            )
+            ->assertJsonPath(
+                'data.features.relatorios_avancados',
                 false
             )
             ->assertJsonCount(

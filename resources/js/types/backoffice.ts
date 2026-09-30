@@ -95,16 +95,44 @@ export interface BackofficeClientUser {
     roles: BackofficeClientUserRole[];
 }
 
-export interface BackofficeClientDetail
-    extends BackofficeClient {
-    settings: Record<
-        string,
-        unknown
-    >;
+export interface BackofficeSaasPlan {
+    id: string;
+    codigo: string;
+    nome: string;
+    descricao: string | null;
+    ativo: boolean;
+}
 
-    companies:
-        BackofficeClientCompany[];
+export interface BackofficeResourceUsage {
+    used: number;
+    limit: number | null;
+    remaining: number | null;
+    can_create: boolean;
+}
 
-    users:
-        BackofficeClientUser[];
+export interface BackofficeClientUsage {
+    empresas: BackofficeResourceUsage;
+    veiculos: BackofficeResourceUsage;
+    motoristas: BackofficeResourceUsage;
+    utilizadores: BackofficeResourceUsage;
+}
+
+export interface BackofficeClientFeatures {
+    multi_company: boolean;
+    integracoes: boolean;
+    relatorios_avancados: boolean;
+}
+
+export interface BackofficeClientDetail extends BackofficeClient {
+    settings: Record<string, unknown>;
+
+    plan: BackofficeSaasPlan | null;
+
+    usage: BackofficeClientUsage;
+
+    features: BackofficeClientFeatures;
+
+    companies: BackofficeClientCompany[];
+
+    users: BackofficeClientUser[];
 }
