@@ -22,6 +22,7 @@ function entitlementTenant(
             'settings' => [
                 'onboarding' => [
                     'required' => false,
+
                     'completed_at' => now()
                         ->toISOString(),
                 ],
@@ -33,28 +34,25 @@ function entitlementTenant(
 test(
     'feature usa configuração do plano',
     function () {
-        $plan =
-            SaasPlan::create([
-                'codigo' => 'teste',
+        $plan = SaasPlan::create([
+            'codigo' => 'teste',
 
-                'nome' => 'Teste',
+            'nome' => 'Teste',
 
-                'ativo' => true,
+            'ativo' => true,
 
-                'features' => [
-                    'multi_company' => true,
-                ],
-            ]);
+            'features' => [
+                'multi_company' => true,
+            ],
+        ]);
 
-        $tenant =
-            entitlementTenant([
-                'saas_plan_id' => $plan->id,
-            ]);
+        $tenant = entitlementTenant([
+            'saas_plan_id' => $plan->id,
+        ]);
 
-        $service =
-            app(
-                SaasEntitlementService::class
-            );
+        $service = app(
+            SaasEntitlementService::class
+        );
 
         expect(
             $service
@@ -66,40 +64,117 @@ test(
 );
 
 test(
-    'override do tenant tem prioridade sobre o plano',
+    'override saas do tenant tem prioridade sobre o plano',
     function () {
-        $plan =
-            SaasPlan::create([
-                'codigo' => 'teste-override',
+        $plan = SaasPlan::create([
+            'codigo' => 'teste-override',
 
-                'nome' => 'Teste Override',
+            'nome' => 'Teste Override',
 
-                'ativo' => true,
+            'ativo' => true,
+
+            'features' => [
+                'multi_company' => true,
+            ],
+        ]);
+
+        $tenant = entitlementTenant([
+            'saas_plan_id' => $plan->id,
+
+            'settings' => [
+                'onboarding' => [
+                    'required' => false,
+                ],
+
+                'saas_overrides' => [
+                    'features' => [
+                        'multi_company' => false,
+                    ],
+                ],
+            ],
+        ]);
+
+        $service = app(
+            SaasEntitlementService::class
+        );
+
+        expect(
+            $service
+                ->featureOverride(
+                    $tenant,
+                    'multi_company'
+                )
+        )->toBeFalse();
+
+        expect(
+            $service
+                ->multiCompanyEnabled(
+                    $tenant
+                )
+        )->toBeFalse();
+    }
+);
+
+test(
+    'configuração legacy não sobrepõe plano saas',
+    function () {
+        $plan = SaasPlan::create([
+            'codigo' => 'teste-legacy-plan',
+
+            'nome' => 'Teste Legacy Plan',
+
+            'ativo' => true,
+
+            'features' => [
+                'multi_company' => true,
+            ],
+        ]);
+
+        $tenant = entitlementTenant([
+            'saas_plan_id' => $plan->id,
+
+            'settings' => [
+                'onboarding' => [
+                    'required' => false,
+                ],
 
                 'features' => [
                     'multi_company' => false,
                 ],
-            ]);
+            ],
+        ]);
 
-        $tenant =
-            entitlementTenant([
-                'saas_plan_id' => $plan->id,
+        $service = app(
+            SaasEntitlementService::class
+        );
 
-                'settings' => [
-                    'onboarding' => [
-                        'required' => false,
-                    ],
+        expect(
+            $service
+                ->multiCompanyEnabled(
+                    $tenant
+                )
+        )->toBeTrue();
+    }
+);
 
-                    'features' => [
-                        'multi_company' => true,
-                    ],
+test(
+    'tenant legado sem plano respeita configuração antiga',
+    function () {
+        $tenant = entitlementTenant([
+            'settings' => [
+                'onboarding' => [
+                    'required' => false,
                 ],
-            ]);
 
-        $service =
-            app(
-                SaasEntitlementService::class
-            );
+                'features' => [
+                    'multi_company' => true,
+                ],
+            ],
+        ]);
+
+        $service = app(
+            SaasEntitlementService::class
+        );
 
         expect(
             $service
@@ -113,15 +188,13 @@ test(
 test(
     'tenant legado sem configuração mantém multiempresa',
     function () {
-        $tenant =
-            entitlementTenant([
-                'settings' => [],
-            ]);
+        $tenant = entitlementTenant([
+            'settings' => [],
+        ]);
 
-        $service =
-            app(
-                SaasEntitlementService::class
-            );
+        $service = app(
+            SaasEntitlementService::class
+        );
 
         expect(
             $service
@@ -133,30 +206,71 @@ test(
 );
 
 test(
+    'limite usa override saas antes do plano',
+    function () {
+        $plan = SaasPlan::create([
+            'codigo' => 'limite-override',
+
+            'nome' => 'Limite Override',
+
+            'ativo' => true,
+
+            'limits' => [
+                'empresas' => 2,
+            ],
+        ]);
+
+        $tenant = entitlementTenant([
+            'saas_plan_id' => $plan->id,
+
+            'settings' => [
+                'onboarding' => [
+                    'required' => false,
+                ],
+
+                'saas_overrides' => [
+                    'limits' => [
+                        'empresas' => 5,
+                    ],
+                ],
+            ],
+        ]);
+
+        $service = app(
+            SaasEntitlementService::class
+        );
+
+        expect(
+            $service->limit(
+                $tenant,
+                'empresas'
+            )
+        )->toBe(5);
+    }
+);
+
+test(
     'limite nulo significa recurso sem limite definido',
     function () {
-        $plan =
-            SaasPlan::create([
-                'codigo' => 'sem-limite',
+        $plan = SaasPlan::create([
+            'codigo' => 'sem-limite',
 
-                'nome' => 'Sem Limite',
+            'nome' => 'Sem Limite',
 
-                'ativo' => true,
+            'ativo' => true,
 
-                'limits' => [
-                    'empresas' => null,
-                ],
-            ]);
+            'limits' => [
+                'empresas' => null,
+            ],
+        ]);
 
-        $tenant =
-            entitlementTenant([
-                'saas_plan_id' => $plan->id,
-            ]);
+        $tenant = entitlementTenant([
+            'saas_plan_id' => $plan->id,
+        ]);
 
-        $service =
-            app(
-                SaasEntitlementService::class
-            );
+        $service = app(
+            SaasEntitlementService::class
+        );
 
         expect(
             $service->limit(
@@ -177,44 +291,40 @@ test(
 test(
     'serviço bloqueia criação quando limite é atingido',
     function () {
-        $plan =
-            SaasPlan::create([
-                'codigo' => 'limitado',
+        $plan = SaasPlan::create([
+            'codigo' => 'limitado',
 
-                'nome' => 'Limitado',
+            'nome' => 'Limitado',
 
-                'ativo' => true,
+            'ativo' => true,
 
-                'limits' => [
-                    'empresas' => 1,
-                ],
-            ]);
+            'limits' => [
+                'empresas' => 1,
+            ],
+        ]);
 
-        $tenant =
-            entitlementTenant([
-                'saas_plan_id' => $plan->id,
-            ]);
+        $tenant = entitlementTenant([
+            'saas_plan_id' => $plan->id,
+        ]);
 
-        $empresa =
-            new Empresa([
-                'nome_empresa' => 'Empresa Limite',
+        $empresa = new Empresa([
+            'nome_empresa' => 'Empresa Limite',
 
-                'nif' => '501999999',
+            'nif' => '501999999',
 
-                'ativo' => true,
+            'ativo' => true,
 
-                'status_cadastro' => 'ativo',
-            ]);
+            'status_cadastro' => 'ativo',
+        ]);
 
         $empresa->tenant_id =
             $tenant->id;
 
         $empresa->save();
 
-        $service =
-            app(
-                SaasEntitlementService::class
-            );
+        $service = app(
+            SaasEntitlementService::class
+        );
 
         expect(
             $service->usage(

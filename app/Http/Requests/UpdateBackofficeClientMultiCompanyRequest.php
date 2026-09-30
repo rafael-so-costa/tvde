@@ -15,7 +15,8 @@ class UpdateBackofficeClientMultiCompanyRequest extends FormRequest
     {
         return [
             'enabled' => [
-                'required',
+                'present',
+                'nullable',
                 'boolean',
             ],
         ];

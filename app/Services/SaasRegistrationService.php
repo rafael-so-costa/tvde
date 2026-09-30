@@ -92,10 +92,6 @@ class SaasRegistrationService
                             'required' => true,
                             'completed_at' => null,
                         ],
-
-                        'features' => [
-                            'multi_company' => false,
-                        ],
                     ],
                 ]);
 
@@ -117,7 +113,8 @@ class SaasRegistrationService
                     'status_cadastro' => 'pendente',
                 ]);
 
-                $empresa->tenant_id = $tenant->id;
+                $empresa->tenant_id =
+                    $tenant->id;
 
                 $empresa->save();
 

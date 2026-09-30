@@ -11,16 +11,13 @@ class SaasEntitlementService
         string $feature,
         bool $default = false
     ): bool {
-        $settings =
-            $tenant->settings ?? [];
-
-        $override = data_get(
-            $settings,
-            "features.{$feature}"
+        $override = $this->featureOverride(
+            $tenant,
+            $feature
         );
 
         if ($override !== null) {
-            return (bool) $override;
+            return $override;
         }
 
         $planValue = data_get(
@@ -30,6 +27,19 @@ class SaasEntitlementService
 
         if ($planValue !== null) {
             return (bool) $planValue;
+        }
+
+        $settings = $tenant->settings ?? [];
+
+        if ($tenant->saas_plan_id === null) {
+            $legacyValue = data_get(
+                $settings,
+                "features.{$feature}"
+            );
+
+            if ($legacyValue !== null) {
+                return (bool) $legacyValue;
+            }
         }
 
         if (
@@ -45,23 +55,33 @@ class SaasEntitlementService
         return $default;
     }
 
+    public function featureOverride(
+        Tenant $tenant,
+        string $feature
+    ): ?bool {
+        $value = data_get(
+            $tenant->settings ?? [],
+            "saas_overrides.features.{$feature}"
+        );
+
+        if ($value === null) {
+            return null;
+        }
+
+        return (bool) $value;
+    }
+
     public function limit(
         Tenant $tenant,
         string $resource
     ): ?int {
-        $settings =
-            $tenant->settings ?? [];
-
-        $override = data_get(
-            $settings,
-            "limits.{$resource}"
+        $override = $this->limitOverride(
+            $tenant,
+            $resource
         );
 
         if ($override !== null) {
-            return max(
-                0,
-                (int) $override
-            );
+            return $override;
         }
 
         $planLimit = data_get(
@@ -69,13 +89,46 @@ class SaasEntitlementService
             $resource
         );
 
-        if ($planLimit === null) {
+        if ($planLimit !== null) {
+            return max(
+                0,
+                (int) $planLimit
+            );
+        }
+
+        if ($tenant->saas_plan_id === null) {
+            $legacyLimit = data_get(
+                $tenant->settings ?? [],
+                "limits.{$resource}"
+            );
+
+            if ($legacyLimit !== null) {
+                return max(
+                    0,
+                    (int) $legacyLimit
+                );
+            }
+        }
+
+        return null;
+    }
+
+    public function limitOverride(
+        Tenant $tenant,
+        string $resource
+    ): ?int {
+        $value = data_get(
+            $tenant->settings ?? [],
+            "saas_overrides.limits.{$resource}"
+        );
+
+        if ($value === null) {
             return null;
         }
 
         return max(
             0,
-            (int) $planLimit
+            (int) $value
         );
     }
 
@@ -112,11 +165,10 @@ class SaasEntitlementService
         Tenant $tenant,
         string $resource
     ): bool {
-        $limit =
-            $this->limit(
-                $tenant,
-                $resource
-            );
+        $limit = $this->limit(
+            $tenant,
+            $resource
+        );
 
         if ($limit === null) {
             return true;

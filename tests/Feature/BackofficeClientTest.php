@@ -697,20 +697,32 @@ test(
 );
 
 test(
-    'super admin pode ativar e desativar multiempresa',
+    'super admin pode configurar e remover override de multiempresa',
     function () {
+        $plan = SaasPlan::create([
+            'codigo' => 'multiempresa-plano',
+
+            'nome' => 'Plano Multiempresa',
+
+            'ativo' => true,
+
+            'features' => [
+                'multi_company' => true,
+            ],
+
+            'ordem' => 20,
+        ]);
+
         $tenant =
             backofficeClientTenant(
                 'Cliente Multiempresa',
                 'cliente-multiempresa'
             );
 
-        expect(
-            data_get(
-                $tenant->settings,
-                'features.multi_company'
-            )
-        )->toBeFalse();
+        $tenant->saas_plan_id =
+            $plan->id;
+
+        $tenant->save();
 
         $superAdmin =
             backofficeClientUser(
@@ -723,6 +735,71 @@ test(
             $superAdmin
         );
 
+        /*
+         * O plano permite multiempresa e ainda
+         * não existe override administrativo.
+         */
+        $this
+            ->withHeaders(
+                backofficeClientHeaders()
+            )
+            ->getJson(
+                "/api/backoffice/clientes/{$tenant->id}"
+            )
+            ->assertOk()
+            ->assertJsonPath(
+                'data.multi_company_enabled',
+                true
+            )
+            ->assertJsonPath(
+                'data.features.multi_company',
+                true
+            )
+            ->assertJsonPath(
+                'data.feature_overrides.multi_company',
+                null
+            );
+
+        /*
+         * Super admin força a feature para false.
+         */
+        $this
+            ->withHeaders(
+                backofficeClientHeaders()
+            )
+            ->patchJson(
+                "/api/backoffice/clientes/{$tenant->id}/multiempresa",
+                [
+                    'enabled' => false,
+                ]
+            )
+            ->assertOk()
+            ->assertJsonPath(
+                'data.multi_company_enabled',
+                false
+            )
+            ->assertJsonPath(
+                'data.multi_company_override',
+                false
+            )
+            ->assertJsonPath(
+                'message',
+                'Override de multiempresa desativado.'
+            );
+
+        $tenant->refresh();
+
+        expect(
+            data_get(
+                $tenant->settings,
+                'saas_overrides.features.multi_company'
+            )
+        )->toBeFalse();
+
+        /*
+         * Super admin força novamente a feature
+         * para true.
+         */
         $this
             ->withHeaders(
                 backofficeClientHeaders()
@@ -739,8 +816,12 @@ test(
                 true
             )
             ->assertJsonPath(
+                'data.multi_company_override',
+                true
+            )
+            ->assertJsonPath(
                 'message',
-                'Multiempresa ativada com sucesso.'
+                'Override de multiempresa ativado.'
             );
 
         $tenant->refresh();
@@ -748,10 +829,14 @@ test(
         expect(
             data_get(
                 $tenant->settings,
-                'features.multi_company'
+                'saas_overrides.features.multi_company'
             )
         )->toBeTrue();
 
+        /*
+         * null remove o override.
+         * O valor efetivo volta a ser o do plano.
+         */
         $this
             ->withHeaders(
                 backofficeClientHeaders()
@@ -759,13 +844,21 @@ test(
             ->patchJson(
                 "/api/backoffice/clientes/{$tenant->id}/multiempresa",
                 [
-                    'enabled' => false,
+                    'enabled' => null,
                 ]
             )
             ->assertOk()
             ->assertJsonPath(
                 'data.multi_company_enabled',
-                false
+                true
+            )
+            ->assertJsonPath(
+                'data.multi_company_override',
+                null
+            )
+            ->assertJsonPath(
+                'message',
+                'Multiempresa voltou a utilizar a configuração do plano.'
             );
 
         $tenant->refresh();
@@ -773,9 +866,16 @@ test(
         expect(
             data_get(
                 $tenant->settings,
-                'features.multi_company'
+                'saas_overrides.features.multi_company'
             )
-        )->toBeFalse();
+        )->toBeNull();
+
+        expect(
+            data_get(
+                $tenant->settings,
+                'saas_overrides'
+            )
+        )->toBeNull();
     }
 );
 

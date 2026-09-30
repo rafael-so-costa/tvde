@@ -123,6 +123,10 @@ export interface BackofficeClientFeatures {
     relatorios_avancados: boolean;
 }
 
+export interface BackofficeClientFeatureOverrides {
+    multi_company: boolean | null;
+}
+
 export interface BackofficeClientDetail extends BackofficeClient {
     settings: Record<string, unknown>;
 
@@ -131,6 +135,8 @@ export interface BackofficeClientDetail extends BackofficeClient {
     usage: BackofficeClientUsage;
 
     features: BackofficeClientFeatures;
+
+    feature_overrides: BackofficeClientFeatureOverrides;
 
     companies: BackofficeClientCompany[];
 

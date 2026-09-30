@@ -390,6 +390,15 @@ class BackofficeClientController extends Controller
                         ),
                 ],
 
+                'feature_overrides' => [
+                    'multi_company' => $this
+                        ->entitlements
+                        ->featureOverride(
+                            $tenant,
+                            'multi_company'
+                        ),
+                ],
+
                 'companies' => $tenant
                     ->empresas,
 
@@ -432,6 +441,9 @@ class BackofficeClientController extends Controller
         string $id
     ): JsonResponse {
         $tenant = Tenant::query()
+            ->with(
+                'saasPlan'
+            )
             ->findOrFail(
                 $id
             );
@@ -440,32 +452,94 @@ class BackofficeClientController extends Controller
             $tenant->settings
             ?? [];
 
-        data_set(
-            $settings,
-            'features.multi_company',
-            $request->boolean(
+        $enabled =
+            $request->validated(
                 'enabled'
-            )
-        );
+            );
+
+        if ($enabled === null) {
+            data_forget(
+                $settings,
+                'saas_overrides.features.multi_company'
+            );
+
+            if (
+                empty(
+                    data_get(
+                        $settings,
+                        'saas_overrides.features',
+                        []
+                    )
+                )
+            ) {
+                data_forget(
+                    $settings,
+                    'saas_overrides.features'
+                );
+            }
+
+            if (
+                empty(
+                    data_get(
+                        $settings,
+                        'saas_overrides',
+                        []
+                    )
+                )
+            ) {
+                data_forget(
+                    $settings,
+                    'saas_overrides'
+                );
+            }
+        } else {
+            data_set(
+                $settings,
+                'saas_overrides.features.multi_company',
+                $enabled
+            );
+        }
 
         $tenant->settings =
             $settings;
 
         $tenant->save();
 
+        $tenant->refresh()
+            ->load(
+                'saasPlan'
+            );
+
+        $effective =
+            $this
+                ->entitlements
+                ->multiCompanyEnabled(
+                    $tenant
+                );
+
+        $override =
+            $this
+                ->entitlements
+                ->featureOverride(
+                    $tenant,
+                    'multi_company'
+                );
+
         return response()->json([
-            'message' => $request->boolean(
-                'enabled'
-            )
-                ? 'Multiempresa ativada com sucesso.'
-                : 'Multiempresa desativada com sucesso.',
+            'message' => $override === null
+                ? 'Multiempresa voltou a utilizar a configuração do plano.'
+                : (
+                    $override
+                        ? 'Override de multiempresa ativado.'
+                        : 'Override de multiempresa desativado.'
+                ),
 
             'data' => [
                 'id' => $tenant->id,
 
-                'multi_company_enabled' => $request->boolean(
-                    'enabled'
-                ),
+                'multi_company_enabled' => $effective,
+
+                'multi_company_override' => $override,
             ],
         ]);
     }
