@@ -5,6 +5,7 @@ import {
     ShieldCheck,
     Truck,
     UsersRound,
+    Layers3,
 } from "lucide-react";
 import { Link, NavLink, Outlet } from "react-router-dom";
 
@@ -67,6 +68,20 @@ export default function BackofficeShell() {
                     >
                         <UsersRound className="h-5 w-5" />
                         Clientes
+                    </NavLink>
+                    <NavLink
+                        to="/backoffice/planos"
+                        className={({ isActive }) =>
+                            [
+                                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition",
+                                isActive
+                                    ? "bg-indigo-500 text-white"
+                                    : "text-slate-400 hover:bg-white/5 hover:text-white",
+                            ].join(" ")
+                        }
+                    >
+                        <Layers3 className="h-5 w-5" />
+                        Planos
                     </NavLink>
                 </nav>
 

@@ -5,6 +5,7 @@ use App\Http\Controllers\AluguerController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BackofficeClientController;
 use App\Http\Controllers\BackofficeDashboardController;
+use App\Http\Controllers\BackofficePlanController;
 use App\Http\Controllers\ChecklistProcessRunController;
 use App\Http\Controllers\ChecklistProcessTemplateController;
 use App\Http\Controllers\ChecklistRecordController;
@@ -67,6 +68,31 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('super_admin')
         ->prefix('backoffice')
         ->group(function () {
+            Route::get(
+                '/planos',
+                [BackofficePlanController::class, 'index']
+            );
+
+            Route::post(
+                '/planos',
+                [BackofficePlanController::class, 'store']
+            );
+
+            Route::get(
+                '/planos/{id}',
+                [BackofficePlanController::class, 'show']
+            )
+                ->whereUuid(
+                    'id'
+                );
+
+            Route::patch(
+                '/planos/{id}',
+                [BackofficePlanController::class, 'update']
+            )
+                ->whereUuid(
+                    'id'
+                );
             Route::patch(
                 '/clientes/{id}/multiempresa',
                 [BackofficeClientController::class, 'multiCompany']

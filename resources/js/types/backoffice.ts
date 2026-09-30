@@ -142,3 +142,34 @@ export interface BackofficeClientDetail extends BackofficeClient {
 
     users: BackofficeClientUser[];
 }
+
+export interface BackofficePlanLimits {
+    empresas: number | null;
+    veiculos: number | null;
+    motoristas: number | null;
+    utilizadores: number | null;
+}
+
+export interface BackofficePlanFeatures {
+    multi_company: boolean;
+    integracoes: boolean;
+    relatorios_avancados: boolean;
+}
+
+export interface BackofficePlan {
+    id: string;
+    codigo: string;
+    nome: string;
+    descricao: string | null;
+    ativo: boolean;
+    ordem: number;
+    limits: BackofficePlanLimits;
+    features: BackofficePlanFeatures;
+    tenants_count: number;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface BackofficePlanListResponse {
+    data: BackofficePlan[];
+}
