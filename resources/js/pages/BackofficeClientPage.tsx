@@ -12,14 +12,20 @@ import {
     ShieldCheck,
     UserRound,
     UsersRound,
+    AlertTriangle,
+    Layers3,
 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
+import { useState } from "react";
 
 import api from "../lib/api";
 
 import type {
     BackofficeClientDetail,
+    BackofficeClientPlanChangeResponse,
+    BackofficeClientPlanPreview,
+    BackofficePlanListResponse,
     BackofficeResourceUsage,
 } from "../types/backoffice";
 
@@ -41,17 +47,59 @@ export default function BackofficeClientPage() {
 
     const queryClient = useQueryClient();
 
+    const [selectedPlanId, setSelectedPlanId] = useState("");
+
     const clientQuery = useQuery({
         queryKey: ["backoffice", "clientes", id],
 
         enabled: Boolean(id),
 
         queryFn: async () => {
-            const response = await api.get(
-                `/api/backoffice/clientes/${id}`,
-            );
+            const response = await api.get(`/api/backoffice/clientes/${id}`);
 
             return response.data.data as BackofficeClientDetail;
+        },
+    });
+
+    const plansQuery = useQuery({
+        queryKey: ["backoffice", "planos", "client-selector"],
+
+        queryFn: async () => {
+            const response = await api.get("/api/backoffice/planos");
+
+            return response.data as BackofficePlanListResponse;
+        },
+    });
+
+    const effectiveSelectedPlanId =
+        selectedPlanId || clientQuery.data?.plan?.id || "";
+
+    const planPreviewQuery = useQuery({
+        queryKey: [
+            "backoffice",
+            "clientes",
+            id,
+            "plano-preview",
+            effectiveSelectedPlanId,
+        ],
+
+        enabled: Boolean(
+            id &&
+            effectiveSelectedPlanId &&
+            effectiveSelectedPlanId !== clientQuery.data?.plan?.id,
+        ),
+
+        queryFn: async () => {
+            const response = await api.get(
+                `/api/backoffice/clientes/${id}/plano-preview`,
+                {
+                    params: {
+                        plan_id: effectiveSelectedPlanId,
+                    },
+                },
+            );
+
+            return response.data.data as BackofficeClientPlanPreview;
         },
     });
 
@@ -85,9 +133,7 @@ export default function BackofficeClientPage() {
     });
 
     const multiCompanyMutation = useMutation({
-        mutationFn: async (
-            enabled: boolean | null,
-        ) => {
+        mutationFn: async (enabled: boolean | null) => {
             const response = await api.patch(
                 `/api/backoffice/clientes/${id}/multiempresa`,
                 {
@@ -119,6 +165,41 @@ export default function BackofficeClientPage() {
         },
     });
 
+    const planMutation = useMutation({
+        mutationFn: async (planId: string) => {
+            const response = await api.patch(
+                `/api/backoffice/clientes/${id}/plano`,
+                {
+                    plan_id: planId,
+                },
+            );
+
+            return response.data as BackofficeClientPlanChangeResponse;
+        },
+
+        onSuccess: async (response) => {
+            setSelectedPlanId(response.data.plan.id);
+
+            await Promise.all([
+                queryClient.invalidateQueries({
+                    queryKey: ["backoffice", "clientes", id],
+                }),
+
+                queryClient.invalidateQueries({
+                    queryKey: ["backoffice", "clientes"],
+                }),
+
+                queryClient.invalidateQueries({
+                    queryKey: ["backoffice", "planos"],
+                }),
+
+                queryClient.invalidateQueries({
+                    queryKey: ["backoffice", "dashboard"],
+                }),
+            ]);
+        },
+    });
+
     if (clientQuery.isLoading) {
         return (
             <div className="flex min-h-[50vh] items-center justify-center">
@@ -127,10 +208,7 @@ export default function BackofficeClientPage() {
         );
     }
 
-    if (
-        clientQuery.isError ||
-        !clientQuery.data
-    ) {
+    if (clientQuery.isError || !clientQuery.data) {
         return (
             <div className="mx-auto max-w-7xl">
                 <Link
@@ -138,7 +216,6 @@ export default function BackofficeClientPage() {
                     className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-indigo-600"
                 >
                     <ArrowLeft className="h-4 w-4" />
-
                     Voltar aos clientes
                 </Link>
 
@@ -149,41 +226,71 @@ export default function BackofficeClientPage() {
         );
     }
 
-    const client =
-        clientQuery.data;
+    const client = clientQuery.data;
+
+    const plans = plansQuery.data?.data ?? [];
+
+    const availablePlans = plans.filter(
+        (plan) => plan.ativo || plan.id === client.plan?.id,
+    );
+
+    const planSelectionChanged = Boolean(
+        effectiveSelectedPlanId && effectiveSelectedPlanId !== client.plan?.id,
+    );
+
+    const selectedPlan =
+        plans.find((plan) => plan.id === effectiveSelectedPlanId) ?? null;
 
     async function changeStatus(): Promise<void> {
-        const nextStatus =
-            !client.ativo;
+        const nextStatus = !client.ativo;
 
-        const confirmed =
-            window.confirm(
-                nextStatus
-                    ? `Ativar o cliente "${client.nome}"?`
-                    : `Inativar o cliente "${client.nome}"? O acesso à organização ficará indisponível para os seus utilizadores.`,
-            );
+        const confirmed = window.confirm(
+            nextStatus
+                ? `Ativar o cliente "${client.nome}"?`
+                : `Inativar o cliente "${client.nome}"? O acesso à organização ficará indisponível para os seus utilizadores.`,
+        );
 
         if (!confirmed) {
             return;
         }
 
-        await statusMutation.mutateAsync(
-            nextStatus,
-        );
+        await statusMutation.mutateAsync(nextStatus);
     }
 
-    function setMultiCompanyOverride(
-        value: boolean | null,
-    ): void {
+    function setMultiCompanyOverride(value: boolean | null): void {
+        if (multiCompanyMutation.isPending) {
+            return;
+        }
+
+        multiCompanyMutation.mutate(value);
+    }
+
+    async function changePlan(): Promise<void> {
         if (
-            multiCompanyMutation.isPending
+            !effectiveSelectedPlanId ||
+            !planSelectionChanged ||
+            planMutation.isPending ||
+            !planPreviewQuery.data
         ) {
             return;
         }
 
-        multiCompanyMutation.mutate(
-            value,
+        const warnings = planPreviewQuery.data.impact.warnings;
+
+        const warningText =
+            warnings.length > 0
+                ? `\n\nAtenção: ${warnings.length} recurso(s) ficarão acima do limite do novo plano. Nenhum dado será apagado, mas novas criações ficarão bloqueadas enquanto o uso estiver acima do limite.`
+                : "";
+
+        const confirmed = window.confirm(
+            `Alterar o plano de "${client.nome}" de "${client.plan?.nome ?? "Sem plano"}" para "${selectedPlan?.nome ?? "plano selecionado"}"?${warningText}`,
         );
+
+        if (!confirmed) {
+            return;
+        }
+
+        await planMutation.mutateAsync(effectiveSelectedPlanId);
     }
 
     return (
@@ -194,7 +301,6 @@ export default function BackofficeClientPage() {
                     className="mb-5 inline-flex items-center gap-2 text-sm font-semibold text-indigo-600 transition hover:text-indigo-700"
                 >
                     <ArrowLeft className="h-4 w-4" />
-
                     Clientes
                 </Link>
 
@@ -226,12 +332,8 @@ export default function BackofficeClientPage() {
 
                     <button
                         type="button"
-                        disabled={
-                            statusMutation.isPending
-                        }
-                        onClick={
-                            changeStatus
-                        }
+                        disabled={statusMutation.isPending}
+                        onClick={changeStatus}
                         className={[
                             "inline-flex h-11 items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold transition disabled:opacity-60",
                             client.ativo
@@ -245,17 +347,13 @@ export default function BackofficeClientPage() {
                             <Power className="h-4 w-4" />
                         )}
 
-                        {client.ativo
-                            ? "Inativar cliente"
-                            : "Ativar cliente"}
+                        {client.ativo ? "Inativar cliente" : "Ativar cliente"}
                     </button>
                 </div>
 
                 {statusMutation.isError && (
                     <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                        {errorMessage(
-                            statusMutation.error,
-                        )}
+                        {errorMessage(statusMutation.error)}
                     </div>
                 )}
             </section>
@@ -263,49 +361,37 @@ export default function BackofficeClientPage() {
             <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
                 <MetricCard
                     label="Utilizadores"
-                    value={
-                        client.users_count
-                    }
+                    value={client.users_count}
                     icon={UsersRound}
                 />
 
                 <MetricCard
                     label="Empresas"
-                    value={
-                        client.empresas_count
-                    }
+                    value={client.empresas_count}
                     icon={Building2}
                 />
 
                 <MetricCard
                     label="Proprietários"
-                    value={
-                        client.proprietarios_count
-                    }
+                    value={client.proprietarios_count}
                     icon={UsersRound}
                 />
 
                 <MetricCard
                     label="Veículos"
-                    value={
-                        client.veiculos_count
-                    }
+                    value={client.veiculos_count}
                     icon={Car}
                 />
 
                 <MetricCard
                     label="Motoristas"
-                    value={
-                        client.motoristas_count
-                    }
+                    value={client.motoristas_count}
                     icon={UserRound}
                 />
 
                 <MetricCard
                     label="Funcionários"
-                    value={
-                        client.funcionarios_count
-                    }
+                    value={client.funcionarios_count}
                     icon={ShieldCheck}
                 />
             </section>
@@ -319,51 +405,24 @@ export default function BackofficeClientPage() {
                     </div>
 
                     <div className="grid gap-5 p-5 sm:grid-cols-2">
-                        <Info
-                            label="Nome"
-                            value={
-                                client.nome
-                            }
-                        />
+                        <Info label="Nome" value={client.nome} />
 
-                        <Info
-                            label="NIF"
-                            value={
-                                client.nif
-                            }
-                        />
+                        <Info label="NIF" value={client.nif} />
 
-                        <Info
-                            label="E-mail"
-                            value={
-                                client.email
-                            }
-                            icon={Mail}
-                        />
+                        <Info label="E-mail" value={client.email} icon={Mail} />
 
                         <Info
                             label="Telefone"
-                            value={
-                                client.telefone
-                            }
+                            value={client.telefone}
                             icon={Phone}
                         />
 
-                        <Info
-                            label="Slug"
-                            value={
-                                client.slug
-                            }
-                        />
+                        <Info label="Slug" value={client.slug} />
 
                         <Info
                             label="Criado em"
-                            value={formatDateTime(
-                                client.created_at,
-                            )}
-                            icon={
-                                CalendarDays
-                            }
+                            value={formatDateTime(client.created_at)}
+                            icon={CalendarDays}
                         />
                     </div>
                 </div>
@@ -377,41 +436,77 @@ export default function BackofficeClientPage() {
 
                     <div className="space-y-5 p-5">
                         <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-4">
-                            <p className="text-xs font-semibold uppercase tracking-wider text-indigo-500">
-                                Plano atual
-                            </p>
-
-                            <div className="mt-2 flex items-center justify-between gap-4">
+                            <div className="flex items-start justify-between gap-4">
                                 <div>
-                                    <p className="font-semibold text-slate-900">
-                                        {client
-                                            .plan
-                                            ?.nome ??
-                                            "Sem plano"}
+                                    <p className="text-xs font-semibold uppercase tracking-wider text-indigo-500">
+                                        Plano atual
                                     </p>
 
-                                    {client
-                                        .plan
-                                        ?.descricao && (
-                                        <p className="mt-1 text-xs text-slate-500">
-                                            {
-                                                client
-                                                    .plan
-                                                    .descricao
-                                            }
+                                    <p className="mt-2 font-semibold text-slate-900">
+                                        {client.plan?.nome ?? "Sem plano"}
+                                    </p>
+
+                                    {client.plan?.descricao && (
+                                        <p className="mt-1 text-xs leading-5 text-slate-500">
+                                            {client.plan.descricao}
                                         </p>
                                     )}
                                 </div>
 
                                 {client.plan && (
                                     <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold uppercase text-indigo-600">
-                                        {
-                                            client
-                                                .plan
-                                                .codigo
-                                        }
+                                        {client.plan.codigo}
                                     </span>
                                 )}
+                            </div>
+
+                            <div className="mt-4 border-t border-indigo-100 pt-4">
+                                <label className="block">
+                                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                                        Alterar plano
+                                    </span>
+
+                                    <select
+                                        value={effectiveSelectedPlanId}
+                                        disabled={
+                                            plansQuery.isLoading ||
+                                            planMutation.isPending
+                                        }
+                                        onChange={(event) =>
+                                            setSelectedPlanId(
+                                                event.target.value,
+                                            )
+                                        }
+                                        className="mt-2 h-11 w-full rounded-xl border border-indigo-100 bg-white px-3 text-sm font-medium text-slate-700 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 disabled:opacity-60"
+                                    >
+                                        {!client.plan && (
+                                            <option value="">
+                                                Selecione um plano
+                                            </option>
+                                        )}
+
+                                        {availablePlans.map((plan) => (
+                                            <option
+                                                key={plan.id}
+                                                value={plan.id}
+                                                disabled={
+                                                    !plan.ativo &&
+                                                    plan.id !== client.plan?.id
+                                                }
+                                            >
+                                                {plan.nome}
+                                                {!plan.ativo
+                                                    ? " — inativo"
+                                                    : ""}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </label>
+
+                                <p className="mt-2 text-xs text-slate-400">
+                                    A alteração só será aplicada após análise do
+                                    impacto e confirmação.
+                                </p>
                             </div>
                         </div>
 
@@ -422,9 +517,7 @@ export default function BackofficeClientPage() {
                                     ? "Pendente"
                                     : "Concluído"
                             }
-                            positive={
-                                !client.onboarding_required
-                            }
+                            positive={!client.onboarding_required}
                         />
 
                         <div className="border-t border-slate-100 pt-4">
@@ -436,11 +529,8 @@ export default function BackofficeClientPage() {
                                         </p>
 
                                         <p className="mt-1 text-xs text-slate-400">
-                                            Permite
-                                            cadastrar mais
-                                            de uma empresa
-                                            nesta
-                                            organização.
+                                            Permite cadastrar mais de uma
+                                            empresa nesta organização.
                                         </p>
                                     </div>
 
@@ -451,9 +541,7 @@ export default function BackofficeClientPage() {
                                                 client.multi_company_enabled
                                                     ? "bg-emerald-50 text-emerald-700"
                                                     : "bg-slate-100 text-slate-600",
-                                            ].join(
-                                                " ",
-                                            )}
+                                            ].join(" ")}
                                         >
                                             {client.multi_company_enabled
                                                 ? "Ativado"
@@ -461,13 +549,10 @@ export default function BackofficeClientPage() {
                                         </span>
 
                                         <p className="mt-1 text-xs text-slate-400">
-                                            {client
-                                                .feature_overrides
-                                                .multi_company ===
-                                            null
+                                            {client.feature_overrides
+                                                .multi_company === null
                                                 ? "Definido pelo plano"
-                                                : client
-                                                        .feature_overrides
+                                                : client.feature_overrides
                                                         .multi_company
                                                   ? "Override ativo"
                                                   : "Override inativo"}
@@ -479,54 +564,42 @@ export default function BackofficeClientPage() {
                                     <OverrideButton
                                         label="Usar plano"
                                         selected={
-                                            client
-                                                .feature_overrides
-                                                .multi_company ===
-                                            null
+                                            client.feature_overrides
+                                                .multi_company === null
                                         }
                                         disabled={
                                             multiCompanyMutation.isPending
                                         }
                                         onClick={() =>
-                                            setMultiCompanyOverride(
-                                                null,
-                                            )
+                                            setMultiCompanyOverride(null)
                                         }
                                     />
 
                                     <OverrideButton
                                         label="Forçar ativo"
                                         selected={
-                                            client
-                                                .feature_overrides
-                                                .multi_company ===
-                                            true
+                                            client.feature_overrides
+                                                .multi_company === true
                                         }
                                         disabled={
                                             multiCompanyMutation.isPending
                                         }
                                         onClick={() =>
-                                            setMultiCompanyOverride(
-                                                true,
-                                            )
+                                            setMultiCompanyOverride(true)
                                         }
                                     />
 
                                     <OverrideButton
                                         label="Forçar inativo"
                                         selected={
-                                            client
-                                                .feature_overrides
-                                                .multi_company ===
-                                            false
+                                            client.feature_overrides
+                                                .multi_company === false
                                         }
                                         disabled={
                                             multiCompanyMutation.isPending
                                         }
                                         onClick={() =>
-                                            setMultiCompanyOverride(
-                                                false,
-                                            )
+                                            setMultiCompanyOverride(false)
                                         }
                                     />
                                 </div>
@@ -534,7 +607,6 @@ export default function BackofficeClientPage() {
                                 {multiCompanyMutation.isPending && (
                                     <div className="flex items-center gap-2 text-xs text-slate-500">
                                         <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
-
                                         A guardar configuração...
                                     </div>
                                 )}
@@ -549,11 +621,7 @@ export default function BackofficeClientPage() {
 
                                 {multiCompanyMutation.isSuccess && (
                                     <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                                        {
-                                            multiCompanyMutation
-                                                .data
-                                                .message
-                                        }
+                                        {multiCompanyMutation.data.message}
                                     </div>
                                 )}
                             </div>
@@ -561,21 +629,14 @@ export default function BackofficeClientPage() {
 
                         <ConfigurationRow
                             title="Estado da conta"
-                            value={
-                                client.ativo
-                                    ? "Ativa"
-                                    : "Inativa"
-                            }
-                            positive={
-                                client.ativo
-                            }
+                            value={client.ativo ? "Ativa" : "Inativa"}
+                            positive={client.ativo}
                         />
 
                         {client.onboarding_completed_at && (
                             <div className="border-t border-slate-100 pt-4">
                                 <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
-                                    Onboarding
-                                    concluído
+                                    Onboarding concluído
                                 </p>
 
                                 <p className="mt-1 text-sm font-medium text-slate-700">
@@ -589,6 +650,206 @@ export default function BackofficeClientPage() {
                 </div>
             </section>
 
+            {planSelectionChanged && (
+                <section className="overflow-hidden rounded-2xl border border-indigo-200 bg-white">
+                    <div className="flex flex-col justify-between gap-4 border-b border-indigo-100 bg-indigo-50/50 px-5 py-4 sm:flex-row sm:items-center">
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <Layers3 className="h-5 w-5 text-indigo-600" />
+
+                                <h2 className="font-semibold text-slate-900">
+                                    Pré-visualização da alteração
+                                </h2>
+                            </div>
+
+                            <p className="mt-1 text-sm text-slate-500">
+                                Veja o impacto efetivo antes de alterar o plano
+                                deste cliente.
+                            </p>
+                        </div>
+
+                        {selectedPlan && (
+                            <div className="text-sm text-slate-500">
+                                <span className="font-semibold text-slate-900">
+                                    {client.plan?.nome ?? "Sem plano"}
+                                </span>
+
+                                <span className="mx-2">→</span>
+
+                                <span className="font-semibold text-indigo-600">
+                                    {selectedPlan.nome}
+                                </span>
+                            </div>
+                        )}
+                    </div>
+
+                    {planPreviewQuery.isLoading ? (
+                        <div className="flex min-h-48 items-center justify-center">
+                            <LoaderCircle className="h-7 w-7 animate-spin text-indigo-600" />
+                        </div>
+                    ) : planPreviewQuery.isError ? (
+                        <div className="p-5">
+                            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                                Não foi possível calcular o impacto do novo
+                                plano.
+                            </div>
+                        </div>
+                    ) : planPreviewQuery.data ? (
+                        <>
+                            {planPreviewQuery.data.impact.warnings.length >
+                                0 && (
+                                <div className="border-b border-amber-100 bg-amber-50 px-5 py-4">
+                                    <div className="flex gap-3">
+                                        <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+
+                                        <div>
+                                            <p className="text-sm font-semibold text-amber-800">
+                                                O cliente ficará acima de um ou
+                                                mais limites
+                                            </p>
+
+                                            <p className="mt-1 text-sm leading-6 text-amber-700">
+                                                Nenhum dado existente será
+                                                removido. Novas criações nesses
+                                                recursos ficarão bloqueadas até
+                                                que a utilização volte ao limite
+                                                permitido.
+                                            </p>
+
+                                            <div className="mt-3 flex flex-wrap gap-2">
+                                                {planPreviewQuery.data.impact.warnings.map(
+                                                    (warning) => (
+                                                        <span
+                                                            key={
+                                                                warning.resource
+                                                            }
+                                                            className="rounded-lg border border-amber-200 bg-white px-3 py-2 text-xs font-semibold text-amber-800"
+                                                        >
+                                                            {resourceLabel(
+                                                                warning.resource,
+                                                            )}
+                                                            : {warning.used}{" "}
+                                                            utilizados /{" "}
+                                                            {warning.limit}{" "}
+                                                            permitidos (+
+                                                            {warning.excess})
+                                                        </span>
+                                                    ),
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="p-5">
+                                <h3 className="text-sm font-semibold text-slate-900">
+                                    Limites após a alteração
+                                </h3>
+
+                                <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                                    <UsageCard
+                                        label="Empresas"
+                                        usage={
+                                            planPreviewQuery.data.impact.usage
+                                                .empresas
+                                        }
+                                    />
+
+                                    <UsageCard
+                                        label="Veículos"
+                                        usage={
+                                            planPreviewQuery.data.impact.usage
+                                                .veiculos
+                                        }
+                                    />
+
+                                    <UsageCard
+                                        label="Motoristas"
+                                        usage={
+                                            planPreviewQuery.data.impact.usage
+                                                .motoristas
+                                        }
+                                    />
+
+                                    <UsageCard
+                                        label="Utilizadores"
+                                        usage={
+                                            planPreviewQuery.data.impact.usage
+                                                .utilizadores
+                                        }
+                                    />
+                                </div>
+
+                                <h3 className="mt-6 text-sm font-semibold text-slate-900">
+                                    Funcionalidades após a alteração
+                                </h3>
+
+                                <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                                    <FeatureCard
+                                        label="Multiempresa"
+                                        enabled={
+                                            planPreviewQuery.data.impact
+                                                .features.multi_company
+                                        }
+                                    />
+
+                                    <FeatureCard
+                                        label="Integrações"
+                                        enabled={
+                                            planPreviewQuery.data.impact
+                                                .features.integracoes
+                                        }
+                                    />
+
+                                    <FeatureCard
+                                        label="Relatórios avançados"
+                                        enabled={
+                                            planPreviewQuery.data.impact
+                                                .features.relatorios_avancados
+                                        }
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex flex-col justify-between gap-4 border-t border-slate-100 bg-slate-50 px-5 py-4 sm:flex-row sm:items-center">
+                                <p className="text-xs leading-5 text-slate-500">
+                                    Overrides administrativos existentes serão
+                                    preservados.
+                                </p>
+
+                                <button
+                                    type="button"
+                                    disabled={planMutation.isPending}
+                                    onClick={changePlan}
+                                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-60"
+                                >
+                                    {planMutation.isPending ? (
+                                        <LoaderCircle className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                        <Layers3 className="h-4 w-4" />
+                                    )}
+                                    Confirmar alteração para{" "}
+                                    {selectedPlan?.nome}
+                                </button>
+                            </div>
+                        </>
+                    ) : null}
+                </section>
+            )}
+
+            {planMutation.isError && (
+                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    {errorMessage(planMutation.error)}
+                </div>
+            )}
+
+            {planMutation.isSuccess && (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                    {planMutation.data.message}
+                </div>
+            )}
+
             <section className="rounded-2xl border border-slate-200 bg-white">
                 <div className="border-b border-slate-100 px-5 py-4">
                     <h2 className="font-semibold text-slate-900">
@@ -601,40 +862,18 @@ export default function BackofficeClientPage() {
                 </div>
 
                 <div className="grid gap-4 p-5 sm:grid-cols-2 xl:grid-cols-4">
-                    <UsageCard
-                        label="Empresas"
-                        usage={
-                            client
-                                .usage
-                                .empresas
-                        }
-                    />
+                    <UsageCard label="Empresas" usage={client.usage.empresas} />
 
-                    <UsageCard
-                        label="Veículos"
-                        usage={
-                            client
-                                .usage
-                                .veiculos
-                        }
-                    />
+                    <UsageCard label="Veículos" usage={client.usage.veiculos} />
 
                     <UsageCard
                         label="Motoristas"
-                        usage={
-                            client
-                                .usage
-                                .motoristas
-                        }
+                        usage={client.usage.motoristas}
                     />
 
                     <UsageCard
                         label="Utilizadores"
-                        usage={
-                            client
-                                .usage
-                                .utilizadores
-                        }
+                        usage={client.usage.utilizadores}
                     />
                 </div>
 
@@ -646,29 +885,17 @@ export default function BackofficeClientPage() {
                     <div className="mt-4 grid gap-3 sm:grid-cols-3">
                         <FeatureCard
                             label="Multiempresa"
-                            enabled={
-                                client
-                                    .features
-                                    .multi_company
-                            }
+                            enabled={client.features.multi_company}
                         />
 
                         <FeatureCard
                             label="Integrações"
-                            enabled={
-                                client
-                                    .features
-                                    .integracoes
-                            }
+                            enabled={client.features.integracoes}
                         />
 
                         <FeatureCard
                             label="Relatórios avançados"
-                            enabled={
-                                client
-                                    .features
-                                    .relatorios_avancados
-                            }
+                            enabled={client.features.relatorios_avancados}
                         />
                     </div>
                 </div>
@@ -676,17 +903,14 @@ export default function BackofficeClientPage() {
 
             <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
                 <div className="border-b border-slate-100 px-5 py-4">
-                    <h2 className="font-semibold text-slate-900">
-                        Empresas
-                    </h2>
+                    <h2 className="font-semibold text-slate-900">Empresas</h2>
 
                     <p className="mt-1 text-sm text-slate-500">
                         Empresas vinculadas a esta organização.
                     </p>
                 </div>
 
-                {client.companies.length ===
-                0 ? (
+                {client.companies.length === 0 ? (
                     <EmptyState text="Nenhuma empresa vinculada." />
                 ) : (
                     <div className="overflow-x-auto">
@@ -712,69 +936,46 @@ export default function BackofficeClientPage() {
                             </thead>
 
                             <tbody className="divide-y divide-slate-100">
-                                {client.companies.map(
-                                    (
-                                        company,
-                                    ) => (
-                                        <tr
-                                            key={
-                                                company.id
-                                            }
-                                        >
-                                            <td className="px-5 py-4">
-                                                <div className="font-semibold text-slate-900">
-                                                    {
-                                                        company.nome_empresa
-                                                    }
-                                                </div>
+                                {client.companies.map((company) => (
+                                    <tr key={company.id}>
+                                        <td className="px-5 py-4">
+                                            <div className="font-semibold text-slate-900">
+                                                {company.nome_empresa}
+                                            </div>
 
+                                            <div className="mt-1 text-xs text-slate-400">
+                                                NIF {company.nif}
+                                            </div>
+                                        </td>
+
+                                        <td className="px-5 py-4 text-sm text-slate-600">
+                                            <div>{company.email ?? "—"}</div>
+
+                                            {company.telemovel && (
                                                 <div className="mt-1 text-xs text-slate-400">
-                                                    NIF{" "}
-                                                    {
-                                                        company.nif
-                                                    }
+                                                    {company.telemovel}
                                                 </div>
-                                            </td>
+                                            )}
+                                        </td>
 
-                                            <td className="px-5 py-4 text-sm text-slate-600">
-                                                <div>
-                                                    {company.email ??
-                                                        "—"}
-                                                </div>
+                                        <td className="px-5 py-4 text-sm text-slate-600">
+                                            {company.endereco_cidade ?? "—"}
+                                        </td>
 
-                                                {company.telemovel && (
-                                                    <div className="mt-1 text-xs text-slate-400">
-                                                        {
-                                                            company.telemovel
-                                                        }
-                                                    </div>
-                                                )}
-                                            </td>
-
-                                            <td className="px-5 py-4 text-sm text-slate-600">
-                                                {company.endereco_cidade ??
-                                                    "—"}
-                                            </td>
-
-                                            <td className="px-5 py-4">
-                                                <span
-                                                    className={[
-                                                        "inline-flex rounded-full px-2.5 py-1 text-xs font-semibold",
-                                                        company.ativo
-                                                            ? "bg-emerald-50 text-emerald-700"
-                                                            : "bg-slate-100 text-slate-600",
-                                                    ].join(
-                                                        " ",
-                                                    )}
-                                                >
-                                                    {
-                                                        company.status_cadastro
-                                                    }
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    ),
-                                )}
+                                        <td className="px-5 py-4">
+                                            <span
+                                                className={[
+                                                    "inline-flex rounded-full px-2.5 py-1 text-xs font-semibold",
+                                                    company.ativo
+                                                        ? "bg-emerald-50 text-emerald-700"
+                                                        : "bg-slate-100 text-slate-600",
+                                                ].join(" ")}
+                                            >
+                                                {company.status_cadastro}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
                             </tbody>
                         </table>
                     </div>
@@ -792,8 +993,7 @@ export default function BackofficeClientPage() {
                     </p>
                 </div>
 
-                {client.users.length ===
-                0 ? (
+                {client.users.length === 0 ? (
                     <EmptyState text="Nenhum utilizador vinculado." />
                 ) : (
                     <div className="overflow-x-auto">
@@ -819,118 +1019,90 @@ export default function BackofficeClientPage() {
                             </thead>
 
                             <tbody className="divide-y divide-slate-100">
-                                {client.users.map(
-                                    (user) => (
-                                        <tr
-                                            key={
-                                                user.id
-                                            }
-                                        >
-                                            <td className="px-5 py-4">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-50 font-semibold text-indigo-600">
-                                                        {user.name
-                                                            .charAt(
-                                                                0,
-                                                            )
-                                                            .toUpperCase()}
-                                                    </div>
-
-                                                    <div>
-                                                        <div className="flex items-center gap-2 font-semibold text-slate-900">
-                                                            {
-                                                                user.name
-                                                            }
-
-                                                            {user.principal && (
-                                                                <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-600">
-                                                                    Principal
-                                                                </span>
-                                                            )}
-                                                        </div>
-
-                                                        <div className="mt-1 text-xs text-slate-400">
-                                                            {
-                                                                user.email
-                                                            }
-                                                        </div>
-                                                    </div>
+                                {client.users.map((user) => (
+                                    <tr key={user.id}>
+                                        <td className="px-5 py-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-50 font-semibold text-indigo-600">
+                                                    {user.name
+                                                        .charAt(0)
+                                                        .toUpperCase()}
                                                 </div>
-                                            </td>
 
-                                            <td className="px-5 py-4">
-                                                <div className="flex flex-wrap gap-1.5">
-                                                    {user
-                                                        .roles
-                                                        .length >
-                                                    0 ? (
-                                                        user.roles.map(
-                                                            (
-                                                                role,
-                                                            ) => (
-                                                                <span
-                                                                    key={
-                                                                        role.codigo
-                                                                    }
-                                                                    className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600"
-                                                                >
-                                                                    {
-                                                                        role.nome
-                                                                    }
-                                                                </span>
-                                                            ),
-                                                        )
-                                                    ) : (
-                                                        <span className="text-sm text-slate-400">
-                                                            Sem
-                                                            role
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </td>
+                                                <div>
+                                                    <div className="flex items-center gap-2 font-semibold text-slate-900">
+                                                        {user.name}
 
-                                            <td className="px-5 py-4">
-                                                <div className="flex flex-col items-start gap-1">
-                                                    <span
-                                                        className={[
-                                                            "inline-flex rounded-full px-2.5 py-1 text-xs font-semibold",
-                                                            user.ativo &&
-                                                            user.membership_status ===
-                                                                "ativo"
-                                                                ? "bg-emerald-50 text-emerald-700"
-                                                                : "bg-red-50 text-red-700",
-                                                        ].join(
-                                                            " ",
+                                                        {user.principal && (
+                                                            <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-600">
+                                                                Principal
+                                                            </span>
                                                         )}
-                                                    >
-                                                        {user.ativo &&
+                                                    </div>
+
+                                                    <div className="mt-1 text-xs text-slate-400">
+                                                        {user.email}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+
+                                        <td className="px-5 py-4">
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {user.roles.length > 0 ? (
+                                                    user.roles.map((role) => (
+                                                        <span
+                                                            key={role.codigo}
+                                                            className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600"
+                                                        >
+                                                            {role.nome}
+                                                        </span>
+                                                    ))
+                                                ) : (
+                                                    <span className="text-sm text-slate-400">
+                                                        Sem role
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </td>
+
+                                        <td className="px-5 py-4">
+                                            <div className="flex flex-col items-start gap-1">
+                                                <span
+                                                    className={[
+                                                        "inline-flex rounded-full px-2.5 py-1 text-xs font-semibold",
+                                                        user.ativo &&
                                                         user.membership_status ===
                                                             "ativo"
-                                                            ? "Ativo"
-                                                            : "Inativo"}
+                                                            ? "bg-emerald-50 text-emerald-700"
+                                                            : "bg-red-50 text-red-700",
+                                                    ].join(" ")}
+                                                >
+                                                    {user.ativo &&
+                                                    user.membership_status ===
+                                                        "ativo"
+                                                        ? "Ativo"
+                                                        : "Inativo"}
+                                                </span>
+
+                                                {user.membership_status !==
+                                                    "ativo" && (
+                                                    <span className="text-xs text-slate-400">
+                                                        {user.membership_status}
                                                     </span>
+                                                )}
+                                            </div>
+                                        </td>
 
-                                                    {user.membership_status !==
-                                                        "ativo" && (
-                                                        <span className="text-xs text-slate-400">
-                                                            {
-                                                                user.membership_status
-                                                            }
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </td>
-
-                                            <td className="px-5 py-4 text-sm text-slate-500">
-                                                {user.last_login_at
-                                                    ? formatDateTime(
-                                                          user.last_login_at,
-                                                      )
-                                                    : "Nunca"}
-                                            </td>
-                                        </tr>
-                                    ),
-                                )}
+                                        <td className="px-5 py-4 text-sm text-slate-500">
+                                            {user.last_login_at
+                                                ? formatDateTime(
+                                                      user.last_login_at,
+                                                  )
+                                                : "Nunca"}
+                                        </td>
+                                    </tr>
+                                ))}
                             </tbody>
                         </table>
                     </div>
@@ -959,9 +1131,7 @@ function MetricCard({
                 {value}
             </div>
 
-            <div className="mt-1 text-sm text-slate-500">
-                {label}
-            </div>
+            <div className="mt-1 text-sm text-slate-500">{label}</div>
         </div>
     );
 }
@@ -982,13 +1152,9 @@ function Info({
             </p>
 
             <div className="mt-1.5 flex items-center gap-2 text-sm font-medium text-slate-700">
-                {Icon && (
-                    <Icon className="h-4 w-4 text-slate-400" />
-                )}
+                {Icon && <Icon className="h-4 w-4 text-slate-400" />}
 
-                <span>
-                    {value || "—"}
-                </span>
+                <span>{value || "—"}</span>
             </div>
         </div>
     );
@@ -1033,17 +1199,13 @@ function ConfigurationRow({
 }) {
     return (
         <div className="flex items-center justify-between gap-4">
-            <span className="text-sm text-slate-500">
-                {title}
-            </span>
+            <span className="text-sm text-slate-500">{title}</span>
 
             <div className="flex items-center gap-2">
                 <CheckCircle2
                     className={[
                         "h-4 w-4",
-                        positive
-                            ? "text-emerald-500"
-                            : "text-slate-300",
+                        positive ? "text-emerald-500" : "text-slate-300",
                     ].join(" ")}
                 />
 
@@ -1064,9 +1226,7 @@ function UsageCard({
 }) {
     return (
         <div className="rounded-xl border border-slate-200 p-4">
-            <p className="text-sm font-medium text-slate-500">
-                {label}
-            </p>
+            <p className="text-sm font-medium text-slate-500">{label}</p>
 
             <div className="mt-2 flex items-end gap-1">
                 <span className="text-2xl font-bold text-slate-950">
@@ -1074,9 +1234,7 @@ function UsageCard({
                 </span>
 
                 <span className="pb-0.5 text-sm text-slate-400">
-                    /{" "}
-                    {usage.limit ??
-                        "∞"}
+                    / {usage.limit ?? "∞"}
                 </span>
             </div>
 
@@ -1091,18 +1249,10 @@ function UsageCard({
     );
 }
 
-function FeatureCard({
-    label,
-    enabled,
-}: {
-    label: string;
-    enabled: boolean;
-}) {
+function FeatureCard({ label, enabled }: { label: string; enabled: boolean }) {
     return (
         <div className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3">
-            <span className="text-sm font-medium text-slate-700">
-                {label}
-            </span>
+            <span className="text-sm font-medium text-slate-700">{label}</span>
 
             <span
                 className={[
@@ -1112,19 +1262,13 @@ function FeatureCard({
                         : "bg-slate-100 text-slate-500",
                 ].join(" ")}
             >
-                {enabled
-                    ? "Disponível"
-                    : "Indisponível"}
+                {enabled ? "Disponível" : "Indisponível"}
             </span>
         </div>
     );
 }
 
-function EmptyState({
-    text,
-}: {
-    text: string;
-}) {
+function EmptyState({ text }: { text: string }) {
     return (
         <div className="px-6 py-12 text-center text-sm text-slate-400">
             {text}
@@ -1132,16 +1276,20 @@ function EmptyState({
     );
 }
 
-function formatDateTime(
-    value: string,
-): string {
-    return new Intl.DateTimeFormat(
-        "pt-PT",
-        {
-            dateStyle: "short",
-            timeStyle: "short",
-        },
-    ).format(
-        new Date(value),
-    );
+function resourceLabel(resource: string): string {
+    const labels: Record<string, string> = {
+        empresas: "Empresas",
+        veiculos: "Veículos",
+        motoristas: "Motoristas",
+        utilizadores: "Utilizadores",
+    };
+
+    return labels[resource] ?? resource;
+}
+
+function formatDateTime(value: string): string {
+    return new Intl.DateTimeFormat("pt-PT", {
+        dateStyle: "short",
+        timeStyle: "short",
+    }).format(new Date(value));
 }

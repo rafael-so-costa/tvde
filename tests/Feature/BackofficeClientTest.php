@@ -915,3 +915,554 @@ test(
             );
     }
 );
+
+test(
+    'super admin consulta impacto de alteração de plano',
+    function () {
+        $currentPlan =
+            SaasPlan::create([
+                'codigo' => 'plano-atual',
+
+                'nome' => 'Plano Atual',
+
+                'ativo' => true,
+
+                'limits' => [
+                    'empresas' => 5,
+                    'veiculos' => 10,
+                    'motoristas' => 10,
+                    'utilizadores' => 10,
+                ],
+
+                'features' => [
+                    'multi_company' => false,
+                    'integracoes' => false,
+                    'relatorios_avancados' => false,
+                ],
+
+                'ordem' => 10,
+            ]);
+
+        $newPlan =
+            SaasPlan::create([
+                'codigo' => 'plano-novo',
+
+                'nome' => 'Plano Novo',
+
+                'ativo' => true,
+
+                'limits' => [
+                    'empresas' => 1,
+                    'veiculos' => 1,
+                    'motoristas' => 1,
+                    'utilizadores' => 1,
+                ],
+
+                'features' => [
+                    'multi_company' => true,
+                    'integracoes' => true,
+                    'relatorios_avancados' => true,
+                ],
+
+                'ordem' => 20,
+            ]);
+
+        $tenant =
+            backofficeClientTenant(
+                'Cliente Preview Plano',
+                'cliente-preview-plano'
+            );
+
+        $tenant->saas_plan_id =
+            $currentPlan->id;
+
+        $tenant->save();
+
+        foreach (
+            [
+                'AA-11-AA',
+                'BB-22-BB',
+            ] as $matricula
+        ) {
+            $veiculo =
+                new Veiculo([
+                    'matricula' => $matricula,
+
+                    'marca' => 'Tesla',
+
+                    'modelo' => 'Model 3',
+                ]);
+
+            $veiculo->tenant_id =
+                $tenant->id;
+
+            $veiculo->save();
+        }
+
+        $superAdmin =
+            backofficeClientUser(
+                'super.preview.plano@frotapro.test',
+                true
+            );
+
+        backofficeClientLogin(
+            $this,
+            $superAdmin
+        );
+
+        $this
+            ->withHeaders(
+                backofficeClientHeaders()
+            )
+            ->getJson(
+                "/api/backoffice/clientes/{$tenant->id}/plano-preview?plan_id={$newPlan->id}"
+            )
+            ->assertOk()
+            ->assertJsonPath(
+                'data.current_plan.codigo',
+                'plano-atual'
+            )
+            ->assertJsonPath(
+                'data.selected_plan.codigo',
+                'plano-novo'
+            )
+            ->assertJsonPath(
+                'data.impact.usage.veiculos.used',
+                2
+            )
+            ->assertJsonPath(
+                'data.impact.usage.veiculos.limit',
+                1
+            )
+            ->assertJsonPath(
+                'data.impact.usage.veiculos.can_create',
+                false
+            )
+            ->assertJsonPath(
+                'data.impact.features.multi_company',
+                true
+            )
+            ->assertJsonPath(
+                'data.impact.features.integracoes',
+                true
+            )
+            ->assertJsonPath(
+                'data.impact.warnings.0.resource',
+                'veiculos'
+            )
+            ->assertJsonPath(
+                'data.impact.warnings.0.excess',
+                1
+            );
+
+        expect(
+            $tenant
+                ->refresh()
+                ->saas_plan_id
+        )->toBe(
+            $currentPlan->id
+        );
+    }
+);
+
+test(
+    'super admin altera plano do cliente',
+    function () {
+        $starter =
+            SaasPlan::create([
+                'codigo' => 'starter-troca',
+                'nome' => 'Starter Troca',
+                'ativo' => true,
+
+                'limits' => [
+                    'empresas' => 1,
+                    'veiculos' => 5,
+                    'motoristas' => 5,
+                    'utilizadores' => 2,
+                ],
+
+                'features' => [
+                    'multi_company' => false,
+                    'integracoes' => false,
+                    'relatorios_avancados' => false,
+                ],
+
+                'ordem' => 10,
+            ]);
+
+        $pro =
+            SaasPlan::create([
+                'codigo' => 'pro-troca',
+                'nome' => 'Pro Troca',
+                'ativo' => true,
+
+                'limits' => [
+                    'empresas' => 3,
+                    'veiculos' => 50,
+                    'motoristas' => 60,
+                    'utilizadores' => 10,
+                ],
+
+                'features' => [
+                    'multi_company' => true,
+                    'integracoes' => true,
+                    'relatorios_avancados' => true,
+                ],
+
+                'ordem' => 20,
+            ]);
+
+        $tenant =
+            backofficeClientTenant(
+                'Cliente Troca Plano',
+                'cliente-troca-plano'
+            );
+
+        $tenant->saas_plan_id =
+            $starter->id;
+
+        $tenant->save();
+
+        $superAdmin =
+            backofficeClientUser(
+                'super.troca.plano@frotapro.test',
+                true
+            );
+
+        backofficeClientLogin(
+            $this,
+            $superAdmin
+        );
+
+        $this
+            ->withHeaders(
+                backofficeClientHeaders()
+            )
+            ->patchJson(
+                "/api/backoffice/clientes/{$tenant->id}/plano",
+                [
+                    'plan_id' => $pro->id,
+                ]
+            )
+            ->assertOk()
+            ->assertJsonPath(
+                'message',
+                'Plano do cliente alterado com sucesso.'
+            )
+            ->assertJsonPath(
+                'data.previous_plan.codigo',
+                'starter-troca'
+            )
+            ->assertJsonPath(
+                'data.plan.codigo',
+                'pro-troca'
+            )
+            ->assertJsonPath(
+                'data.impact.features.multi_company',
+                true
+            )
+            ->assertJsonPath(
+                'data.impact.features.integracoes',
+                true
+            );
+
+        expect(
+            $tenant
+                ->refresh()
+                ->saas_plan_id
+        )->toBe(
+            $pro->id
+        );
+    }
+);
+
+test(
+    'plano inativo não pode ser atribuído ao cliente',
+    function () {
+        $inactivePlan =
+            SaasPlan::create([
+                'codigo' => 'plano-inativo',
+
+                'nome' => 'Plano Inativo',
+
+                'ativo' => false,
+
+                'limits' => [
+                    'empresas' => 1,
+                ],
+
+                'features' => [
+                    'multi_company' => false,
+                ],
+
+                'ordem' => 90,
+            ]);
+
+        $tenant =
+            backofficeClientTenant(
+                'Cliente Plano Inativo',
+                'cliente-plano-inativo'
+            );
+
+        $superAdmin =
+            backofficeClientUser(
+                'super.plano.inativo@frotapro.test',
+                true
+            );
+
+        backofficeClientLogin(
+            $this,
+            $superAdmin
+        );
+
+        $this
+            ->withHeaders(
+                backofficeClientHeaders()
+            )
+            ->patchJson(
+                "/api/backoffice/clientes/{$tenant->id}/plano",
+                [
+                    'plan_id' => $inactivePlan->id,
+                ]
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(
+                'plan_id'
+            );
+
+        expect(
+            $tenant
+                ->refresh()
+                ->saas_plan_id
+        )->toBeNull();
+    }
+);
+
+test(
+    'downgrade acima do limite não apaga dados existentes',
+    function () {
+        $largePlan =
+            SaasPlan::create([
+                'codigo' => 'plano-grande',
+
+                'nome' => 'Plano Grande',
+
+                'ativo' => true,
+
+                'limits' => [
+                    'empresas' => 5,
+                    'veiculos' => 10,
+                    'motoristas' => 10,
+                    'utilizadores' => 10,
+                ],
+
+                'features' => [
+                    'multi_company' => true,
+                    'integracoes' => true,
+                    'relatorios_avancados' => true,
+                ],
+
+                'ordem' => 20,
+            ]);
+
+        $smallPlan =
+            SaasPlan::create([
+                'codigo' => 'plano-pequeno',
+
+                'nome' => 'Plano Pequeno',
+
+                'ativo' => true,
+
+                'limits' => [
+                    'empresas' => 1,
+                    'veiculos' => 1,
+                    'motoristas' => 1,
+                    'utilizadores' => 1,
+                ],
+
+                'features' => [
+                    'multi_company' => false,
+                    'integracoes' => false,
+                    'relatorios_avancados' => false,
+                ],
+
+                'ordem' => 10,
+            ]);
+
+        $tenant =
+            backofficeClientTenant(
+                'Cliente Downgrade',
+                'cliente-downgrade'
+            );
+
+        $tenant->saas_plan_id =
+            $largePlan->id;
+
+        $tenant->save();
+
+        foreach (
+            [
+                'CC-11-CC',
+                'DD-22-DD',
+            ] as $matricula
+        ) {
+            $veiculo =
+                new Veiculo([
+                    'matricula' => $matricula,
+
+                    'marca' => 'Tesla',
+
+                    'modelo' => 'Model Y',
+                ]);
+
+            $veiculo->tenant_id =
+                $tenant->id;
+
+            $veiculo->save();
+        }
+
+        $superAdmin =
+            backofficeClientUser(
+                'super.downgrade@frotapro.test',
+                true
+            );
+
+        backofficeClientLogin(
+            $this,
+            $superAdmin
+        );
+
+        $this
+            ->withHeaders(
+                backofficeClientHeaders()
+            )
+            ->patchJson(
+                "/api/backoffice/clientes/{$tenant->id}/plano",
+                [
+                    'plan_id' => $smallPlan->id,
+                ]
+            )
+            ->assertOk()
+            ->assertJsonPath(
+                'data.plan.codigo',
+                'plano-pequeno'
+            )
+            ->assertJsonPath(
+                'data.impact.usage.veiculos.used',
+                2
+            )
+            ->assertJsonPath(
+                'data.impact.usage.veiculos.limit',
+                1
+            )
+            ->assertJsonPath(
+                'data.impact.usage.veiculos.can_create',
+                false
+            )
+            ->assertJsonPath(
+                'data.impact.warnings.0.resource',
+                'veiculos'
+            );
+
+        expect(
+            Veiculo::query()
+                ->where(
+                    'tenant_id',
+                    $tenant->id
+                )
+                ->count()
+        )->toBe(2);
+    }
+);
+
+test(
+    'alteração de plano preserva overrides saas do cliente',
+    function () {
+        $plan =
+            SaasPlan::create([
+                'codigo' => 'plano-sem-multi',
+
+                'nome' => 'Plano Sem Multi',
+
+                'ativo' => true,
+
+                'limits' => [
+                    'empresas' => 1,
+                    'veiculos' => 10,
+                    'motoristas' => 10,
+                    'utilizadores' => 5,
+                ],
+
+                'features' => [
+                    'multi_company' => false,
+                    'integracoes' => false,
+                    'relatorios_avancados' => false,
+                ],
+
+                'ordem' => 30,
+            ]);
+
+        $tenant =
+            backofficeClientTenant(
+                'Cliente Override Plano',
+                'cliente-override-plano'
+            );
+
+        $settings =
+            $tenant->settings
+            ?? [];
+
+        data_set(
+            $settings,
+            'saas_overrides.features.multi_company',
+            true
+        );
+
+        $tenant->settings =
+            $settings;
+
+        $tenant->save();
+
+        $superAdmin =
+            backofficeClientUser(
+                'super.override.plano@frotapro.test',
+                true
+            );
+
+        backofficeClientLogin(
+            $this,
+            $superAdmin
+        );
+
+        $this
+            ->withHeaders(
+                backofficeClientHeaders()
+            )
+            ->patchJson(
+                "/api/backoffice/clientes/{$tenant->id}/plano",
+                [
+                    'plan_id' => $plan->id,
+                ]
+            )
+            ->assertOk()
+            ->assertJsonPath(
+                'data.impact.features.multi_company',
+                true
+            );
+
+        $tenant->refresh();
+
+        expect(
+            data_get(
+                $tenant->settings,
+                'saas_overrides.features.multi_company'
+            )
+        )->toBeTrue();
+
+        expect(
+            $tenant->saas_plan_id
+        )->toBe(
+            $plan->id
+        );
+    }
+);

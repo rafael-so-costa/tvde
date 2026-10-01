@@ -173,3 +173,34 @@ export interface BackofficePlan {
 export interface BackofficePlanListResponse {
     data: BackofficePlan[];
 }
+
+
+export interface BackofficePlanImpactWarning {
+    resource: string;
+    used: number;
+    limit: number;
+    excess: number;
+}
+
+export interface BackofficePlanImpact {
+    usage: BackofficeClientUsage;
+    features: BackofficeClientFeatures;
+    warnings: BackofficePlanImpactWarning[];
+}
+
+export interface BackofficeClientPlanPreview {
+    current_plan: BackofficeSaasPlan | null;
+    selected_plan: BackofficeSaasPlan;
+    impact: BackofficePlanImpact;
+}
+
+export interface BackofficeClientPlanChangeResponse {
+    message: string;
+
+    data: {
+        id: string;
+        previous_plan: BackofficeSaasPlan | null;
+        plan: BackofficeSaasPlan;
+        impact: BackofficePlanImpact;
+    };
+}

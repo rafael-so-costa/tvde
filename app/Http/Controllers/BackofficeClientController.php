@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ListBackofficeClientsRequest;
 use App\Http\Requests\UpdateBackofficeClientMultiCompanyRequest;
+use App\Http\Requests\UpdateBackofficeClientPlanRequest;
 use App\Http\Requests\UpdateBackofficeClientStatusRequest;
+use App\Models\SaasPlan;
 use App\Models\Tenant;
 use App\Models\UserRole;
 use App\Services\SaasEntitlementService;
@@ -436,6 +438,132 @@ class BackofficeClientController extends Controller
         ]);
     }
 
+    public function planPreview(
+        UpdateBackofficeClientPlanRequest $request,
+        string $id
+    ): JsonResponse {
+        $tenant = Tenant::query()
+            ->with(
+                'saasPlan'
+            )
+            ->findOrFail(
+                $id
+            );
+
+        $plan = SaasPlan::query()
+            ->findOrFail(
+                $request->validated(
+                    'plan_id'
+                )
+            );
+
+        return response()->json([
+            'data' => [
+                'current_plan' => $this
+                    ->planReference(
+                        $tenant->saasPlan
+                    ),
+
+                'selected_plan' => $this
+                    ->planReference(
+                        $plan
+                    ),
+
+                'impact' => $this
+                    ->planImpact(
+                        $tenant,
+                        $plan
+                    ),
+            ],
+        ]);
+    }
+
+    public function plan(
+        UpdateBackofficeClientPlanRequest $request,
+        string $id
+    ): JsonResponse {
+        $tenant = Tenant::query()
+            ->with(
+                'saasPlan'
+            )
+            ->findOrFail(
+                $id
+            );
+
+        $plan = SaasPlan::query()
+            ->findOrFail(
+                $request->validated(
+                    'plan_id'
+                )
+            );
+
+        $previousPlan =
+            $tenant->saasPlan;
+
+        if (
+            $tenant->saas_plan_id ===
+            $plan->id
+        ) {
+            return response()->json([
+                'message' => 'O cliente já utiliza este plano.',
+
+                'data' => [
+                    'id' => $tenant->id,
+
+                    'previous_plan' => $this
+                        ->planReference(
+                            $previousPlan
+                        ),
+
+                    'plan' => $this
+                        ->planReference(
+                            $plan
+                        ),
+
+                    'impact' => $this
+                        ->planImpact(
+                            $tenant,
+                            $plan
+                        ),
+                ],
+            ]);
+        }
+
+        $tenant->saas_plan_id =
+            $plan->id;
+
+        $tenant->save();
+
+        $tenant->refresh()
+            ->load(
+                'saasPlan'
+            );
+
+        return response()->json([
+            'message' => 'Plano do cliente alterado com sucesso.',
+
+            'data' => [
+                'id' => $tenant->id,
+
+                'previous_plan' => $this
+                    ->planReference(
+                        $previousPlan
+                    ),
+
+                'plan' => $this
+                    ->planReference(
+                        $tenant->saasPlan
+                    ),
+
+                'impact' => $this
+                    ->planImpact(
+                        $tenant,
+                        $tenant->saasPlan
+                    ),
+            ],
+        ]);
+    }
+
     public function multiCompany(
         UpdateBackofficeClientMultiCompanyRequest $request,
         string $id
@@ -464,13 +592,11 @@ class BackofficeClientController extends Controller
             );
 
             if (
-                empty(
-                    data_get(
-                        $settings,
-                        'saas_overrides.features',
-                        []
-                    )
-                )
+                empty(data_get(
+                    $settings,
+                    'saas_overrides.features',
+                    []
+                ))
             ) {
                 data_forget(
                     $settings,
@@ -479,13 +605,11 @@ class BackofficeClientController extends Controller
             }
 
             if (
-                empty(
-                    data_get(
-                        $settings,
-                        'saas_overrides',
-                        []
-                    )
-                )
+                empty(data_get(
+                    $settings,
+                    'saas_overrides',
+                    []
+                ))
             ) {
                 data_forget(
                     $settings,
@@ -530,8 +654,8 @@ class BackofficeClientController extends Controller
                 ? 'Multiempresa voltou a utilizar a configuração do plano.'
                 : (
                     $override
-                        ? 'Override de multiempresa ativado.'
-                        : 'Override de multiempresa desativado.'
+                    ? 'Override de multiempresa ativado.'
+                    : 'Override de multiempresa desativado.'
                 ),
 
             'data' => [
@@ -542,6 +666,112 @@ class BackofficeClientController extends Controller
                 'multi_company_override' => $override,
             ],
         ]);
+    }
+
+    private function planImpact(
+        Tenant $tenant,
+        SaasPlan $plan
+    ): array {
+        $previewTenant =
+            clone $tenant;
+
+        $previewTenant->saas_plan_id =
+            $plan->id;
+
+        $previewTenant->setRelation(
+            'saasPlan',
+            $plan
+        );
+
+        $resources = [
+            'empresas',
+            'veiculos',
+            'motoristas',
+            'utilizadores',
+        ];
+
+        $usage = [];
+        $warnings = [];
+
+        foreach (
+            $resources as $resource
+        ) {
+            $resourceUsage =
+                $this->resourceUsage(
+                    $previewTenant,
+                    $resource
+                );
+
+            $usage[$resource] =
+                $resourceUsage;
+
+            if (
+                $resourceUsage['limit'] !==
+                null &&
+                $resourceUsage['used'] >
+                $resourceUsage['limit']
+            ) {
+                $warnings[] = [
+                    'resource' => $resource,
+
+                    'used' => $resourceUsage['used'],
+
+                    'limit' => $resourceUsage['limit'],
+
+                    'excess' => $resourceUsage['used'] -
+                        $resourceUsage['limit'],
+                ];
+            }
+        }
+
+        return [
+            'usage' => $usage,
+
+            'features' => [
+                'multi_company' => $this
+                    ->entitlements
+                    ->feature(
+                        $previewTenant,
+                        'multi_company'
+                    ),
+
+                'integracoes' => $this
+                    ->entitlements
+                    ->feature(
+                        $previewTenant,
+                        'integracoes'
+                    ),
+
+                'relatorios_avancados' => $this
+                    ->entitlements
+                    ->feature(
+                        $previewTenant,
+                        'relatorios_avancados'
+                    ),
+            ],
+
+            'warnings' => $warnings,
+        ];
+    }
+
+    private function planReference(
+        ?SaasPlan $plan
+    ): ?array {
+        if (! $plan) {
+            return null;
+        }
+
+        return [
+            'id' => $plan->id,
+
+            'codigo' => $plan->codigo,
+
+            'nome' => $plan->nome,
+
+            'descricao' => $plan->descricao,
+
+            'ativo' => $plan->ativo,
+        ];
     }
 
     private function resourceUsage(

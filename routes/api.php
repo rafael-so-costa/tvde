@@ -69,6 +69,21 @@ Route::middleware('auth:sanctum')->group(function () {
         ->prefix('backoffice')
         ->group(function () {
             Route::get(
+                '/clientes/{id}/plano-preview',
+                [BackofficeClientController::class, 'planPreview']
+            )
+                ->whereUuid(
+                    'id'
+                );
+
+            Route::patch(
+                '/clientes/{id}/plano',
+                [BackofficeClientController::class, 'plan']
+            )
+                ->whereUuid(
+                    'id'
+                );
+            Route::get(
                 '/planos',
                 [BackofficePlanController::class, 'index']
             );
