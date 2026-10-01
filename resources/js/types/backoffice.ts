@@ -204,3 +204,65 @@ export interface BackofficeClientPlanChangeResponse {
         impact: BackofficePlanImpact;
     };
 }
+
+export type BackofficeSubscriptionStatus =
+    | "trialing"
+    | "active"
+    | "past_due"
+    | "suspended"
+    | "canceled";
+
+export type BackofficeBillingCycle =
+    | "monthly"
+    | "yearly";
+
+export interface BackofficeSubscriptionTenant {
+    id: string;
+    nome: string;
+    slug: string;
+    nif: string | null;
+    email: string | null;
+    telefone: string | null;
+    ativo: boolean;
+}
+
+export interface BackofficeSubscription {
+    id: string;
+    status: BackofficeSubscriptionStatus;
+    billing_cycle: BackofficeBillingCycle;
+    price_amount: number | null;
+    currency: string;
+
+    starts_at: string;
+    trial_ends_at: string | null;
+
+    current_period_starts_at: string | null;
+    current_period_ends_at: string | null;
+
+    cancels_at: string | null;
+    canceled_at: string | null;
+    cancel_scheduled: boolean;
+
+    external_provider: string | null;
+    external_subscription_id: string | null;
+
+    tenant: BackofficeSubscriptionTenant | null;
+    plan: BackofficeSaasPlan | null;
+
+    created_at: string;
+    updated_at: string;
+}
+
+export interface BackofficeSubscriptionListResponse {
+    data: BackofficeSubscription[];
+    meta: BackofficePagination;
+}
+
+export interface BackofficeSubscriptionResponse {
+    data: BackofficeSubscription;
+}
+
+export interface BackofficeSubscriptionMutationResponse {
+    message: string;
+    data: BackofficeSubscription;
+}

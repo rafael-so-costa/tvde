@@ -42,6 +42,8 @@ import BackofficeClientsPage from "./pages/BackofficeClientsPage";
 import BackofficeClientPage from "./pages/BackofficeClientPage";
 import BackofficePlansPage from "./pages/BackofficePlansPage";
 import BackofficePlanPage from "./pages/BackofficePlanPage";
+import BackofficeSubscriptionsPage from "./pages/BackofficeSubscriptionsPage";
+import BackofficeSubscriptionPage from "./pages/BackofficeSubscriptionPage";
 
 export default function App() {
     return (
@@ -96,6 +98,15 @@ export default function App() {
                         <Route
                             path="planos/:id"
                             element={<BackofficePlanPage />}
+                        />
+                        <Route
+                            path="assinaturas"
+                            element={<BackofficeSubscriptionsPage />}
+                        />
+
+                        <Route
+                            path="assinaturas/:id"
+                            element={<BackofficeSubscriptionPage />}
                         />
                     </Route>
                 </Route>

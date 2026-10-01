@@ -6,6 +6,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BackofficeClientController;
 use App\Http\Controllers\BackofficeDashboardController;
 use App\Http\Controllers\BackofficePlanController;
+use App\Http\Controllers\BackofficeSubscriptionController;
 use App\Http\Controllers\ChecklistProcessRunController;
 use App\Http\Controllers\ChecklistProcessTemplateController;
 use App\Http\Controllers\ChecklistRecordController;
@@ -68,6 +69,34 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('super_admin')
         ->prefix('backoffice')
         ->group(function () {
+            Route::get(
+                '/assinaturas',
+                [BackofficeSubscriptionController::class, 'index']
+            );
+
+            Route::get(
+                '/assinaturas/{id}',
+                [BackofficeSubscriptionController::class, 'show']
+            )
+                ->whereUuid(
+                    'id'
+                );
+
+            Route::patch(
+                '/assinaturas/{id}',
+                [BackofficeSubscriptionController::class, 'update']
+            )
+                ->whereUuid(
+                    'id'
+                );
+
+            Route::post(
+                '/assinaturas/{id}/acao',
+                [BackofficeSubscriptionController::class, 'action']
+            )
+                ->whereUuid(
+                    'id'
+                );
             Route::get(
                 '/clientes/{id}/plano-preview',
                 [BackofficeClientController::class, 'planPreview']
