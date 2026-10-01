@@ -16,6 +16,10 @@ use RuntimeException;
 
 class SaasRegistrationService
 {
+    public function __construct(
+        private SaasSubscriptionService $subscriptions
+    ) {}
+
     public function register(array $data): array
     {
         $adminRole = Role::query()
@@ -95,6 +99,13 @@ class SaasRegistrationService
                     ],
                 ]);
 
+                $subscription =
+                    $this->subscriptions
+                        ->ensureForTenant(
+                            $tenant,
+                            $starterPlan
+                        );
+
                 $empresa = new Empresa([
                     'nome_empresa' => $data['company_name'],
 
@@ -135,6 +146,7 @@ class SaasRegistrationService
                     'user' => $user,
                     'tenant' => $tenant,
                     'empresa' => $empresa,
+                    'subscription' => $subscription,
                 ];
             }
         );

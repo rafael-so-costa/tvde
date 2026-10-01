@@ -36,4 +36,11 @@ class SaasPlan extends Model
             Tenant::class
         );
     }
+
+    public function subscriptions(): HasMany
+    {
+        return $this->hasMany(
+            SaasSubscription::class
+        );
+    }
 }

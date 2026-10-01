@@ -10,13 +10,15 @@ use App\Models\SaasPlan;
 use App\Models\Tenant;
 use App\Models\UserRole;
 use App\Services\SaasEntitlementService;
+use App\Services\SaasSubscriptionService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 
 class BackofficeClientController extends Controller
 {
     public function __construct(
-        private SaasEntitlementService $entitlements
+        private SaasEntitlementService $entitlements,
+        private SaasSubscriptionService $subscriptions
     ) {}
 
     public function index(
@@ -529,15 +531,17 @@ class BackofficeClientController extends Controller
             ]);
         }
 
-        $tenant->saas_plan_id =
-            $plan->id;
-
-        $tenant->save();
+        $this->subscriptions
+            ->changePlan(
+                $tenant,
+                $plan
+            );
 
         $tenant->refresh()
-            ->load(
-                'saasPlan'
-            );
+            ->load([
+                'saasPlan',
+                'saasSubscription.plan',
+            ]);
 
         return response()->json([
             'message' => 'Plano do cliente alterado com sucesso.',
