@@ -4,9 +4,12 @@ use App\Http\Controllers\AlertController;
 use App\Http\Controllers\AluguerController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BackofficeClientController;
+use App\Http\Controllers\BackofficeCrmDashboardController;
 use App\Http\Controllers\BackofficeDashboardController;
 use App\Http\Controllers\BackofficePlanController;
 use App\Http\Controllers\BackofficeSubscriptionController;
+use App\Http\Controllers\BackofficeTvdeImportController;
+use App\Http\Controllers\BackofficeTvdeOperatorController;
 use App\Http\Controllers\ChecklistProcessRunController;
 use App\Http\Controllers\ChecklistProcessTemplateController;
 use App\Http\Controllers\ChecklistRecordController;
@@ -69,6 +72,36 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('super_admin')
         ->prefix('backoffice')
         ->group(function () {
+
+            Route::get(
+                '/crm/dashboard',
+                [BackofficeCrmDashboardController::class, 'show']
+            );
+
+            Route::get(
+                '/crm/importacoes',
+                [BackofficeTvdeImportController::class, 'index']
+            );
+
+            Route::get(
+                '/crm/importacoes/{id}',
+                [BackofficeTvdeImportController::class, 'show']
+            )
+                ->whereUuid(
+                    'id'
+                );
+            Route::get(
+                '/crm/operadores',
+                [BackofficeTvdeOperatorController::class, 'index']
+            );
+
+            Route::get(
+                '/crm/operadores/{id}',
+                [BackofficeTvdeOperatorController::class, 'show']
+            )
+                ->whereUuid(
+                    'id'
+                );
             Route::get(
                 '/assinaturas',
                 [BackofficeSubscriptionController::class, 'index']

@@ -1,12 +1,14 @@
 import {
     Building2,
+    CreditCard,
+    Database,
     LayoutDashboard,
+    Layers3,
     LogOut,
     ShieldCheck,
     Truck,
     UsersRound,
-    Layers3,
-    CreditCard,
+    FileClock,
 } from "lucide-react";
 import { Link, NavLink, Outlet } from "react-router-dom";
 
@@ -14,6 +16,14 @@ import { useAuth } from "../contexts/AuthContext";
 
 export default function BackofficeShell() {
     const { user, logout } = useAuth();
+
+    const navClass = ({ isActive }: { isActive: boolean }) =>
+        [
+            "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition",
+            isActive
+                ? "bg-indigo-500 text-white"
+                : "text-slate-400 hover:bg-white/5 hover:text-white",
+        ].join(" ");
 
     return (
         <div className="min-h-screen bg-slate-100">
@@ -34,70 +44,65 @@ export default function BackofficeShell() {
                     </div>
                 </div>
 
-                <div className="px-4 pb-3 pt-6">
-                    <div className="px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">
-                        Administração
+                <nav className="flex-1 overflow-y-auto px-3 pb-5">
+                    <div className="px-1 pb-3 pt-6">
+                        <div className="px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">
+                            Administração
+                        </div>
                     </div>
-                </div>
 
-                <nav className="flex-1 space-y-1 px-3">
-                    <NavLink
-                        to="/backoffice"
-                        end
-                        className={({ isActive }) =>
-                            [
-                                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition",
-                                isActive
-                                    ? "bg-indigo-500 text-white"
-                                    : "text-slate-400 hover:bg-white/5 hover:text-white",
-                            ].join(" ")
-                        }
-                    >
-                        <LayoutDashboard className="h-5 w-5" />
-                        Dashboard
-                    </NavLink>
-                    <NavLink
-                        to="/backoffice/clientes"
-                        className={({ isActive }) =>
-                            [
-                                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition",
-                                isActive
-                                    ? "bg-indigo-500 text-white"
-                                    : "text-slate-400 hover:bg-white/5 hover:text-white",
-                            ].join(" ")
-                        }
-                    >
-                        <UsersRound className="h-5 w-5" />
-                        Clientes
-                    </NavLink>
-                    <NavLink
-                        to="/backoffice/planos"
-                        className={({ isActive }) =>
-                            [
-                                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition",
-                                isActive
-                                    ? "bg-indigo-500 text-white"
-                                    : "text-slate-400 hover:bg-white/5 hover:text-white",
-                            ].join(" ")
-                        }
-                    >
-                        <Layers3 className="h-5 w-5" />
-                        Planos
-                    </NavLink>
-                    <NavLink
-                        to="/backoffice/assinaturas"
-                        className={({ isActive }) =>
-                            [
-                                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition",
-                                isActive
-                                    ? "bg-indigo-500 text-white"
-                                    : "text-slate-400 hover:bg-white/5 hover:text-white",
-                            ].join(" ")
-                        }
-                    >
-                        <CreditCard className="h-5 w-5" />
-                        Assinaturas
-                    </NavLink>
+                    <div className="space-y-1">
+                        <NavLink to="/backoffice" end className={navClass}>
+                            <LayoutDashboard className="h-5 w-5" />
+                            Dashboard
+                        </NavLink>
+
+                        <NavLink to="/backoffice/clientes" className={navClass}>
+                            <UsersRound className="h-5 w-5" />
+                            Clientes
+                        </NavLink>
+
+                        <NavLink to="/backoffice/planos" className={navClass}>
+                            <Layers3 className="h-5 w-5" />
+                            Planos
+                        </NavLink>
+
+                        <NavLink
+                            to="/backoffice/assinaturas"
+                            className={navClass}
+                        >
+                            <CreditCard className="h-5 w-5" />
+                            Assinaturas
+                        </NavLink>
+                    </div>
+
+                    <div className="px-1 pb-3 pt-7">
+                        <div className="px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">
+                            CRM
+                        </div>
+                    </div>
+
+                    <div className="space-y-1">
+                        <NavLink to="/backoffice/crm" end className={navClass}>
+                            <LayoutDashboard className="h-5 w-5" />
+                            Dashboard CRM
+                        </NavLink>
+
+                        <NavLink
+                            to="/backoffice/crm/operadores"
+                            className={navClass}
+                        >
+                            <Database className="h-5 w-5" />
+                            Base TVDE
+                        </NavLink>
+                        <NavLink
+                            to="/backoffice/crm/importacoes"
+                            className={navClass}
+                        >
+                            <FileClock className="h-5 w-5" />
+                            Importações
+                        </NavLink>
+                    </div>
                 </nav>
 
                 <div className="border-t border-white/10 p-4">

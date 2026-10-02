@@ -3,15 +3,26 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import ManagementRoute from "./components/ManagementRoute";
 import PortalAreaRoute from "./components/PortalAreaRoute";
 import ProtectedRoute from "./components/ProtectedRoute";
+import SuperAdminRoute from "./components/SuperAdminRoute";
 import TenantOnboardingGate from "./components/TenantOnboardingGate";
 
 import AppShell from "./layouts/AppShell";
+import BackofficeShell from "./layouts/BackofficeShell";
 import MotoristaShell from "./layouts/MotoristaShell";
 import ProprietarioShell from "./layouts/ProprietarioShell";
 
 import AlertsPage from "./pages/AlertsPage";
 import AlugueresPage from "./pages/AlugueresPage";
 import AprovacaoManutencaoPublicaPage from "./pages/AprovacaoManutencaoPublicaPage";
+import BackofficeClientPage from "./pages/BackofficeClientPage";
+import BackofficeClientsPage from "./pages/BackofficeClientsPage";
+import BackofficeCrmDashboardPage from "./pages/BackofficeCrmDashboardPage";
+import BackofficeDashboardPage from "./pages/BackofficeDashboardPage";
+import BackofficePlanPage from "./pages/BackofficePlanPage";
+import BackofficePlansPage from "./pages/BackofficePlansPage";
+import BackofficeSubscriptionPage from "./pages/BackofficeSubscriptionPage";
+import BackofficeSubscriptionsPage from "./pages/BackofficeSubscriptionsPage";
+import BackofficeTvdeOperatorsPage from "./pages/BackofficeTvdeOperatorsPage";
 import ChecklistsPage from "./pages/ChecklistsPage";
 import ContratosPage from "./pages/ContratosPage";
 import DashboardPage from "./pages/DashboardPage";
@@ -35,15 +46,9 @@ import RemoteSignaturePage from "./pages/RemoteSignaturePage";
 import SinistrosPage from "./pages/SinistrosPage";
 import TemplatesPage from "./pages/TemplatesPage";
 import VeiculosPage from "./pages/VeiculosPage";
-import SuperAdminRoute from "./components/SuperAdminRoute";
-import BackofficeShell from "./layouts/BackofficeShell";
-import BackofficeDashboardPage from "./pages/BackofficeDashboardPage";
-import BackofficeClientsPage from "./pages/BackofficeClientsPage";
-import BackofficeClientPage from "./pages/BackofficeClientPage";
-import BackofficePlansPage from "./pages/BackofficePlansPage";
-import BackofficePlanPage from "./pages/BackofficePlanPage";
-import BackofficeSubscriptionsPage from "./pages/BackofficeSubscriptionsPage";
-import BackofficeSubscriptionPage from "./pages/BackofficeSubscriptionPage";
+import BackofficeTvdeImportPage from "./pages/BackofficeTvdeImportPage";
+import BackofficeTvdeImportsPage from "./pages/BackofficeTvdeImportsPage";
+import BackofficeTvdeOperatorPage from "./pages/BackofficeTvdeOperatorPage";
 
 export default function App() {
     return (
@@ -99,6 +104,7 @@ export default function App() {
                             path="planos/:id"
                             element={<BackofficePlanPage />}
                         />
+
                         <Route
                             path="assinaturas"
                             element={<BackofficeSubscriptionsPage />}
@@ -108,8 +114,33 @@ export default function App() {
                             path="assinaturas/:id"
                             element={<BackofficeSubscriptionPage />}
                         />
+
+                        <Route
+                            path="crm"
+                            element={<BackofficeCrmDashboardPage />}
+                        />
+
+                        <Route
+                            path="crm/operadores"
+                            element={<BackofficeTvdeOperatorsPage />}
+                        />
+                        <Route
+                            path="crm/operadores/:id"
+                            element={<BackofficeTvdeOperatorPage />}
+                        />
+
+                        <Route
+                            path="crm/importacoes"
+                            element={<BackofficeTvdeImportsPage />}
+                        />
+
+                        <Route
+                            path="crm/importacoes/:id"
+                            element={<BackofficeTvdeImportPage />}
+                        />
                     </Route>
                 </Route>
+
                 <Route element={<ManagementRoute />}>
                     <Route element={<TenantOnboardingGate />}>
                         <Route path="onboarding" element={<OnboardingPage />} />
