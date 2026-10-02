@@ -7,10 +7,7 @@ import {
     MapPin,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import {
-    Link,
-    useParams,
-} from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 
 import api from "../lib/api";
 
@@ -21,33 +18,26 @@ import type {
     BackofficeTvdeSource,
 } from "../types/backofficeCrm";
 
+import BackofficeNifEnrichmentPanel from "../components/BackofficeNifEnrichmentPanel";
+
 export default function BackofficeTvdeOperatorPage() {
-    const { id } =
-        useParams<{
-            id: string;
-        }>();
+    const { id } = useParams<{
+        id: string;
+    }>();
 
-    const operatorQuery =
-        useQuery({
-            queryKey: [
-                "backoffice",
-                "crm",
-                "operadores",
-                id,
-            ],
+    const operatorQuery = useQuery({
+        queryKey: ["backoffice", "crm", "operadores", id],
 
-            enabled: Boolean(id),
+        enabled: Boolean(id),
 
-            queryFn: async () => {
-                const response =
-                    await api.get(
-                        `/api/backoffice/crm/operadores/${id}`,
-                    );
+        queryFn: async () => {
+            const response = await api.get(
+                `/api/backoffice/crm/operadores/${id}`,
+            );
 
-                return response
-                    .data as BackofficeTvdeOperatorResponse;
-            },
-        });
+            return response.data as BackofficeTvdeOperatorResponse;
+        },
+    });
 
     if (operatorQuery.isLoading) {
         return (
@@ -57,10 +47,7 @@ export default function BackofficeTvdeOperatorPage() {
         );
     }
 
-    if (
-        operatorQuery.isError ||
-        !operatorQuery.data
-    ) {
+    if (operatorQuery.isError || !operatorQuery.data) {
         return (
             <div className="mx-auto max-w-7xl space-y-5">
                 <Link
@@ -78,8 +65,7 @@ export default function BackofficeTvdeOperatorPage() {
         );
     }
 
-    const operator =
-        operatorQuery.data.data;
+    const operator = operatorQuery.data.data;
 
     return (
         <div className="mx-auto max-w-7xl space-y-7">
@@ -114,14 +100,9 @@ export default function BackofficeTvdeOperatorPage() {
                     </div>
 
                     <div className="flex flex-wrap gap-2">
-                        {operator.sources.map(
-                            (source) => (
-                                <SourceBadge
-                                    key={source}
-                                    source={source}
-                                />
-                            ),
-                        )}
+                        {operator.sources.map((source) => (
+                            <SourceBadge key={source} source={source} />
+                        ))}
 
                         <span
                             className={[
@@ -131,9 +112,7 @@ export default function BackofficeTvdeOperatorPage() {
                                     : "bg-red-50 text-red-700",
                             ].join(" ")}
                         >
-                            {operator.active
-                                ? "Ativo"
-                                : "Removido"}
+                            {operator.active ? "Ativo" : "Removido"}
                         </span>
 
                         <span
@@ -155,36 +134,26 @@ export default function BackofficeTvdeOperatorPage() {
             <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <Metric
                     label="Registos"
-                    value={
-                        operator.registrations.length
-                    }
+                    value={operator.registrations.length}
                 />
 
                 <Metric
                     label="IMT"
-                    value={
-                        operator.source_presence.imt
-                            ? "Sim"
-                            : "Não"
-                    }
+                    value={operator.source_presence.imt ? "Sim" : "Não"}
                 />
 
                 <Metric
                     label="RAM"
-                    value={
-                        operator.source_presence.ram
-                            ? "Sim"
-                            : "Não"
-                    }
+                    value={operator.source_presence.ram ? "Sim" : "Não"}
                 />
 
-                <Metric
-                    label="Eventos"
-                    value={
-                        operator.changes.length
-                    }
-                />
+                <Metric label="Eventos" value={operator.changes.length} />
             </section>
+
+            <BackofficeNifEnrichmentPanel
+                operatorId={operator.id}
+                nif={operator.nif}
+            />
 
             {operator.customers.length > 0 && (
                 <section className="overflow-hidden rounded-2xl border border-emerald-200 bg-white">
@@ -199,29 +168,25 @@ export default function BackofficeTvdeOperatorPage() {
                     </div>
 
                     <div className="grid gap-4 p-5 sm:grid-cols-2">
-                        {operator.customers.map(
-                            (customer) => (
-                                <Link
-                                    key={customer.id}
-                                    to={`/backoffice/clientes/${customer.id}`}
-                                    className="rounded-xl border border-slate-200 p-4 transition hover:border-indigo-200 hover:bg-indigo-50/40"
-                                >
-                                    <div className="font-semibold text-slate-900">
-                                        {customer.nome}
-                                    </div>
+                        {operator.customers.map((customer) => (
+                            <Link
+                                key={customer.id}
+                                to={`/backoffice/clientes/${customer.id}`}
+                                className="rounded-xl border border-slate-200 p-4 transition hover:border-indigo-200 hover:bg-indigo-50/40"
+                            >
+                                <div className="font-semibold text-slate-900">
+                                    {customer.nome}
+                                </div>
 
-                                    <div className="mt-2 text-sm text-slate-500">
-                                        {customer.email ??
-                                            "Sem e-mail"}
-                                    </div>
+                                <div className="mt-2 text-sm text-slate-500">
+                                    {customer.email ?? "Sem e-mail"}
+                                </div>
 
-                                    <div className="mt-1 text-sm text-slate-500">
-                                        {customer.telefone ??
-                                            "Sem telefone"}
-                                    </div>
-                                </Link>
-                            ),
-                        )}
+                                <div className="mt-1 text-sm text-slate-500">
+                                    {customer.telefone ?? "Sem telefone"}
+                                </div>
+                            </Link>
+                        ))}
                     </div>
                 </section>
             )}
@@ -245,45 +210,27 @@ export default function BackofficeTvdeOperatorPage() {
                     <table className="w-full text-left">
                         <thead className="border-b border-slate-200 bg-slate-50">
                             <tr>
-                                <th className={thClass}>
-                                    Fonte
-                                </th>
+                                <th className={thClass}>Fonte</th>
 
-                                <th className={thClass}>
-                                    Denominação
-                                </th>
+                                <th className={thClass}>Denominação</th>
 
-                                <th className={thClass}>
-                                    Localização
-                                </th>
+                                <th className={thClass}>Localização</th>
 
-                                <th className={thClass}>
-                                    Licença
-                                </th>
+                                <th className={thClass}>Licença</th>
 
-                                <th className={thClass}>
-                                    Visto primeiro
-                                </th>
+                                <th className={thClass}>Visto primeiro</th>
 
-                                <th className={thClass}>
-                                    Estado
-                                </th>
+                                <th className={thClass}>Estado</th>
                             </tr>
                         </thead>
 
                         <tbody className="divide-y divide-slate-100">
-                            {operator.registrations.map(
-                                (registration) => (
-                                    <RegistrationRow
-                                        key={
-                                            registration.id
-                                        }
-                                        registration={
-                                            registration
-                                        }
-                                    />
-                                ),
-                            )}
+                            {operator.registrations.map((registration) => (
+                                <RegistrationRow
+                                    key={registration.id}
+                                    registration={registration}
+                                />
+                            ))}
                         </tbody>
                     </table>
                 </div>
@@ -304,61 +251,47 @@ export default function BackofficeTvdeOperatorPage() {
                     </p>
                 </div>
 
-                {operator.changes.length ===
-                0 ? (
+                {operator.changes.length === 0 ? (
                     <div className="px-6 py-12 text-center text-sm text-slate-400">
                         Nenhum evento registado.
                     </div>
                 ) : (
                     <div className="divide-y divide-slate-100">
-                        {operator.changes.map(
-                            (change) => (
-                                <div
-                                    key={
-                                        change.id
-                                    }
-                                    className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
-                                >
-                                    <div>
-                                        <div className="flex items-center gap-2">
-                                            <ChangeBadge
-                                                type={
-                                                    change.change_type
-                                                }
+                        {operator.changes.map((change) => (
+                            <div
+                                key={change.id}
+                                className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
+                            >
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <ChangeBadge
+                                            type={change.change_type}
+                                        />
+
+                                        {change.import && (
+                                            <SourceBadge
+                                                source={change.import.source}
                                             />
-
-                                            {change.import && (
-                                                <SourceBadge
-                                                    source={
-                                                        change.import.source
-                                                    }
-                                                />
-                                            )}
-                                        </div>
-
-                                        <div className="mt-2 text-sm text-slate-500">
-                                            {change.changed_fields &&
-                                            change.changed_fields.length >
-                                                0
-                                                ? change.changed_fields.join(
-                                                      ", ",
-                                                  )
-                                                : "Sem campos específicos"}
-                                        </div>
+                                        )}
                                     </div>
 
-                                    <div className="text-sm text-slate-500">
-                                        {change.import
-                                            ? formatDate(
-                                                  change.import.reference_date,
-                                              )
-                                            : formatDateTime(
-                                                  change.created_at,
-                                              )}
+                                    <div className="mt-2 text-sm text-slate-500">
+                                        {change.changed_fields &&
+                                        change.changed_fields.length > 0
+                                            ? change.changed_fields.join(", ")
+                                            : "Sem campos específicos"}
                                     </div>
                                 </div>
-                            ),
-                        )}
+
+                                <div className="text-sm text-slate-500">
+                                    {change.import
+                                        ? formatDate(
+                                              change.import.reference_date,
+                                          )
+                                        : formatDateTime(change.created_at)}
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 )}
             </section>
@@ -382,11 +315,7 @@ function RegistrationRow({
     return (
         <tr>
             <td className="px-5 py-4">
-                <SourceBadge
-                    source={
-                        registration.source
-                    }
-                />
+                <SourceBadge source={registration.source} />
             </td>
 
             <td className="px-5 py-4">
@@ -403,22 +332,17 @@ function RegistrationRow({
                 <div className="flex items-start gap-2">
                     <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
 
-                    <span>
-                        {location || "—"}
-                    </span>
+                    <span>{location || "—"}</span>
                 </div>
             </td>
 
             <td className="px-5 py-4 text-sm text-slate-600">
-                {registration.license_number ??
-                    "—"}
+                {registration.license_number ?? "—"}
             </td>
 
             <td className="px-5 py-4 text-sm text-slate-500">
                 {registration.first_seen_at
-                    ? formatDate(
-                          registration.first_seen_at,
-                      )
+                    ? formatDate(registration.first_seen_at)
                     : "—"}
             </td>
 
@@ -431,42 +355,26 @@ function RegistrationRow({
                             : "bg-red-50 text-red-700",
                     ].join(" ")}
                 >
-                    {registration.active
-                        ? "Ativo"
-                        : "Removido"}
+                    {registration.active ? "Ativo" : "Removido"}
                 </span>
             </td>
         </tr>
     );
 }
 
-function Metric({
-    label,
-    value,
-}: {
-    label: string;
-    value: number | string;
-}) {
+function Metric({ label, value }: { label: string; value: number | string }) {
     return (
         <div className="rounded-2xl border border-slate-200 bg-white p-5">
             <div className="text-2xl font-bold text-slate-950">
-                {typeof value === "number"
-                    ? formatNumber(value)
-                    : value}
+                {typeof value === "number" ? formatNumber(value) : value}
             </div>
 
-            <div className="mt-1 text-sm text-slate-500">
-                {label}
-            </div>
+            <div className="mt-1 text-sm text-slate-500">{label}</div>
         </div>
     );
 }
 
-function SourceBadge({
-    source,
-}: {
-    source: BackofficeTvdeSource;
-}) {
+function SourceBadge({ source }: { source: BackofficeTvdeSource }) {
     return (
         <span
             className={[
@@ -476,35 +384,17 @@ function SourceBadge({
                     : "bg-indigo-50 text-indigo-700",
             ].join(" ")}
         >
-            {source === "ram"
-                ? "RAM"
-                : "IMT"}
+            {source === "ram" ? "RAM" : "IMT"}
         </span>
     );
 }
 
-function ChangeBadge({
-    type,
-}: {
-    type: BackofficeTvdeChangeType;
-}) {
+function ChangeBadge({ type }: { type: BackofficeTvdeChangeType }) {
     const config = {
-        created: [
-            "Novo",
-            "bg-emerald-50 text-emerald-700",
-        ],
-        updated: [
-            "Alterado",
-            "bg-amber-50 text-amber-700",
-        ],
-        removed: [
-            "Removido",
-            "bg-red-50 text-red-700",
-        ],
-        restored: [
-            "Restaurado",
-            "bg-sky-50 text-sky-700",
-        ],
+        created: ["Novo", "bg-emerald-50 text-emerald-700"],
+        updated: ["Alterado", "bg-amber-50 text-amber-700"],
+        removed: ["Removido", "bg-red-50 text-red-700"],
+        restored: ["Restaurado", "bg-sky-50 text-sky-700"],
     }[type];
 
     return (
@@ -516,35 +406,21 @@ function ChangeBadge({
     );
 }
 
-function formatNumber(
-    value: number,
-): string {
-    return new Intl.NumberFormat(
-        "pt-PT",
-    ).format(value);
+function formatNumber(value: number): string {
+    return new Intl.NumberFormat("pt-PT").format(value);
 }
 
-function formatDate(
-    value: string,
-): string {
-    return new Intl.DateTimeFormat(
-        "pt-PT",
-        {
-            dateStyle: "short",
-        },
-    ).format(new Date(value));
+function formatDate(value: string): string {
+    return new Intl.DateTimeFormat("pt-PT", {
+        dateStyle: "short",
+    }).format(new Date(value));
 }
 
-function formatDateTime(
-    value: string,
-): string {
-    return new Intl.DateTimeFormat(
-        "pt-PT",
-        {
-            dateStyle: "short",
-            timeStyle: "short",
-        },
-    ).format(new Date(value));
+function formatDateTime(value: string): string {
+    return new Intl.DateTimeFormat("pt-PT", {
+        dateStyle: "short",
+        timeStyle: "short",
+    }).format(new Date(value));
 }
 
 const thClass =

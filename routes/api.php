@@ -10,6 +10,7 @@ use App\Http\Controllers\BackofficePlanController;
 use App\Http\Controllers\BackofficeSubscriptionController;
 use App\Http\Controllers\BackofficeTvdeImportController;
 use App\Http\Controllers\BackofficeTvdeOperatorController;
+use App\Http\Controllers\BackofficeTvdeOperatorEnrichmentController;
 use App\Http\Controllers\ChecklistProcessRunController;
 use App\Http\Controllers\ChecklistProcessTemplateController;
 use App\Http\Controllers\ChecklistRecordController;
@@ -72,6 +73,22 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('super_admin')
         ->prefix('backoffice')
         ->group(function () {
+
+            Route::get(
+                '/crm/operadores/{id}/enriquecimento',
+                [BackofficeTvdeOperatorEnrichmentController::class, 'show']
+            )
+                ->whereUuid(
+                    'id'
+                );
+
+            Route::post(
+                '/crm/operadores/{id}/enriquecimento',
+                [BackofficeTvdeOperatorEnrichmentController::class, 'store']
+            )
+                ->whereUuid(
+                    'id'
+                );
 
             Route::get(
                 '/crm/dashboard',
