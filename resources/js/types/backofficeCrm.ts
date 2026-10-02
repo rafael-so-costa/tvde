@@ -10,6 +10,13 @@ export type BackofficeTvdeChangeType =
     | "removed"
     | "restored";
 
+export type BackofficeTvdeNifStatus =
+    | "pending"
+    | "success"
+    | "not_found"
+    | "invalid"
+    | "error";
+
 export interface BackofficeTvdeCustomer {
     id: string;
     nome: string;
@@ -49,6 +56,18 @@ export interface BackofficeTvdeRegistrationDetail
     raw_data: Record<string, unknown> | null;
 }
 
+export interface BackofficeTvdeNifEnrichmentSummary {
+    lookup_status: BackofficeTvdeNifStatus;
+    title: string | null;
+    cae: string | null;
+    lookup_count: number;
+    last_looked_up_at: string | null;
+    last_success_at: string | null;
+    last_error: string | null;
+    cache_is_fresh: boolean;
+    cache_expires_at: string | null;
+}
+
 export interface BackofficeTvdeOperator {
     id: string;
     nif: string;
@@ -58,6 +77,11 @@ export interface BackofficeTvdeOperator {
     customers: BackofficeTvdeCustomer[];
     sources: BackofficeTvdeSource[];
     registrations: BackofficeTvdeRegistration[];
+
+    nif_enrichment:
+        | BackofficeTvdeNifEnrichmentSummary
+        | null;
+
     created_at: string;
     updated_at: string;
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\NifEnrichment;
 use App\Models\TvdeImport;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -60,6 +61,19 @@ class ListBackofficeTvdeOperatorsRequest extends FormRequest
                 Rule::in([
                     'yes',
                     'no',
+                ]),
+            ],
+
+            'enrichment' => [
+                'nullable',
+                Rule::in([
+                    'not_queried',
+                    NifEnrichment::STATUS_PENDING,
+                    NifEnrichment::STATUS_SUCCESS,
+                    NifEnrichment::STATUS_NOT_FOUND,
+                    NifEnrichment::STATUS_INVALID,
+                    NifEnrichment::STATUS_ERROR,
+                    'expired',
                 ]),
             ],
 

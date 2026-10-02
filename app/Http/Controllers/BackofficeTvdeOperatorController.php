@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ListBackofficeTvdeOperatorsRequest;
+use App\Models\NifEnrichment;
 use App\Models\Tenant;
 use App\Models\TvdeImport;
 use App\Models\TvdeOperator;
@@ -18,26 +19,14 @@ class BackofficeTvdeOperatorController extends Controller
     ): JsonResponse {
         $data = $request->validated();
 
-        $search = $data['search']
-            ?? null;
-
-        $source = $data['source']
-            ?? null;
-
-        $status = $data['status']
-            ?? null;
-
-        $customer = $data['customer']
-            ?? null;
-
-        $district = $data['district']
-            ?? null;
-
-        $municipality = $data['municipality']
-            ?? null;
-
-        $perPage = $data['per_page']
-            ?? 20;
+        $search = $data['search'] ?? null;
+        $source = $data['source'] ?? null;
+        $status = $data['status'] ?? null;
+        $customer = $data['customer'] ?? null;
+        $enrichment = $data['enrichment'] ?? null;
+        $district = $data['district'] ?? null;
+        $municipality = $data['municipality'] ?? null;
+        $perPage = $data['per_page'] ?? 20;
 
         $query = TvdeOperator::query()
             ->select([
@@ -92,65 +81,49 @@ class BackofficeTvdeOperatorController extends Controller
             );
         }
 
-        if ($source) {
+        /*
+         * Fonte, distrito e concelho têm de pertencer ao mesmo
+         * registo TVDE ativo.
+         */
+        if (
+            $source ||
+            $district ||
+            $municipality
+        ) {
             $query->whereHas(
                 'registrations',
                 function (
                     Builder $query
                 ) use (
-                    $source
-                ): void {
-                    $query
-                        ->where(
-                            'source',
-                            $source
-                        )
-                        ->where(
-                            'active',
-                            true
-                        );
-                }
-            );
-        }
-
-        if ($district) {
-            $query->whereHas(
-                'registrations',
-                function (
-                    Builder $query
-                ) use (
-                    $district
-                ): void {
-                    $query
-                        ->where(
-                            'district',
-                            $district
-                        )
-                        ->where(
-                            'active',
-                            true
-                        );
-                }
-            );
-        }
-
-        if ($municipality) {
-            $query->whereHas(
-                'registrations',
-                function (
-                    Builder $query
-                ) use (
+                    $source,
+                    $district,
                     $municipality
                 ): void {
-                    $query
-                        ->where(
+                    $query->where(
+                        'active',
+                        true
+                    );
+
+                    if ($source) {
+                        $query->where(
+                            'source',
+                            $source
+                        );
+                    }
+
+                    if ($district) {
+                        $query->where(
+                            'district',
+                            $district
+                        );
+                    }
+
+                    if ($municipality) {
+                        $query->where(
                             'municipality',
                             $municipality
-                        )
-                        ->where(
-                            'active',
-                            true
                         );
+                    }
                 }
             );
         }
@@ -186,6 +159,11 @@ class BackofficeTvdeOperatorController extends Controller
                 }
             );
         }
+
+        $this->applyEnrichmentFilter(
+            $query,
+            $enrichment
+        );
 
         $paginator = $query
             ->orderBy(
@@ -241,13 +219,24 @@ class BackofficeTvdeOperatorController extends Controller
                 'nif'
             );
 
+        $enrichments = NifEnrichment::query()
+            ->whereIn(
+                'nif',
+                $nifs
+            )
+            ->get()
+            ->keyBy(
+                'nif'
+            );
+
         $items = $operators
             ->map(
                 function (
                     TvdeOperator $operator
                 ) use (
                     $registrations,
-                    $customers
+                    $customers,
+                    $enrichments
                 ): array {
                     $operatorRegistrations =
                         $registrations->get(
@@ -259,6 +248,11 @@ class BackofficeTvdeOperatorController extends Controller
                         $customers->get(
                             $operator->nif,
                             collect()
+                        );
+
+                    $operatorEnrichment =
+                        $enrichments->get(
+                            $operator->nif
                         );
 
                     return [
@@ -307,6 +301,12 @@ class BackofficeTvdeOperatorController extends Controller
                                     )
                             )
                             ->values(),
+
+                        'nif_enrichment' => $operatorEnrichment
+                                ? $this->enrichmentSummary(
+                                    $operatorEnrichment
+                                )
+                                : null,
 
                         'created_at' => $operator->created_at,
 
@@ -515,7 +515,10 @@ class BackofficeTvdeOperatorController extends Controller
 
                                         'reference_date' => $change
                                             ->import
-                                            ->reference_date,
+                                            ->reference_date
+                                            ?->format(
+                                                'Y-m-d'
+                                            ),
                                     ]
                                     : null,
                         ]
@@ -527,6 +530,149 @@ class BackofficeTvdeOperatorController extends Controller
                 'updated_at' => $operator->updated_at,
             ],
         ]);
+    }
+
+    private function applyEnrichmentFilter(
+        Builder $query,
+        ?string $enrichment
+    ): void {
+        if (! $enrichment) {
+            return;
+        }
+
+        if ($enrichment === 'not_queried') {
+            $query->whereNotExists(
+                function (
+                    QueryBuilder $query
+                ): void {
+                    $query
+                        ->selectRaw('1')
+                        ->from(
+                            'nif_enrichments'
+                        )
+                        ->whereColumn(
+                            'nif_enrichments.nif',
+                            'tvde_operators.nif'
+                        );
+                }
+            );
+
+            return;
+        }
+
+        $cacheDays = max(
+            0,
+            (int) config(
+                'services.nif_pt.cache_days',
+                30
+            )
+        );
+
+        $query->whereExists(
+            function (
+                QueryBuilder $subquery
+            ) use (
+                $enrichment,
+                $cacheDays
+            ): void {
+                $subquery
+                    ->selectRaw('1')
+                    ->from(
+                        'nif_enrichments'
+                    )
+                    ->whereColumn(
+                        'nif_enrichments.nif',
+                        'tvde_operators.nif'
+                    );
+
+                if (
+                    $enrichment ===
+                    'expired'
+                ) {
+                    $subquery
+                        ->where(
+                            'lookup_status',
+                            NifEnrichment::STATUS_SUCCESS
+                        )
+                        ->whereNotNull(
+                            'last_success_at'
+                        );
+
+                    if ($cacheDays > 0) {
+                        $subquery->where(
+                            'last_success_at',
+                            '<',
+                            now()->subDays(
+                                $cacheDays
+                            )
+                        );
+                    }
+
+                    return;
+                }
+
+                $subquery->where(
+                    'lookup_status',
+                    $enrichment
+                );
+            }
+        );
+    }
+
+    private function enrichmentSummary(
+        NifEnrichment $enrichment
+    ): array {
+        $cacheDays = max(
+            0,
+            (int) config(
+                'services.nif_pt.cache_days',
+                30
+            )
+        );
+
+        $cacheExpiresAt =
+            $enrichment
+                ->last_success_at &&
+            $cacheDays > 0
+                ? $enrichment
+                    ->last_success_at
+                    ->copy()
+                    ->addDays(
+                        $cacheDays
+                    )
+                : null;
+
+        return [
+            'lookup_status' => $enrichment
+                ->lookup_status,
+
+            'title' => $enrichment
+                ->title,
+
+            'cae' => $enrichment
+                ->cae,
+
+            'lookup_count' => $enrichment
+                ->lookup_count,
+
+            'last_looked_up_at' => $enrichment
+                ->last_looked_up_at,
+
+            'last_success_at' => $enrichment
+                ->last_success_at,
+
+            'last_error' => $enrichment
+                ->last_error,
+
+            'cache_is_fresh' => $enrichment
+                ->lookup_status ===
+                NifEnrichment::STATUS_SUCCESS &&
+                $cacheExpiresAt !== null &&
+                $cacheExpiresAt
+                    ->isFuture(),
+
+            'cache_expires_at' => $cacheExpiresAt,
+        ];
     }
 
     private function registrationSummary(

@@ -181,52 +181,52 @@ class BackofficeTvdeImportController extends Controller
                         'after_data' => $change->after_data,
 
                         'operator' => $change->operator
-                                ? [
-                                    'id' => $change
-                                        ->operator
-                                        ->id,
+                            ? [
+                                'id' => $change
+                                    ->operator
+                                    ->id,
 
-                                    'nif' => $change
-                                        ->operator
-                                        ->nif,
+                                'nif' => $change
+                                    ->operator
+                                    ->nif,
 
-                                    'display_name' => $change
-                                        ->operator
-                                        ->display_name,
-                                ]
-                                : null,
+                                'display_name' => $change
+                                    ->operator
+                                    ->display_name,
+                            ]
+                            : null,
 
                         'registration' => $change->registration
-                                ? [
-                                    'id' => $change
-                                        ->registration
-                                        ->id,
+                            ? [
+                                'id' => $change
+                                    ->registration
+                                    ->id,
 
-                                    'source' => $change
-                                        ->registration
-                                        ->source,
+                                'source' => $change
+                                    ->registration
+                                    ->source,
 
-                                    'jurisdiction' => $change
-                                        ->registration
-                                        ->jurisdiction,
+                                'jurisdiction' => $change
+                                    ->registration
+                                    ->jurisdiction,
 
-                                    'license_number' => $change
-                                        ->registration
-                                        ->license_number,
+                                'license_number' => $change
+                                    ->registration
+                                    ->license_number,
 
-                                    'district' => $change
-                                        ->registration
-                                        ->district,
+                                'district' => $change
+                                    ->registration
+                                    ->district,
 
-                                    'municipality' => $change
-                                        ->registration
-                                        ->municipality,
+                                'municipality' => $change
+                                    ->registration
+                                    ->municipality,
 
-                                    'postal_locality' => $change
-                                        ->registration
-                                        ->postal_locality,
-                                ]
-                                : null,
+                                'postal_locality' => $change
+                                    ->registration
+                                    ->postal_locality,
+                            ]
+                            : null,
 
                         'created_at' => $change->created_at,
                     ]
@@ -251,30 +251,22 @@ class BackofficeTvdeImportController extends Controller
 
                 'change_counts' => [
                     'created' => (int) (
-                        $changeCounts[
-                            TvdeImportChange::TYPE_CREATED
-                        ]
+                        $changeCounts[TvdeImportChange::TYPE_CREATED]
                         ?? 0
                     ),
 
                     'updated' => (int) (
-                        $changeCounts[
-                            TvdeImportChange::TYPE_UPDATED
-                        ]
+                        $changeCounts[TvdeImportChange::TYPE_UPDATED]
                         ?? 0
                     ),
 
                     'removed' => (int) (
-                        $changeCounts[
-                            TvdeImportChange::TYPE_REMOVED
-                        ]
+                        $changeCounts[TvdeImportChange::TYPE_REMOVED]
                         ?? 0
                     ),
 
                     'restored' => (int) (
-                        $changeCounts[
-                            TvdeImportChange::TYPE_RESTORED
-                        ]
+                        $changeCounts[TvdeImportChange::TYPE_RESTORED]
                         ?? 0
                     ),
                 ],
@@ -283,23 +275,23 @@ class BackofficeTvdeImportController extends Controller
                     'data' => $items,
 
                     'meta' => [
-                    'current_page' => $changes
-                        ->currentPage(),
+                        'current_page' => $changes
+                            ->currentPage(),
 
-                    'last_page' => $changes
-                        ->lastPage(),
+                        'last_page' => $changes
+                            ->lastPage(),
 
-                    'per_page' => $changes
-                        ->perPage(),
+                        'per_page' => $changes
+                            ->perPage(),
 
-                    'total' => $changes
-                        ->total(),
+                        'total' => $changes
+                            ->total(),
 
-                    'from' => $changes
-                        ->firstItem(),
+                        'from' => $changes
+                            ->firstItem(),
 
-                    'to' => $changes
-                        ->lastItem(),
+                        'to' => $changes
+                            ->lastItem(),
                     ],
                 ],
             ],
@@ -314,7 +306,11 @@ class BackofficeTvdeImportController extends Controller
 
             'source' => $import->source,
 
-            'reference_date' => $import->reference_date,
+            'reference_date' => $import
+                ->reference_date
+                ?->format(
+                    'Y-m-d'
+                ),
 
             'original_filename' => $import->original_filename,
 
@@ -333,20 +329,20 @@ class BackofficeTvdeImportController extends Controller
             'unchanged_records' => $import->unchanged_records,
 
             'imported_by' => $import->user
-                    ? [
-                        'id' => $import
-                            ->user
-                            ->id,
+                ? [
+                    'id' => $import
+                        ->user
+                        ->id,
 
-                        'name' => $import
-                            ->user
-                            ->name,
+                    'name' => $import
+                        ->user
+                        ->name,
 
-                        'email' => $import
-                            ->user
-                            ->email,
-                    ]
-                    : null,
+                    'email' => $import
+                        ->user
+                        ->email,
+                ]
+                : null,
 
             'created_at' => $import->created_at,
         ];

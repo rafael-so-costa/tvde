@@ -196,28 +196,28 @@ class BackofficeCrmDashboardController extends Controller
                     'prospects' => max(
                         0,
                         $operatorsActive -
-                        $customers
+                            $customers
                     ),
                 ],
 
                 'latest_import' => $latestImport
-                        ? $this->importSummary(
-                            $latestImport
-                        )
-                        : null,
+                    ? $this->importSummary(
+                        $latestImport
+                    )
+                    : null,
 
                 'latest_sources' => [
                     'imt' => $latestImt
-                            ? $this->importSummary(
-                                $latestImt
-                            )
-                            : null,
+                        ? $this->importSummary(
+                            $latestImt
+                        )
+                        : null,
 
                     'ram' => $latestRam
-                            ? $this->importSummary(
-                                $latestRam
-                            )
-                            : null,
+                        ? $this->importSummary(
+                            $latestRam
+                        )
+                        : null,
                 ],
 
                 'recent_imports' => $recentImports,
@@ -233,7 +233,11 @@ class BackofficeCrmDashboardController extends Controller
 
             'source' => $import->source,
 
-            'reference_date' => $import->reference_date,
+            'reference_date' => $import
+                ->reference_date
+                ?->format(
+                    'Y-m-d'
+                ),
 
             'status' => $import->status,
 

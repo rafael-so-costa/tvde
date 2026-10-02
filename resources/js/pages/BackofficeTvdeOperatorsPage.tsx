@@ -17,32 +17,28 @@ import { Link } from "react-router-dom";
 import api from "../lib/api";
 
 import type {
+    BackofficeTvdeNifEnrichmentSummary,
     BackofficeTvdeOperator,
     BackofficeTvdeOperatorListResponse,
     BackofficeTvdeSource,
 } from "../types/backofficeCrm";
 
 export default function BackofficeTvdeOperatorsPage() {
-    const [
-        search,
-        setSearch,
-    ] = useState("");
+    const [search, setSearch] =
+        useState("");
+
+    const [source, setSource] =
+        useState("");
+
+    const [status, setStatus] =
+        useState("active");
+
+    const [customer, setCustomer] =
+        useState("");
 
     const [
-        source,
-        setSource,
-    ] = useState("");
-
-    const [
-        status,
-        setStatus,
-    ] = useState(
-        "active",
-    );
-
-    const [
-        customer,
-        setCustomer,
+        enrichment,
+        setEnrichment,
     ] = useState("");
 
     const [
@@ -55,10 +51,8 @@ export default function BackofficeTvdeOperatorsPage() {
         setMunicipality,
     ] = useState("");
 
-    const [
-        page,
-        setPage,
-    ] = useState(1);
+    const [page, setPage] =
+        useState(1);
 
     const deferredSearch =
         useDeferredValue(search);
@@ -81,6 +75,7 @@ export default function BackofficeTvdeOperatorsPage() {
                 source,
                 status,
                 customer,
+                enrichment,
                 deferredDistrict,
                 deferredMunicipality,
                 page,
@@ -106,6 +101,10 @@ export default function BackofficeTvdeOperatorsPage() {
 
                                 customer:
                                     customer ||
+                                    undefined,
+
+                                enrichment:
+                                    enrichment ||
                                     undefined,
 
                                 district:
@@ -265,7 +264,47 @@ export default function BackofficeTvdeOperatorsPage() {
                     </select>
                 </div>
 
-                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <div className="mt-3 grid gap-3 md:grid-cols-3">
+                    <select
+                        value={enrichment}
+                        onChange={(event) => {
+                            setEnrichment(
+                                event.target.value,
+                            );
+
+                            resetPage();
+                        }}
+                        className={selectClass}
+                    >
+                        <option value="">
+                            Todos NIF.PT
+                        </option>
+
+                        <option value="not_queried">
+                            Não consultados
+                        </option>
+
+                        <option value="success">
+                            Enriquecidos
+                        </option>
+
+                        <option value="not_found">
+                            Sem resultado
+                        </option>
+
+                        <option value="invalid">
+                            NIF inválido
+                        </option>
+
+                        <option value="error">
+                            Erro
+                        </option>
+
+                        <option value="expired">
+                            Cache expirado
+                        </option>
+                    </select>
+
                     <input
                         value={district}
                         onChange={(event) => {
@@ -303,7 +342,8 @@ export default function BackofficeTvdeOperatorsPage() {
                     <div className="px-6 py-16 text-center text-sm text-red-600">
                         Não foi possível carregar a base TVDE.
                     </div>
-                ) : operators.length === 0 ? (
+                ) : operators.length ===
+                  0 ? (
                     <div className="px-6 py-16 text-center">
                         <Database className="mx-auto h-10 w-10 text-slate-300" />
 
@@ -333,6 +373,10 @@ export default function BackofficeTvdeOperatorsPage() {
                                     </th>
 
                                     <th className={thClass}>
+                                        NIF.PT
+                                    </th>
+
+                                    <th className={thClass}>
                                         CRM
                                     </th>
 
@@ -340,7 +384,9 @@ export default function BackofficeTvdeOperatorsPage() {
                                         Estado
                                     </th>
 
-                                    <th className={`${thClass} text-right`}>
+                                    <th
+                                        className={`${thClass} text-right`}
+                                    >
                                         Ações
                                     </th>
                                 </tr>
@@ -391,7 +437,9 @@ export default function BackofficeTvdeOperatorsPage() {
                                                 1,
                                         )
                                     }
-                                    className={paginationButtonClass}
+                                    className={
+                                        paginationButtonClass
+                                    }
                                 >
                                     <ChevronLeft className="h-4 w-4" />
                                 </button>
@@ -411,7 +459,9 @@ export default function BackofficeTvdeOperatorsPage() {
                                                 1,
                                         )
                                     }
-                                    className={paginationButtonClass}
+                                    className={
+                                        paginationButtonClass
+                                    }
                                 >
                                     <ChevronRight className="h-4 w-4" />
                                 </button>
@@ -444,8 +494,9 @@ function OperatorRow({
             })
             .filter(Boolean);
 
-    const uniqueLocations =
-        [...new Set(locations)];
+    const uniqueLocations = [
+        ...new Set(locations),
+    ];
 
     return (
         <tr className="transition hover:bg-slate-50/70">
@@ -489,6 +540,14 @@ function OperatorRow({
             </td>
 
             <td className="px-5 py-4">
+                <NifStatusBadge
+                    enrichment={
+                        operator.nif_enrichment
+                    }
+                />
+            </td>
+
+            <td className="px-5 py-4">
                 {operator.is_customer ? (
                     <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
                         Cliente
@@ -527,6 +586,69 @@ function OperatorRow({
                 </div>
             </td>
         </tr>
+    );
+}
+
+function NifStatusBadge({
+    enrichment,
+}: {
+    enrichment:
+        | BackofficeTvdeNifEnrichmentSummary
+        | null;
+}) {
+    if (!enrichment) {
+        return (
+            <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                Não consultado
+            </span>
+        );
+    }
+
+    if (
+        enrichment.lookup_status ===
+            "success" &&
+        !enrichment.cache_is_fresh
+    ) {
+        return (
+            <span className="inline-flex rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
+                Cache expirado
+            </span>
+        );
+    }
+
+    const config = {
+        success: [
+            "Enriquecido",
+            "bg-emerald-50 text-emerald-700",
+        ],
+
+        not_found: [
+            "Sem resultado",
+            "bg-slate-100 text-slate-600",
+        ],
+
+        invalid: [
+            "NIF inválido",
+            "bg-red-50 text-red-700",
+        ],
+
+        error: [
+            "Erro",
+            "bg-red-50 text-red-700",
+        ],
+
+        pending: [
+            "Pendente",
+            "bg-amber-50 text-amber-700",
+        ],
+    }[enrichment.lookup_status];
+
+    return (
+        <span
+            className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${config[1]}`}
+        >
+            {config[0]}
+        </span>
     );
 }
 

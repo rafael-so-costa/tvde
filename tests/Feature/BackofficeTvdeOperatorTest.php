@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\NifEnrichment;
 use App\Models\Role;
 use App\Models\Tenant;
 use App\Models\TvdeImport;
@@ -524,6 +525,198 @@ test(
             ->assertJsonPath(
                 'data.changes.0.change_type',
                 TvdeImportChange::TYPE_CREATED
+            );
+    }
+);
+
+test(
+    'filtros geográficos e fonte pertencem ao mesmo registo tvde',
+    function () {
+        $imt =
+            backofficeTvdeImport(
+                TvdeImport::SOURCE_IMT,
+                '2026-08-05',
+                str_repeat(
+                    'f',
+                    64
+                )
+            );
+
+        $ram =
+            backofficeTvdeImport(
+                TvdeImport::SOURCE_RAM,
+                '2025-10-06',
+                str_repeat(
+                    '1',
+                    64
+                )
+            );
+
+        $operator =
+            backofficeTvdeOperator(
+                '515696544',
+                'Operador Multijurisdição'
+            );
+
+        backofficeTvdeRegistration(
+            $operator,
+            $imt,
+            TvdeImport::SOURCE_IMT,
+            'imt_continental:515696544',
+            'Lisboa',
+            'Lisboa'
+        );
+
+        backofficeTvdeRegistration(
+            $operator,
+            $ram,
+            TvdeImport::SOURCE_RAM,
+            'ram:9999',
+            'Madeira',
+            'Funchal',
+            '9999'
+        );
+
+        $user =
+            backofficeTvdeUser(
+                true
+            );
+
+        backofficeTvdeLogin(
+            $this,
+            $user
+        );
+
+        $this
+            ->withHeaders(
+                backofficeTvdeHeaders()
+            )
+            ->getJson(
+                '/api/backoffice/crm/operadores?source=ram&district=Lisboa'
+            )
+            ->assertOk()
+            ->assertJsonPath(
+                'meta.total',
+                0
+            );
+    }
+);
+
+test(
+    'lista operadores apresenta e filtra estado do enriquecimento nif pt',
+    function () {
+        $import =
+            backofficeTvdeImport(
+                TvdeImport::SOURCE_IMT,
+                '2026-08-05',
+                str_repeat(
+                    '2',
+                    64
+                )
+            );
+
+        $enriched =
+            backofficeTvdeOperator(
+                '515696544',
+                'Operador Enriquecido'
+            );
+
+        $notQueried =
+            backofficeTvdeOperator(
+                '516057464',
+                'Operador Não Consultado'
+            );
+
+        backofficeTvdeRegistration(
+            $enriched,
+            $import,
+            TvdeImport::SOURCE_IMT,
+            'imt_continental:515696544',
+            'Lisboa',
+            'Lisboa'
+        );
+
+        backofficeTvdeRegistration(
+            $notQueried,
+            $import,
+            TvdeImport::SOURCE_IMT,
+            'imt_continental:516057464',
+            'Porto',
+            'Porto'
+        );
+
+        NifEnrichment::create([
+            'nif' => $enriched->nif,
+
+            'provider' => NifEnrichment::PROVIDER_NIF_PT,
+
+            'lookup_status' => NifEnrichment::STATUS_SUCCESS,
+
+            'title' => 'Operador Enriquecido, Lda.',
+
+            'cae' => '49320',
+
+            'lookup_count' => 1,
+
+            'last_looked_up_at' => now(),
+
+            'last_success_at' => now(),
+        ]);
+
+        $user =
+            backofficeTvdeUser(
+                true
+            );
+
+        backofficeTvdeLogin(
+            $this,
+            $user
+        );
+
+        $this
+            ->withHeaders(
+                backofficeTvdeHeaders()
+            )
+            ->getJson(
+                '/api/backoffice/crm/operadores?enrichment=success'
+            )
+            ->assertOk()
+            ->assertJsonPath(
+                'meta.total',
+                1
+            )
+            ->assertJsonPath(
+                'data.0.nif',
+                '515696544'
+            )
+            ->assertJsonPath(
+                'data.0.nif_enrichment.lookup_status',
+                NifEnrichment::STATUS_SUCCESS
+            )
+            ->assertJsonPath(
+                'data.0.nif_enrichment.cache_is_fresh',
+                true
+            );
+
+        $this
+            ->withHeaders(
+                backofficeTvdeHeaders()
+            )
+            ->getJson(
+                '/api/backoffice/crm/operadores?enrichment=not_queried'
+            )
+            ->assertOk()
+            ->assertJsonPath(
+                'meta.total',
+                1
+            )
+            ->assertJsonPath(
+                'data.0.nif',
+                '516057464'
+            )
+            ->assertJsonPath(
+                'data.0.nif_enrichment',
+                null
             );
     }
 );

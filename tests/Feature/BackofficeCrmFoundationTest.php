@@ -36,8 +36,8 @@ function crmFoundationUser(
         User::factory()
             ->create([
                 'email' => $superAdmin
-                        ? 'crm.foundation.admin@frotapro.test'
-                        : 'crm.foundation.user@frotapro.test',
+                    ? 'crm.foundation.admin@frotapro.test'
+                    : 'crm.foundation.user@frotapro.test',
 
                 'password' => Hash::make(
                     'SenhaTeste123!'
@@ -134,33 +134,33 @@ function crmFoundationRegistration(
         'source' => $source,
 
         'jurisdiction' => $source ===
-                TvdeImport::SOURCE_RAM
-                ? TvdeOperatorRegistration::JURISDICTION_MADEIRA
-                : TvdeOperatorRegistration::JURISDICTION_CONTINENTAL,
+            TvdeImport::SOURCE_RAM
+            ? TvdeOperatorRegistration::JURISDICTION_MADEIRA
+            : TvdeOperatorRegistration::JURISDICTION_CONTINENTAL,
 
         'source_key' => $sourceKey,
 
         'denomination' => $operator->display_name,
 
         'license_number' => $source ===
-                TvdeImport::SOURCE_RAM
-                ? '8100'
-                : null,
+            TvdeImport::SOURCE_RAM
+            ? '8100'
+            : null,
 
         'district' => $source ===
-                TvdeImport::SOURCE_RAM
-                ? 'Madeira'
-                : 'Lisboa',
+            TvdeImport::SOURCE_RAM
+            ? 'Madeira'
+            : 'Lisboa',
 
         'municipality' => $source ===
-                TvdeImport::SOURCE_RAM
-                ? 'Funchal'
-                : 'Lisboa',
+            TvdeImport::SOURCE_RAM
+            ? 'Funchal'
+            : 'Lisboa',
 
         'postal_locality' => $source ===
-                TvdeImport::SOURCE_RAM
-                ? null
-                : 'Lisboa',
+            TvdeImport::SOURCE_RAM
+            ? null
+            : 'Lisboa',
 
         'active' => $active,
 
@@ -178,12 +178,12 @@ function crmFoundationRegistration(
         'last_seen_at' => $import->reference_date,
 
         'removed_in_import_id' => $active
-                ? null
-                : $import->id,
+            ? null
+            : $import->id,
 
         'removed_at' => $active
-                ? null
-                : $import->reference_date,
+            ? null
+            : $import->reference_date,
     ]);
 }
 
@@ -372,6 +372,18 @@ test(
             ->assertJsonPath(
                 'data.latest_sources.ram.total_records',
                 1
+            )
+            ->assertJsonPath(
+                'data.latest_sources.imt.reference_date',
+                '2026-08-05'
+            )
+            ->assertJsonPath(
+                'data.latest_sources.ram.reference_date',
+                '2025-10-06'
+            )
+            ->assertJsonPath(
+                'data.latest_import.reference_date',
+                '2026-08-05'
             );
     }
 );
@@ -428,6 +440,10 @@ test(
             ->assertJsonPath(
                 'data.0.total_records',
                 394
+            )
+            ->assertJsonPath(
+                'data.0.reference_date',
+                '2025-10-06'
             );
     }
 );
@@ -499,6 +515,10 @@ test(
             ->assertJsonPath(
                 'data.id',
                 $import->id
+            )
+            ->assertJsonPath(
+                'data.reference_date',
+                '2026-08-05'
             )
             ->assertJsonPath(
                 'data.change_counts.created',
