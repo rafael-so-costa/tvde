@@ -4,12 +4,21 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ListBackofficeTvdeImportsRequest;
 use App\Http\Requests\ShowBackofficeTvdeImportRequest;
+use App\Http\Requests\StoreBackofficeTvdeImportRequest;
 use App\Models\TvdeImport;
 use App\Models\TvdeImportChange;
+use App\Services\TvdeImportService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
+use RuntimeException;
 
 class BackofficeTvdeImportController extends Controller
 {
+    public function __construct(
+        private readonly TvdeImportService $imports
+    ) {}
+
     public function index(
         ListBackofficeTvdeImportsRequest $request
     ): JsonResponse {
@@ -78,19 +87,112 @@ class BackofficeTvdeImportController extends Controller
             'data' => $items,
 
             'meta' => [
-                'current_page' => $paginator->currentPage(),
+                'current_page' => $paginator
+                    ->currentPage(),
 
-                'last_page' => $paginator->lastPage(),
+                'last_page' => $paginator
+                    ->lastPage(),
 
-                'per_page' => $paginator->perPage(),
+                'per_page' => $paginator
+                    ->perPage(),
 
-                'total' => $paginator->total(),
+                'total' => $paginator
+                    ->total(),
 
-                'from' => $paginator->firstItem(),
+                'from' => $paginator
+                    ->firstItem(),
 
-                'to' => $paginator->lastItem(),
+                'to' => $paginator
+                    ->lastItem(),
             ],
         ]);
+    }
+
+    public function store(
+        StoreBackofficeTvdeImportRequest $request
+    ): JsonResponse {
+        $data =
+            $request->validated();
+
+        $file =
+            $request->file(
+                'file'
+            );
+
+        if (! $file) {
+            throw ValidationException::withMessages([
+                'file' => 'O PDF não foi recebido.',
+            ]);
+        }
+
+        $originalFilename =
+            $file->getClientOriginalName();
+
+        $storedPath =
+            $file->store(
+                'tvde-imports/tmp',
+                'local'
+            );
+
+        if (! $storedPath) {
+            throw new RuntimeException(
+                'Não foi possível guardar temporariamente o PDF.'
+            );
+        }
+
+        try {
+            try {
+                $import =
+                    $this
+                        ->imports
+                        ->import(
+                            path: Storage::disk(
+                                'local'
+                            )->path(
+                                $storedPath
+                            ),
+
+                            source: $data[
+                                'source'
+                            ],
+
+                            userId: $request
+                                ->user()
+                                ?->id,
+
+                            originalFilename: $originalFilename
+                        );
+            } catch (
+                ValidationException $exception
+            ) {
+                throw $exception;
+            } catch (
+                RuntimeException $exception
+            ) {
+                throw ValidationException::withMessages([
+                    'file' => $exception
+                        ->getMessage(),
+                ]);
+            }
+        } finally {
+            Storage::disk(
+                'local'
+            )->delete(
+                $storedPath
+            );
+        }
+
+        $import->load([
+            'user:id,name,email',
+        ]);
+
+        return response()->json([
+            'message' => 'Importação TVDE concluída com sucesso.',
+
+            'data' => $this->summary(
+                $import
+            ),
+        ], 201);
     }
 
     public function show(

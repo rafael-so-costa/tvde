@@ -51,6 +51,12 @@ export type BackofficeNifBatchItemStatus =
     | "error"
     | "skipped";
 
+
+
+    export interface BackofficeCrmAssigneeListResponse {
+    data: BackofficeCrmUserReference[];
+}
+
 export interface BackofficeCrmUserReference {
     id: string;
     name: string;

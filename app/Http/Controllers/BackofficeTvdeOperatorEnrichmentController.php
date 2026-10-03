@@ -7,6 +7,7 @@ use App\Models\NifEnrichment;
 use App\Models\NifLookupAttempt;
 use App\Models\TvdeOperator;
 use App\Services\NifPtService;
+use App\Services\NifPtUsageGuard;
 use Illuminate\Http\JsonResponse;
 use InvalidArgumentException;
 use RuntimeException;
@@ -35,10 +36,10 @@ class BackofficeTvdeOperatorEnrichmentController extends Controller
                 'configured' => $this->configured(),
 
                 'enrichment' => $enrichment
-                        ? $this->summary(
-                            $enrichment
-                        )
-                        : null,
+                    ? $this->summary(
+                        $enrichment
+                    )
+                    : null,
             ],
         ]);
     }
@@ -46,68 +47,85 @@ class BackofficeTvdeOperatorEnrichmentController extends Controller
     public function store(
         LookupBackofficeTvdeOperatorNifRequest $request,
         string $id,
-        NifPtService $service
+        NifPtService $service,
+        NifPtUsageGuard $guard
     ): JsonResponse {
-        $operator =
-            TvdeOperator::query()
-                ->findOrFail(
-                    $id
-                );
-
-        try {
-            $enrichment =
-                $service->lookup(
-                    $operator->nif,
-                    $request->boolean(
-                        'force'
-                    )
-                );
-        } catch (
-            InvalidArgumentException|
-            RuntimeException $exception
-        ) {
-            return response()->json(
-                [
-                    'message' => $exception
-                        ->getMessage(),
-                ],
-                422
+        $operator = TvdeOperator::query()
+            ->findOrFail(
+                $id
             );
+
+        $force = $request->boolean(
+            'force'
+        );
+
+        $lock = null;
+
+        if (
+            $service->requiresExternalLookup(
+                $operator->nif,
+                $force
+            )
+        ) {
+            $lock = $guard->lock();
+
+            if (! $lock->get()) {
+                return response()->json([
+                    'message' => 'Já existe uma consulta externa NIF.PT em execução.',
+                ], 409);
+            }
+
+            $reason = $guard->blockReason();
+
+            if ($reason !== null) {
+                $lock->release();
+
+                return response()->json([
+                    'message' => $reason,
+                ], 429);
+            }
         }
 
-        $attempt =
-            $this->latestAttempt(
-                $enrichment
-            );
-
-        $statusCode =
-            match (
-                $enrichment
-                    ->lookup_status
+        try {
+            try {
+                $enrichment = $service->lookup(
+                    $operator->nif,
+                    $force
+                );
+            } catch (
+                InvalidArgumentException|
+                RuntimeException $exception
             ) {
-                NifEnrichment::STATUS_INVALID => 422,
+                return response()->json(
+                    [
+                        'message' => $exception
+                            ->getMessage(),
+                    ],
+                    422
+                );
+            }
+        } finally {
+            $lock?->release();
+        }
 
-                NifEnrichment::STATUS_ERROR => 502,
+        $attempt = $this->latestAttempt(
+            $enrichment
+        );
 
-                default => 200,
-            };
+        $statusCode = match ($enrichment->lookup_status) {
+            NifEnrichment::STATUS_INVALID => 422,
+            NifEnrichment::STATUS_ERROR => 502,
+            default => 200,
+        };
 
-        $message =
-            match (
-                $attempt?->status
-            ) {
-                NifLookupAttempt::STATUS_CACHE_HIT => 'Dados obtidos do cache local.',
-
-                NifLookupAttempt::STATUS_SUCCESS => 'Dados NIF.PT atualizados com sucesso.',
-
-                NifLookupAttempt::STATUS_NOT_FOUND => 'O NIF é válido, mas não foi encontrado no NIF.PT.',
-
-                NifLookupAttempt::STATUS_INVALID => 'O NIF foi considerado inválido.',
-
-                NifLookupAttempt::STATUS_ERROR => 'Não foi possível consultar o NIF.PT.',
-
-                default => 'Consulta concluída.',
-            };
+        $message = match ($attempt?->status) {
+            NifLookupAttempt::STATUS_CACHE_HIT => 'Dados obtidos do cache local.',
+            NifLookupAttempt::STATUS_SUCCESS => 'Dados NIF.PT atualizados com sucesso.',
+            NifLookupAttempt::STATUS_NOT_FOUND => 'O NIF é válido, mas não foi encontrado no NIF.PT.',
+            NifLookupAttempt::STATUS_INVALID => 'O NIF foi considerado inválido.',
+            NifLookupAttempt::STATUS_ERROR => 'Não foi possível consultar o NIF.PT.',
+            default => 'Consulta concluída.',
+        };
 
         return response()->json(
             [
@@ -140,22 +158,22 @@ class BackofficeTvdeOperatorEnrichmentController extends Controller
         $cacheExpiresAt =
             $enrichment
                 ->last_success_at &&
-            $cacheDays > 0
+                $cacheDays > 0
                 ? $enrichment
                     ->last_success_at
                     ->copy()
                     ->addDays(
                         $cacheDays
                     )
-                : null;
+            : null;
 
         $cacheIsFresh =
             $enrichment
                 ->lookup_status ===
                 NifEnrichment::STATUS_SUCCESS &&
-            $cacheExpiresAt !== null &&
-            $cacheExpiresAt
-                ->isFuture();
+                $cacheExpiresAt !== null &&
+                $cacheExpiresAt
+                    ->isFuture();
 
         $attempt =
             $this->latestAttempt(
@@ -233,27 +251,27 @@ class BackofficeTvdeOperatorEnrichmentController extends Controller
             'cache_expires_at' => $cacheExpiresAt,
 
             'last_attempt' => $attempt
-                    ? [
-                        'id' => $attempt->id,
+                ? [
+                    'id' => $attempt->id,
 
-                        'status' => $attempt->status,
+                    'status' => $attempt->status,
 
-                        'http_status' => $attempt
-                            ->http_status,
+                    'http_status' => $attempt
+                        ->http_status,
 
-                        'credit_type' => $attempt
-                            ->credit_type,
+                    'credit_type' => $attempt
+                        ->credit_type,
 
-                        'duration_ms' => $attempt
-                            ->duration_ms,
+                    'duration_ms' => $attempt
+                        ->duration_ms,
 
-                        'error_message' => $attempt
-                            ->error_message,
+                    'error_message' => $attempt
+                        ->error_message,
 
-                        'requested_at' => $attempt
-                            ->requested_at,
-                    ]
-                    : null,
+                    'requested_at' => $attempt
+                        ->requested_at,
+                ]
+                : null,
 
             'created_at' => $enrichment
                 ->created_at,

@@ -6,6 +6,7 @@ use App\Http\Requests\ListBackofficeCrmLeadsRequest;
 use App\Http\Requests\StoreBackofficeCrmLeadRequest;
 use App\Http\Requests\UpdateBackofficeCrmLeadRequest;
 use App\Models\CrmLead;
+use App\Models\User;
 use App\Services\CrmLeadService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -74,10 +75,8 @@ class BackofficeCrmLeadController extends Controller
 
         if (
             $assignedTo =
-                $data[
-                    'assigned_to_user_id'
-                ]
-                ?? null
+            $data['assigned_to_user_id']
+            ?? null
         ) {
             $query->where(
                 'assigned_to_user_id',
@@ -108,8 +107,8 @@ class BackofficeCrmLeadController extends Controller
 
         if (
             $municipality =
-                $data['municipality']
-                ?? null
+            $data['municipality']
+            ?? null
         ) {
             $query->where(
                 'municipality',
@@ -195,6 +194,42 @@ class BackofficeCrmLeadController extends Controller
                 'to' => $paginator
                     ->lastItem(),
             ],
+        ]);
+    }
+
+    public function assignees(): JsonResponse
+    {
+        $users = User::query()
+            ->where(
+                'ativo',
+                true
+            )
+            ->whereHas(
+                'roles',
+                function (
+                    Builder $query
+                ): void {
+                    $query
+                        ->where(
+                            'codigo',
+                            'super_admin'
+                        )
+                        ->whereNull(
+                            'user_roles.tenant_id'
+                        );
+                }
+            )
+            ->orderBy(
+                'name'
+            )
+            ->get([
+                'id',
+                'name',
+                'email',
+            ]);
+
+        return response()->json([
+            'data' => $users,
         ]);
     }
 
@@ -363,60 +398,60 @@ class BackofficeCrmLeadController extends Controller
             ),
 
             'assigned_to' => $lead->assignedTo
-                    ? [
-                        'id' => $lead
-                            ->assignedTo
-                            ->id,
+                ? [
+                    'id' => $lead
+                        ->assignedTo
+                        ->id,
 
-                        'name' => $lead
-                            ->assignedTo
-                            ->name,
+                    'name' => $lead
+                        ->assignedTo
+                        ->name,
 
-                        'email' => $lead
-                            ->assignedTo
-                            ->email,
-                    ]
-                    : null,
+                    'email' => $lead
+                        ->assignedTo
+                        ->email,
+                ]
+                : null,
 
             'converted_tenant' => $lead->convertedTenant
-                    ? [
-                        'id' => $lead
-                            ->convertedTenant
-                            ->id,
+                ? [
+                    'id' => $lead
+                        ->convertedTenant
+                        ->id,
 
-                        'nome' => $lead
-                            ->convertedTenant
-                            ->nome,
+                    'nome' => $lead
+                        ->convertedTenant
+                        ->nome,
 
-                        'slug' => $lead
-                            ->convertedTenant
-                            ->slug,
+                    'slug' => $lead
+                        ->convertedTenant
+                        ->slug,
 
-                        'nif' => $lead
-                            ->convertedTenant
-                            ->nif,
+                    'nif' => $lead
+                        ->convertedTenant
+                        ->nif,
 
-                        'ativo' => $lead
-                            ->convertedTenant
-                            ->ativo,
-                    ]
-                    : null,
+                    'ativo' => $lead
+                        ->convertedTenant
+                        ->ativo,
+                ]
+                : null,
 
             'tvde_operator' => $lead->tvdeOperator
-                    ? [
-                        'id' => $lead
-                            ->tvdeOperator
-                            ->id,
+                ? [
+                    'id' => $lead
+                        ->tvdeOperator
+                        ->id,
 
-                        'nif' => $lead
-                            ->tvdeOperator
-                            ->nif,
+                    'nif' => $lead
+                        ->tvdeOperator
+                        ->nif,
 
-                        'display_name' => $lead
-                            ->tvdeOperator
-                            ->display_name,
-                    ]
-                    : null,
+                    'display_name' => $lead
+                        ->tvdeOperator
+                        ->display_name,
+                ]
+                : null,
 
             'tags' => $lead
                 ->tags
@@ -458,20 +493,20 @@ class BackofficeCrmLeadController extends Controller
             'metadata' => $lead->metadata,
 
             'created_by' => $lead->createdBy
-                    ? [
-                        'id' => $lead
-                            ->createdBy
-                            ->id,
+                ? [
+                    'id' => $lead
+                        ->createdBy
+                        ->id,
 
-                        'name' => $lead
-                            ->createdBy
-                            ->name,
+                    'name' => $lead
+                        ->createdBy
+                        ->name,
 
-                        'email' => $lead
-                            ->createdBy
-                            ->email,
-                    ]
-                    : null,
+                    'email' => $lead
+                        ->createdBy
+                        ->email,
+                ]
+                : null,
 
             'stage_history' => $lead
                 ->stageHistories
@@ -491,16 +526,16 @@ class BackofficeCrmLeadController extends Controller
 
                         'changed_by' => $history
                             ->changedBy
-                                ? [
-                                    'id' => $history
-                                        ->changedBy
-                                        ->id,
+                            ? [
+                                'id' => $history
+                                    ->changedBy
+                                    ->id,
 
-                                    'name' => $history
-                                        ->changedBy
-                                        ->name,
-                                ]
-                                : null,
+                                'name' => $history
+                                    ->changedBy
+                                    ->name,
+                            ]
+                            : null,
 
                         'note' => $history
                             ->note,
@@ -556,28 +591,28 @@ class BackofficeCrmLeadController extends Controller
             'created_at' => $activity->created_at,
 
             'assigned_to' => $activity->assignedTo
-                    ? [
-                        'id' => $activity
-                            ->assignedTo
-                            ->id,
+                ? [
+                    'id' => $activity
+                        ->assignedTo
+                        ->id,
 
-                        'name' => $activity
-                            ->assignedTo
-                            ->name,
-                    ]
-                    : null,
+                    'name' => $activity
+                        ->assignedTo
+                        ->name,
+                ]
+                : null,
 
             'created_by' => $activity->createdBy
-                    ? [
-                        'id' => $activity
-                            ->createdBy
-                            ->id,
+                ? [
+                    'id' => $activity
+                        ->createdBy
+                        ->id,
 
-                        'name' => $activity
-                            ->createdBy
-                            ->name,
-                    ]
-                    : null,
+                    'name' => $activity
+                        ->createdBy
+                        ->name,
+                ]
+                : null,
         ];
     }
 }

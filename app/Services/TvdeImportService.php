@@ -23,7 +23,8 @@ class TvdeImportService
     public function import(
         string $path,
         string $source,
-        ?string $userId = null
+        ?string $userId = null,
+        ?string $originalFilename = null
     ): TvdeImport {
         if (! is_file($path)) {
             throw new RuntimeException(
@@ -76,24 +77,25 @@ class TvdeImportService
 
             'reference_date' => $parsed['reference_date'],
 
-            'original_filename' => basename(
-                $path
-            ),
+            'original_filename' => $originalFilename
+                ?: basename(
+                    $path
+                ),
 
             'file_hash' => $fileHash,
 
             'status' => TvdeImport::STATUS_PROCESSING,
 
             'metadata' => [
-            'total_pages' => $parsed['total_pages'],
+                'total_pages' => $parsed['total_pages'],
 
-            'parsed_pages' => $parsed['parsed_pages'],
+                'parsed_pages' => $parsed['parsed_pages'],
 
-            'skipped_pages' => $parsed['skipped_pages'],
+                'skipped_pages' => $parsed['skipped_pages'],
 
-            'file_size' => filesize(
-                $path
-            ),
+                'file_size' => filesize(
+                    $path
+                ),
             ],
 
             'imported_by' => $userId,
@@ -187,13 +189,13 @@ class TvdeImportService
 
         $operatorsWithImt =
             $parsed['source'] ===
-                TvdeImport::SOURCE_RAM
-                    ? $this->loadOperatorsWithActiveImt(
-                        $operators
-                            ->pluck('id')
-                            ->all()
-                    )
-                    : [];
+            TvdeImport::SOURCE_RAM
+            ? $this->loadOperatorsWithActiveImt(
+                $operators
+                    ->pluck('id')
+                    ->all()
+            )
+            : [];
 
         $seenSourceKeys = [];
 
@@ -227,9 +229,7 @@ class TvdeImportService
             $sourceKey =
                 $record['source_key'];
 
-            $seenSourceKeys[
-                $sourceKey
-            ] = true;
+            $seenSourceKeys[$sourceKey] = true;
 
             $recordHash =
                 $this->recordHash(
@@ -462,9 +462,7 @@ class TvdeImportService
             if (
                 ! $registration->active ||
                 isset(
-                    $seenSourceKeys[
-                        $sourceKey
-                    ]
+                    $seenSourceKeys[$sourceKey]
                 )
             ) {
                 continue;
@@ -527,14 +525,10 @@ class TvdeImportService
             $import->metadata
             ?? [];
 
-        $metadata[
-            'new_operators'
-        ] =
+        $metadata['new_operators'] =
             $newOperatorCount;
 
-        $metadata[
-            'unique_nifs'
-        ] =
+        $metadata['unique_nifs'] =
             count(
                 $nifs
             );
@@ -587,25 +581,17 @@ class TvdeImportService
 
             if (
                 isset(
-                    $existingNifs[
-                        $nif
-                    ]
+                    $existingNifs[$nif]
                 ) ||
                 isset(
-                    $names[
-                        $nif
-                    ]
+                    $names[$nif]
                 )
             ) {
                 continue;
             }
 
-            $names[
-                $nif
-            ] =
-                $record[
-                    'denomination'
-                ];
+            $names[$nif] =
+                $record['denomination'];
         }
 
         $rows = [];
@@ -712,9 +698,7 @@ class TvdeImportService
                     ) use (
                         &$result
                     ): void {
-                        $result[
-                            $operatorId
-                        ] = true;
+                        $result[$operatorId] = true;
                     }
                 );
         }
@@ -730,25 +714,21 @@ class TvdeImportService
     ): void {
         $canUpdate =
             $source ===
-                TvdeImport::SOURCE_IMT ||
+            TvdeImport::SOURCE_IMT ||
             ! isset(
-                $operatorsWithImt[
-                    $operator->id
-                ]
+                $operatorsWithImt[$operator->id]
             );
 
         if (
             ! $canUpdate ||
             $operator->display_name ===
-                $record['denomination']
+            $record['denomination']
         ) {
             return;
         }
 
         $operator->display_name =
-            $record[
-                'denomination'
-            ];
+            $record['denomination'];
 
         $operator->save();
     }
@@ -790,8 +770,8 @@ class TvdeImportService
             'raw_data' => json_encode(
                 $record['raw_data'],
                 JSON_THROW_ON_ERROR
-                | JSON_UNESCAPED_UNICODE
-                | JSON_UNESCAPED_SLASHES
+                    | JSON_UNESCAPED_UNICODE
+                    | JSON_UNESCAPED_SLASHES
             ),
 
             'first_seen_import_id' => $import->id,
@@ -822,8 +802,8 @@ class TvdeImportService
                     $record
                 ),
                 JSON_THROW_ON_ERROR
-                | JSON_UNESCAPED_UNICODE
-                | JSON_UNESCAPED_SLASHES
+                    | JSON_UNESCAPED_UNICODE
+                    | JSON_UNESCAPED_SLASHES
             )
         );
     }
@@ -913,9 +893,7 @@ class TvdeImportService
             $incoming as $field => $value
         ) {
             if (
-                $current[
-                    $field
-                ] !==
+                $current[$field] !==
                 $value
             ) {
                 $changed[] =
@@ -950,27 +928,27 @@ class TvdeImportService
             'changed_fields' => json_encode(
                 $changedFields,
                 JSON_THROW_ON_ERROR
-                | JSON_UNESCAPED_UNICODE
-                | JSON_UNESCAPED_SLASHES
+                    | JSON_UNESCAPED_UNICODE
+                    | JSON_UNESCAPED_SLASHES
             ),
 
             'before_data' => $before === null
-                    ? null
-                    : json_encode(
-                        $before,
-                        JSON_THROW_ON_ERROR
+                ? null
+                : json_encode(
+                    $before,
+                    JSON_THROW_ON_ERROR
                         | JSON_UNESCAPED_UNICODE
                         | JSON_UNESCAPED_SLASHES
-                    ),
+                ),
 
             'after_data' => $after === null
-                    ? null
-                    : json_encode(
-                        $after,
-                        JSON_THROW_ON_ERROR
+                ? null
+                : json_encode(
+                    $after,
+                    JSON_THROW_ON_ERROR
                         | JSON_UNESCAPED_UNICODE
                         | JSON_UNESCAPED_SLASHES
-                    ),
+                ),
 
             'created_at' => $now,
 

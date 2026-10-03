@@ -447,7 +447,7 @@ class NifEnrichmentBatchService
             $newAttempt =
                 $attempt &&
                 $attempt->id !==
-                    $beforeAttemptId;
+                $beforeAttemptId;
 
             $externalLookup =
                 $willRequireExternalLookup &&
@@ -458,9 +458,7 @@ class NifEnrichmentBatchService
                 NifLookupAttempt::STATUS_CACHE_HIT;
 
             $status =
-                match (
-                    $attempt?->status
-                ) {
+                match ($attempt?->status) {
                     NifLookupAttempt::STATUS_SUCCESS,
                     NifLookupAttempt::STATUS_CACHE_HIT => NifEnrichmentBatchItem::STATUS_SUCCESS,
 
@@ -471,9 +469,9 @@ class NifEnrichmentBatchService
 
                     default => $enrichment
                         ->lookup_status ===
-                            NifEnrichment::STATUS_SUCCESS
-                                ? NifEnrichmentBatchItem::STATUS_SUCCESS
-                                : NifEnrichmentBatchItem::STATUS_ERROR,
+                        NifEnrichment::STATUS_SUCCESS
+                        ? NifEnrichmentBatchItem::STATUS_SUCCESS
+                        : NifEnrichmentBatchItem::STATUS_ERROR,
                 };
 
             $item->fill([
@@ -489,14 +487,14 @@ class NifEnrichmentBatchService
 
                 'error_message' => $status ===
                     NifEnrichmentBatchItem::STATUS_ERROR
-                        ? (
-                            $attempt
-                                ?->error_message
-                            ?: $enrichment
-                                ->last_error
-                            ?: 'Não foi possível enriquecer este NIF.'
-                        )
-                        : null,
+                    ? (
+                        $attempt
+                            ?->error_message
+                        ?: $enrichment
+                            ->last_error
+                        ?: 'Não foi possível enriquecer este NIF.'
+                    )
+                    : null,
 
                 'processed_at' => now(),
             ]);
@@ -522,7 +520,7 @@ class NifEnrichmentBatchService
             $newAttempt =
                 $afterAttempt &&
                 $afterAttempt->id !==
-                    $beforeAttemptId;
+                $beforeAttemptId;
 
             $externalLookup =
                 $willRequireExternalLookup &&
@@ -530,8 +528,8 @@ class NifEnrichmentBatchService
 
             $item->fill([
                 'nif_lookup_attempt_id' => $newAttempt
-                        ? $afterAttempt->id
-                        : null,
+                    ? $afterAttempt->id
+                    : null,
 
                 'status' => NifEnrichmentBatchItem::STATUS_ERROR,
 
@@ -555,57 +553,11 @@ class NifEnrichmentBatchService
         NifEnrichmentBatchItem $item,
         bool $forceRefresh
     ): bool {
-        if (
-            ! $this
-                ->nifPtService
-                ->isValidNif(
-                    $item->nif
-                )
-        ) {
-            return false;
-        }
-
-        if ($forceRefresh) {
-            return true;
-        }
-
-        $enrichment =
-            NifEnrichment::query()
-                ->where(
-                    'nif',
-                    $item->nif
-                )
-                ->first();
-
-        if (
-            ! $enrichment ||
-            $enrichment
-                ->lookup_status !==
-                NifEnrichment::STATUS_SUCCESS ||
-            ! $enrichment
-                ->last_success_at
-        ) {
-            return true;
-        }
-
-        $cacheDays = max(
-            0,
-            (int) config(
-                'services.nif_pt.cache_days',
-                30
-            )
-        );
-
-        if ($cacheDays === 0) {
-            return true;
-        }
-
-        return $enrichment
-            ->last_success_at
-            ->lt(
-                now()->subDays(
-                    $cacheDays
-                )
+        return $this
+            ->nifPtService
+            ->requiresExternalLookup(
+                $item->nif,
+                $forceRefresh
             );
     }
 
@@ -665,37 +617,27 @@ class NifEnrichmentBatchService
             'total_items' => $totalItems,
 
             'pending_items' => (int) (
-                $counts[
-                    NifEnrichmentBatchItem::STATUS_PENDING
-                ]
+                $counts[NifEnrichmentBatchItem::STATUS_PENDING]
                 ?? 0
             ),
 
             'processing_items' => (int) (
-                $counts[
-                    NifEnrichmentBatchItem::STATUS_PROCESSING
-                ]
+                $counts[NifEnrichmentBatchItem::STATUS_PROCESSING]
                 ?? 0
             ),
 
             'success_items' => (int) (
-                $counts[
-                    NifEnrichmentBatchItem::STATUS_SUCCESS
-                ]
+                $counts[NifEnrichmentBatchItem::STATUS_SUCCESS]
                 ?? 0
             ),
 
             'error_items' => (int) (
-                $counts[
-                    NifEnrichmentBatchItem::STATUS_ERROR
-                ]
+                $counts[NifEnrichmentBatchItem::STATUS_ERROR]
                 ?? 0
             ),
 
             'skipped_items' => (int) (
-                $counts[
-                    NifEnrichmentBatchItem::STATUS_SKIPPED
-                ]
+                $counts[NifEnrichmentBatchItem::STATUS_SKIPPED]
                 ?? 0
             ),
 

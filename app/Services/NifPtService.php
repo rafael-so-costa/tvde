@@ -201,6 +201,41 @@ class NifPtService
         }
     }
 
+    public function requiresExternalLookup(
+        string $nif,
+        bool $force = false
+    ): bool {
+        $nif = $this->normalizeNif(
+            $nif
+        );
+
+        if (
+            strlen($nif) !== 9 ||
+            ! $this->isValidNif($nif)
+        ) {
+            return false;
+        }
+
+        if ($force) {
+            return true;
+        }
+
+        $enrichment = NifEnrichment::query()
+            ->where(
+                'nif',
+                $nif
+            )
+            ->first();
+
+        if (! $enrichment) {
+            return true;
+        }
+
+        return ! $this->isFresh(
+            $enrichment
+        );
+    }
+
     public function isValidNif(
         string $nif
     ): bool {
@@ -233,8 +268,8 @@ class NifPtService
 
         $checkDigit =
             $remainder < 2
-                ? 0
-                : 11 - $remainder;
+            ? 0
+            : 11 - $remainder;
 
         return $checkDigit ===
             (int) $nif[8];
@@ -427,15 +462,11 @@ class NifPtService
                     ),
 
                     'nif_validation' => $this->booleanValue(
-                        $payload[
-                            'nif_validation'
-                        ] ?? null
+                        $payload['nif_validation'] ?? null
                     ),
 
                     'is_nif' => $this->booleanValue(
-                        $payload[
-                            'is_nif'
-                        ] ?? null
+                        $payload['is_nif'] ?? null
                     ),
 
                     'provider_credits' => $credits,
@@ -445,7 +476,7 @@ class NifPtService
                     'last_error' => null,
 
                     'lookup_count' => ((int) $enrichment
-                    ->lookup_count) + 1,
+                        ->lookup_count) + 1,
 
                     'last_looked_up_at' => $requestedAt,
 
@@ -489,15 +520,11 @@ class NifPtService
                     'lookup_status' => $status,
 
                     'nif_validation' => $this->booleanValue(
-                        $payload[
-                            'nif_validation'
-                        ] ?? null
+                        $payload['nif_validation'] ?? null
                     ),
 
                     'is_nif' => $this->booleanValue(
-                        $payload[
-                            'is_nif'
-                        ] ?? null
+                        $payload['is_nif'] ?? null
                     ),
 
                     'provider_credits' => $this->credits(
@@ -511,7 +538,7 @@ class NifPtService
                     'last_error' => null,
 
                     'lookup_count' => ((int) $enrichment
-                    ->lookup_count) + 1,
+                        ->lookup_count) + 1,
 
                     'last_looked_up_at' => $requestedAt,
                 ]);
@@ -556,8 +583,8 @@ class NifPtService
 
                 $enrichment->fill([
                     'lookup_status' => $hasSuccessfulCache
-                            ? NifEnrichment::STATUS_SUCCESS
-                            : NifEnrichment::STATUS_ERROR,
+                        ? NifEnrichment::STATUS_SUCCESS
+                        : NifEnrichment::STATUS_ERROR,
 
                     'provider_credits' => $this->credits(
                         $payload
@@ -568,7 +595,7 @@ class NifPtService
                     'last_error' => $errorMessage,
 
                     'lookup_count' => ((int) $enrichment
-                    ->lookup_count) + 1,
+                        ->lookup_count) + 1,
 
                     'last_looked_up_at' => $requestedAt,
                 ]);
@@ -680,7 +707,7 @@ class NifPtService
             $value =
                 $this->stringValue(
                     $payload[$key]
-                    ?? null
+                        ?? null
                 );
 
             if ($value !== null) {
@@ -740,7 +767,7 @@ class NifPtService
                     hrtime(true) -
                     $startedAt
                 ) /
-                1_000_000
+                    1_000_000
             )
         );
     }

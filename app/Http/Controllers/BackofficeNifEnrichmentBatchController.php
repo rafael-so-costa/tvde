@@ -6,6 +6,7 @@ use App\Http\Requests\CreateBackofficeNifEnrichmentBatchRequest;
 use App\Models\NifEnrichmentBatch;
 use App\Models\NifEnrichmentBatchItem;
 use App\Services\NifEnrichmentBatchService;
+use App\Services\NifPtUsageGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -13,7 +14,8 @@ use Illuminate\Validation\Rule;
 class BackofficeNifEnrichmentBatchController extends Controller
 {
     public function __construct(
-        private readonly NifEnrichmentBatchService $batches
+        private readonly NifEnrichmentBatchService $batches,
+        private readonly NifPtUsageGuard $nifPtGuard
     ) {}
 
     public function index(
@@ -44,8 +46,8 @@ class BackofficeNifEnrichmentBatchController extends Controller
 
         if (
             $status =
-                $data['status']
-                ?? null
+            $data['status']
+            ?? null
         ) {
             $query->where(
                 'status',
@@ -59,9 +61,7 @@ class BackofficeNifEnrichmentBatchController extends Controller
                     'created_at'
                 )
                 ->paginate(
-                    $data[
-                        'per_page'
-                    ] ?? 20
+                    $data['per_page'] ?? 20
                 );
 
         return response()->json([
@@ -110,17 +110,11 @@ class BackofficeNifEnrichmentBatchController extends Controller
             $this
                 ->batches
                 ->create(
-                    operatorIds: $data[
-                            'operator_ids'
-                        ],
+                    operatorIds: $data['operator_ids'],
 
-                    forceRefresh: $data[
-                            'force_refresh'
-                        ],
+                    forceRefresh: $data['force_refresh'],
 
-                    name: $data[
-                            'name'
-                        ] ?? null,
+                    name: $data['name'] ?? null,
 
                     actor: $request->user()
                 );
@@ -160,26 +154,48 @@ class BackofficeNifEnrichmentBatchController extends Controller
     public function process(
         string $id
     ): JsonResponse {
-        $batch =
-            NifEnrichmentBatch::query()
-                ->findOrFail(
-                    $id
-                );
+        $batch = NifEnrichmentBatch::query()
+            ->findOrFail(
+                $id
+            );
 
-        $batch =
-            $this
+        $lock = $this
+            ->nifPtGuard
+            ->lock();
+
+        if (! $lock->get()) {
+            return response()->json([
+                'message' => 'Já existe um processamento NIF.PT em execução.',
+            ], 409);
+        }
+
+        try {
+            $reason = $this
+                ->nifPtGuard
+                ->blockReason();
+
+            if ($reason !== null) {
+                return response()->json([
+                    'message' => $reason,
+                ], 429);
+            }
+
+            $batch = $this
                 ->batches
                 ->processBatch(
                     $batch
                 );
 
-        return response()->json([
-            'message' => 'Ciclo de processamento executado.',
+            return response()->json([
+                'message' => 'Ciclo de processamento executado.',
 
-            'data' => $this->detail(
-                $batch
-            ),
-        ]);
+                'data' => $this->detail(
+                    $batch
+                ),
+            ]);
+        } finally {
+            $lock->release();
+        }
     }
 
     public function cancel(
@@ -260,20 +276,20 @@ class BackofficeNifEnrichmentBatchController extends Controller
                 ->created_at,
 
             'created_by' => $batch->createdBy
-                    ? [
-                        'id' => $batch
-                            ->createdBy
-                            ->id,
+                ? [
+                    'id' => $batch
+                        ->createdBy
+                        ->id,
 
-                        'name' => $batch
-                            ->createdBy
-                            ->name,
+                    'name' => $batch
+                        ->createdBy
+                        ->name,
 
-                        'email' => $batch
-                            ->createdBy
-                            ->email,
-                    ]
-                    : null,
+                    'email' => $batch
+                        ->createdBy
+                        ->email,
+                ]
+                : null,
         ];
     }
 
@@ -329,78 +345,78 @@ class BackofficeNifEnrichmentBatchController extends Controller
 
                         'operator' => $item
                             ->tvdeOperator
-                                ? [
-                                    'id' => $item
-                                        ->tvdeOperator
-                                        ->id,
+                            ? [
+                                'id' => $item
+                                    ->tvdeOperator
+                                    ->id,
 
-                                    'nif' => $item
-                                        ->tvdeOperator
-                                        ->nif,
+                                'nif' => $item
+                                    ->tvdeOperator
+                                    ->nif,
 
-                                    'display_name' => $item
-                                        ->tvdeOperator
-                                        ->display_name,
-                                ]
-                                : null,
+                                'display_name' => $item
+                                    ->tvdeOperator
+                                    ->display_name,
+                            ]
+                            : null,
 
                         'enrichment' => $item
                             ->enrichment
-                                ? [
-                                    'id' => $item
-                                        ->enrichment
-                                        ->id,
+                            ? [
+                                'id' => $item
+                                    ->enrichment
+                                    ->id,
 
-                                    'lookup_status' => $item
-                                        ->enrichment
-                                        ->lookup_status,
+                                'lookup_status' => $item
+                                    ->enrichment
+                                    ->lookup_status,
 
-                                    'title' => $item
-                                        ->enrichment
-                                        ->title,
+                                'title' => $item
+                                    ->enrichment
+                                    ->title,
 
-                                    'city' => $item
-                                        ->enrichment
-                                        ->city,
+                                'city' => $item
+                                    ->enrichment
+                                    ->city,
 
-                                    'cae' => $item
-                                        ->enrichment
-                                        ->cae,
+                                'cae' => $item
+                                    ->enrichment
+                                    ->cae,
 
-                                    'last_success_at' => $item
-                                        ->enrichment
-                                        ->last_success_at,
-                                ]
-                                : null,
+                                'last_success_at' => $item
+                                    ->enrichment
+                                    ->last_success_at,
+                            ]
+                            : null,
 
                         'lookup_attempt' => $item
                             ->lookupAttempt
-                                ? [
-                                    'id' => $item
-                                        ->lookupAttempt
-                                        ->id,
+                            ? [
+                                'id' => $item
+                                    ->lookupAttempt
+                                    ->id,
 
-                                    'status' => $item
-                                        ->lookupAttempt
-                                        ->status,
+                                'status' => $item
+                                    ->lookupAttempt
+                                    ->status,
 
-                                    'http_status' => $item
-                                        ->lookupAttempt
-                                        ->http_status,
+                                'http_status' => $item
+                                    ->lookupAttempt
+                                    ->http_status,
 
-                                    'duration_ms' => $item
-                                        ->lookupAttempt
-                                        ->duration_ms,
+                                'duration_ms' => $item
+                                    ->lookupAttempt
+                                    ->duration_ms,
 
-                                    'error_message' => $item
-                                        ->lookupAttempt
-                                        ->error_message,
+                                'error_message' => $item
+                                    ->lookupAttempt
+                                    ->error_message,
 
-                                    'requested_at' => $item
-                                        ->lookupAttempt
-                                        ->requested_at,
-                                ]
-                                : null,
+                                'requested_at' => $item
+                                    ->lookupAttempt
+                                    ->requested_at,
+                            ]
+                            : null,
                     ]
                 )
                 ->values(),

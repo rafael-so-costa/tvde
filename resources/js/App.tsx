@@ -1,8 +1,4 @@
-import {
-    Navigate,
-    Route,
-    Routes,
-} from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 
 import ManagementRoute from "./components/ManagementRoute";
 import PortalAreaRoute from "./components/PortalAreaRoute";
@@ -60,477 +56,287 @@ import RemoteSignaturePage from "./pages/RemoteSignaturePage";
 import SinistrosPage from "./pages/SinistrosPage";
 import TemplatesPage from "./pages/TemplatesPage";
 import VeiculosPage from "./pages/VeiculosPage";
+import BackofficeTvdeImportCreatePage from "./pages/BackofficeTvdeImportCreatePage";
 
 export default function App() {
     return (
         <Routes>
-            <Route
-                path="/login"
-                element={
-                    <LoginPage />
-                }
-            />
+            <Route path="/login" element={<LoginPage />} />
 
             <Route
                 path="/assinaturas/remotas/:token"
-                element={
-                    <RemoteSignaturePage />
-                }
+                element={<RemoteSignaturePage />}
             />
 
             <Route
                 path="/registo-expediente-publico"
-                element={
-                    <ExpedientePublicPage />
-                }
+                element={<ExpedientePublicPage />}
             />
 
             <Route
                 path="/aprovacao-manutencao/:token"
-                element={
-                    <AprovacaoManutencaoPublicaPage />
-                }
+                element={<AprovacaoManutencaoPublicaPage />}
             />
 
             <Route
                 path="/convites/funcionario/:token"
-                element={
-                    <FuncionarioInvitePage />
-                }
+                element={<FuncionarioInvitePage />}
             />
 
-            <Route
-                element={
-                    <ProtectedRoute />
-                }
-            >
-                <Route
-                    element={
-                        <SuperAdminRoute />
-                    }
-                >
-                    <Route
-                        path="backoffice"
-                        element={
-                            <BackofficeShell />
-                        }
-                    >
-                        <Route
-                            index
-                            element={
-                                <BackofficeDashboardPage />
-                            }
-                        />
+            <Route element={<ProtectedRoute />}>
+                <Route element={<SuperAdminRoute />}>
+                    <Route path="backoffice" element={<BackofficeShell />}>
+                        <Route index element={<BackofficeDashboardPage />} />
 
                         <Route
                             path="clientes"
-                            element={
-                                <BackofficeClientsPage />
-                            }
+                            element={<BackofficeClientsPage />}
                         />
 
                         <Route
                             path="clientes/:id"
-                            element={
-                                <BackofficeClientPage />
-                            }
+                            element={<BackofficeClientPage />}
                         />
 
                         <Route
                             path="planos"
-                            element={
-                                <BackofficePlansPage />
-                            }
+                            element={<BackofficePlansPage />}
                         />
 
                         <Route
                             path="planos/novo"
-                            element={
-                                <BackofficePlanPage />
-                            }
+                            element={<BackofficePlanPage />}
                         />
 
                         <Route
                             path="planos/:id"
-                            element={
-                                <BackofficePlanPage />
-                            }
+                            element={<BackofficePlanPage />}
                         />
 
                         <Route
                             path="assinaturas"
-                            element={
-                                <BackofficeSubscriptionsPage />
-                            }
+                            element={<BackofficeSubscriptionsPage />}
                         />
 
                         <Route
                             path="assinaturas/:id"
-                            element={
-                                <BackofficeSubscriptionPage />
-                            }
+                            element={<BackofficeSubscriptionPage />}
                         />
 
                         <Route
                             path="crm"
-                            element={
-                                <BackofficeCrmDashboardPage />
-                            }
+                            element={<BackofficeCrmDashboardPage />}
                         />
 
                         <Route
                             path="crm/leads"
-                            element={
-                                <BackofficeCrmLeadsPage />
-                            }
+                            element={<BackofficeCrmLeadsPage />}
                         />
 
                         <Route
                             path="crm/leads/:id"
-                            element={
-                                <BackofficeCrmLeadPage />
-                            }
+                            element={<BackofficeCrmLeadPage />}
                         />
 
                         <Route
                             path="crm/pipeline"
-                            element={
-                                <BackofficeCrmPipelinePage />
-                            }
+                            element={<BackofficeCrmPipelinePage />}
                         />
 
                         <Route
                             path="crm/atividades"
-                            element={
-                                <BackofficeCrmActivitiesPage />
-                            }
+                            element={<BackofficeCrmActivitiesPage />}
                         />
 
                         <Route
                             path="crm/tags"
-                            element={
-                                <BackofficeCrmTagsPage />
-                            }
+                            element={<BackofficeCrmTagsPage />}
                         />
 
                         <Route
                             path="crm/operadores"
-                            element={
-                                <BackofficeTvdeOperatorsPage />
-                            }
+                            element={<BackofficeTvdeOperatorsPage />}
                         />
 
                         <Route
                             path="crm/operadores/:id"
-                            element={
-                                <BackofficeTvdeOperatorPage />
-                            }
+                            element={<BackofficeTvdeOperatorPage />}
                         />
 
                         <Route
                             path="crm/enriquecimento/lotes"
-                            element={
-                                <BackofficeNifEnrichmentBatchesPage />
-                            }
+                            element={<BackofficeNifEnrichmentBatchesPage />}
                         />
 
                         <Route
                             path="crm/enriquecimento/lotes/:id"
-                            element={
-                                <BackofficeNifEnrichmentBatchPage />
-                            }
+                            element={<BackofficeNifEnrichmentBatchPage />}
+                        />
+
+                        <Route
+                            path="crm/importacoes/nova"
+                            element={<BackofficeTvdeImportCreatePage />}
                         />
 
                         <Route
                             path="crm/importacoes"
-                            element={
-                                <BackofficeTvdeImportsPage />
-                            }
+                            element={<BackofficeTvdeImportsPage />}
                         />
 
                         <Route
                             path="crm/importacoes/:id"
-                            element={
-                                <BackofficeTvdeImportPage />
-                            }
+                            element={<BackofficeTvdeImportPage />}
                         />
                     </Route>
                 </Route>
 
-                <Route
-                    element={
-                        <ManagementRoute />
-                    }
-                >
-                    <Route
-                        element={
-                            <TenantOnboardingGate />
-                        }
-                    >
-                        <Route
-                            path="onboarding"
-                            element={
-                                <OnboardingPage />
-                            }
-                        />
+                <Route element={<ManagementRoute />}>
+                    <Route element={<TenantOnboardingGate />}>
+                        <Route path="onboarding" element={<OnboardingPage />} />
 
-                        <Route
-                            element={
-                                <AppShell />
-                            }
-                        >
+                        <Route element={<AppShell />}>
                             <Route
                                 index
-                                element={
-                                    <Navigate
-                                        to="/painel"
-                                        replace
-                                    />
-                                }
+                                element={<Navigate to="/painel" replace />}
                             />
 
-                            <Route
-                                path="painel"
-                                element={
-                                    <DashboardPage />
-                                }
-                            />
+                            <Route path="painel" element={<DashboardPage />} />
 
                             <Route
                                 path="minha-conta"
-                                element={
-                                    <MyAccountPage />
-                                }
+                                element={<MyAccountPage />}
                             />
 
-                            <Route
-                                path="alertas"
-                                element={
-                                    <AlertsPage />
-                                }
-                            />
+                            <Route path="alertas" element={<AlertsPage />} />
 
-                            <Route
-                                path="empresas"
-                                element={
-                                    <EmpresasPage />
-                                }
-                            />
+                            <Route path="empresas" element={<EmpresasPage />} />
 
                             <Route
                                 path="funcionarios"
-                                element={
-                                    <FuncionariosPage />
-                                }
+                                element={<FuncionariosPage />}
                             />
 
                             <Route
                                 path="proprietarios"
-                                element={
-                                    <ProprietariosPage />
-                                }
+                                element={<ProprietariosPage />}
                             />
 
                             <Route
                                 path="motoristas"
-                                element={
-                                    <MotoristasPage />
-                                }
+                                element={<MotoristasPage />}
                             />
 
                             <Route
                                 path="registos-criminais"
-                                element={
-                                    <RegistosCriminaisPage />
-                                }
+                                element={<RegistosCriminaisPage />}
                             />
 
                             <Route
                                 path="recibos-verdes"
-                                element={
-                                    <RecibosVerdesPage />
-                                }
+                                element={<RecibosVerdesPage />}
                             />
 
                             <Route
                                 path="expediente"
-                                element={
-                                    <ExpedientePage mode="management" />
-                                }
+                                element={<ExpedientePage mode="management" />}
                             />
 
                             <Route
                                 path="multas"
-                                element={
-                                    <MultasPage mode="management" />
-                                }
+                                element={<MultasPage mode="management" />}
                             />
 
                             <Route
                                 path="sinistros"
-                                element={
-                                    <SinistrosPage mode="management" />
-                                }
+                                element={<SinistrosPage mode="management" />}
                             />
 
                             <Route
                                 path="manutencao"
-                                element={
-                                    <ManutencaoPage />
-                                }
+                                element={<ManutencaoPage />}
                             />
 
-                            <Route
-                                path="veiculos"
-                                element={
-                                    <VeiculosPage />
-                                }
-                            />
+                            <Route path="veiculos" element={<VeiculosPage />} />
 
                             <Route
                                 path="checklists"
-                                element={
-                                    <ChecklistsPage />
-                                }
+                                element={<ChecklistsPage />}
                             />
 
                             <Route
                                 path="alugueres"
-                                element={
-                                    <AlugueresPage />
-                                }
+                                element={<AlugueresPage />}
                             />
 
                             <Route
                                 path="contratos"
-                                element={
-                                    <ContratosPage />
-                                }
+                                element={<ContratosPage />}
                             />
 
                             <Route
                                 path="templates"
-                                element={
-                                    <TemplatesPage />
-                                }
+                                element={<TemplatesPage />}
                             />
                         </Route>
                     </Route>
                 </Route>
 
-                <Route
-                    element={
-                        <PortalAreaRoute area="motorista" />
-                    }
-                >
-                    <Route
-                        path="portal/motorista"
-                        element={
-                            <MotoristaShell />
-                        }
-                    >
-                        <Route
-                            index
-                            element={
-                                <MotoristaDashboardPage />
-                            }
-                        />
+                <Route element={<PortalAreaRoute area="motorista" />}>
+                    <Route path="portal/motorista" element={<MotoristaShell />}>
+                        <Route index element={<MotoristaDashboardPage />} />
 
-                        <Route
-                            path="minha-conta"
-                            element={
-                                <MyAccountPage />
-                            }
-                        />
+                        <Route path="minha-conta" element={<MyAccountPage />} />
 
                         <Route
                             path="expediente"
-                            element={
-                                <ExpedientePage mode="motorista" />
-                            }
+                            element={<ExpedientePage mode="motorista" />}
                         />
 
                         <Route
                             path="multas"
-                            element={
-                                <MultasPage mode="readonly" />
-                            }
+                            element={<MultasPage mode="readonly" />}
                         />
 
                         <Route
                             path="sinistros"
-                            element={
-                                <SinistrosPage mode="readonly" />
-                            }
+                            element={<SinistrosPage mode="readonly" />}
                         />
 
                         <Route
                             path="registo-criminal"
-                            element={
-                                <RegistosCriminaisPage />
-                            }
+                            element={<RegistosCriminaisPage />}
                         />
 
                         <Route
                             path="recibos-verdes"
-                            element={
-                                <RecibosVerdesPage />
-                            }
+                            element={<RecibosVerdesPage />}
                         />
                     </Route>
                 </Route>
 
-                <Route
-                    element={
-                        <PortalAreaRoute area="proprietario" />
-                    }
-                >
+                <Route element={<PortalAreaRoute area="proprietario" />}>
                     <Route
                         path="portal/proprietario"
-                        element={
-                            <ProprietarioShell />
-                        }
+                        element={<ProprietarioShell />}
                     >
-                        <Route
-                            index
-                            element={
-                                <ProprietarioDashboardPage />
-                            }
-                        />
+                        <Route index element={<ProprietarioDashboardPage />} />
 
-                        <Route
-                            path="minha-conta"
-                            element={
-                                <MyAccountPage />
-                            }
-                        />
+                        <Route path="minha-conta" element={<MyAccountPage />} />
 
                         <Route
                             path="multas"
-                            element={
-                                <MultasPage mode="readonly" />
-                            }
+                            element={<MultasPage mode="readonly" />}
                         />
 
                         <Route
                             path="sinistros"
-                            element={
-                                <SinistrosPage mode="readonly" />
-                            }
+                            element={<SinistrosPage mode="readonly" />}
                         />
                     </Route>
                 </Route>
             </Route>
 
-            <Route
-                path="*"
-                element={
-                    <Navigate
-                        to="/painel"
-                        replace
-                    />
-                }
-            />
+            <Route path="*" element={<Navigate to="/painel" replace />} />
         </Routes>
     );
 }

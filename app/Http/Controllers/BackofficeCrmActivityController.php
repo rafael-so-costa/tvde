@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class BackofficeCrmActivityController extends Controller
 {
@@ -65,14 +66,13 @@ class BackofficeCrmActivityController extends Controller
             ],
         ]);
 
-        $query =
-            CrmActivity::query()
-                ->with([
-                    'lead:id,company_name,nif,current_stage_id',
-                    'lead.currentStage',
-                    'assignedTo:id,name,email',
-                    'createdBy:id,name,email',
-                ]);
+        $query = CrmActivity::query()
+            ->with([
+                'lead:id,company_name,nif,current_stage_id',
+                'lead.currentStage',
+                'assignedTo:id,name,email',
+                'createdBy:id,name,email',
+            ]);
 
         if ($leadId = $data['lead_id'] ?? null) {
             $query->where(
@@ -113,21 +113,20 @@ class BackofficeCrmActivityController extends Controller
             $data['scheduled'] ?? null
         );
 
-        $paginator =
-            $query
-                ->orderByRaw(
-                    'scheduled_at IS NULL'
-                )
-                ->orderBy(
-                    'scheduled_at'
-                )
-                ->orderByDesc(
-                    'created_at'
-                )
-                ->paginate(
-                    $data['per_page']
-                        ?? 20
-                );
+        $paginator = $query
+            ->orderByRaw(
+                'scheduled_at IS NULL'
+            )
+            ->orderBy(
+                'scheduled_at'
+            )
+            ->orderByDesc(
+                'created_at'
+            )
+            ->paginate(
+                $data['per_page']
+                    ?? 20
+            );
 
         return response()->json([
             'data' => collect(
@@ -168,14 +167,12 @@ class BackofficeCrmActivityController extends Controller
         StoreBackofficeCrmActivityRequest $request,
         string $leadId
     ): JsonResponse {
-        $lead =
-            CrmLead::query()
-                ->findOrFail(
-                    $leadId
-                );
+        $lead = CrmLead::query()
+            ->findOrFail(
+                $leadId
+            );
 
-        $data =
-            $request->validated();
+        $data = $request->validated();
 
         if (
             $data['status'] ===
@@ -188,16 +185,15 @@ class BackofficeCrmActivityController extends Controller
                 now();
         }
 
-        $activity =
-            $lead
-                ->activities()
-                ->create([
-                    ...$data,
+        $activity = $lead
+            ->activities()
+            ->create([
+                ...$data,
 
-                    'created_by_user_id' => $request
-                        ->user()
-                        ?->id,
-                ]);
+                'created_by_user_id' => $request
+                    ->user()
+                    ?->id,
+            ]);
 
         if (
             in_array(
@@ -243,17 +239,24 @@ class BackofficeCrmActivityController extends Controller
         CompleteBackofficeCrmActivityRequest $request,
         string $id
     ): JsonResponse {
-        $activity =
-            CrmActivity::query()
-                ->with(
-                    'lead'
-                )
-                ->findOrFail(
-                    $id
-                );
+        $activity = CrmActivity::query()
+            ->with(
+                'lead'
+            )
+            ->findOrFail(
+                $id
+            );
 
-        $data =
-            $request->validated();
+        if (
+            $activity->status !==
+            CrmActivity::STATUS_PLANNED
+        ) {
+            throw ValidationException::withMessages([
+                'activity' => 'Apenas atividades planeadas podem ser concluídas.',
+            ]);
+        }
+
+        $data = $request->validated();
 
         $activity->status =
             CrmActivity::STATUS_COMPLETED;
@@ -309,11 +312,19 @@ class BackofficeCrmActivityController extends Controller
     public function cancel(
         string $id
     ): JsonResponse {
-        $activity =
-            CrmActivity::query()
-                ->findOrFail(
-                    $id
-                );
+        $activity = CrmActivity::query()
+            ->findOrFail(
+                $id
+            );
+
+        if (
+            $activity->status !==
+            CrmActivity::STATUS_PLANNED
+        ) {
+            throw ValidationException::withMessages([
+                'activity' => 'Apenas atividades planeadas podem ser canceladas.',
+            ]);
+        }
 
         $activity->status =
             CrmActivity::STATUS_CANCELED;
@@ -419,69 +430,69 @@ class BackofficeCrmActivityController extends Controller
                 ->updated_at,
 
             'lead' => $activity->lead
-                    ? [
-                        'id' => $activity
-                            ->lead
-                            ->id,
+                ? [
+                    'id' => $activity
+                        ->lead
+                        ->id,
 
-                        'company_name' => $activity
-                            ->lead
-                            ->company_name,
+                    'company_name' => $activity
+                        ->lead
+                        ->company_name,
 
-                        'nif' => $activity
-                            ->lead
-                            ->nif,
+                    'nif' => $activity
+                        ->lead
+                        ->nif,
 
-                        'stage' => $activity
-                            ->lead
-                            ->currentStage
-                                ? [
-                                    'id' => $activity
-                                        ->lead
-                                        ->currentStage
-                                        ->id,
+                    'stage' => $activity
+                        ->lead
+                        ->currentStage
+                        ? [
+                            'id' => $activity
+                                ->lead
+                                ->currentStage
+                                ->id,
 
-                                    'name' => $activity
-                                        ->lead
-                                        ->currentStage
-                                        ->name,
+                            'name' => $activity
+                                ->lead
+                                ->currentStage
+                                ->name,
 
-                                    'color' => $activity
-                                        ->lead
-                                        ->currentStage
-                                        ->color,
-                                ]
-                                : null,
-                    ]
-                    : null,
+                            'color' => $activity
+                                ->lead
+                                ->currentStage
+                                ->color,
+                        ]
+                        : null,
+                ]
+                : null,
 
             'assigned_to' => $activity->assignedTo
-                    ? [
-                        'id' => $activity
-                            ->assignedTo
-                            ->id,
+                ? [
+                    'id' => $activity
+                        ->assignedTo
+                        ->id,
 
-                        'name' => $activity
-                            ->assignedTo
-                            ->name,
+                    'name' => $activity
+                        ->assignedTo
+                        ->name,
 
-                        'email' => $activity
-                            ->assignedTo
-                            ->email,
-                    ]
-                    : null,
+                    'email' => $activity
+                        ->assignedTo
+                        ->email,
+                ]
+                : null,
 
             'created_by' => $activity->createdBy
-                    ? [
-                        'id' => $activity
-                            ->createdBy
-                            ->id,
+                ? [
+                    'id' => $activity
+                        ->createdBy
+                        ->id,
 
-                        'name' => $activity
-                            ->createdBy
-                            ->name,
-                    ]
-                    : null,
+                    'name' => $activity
+                        ->createdBy
+                        ->name,
+                ]
+                : null,
         ];
     }
 }

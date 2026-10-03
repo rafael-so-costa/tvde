@@ -99,6 +99,14 @@ Route::middleware('auth:sanctum')->group(function () {
             );
 
             /*
+             * CRM - Responsáveis
+             */
+            Route::get(
+                '/crm/assignees',
+                [BackofficeCrmLeadController::class, 'assignees']
+            );
+
+            /*
              * CRM - Leads
              */
             Route::get(
@@ -298,39 +306,13 @@ Route::middleware('auth:sanctum')->group(function () {
                 [BackofficeTvdeImportController::class, 'index']
             );
 
-            Route::get(
-                '/crm/importacoes/{id}',
-                [BackofficeTvdeImportController::class, 'show']
-            )
-                ->whereUuid(
-                    'id'
-                );
-
-            Route::get(
-                '/crm/operadores/{id}/enriquecimento',
-                [BackofficeTvdeOperatorEnrichmentController::class, 'show']
-            )
-                ->whereUuid(
-                    'id'
-                );
-
             Route::post(
-                '/crm/operadores/{id}/enriquecimento',
-                [BackofficeTvdeOperatorEnrichmentController::class, 'store']
-            )
-                ->whereUuid(
-                    'id'
-                );
-
-            Route::get(
-                '/crm/dashboard',
-                [BackofficeCrmDashboardController::class, 'show']
-            );
-
-            Route::get(
                 '/crm/importacoes',
-                [BackofficeTvdeImportController::class, 'index']
-            );
+                [BackofficeTvdeImportController::class, 'store']
+            )
+                ->middleware(
+                    'throttle:2,1'
+                );
 
             Route::get(
                 '/crm/importacoes/{id}',
@@ -339,18 +321,7 @@ Route::middleware('auth:sanctum')->group(function () {
                 ->whereUuid(
                     'id'
                 );
-            Route::get(
-                '/crm/operadores',
-                [BackofficeTvdeOperatorController::class, 'index']
-            );
 
-            Route::get(
-                '/crm/operadores/{id}',
-                [BackofficeTvdeOperatorController::class, 'show']
-            )
-                ->whereUuid(
-                    'id'
-                );
             Route::get(
                 '/assinaturas',
                 [BackofficeSubscriptionController::class, 'index']
@@ -379,6 +350,7 @@ Route::middleware('auth:sanctum')->group(function () {
                 ->whereUuid(
                     'id'
                 );
+
             Route::get(
                 '/clientes/{id}/plano-preview',
                 [BackofficeClientController::class, 'planPreview']
@@ -394,6 +366,7 @@ Route::middleware('auth:sanctum')->group(function () {
                 ->whereUuid(
                     'id'
                 );
+
             Route::get(
                 '/planos',
                 [BackofficePlanController::class, 'index']
@@ -419,11 +392,13 @@ Route::middleware('auth:sanctum')->group(function () {
                 ->whereUuid(
                     'id'
                 );
+
             Route::patch(
                 '/clientes/{id}/multiempresa',
                 [BackofficeClientController::class, 'multiCompany']
             )
                 ->whereUuid('id');
+
             Route::get(
                 '/dashboard',
                 [BackofficeDashboardController::class, 'show']
@@ -450,6 +425,7 @@ Route::middleware('auth:sanctum')->group(function () {
                     'id'
                 );
         });
+
     Route::get('/minha-conta', [MyAccountController::class, 'show']);
     Route::patch('/minha-conta', [MyAccountController::class, 'update']);
     Route::patch('/minha-conta/senha', [MyAccountController::class, 'password']);
@@ -470,6 +446,7 @@ Route::middleware('auth:sanctum')->group(function () {
             '/onboarding',
             [SaasOnboardingController::class, 'update']
         )->middleware('permission:empresas,configurar');
+
         Route::get('/portal/proprietario/dashboard', [ProprietarioDashboardController::class, 'show']);
         Route::get('/portal/motorista/dashboard', [MotoristaDashboardController::class, 'show']);
         Route::get('/portal/identity', [PortalIdentityController::class, 'show']);

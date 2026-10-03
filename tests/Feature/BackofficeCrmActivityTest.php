@@ -185,3 +185,40 @@ test('atividade planeada pode ser cancelada', function () {
         $activity->refresh()->status
     )->toBe(CrmActivity::STATUS_CANCELED);
 });
+
+test('atividade concluída não pode ser cancelada', function () {
+    $lead = crmActivityLead();
+
+    $activity = CrmActivity::create([
+        'crm_lead_id' => $lead->id,
+        'type' => CrmActivity::TYPE_CALL,
+        'status' => CrmActivity::STATUS_COMPLETED,
+        'subject' => 'Chamada concluída',
+        'completed_at' => now(),
+    ]);
+
+    $admin = crmActivityAdmin();
+
+    crmActivityLogin(
+        $this,
+        $admin
+    );
+
+    $this
+        ->withHeaders(
+            crmActivityHeaders()
+        )
+        ->postJson(
+            "/api/backoffice/crm/atividades/{$activity->id}/cancelar"
+        )
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(
+            'activity'
+        );
+
+    expect(
+        $activity->refresh()->status
+    )->toBe(
+        CrmActivity::STATUS_COMPLETED
+    );
+});

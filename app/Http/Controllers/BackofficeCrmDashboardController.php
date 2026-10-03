@@ -221,14 +221,14 @@ class BackofficeCrmDashboardController extends Controller
 
         $conversionRate =
             $resolvedLeads > 0
-                ? round(
-                    (
-                        $wonLeads /
-                        $resolvedLeads
-                    ) * 100,
-                    2
-                )
-                : 0.0;
+            ? round(
+                (
+                    $wonLeads /
+                    $resolvedLeads
+                ) * 100,
+                2
+            )
+            : 0.0;
 
         $newLeads30Days =
             CrmLead::query()
@@ -375,33 +375,33 @@ class BackofficeCrmDashboardController extends Controller
                             ->created_at,
 
                         'lead' => $activity->lead
-                                ? [
-                                    'id' => $activity
-                                        ->lead
-                                        ->id,
+                            ? [
+                                'id' => $activity
+                                    ->lead
+                                    ->id,
 
-                                    'company_name' => $activity
-                                        ->lead
-                                        ->company_name,
+                                'company_name' => $activity
+                                    ->lead
+                                    ->company_name,
 
-                                    'nif' => $activity
-                                        ->lead
-                                        ->nif,
-                                ]
-                                : null,
+                                'nif' => $activity
+                                    ->lead
+                                    ->nif,
+                            ]
+                            : null,
 
                         'created_by' => $activity
                             ->createdBy
-                                ? [
-                                    'id' => $activity
-                                        ->createdBy
-                                        ->id,
+                            ? [
+                                'id' => $activity
+                                    ->createdBy
+                                    ->id,
 
-                                    'name' => $activity
-                                        ->createdBy
-                                        ->name,
-                                ]
-                                : null,
+                                'name' => $activity
+                                    ->createdBy
+                                    ->name,
+                            ]
+                            : null,
                     ]
                 )
                 ->values();
@@ -433,6 +433,20 @@ class BackofficeCrmDashboardController extends Controller
                 )
                 ->count();
 
+        $notQueriedNifs =
+            TvdeOperator::query()
+                ->whereHas(
+                    'registrations',
+                    fn ($query) => $query->where(
+                        'active',
+                        true
+                    )
+                )
+                ->whereDoesntHave(
+                    'nifEnrichment'
+                )
+                ->count();
+
         return response()->json([
             'data' => [
                 'metrics' => [
@@ -456,7 +470,7 @@ class BackofficeCrmDashboardController extends Controller
                     'prospects' => max(
                         0,
                         $operatorsActive -
-                        $customers
+                            $customers
                     ),
                 ],
 
@@ -489,12 +503,7 @@ class BackofficeCrmDashboardController extends Controller
 
                     'active_batches' => $activeBatches,
 
-                    'not_queried' => max(
-                        0,
-                        $operatorsActive -
-                        NifEnrichment::query()
-                            ->count()
-                    ),
+                    'not_queried' => $notQueriedNifs,
                 ],
 
                 'pipeline' => $pipeline,
@@ -502,26 +511,26 @@ class BackofficeCrmDashboardController extends Controller
                 'recent_activities' => $recentActivities,
 
                 'latest_import' => $latestImport
-                        ? $this
-                            ->importSummary(
-                                $latestImport
-                            )
-                        : null,
+                    ? $this
+                        ->importSummary(
+                            $latestImport
+                        )
+                    : null,
 
                 'latest_sources' => [
                     'imt' => $latestImt
-                            ? $this
-                                ->importSummary(
-                                    $latestImt
-                                )
-                            : null,
+                        ? $this
+                            ->importSummary(
+                                $latestImt
+                            )
+                        : null,
 
                     'ram' => $latestRam
-                            ? $this
-                                ->importSummary(
-                                    $latestRam
-                                )
-                            : null,
+                        ? $this
+                            ->importSummary(
+                                $latestRam
+                            )
+                        : null,
                 ],
 
                 'recent_imports' => $recentImports,

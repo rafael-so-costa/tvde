@@ -19,6 +19,8 @@ export type BackofficeTvdeChangeType =
     | "removed"
     | "restored";
 
+
+
 export type BackofficeTvdeNifStatus =
     | "pending"
     | "success"
@@ -26,6 +28,11 @@ export type BackofficeTvdeNifStatus =
     | "invalid"
     | "error";
 
+
+    export interface BackofficeTvdeImportMutationResponse {
+    message: string;
+    data: BackofficeTvdeImportListItem;
+}
 export interface BackofficeTvdeCustomer {
     id: string;
     nome: string;
