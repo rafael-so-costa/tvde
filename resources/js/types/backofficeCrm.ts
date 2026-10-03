@@ -1,4 +1,13 @@
-import type { BackofficePagination } from "./backoffice";
+import type {
+    BackofficePagination,
+} from "./backoffice";
+
+import type {
+    BackofficeCrmCommercialMetrics,
+    BackofficeCrmDashboardActivity,
+    BackofficeCrmEnrichmentMetrics,
+    BackofficeCrmPipelineStage,
+} from "./backofficeCrmCommercial";
 
 export type BackofficeTvdeSource =
     | "imt_continental"
@@ -50,22 +59,48 @@ export interface BackofficeTvdeRegistration {
 
 export interface BackofficeTvdeRegistrationDetail
     extends BackofficeTvdeRegistration {
-    first_seen_import_id: string | null;
-    last_seen_import_id: string | null;
-    removed_in_import_id: string | null;
-    raw_data: Record<string, unknown> | null;
+    first_seen_import_id:
+        | string
+        | null;
+
+    last_seen_import_id:
+        | string
+        | null;
+
+    removed_in_import_id:
+        | string
+        | null;
+
+    raw_data:
+        | Record<string, unknown>
+        | null;
 }
 
 export interface BackofficeTvdeNifEnrichmentSummary {
-    lookup_status: BackofficeTvdeNifStatus;
+    lookup_status:
+        BackofficeTvdeNifStatus;
+
     title: string | null;
     cae: string | null;
     lookup_count: number;
-    last_looked_up_at: string | null;
-    last_success_at: string | null;
-    last_error: string | null;
+
+    last_looked_up_at:
+        | string
+        | null;
+
+    last_success_at:
+        | string
+        | null;
+
+    last_error:
+        | string
+        | null;
+
     cache_is_fresh: boolean;
-    cache_expires_at: string | null;
+
+    cache_expires_at:
+        | string
+        | null;
 }
 
 export interface BackofficeTvdeOperator {
@@ -74,9 +109,15 @@ export interface BackofficeTvdeOperator {
     display_name: string;
     active: boolean;
     is_customer: boolean;
-    customers: BackofficeTvdeCustomer[];
-    sources: BackofficeTvdeSource[];
-    registrations: BackofficeTvdeRegistration[];
+
+    customers:
+        BackofficeTvdeCustomer[];
+
+    sources:
+        BackofficeTvdeSource[];
+
+    registrations:
+        BackofficeTvdeRegistration[];
 
     nif_enrichment:
         | BackofficeTvdeNifEnrichmentSummary
@@ -93,10 +134,22 @@ export interface BackofficeTvdeOperatorListResponse {
 
 export interface BackofficeTvdeOperatorChange {
     id: string;
-    change_type: BackofficeTvdeChangeType;
-    changed_fields: string[] | null;
-    before_data: Record<string, unknown> | null;
-    after_data: Record<string, unknown> | null;
+
+    change_type:
+        BackofficeTvdeChangeType;
+
+    changed_fields:
+        | string[]
+        | null;
+
+    before_data:
+        | Record<string, unknown>
+        | null;
+
+    after_data:
+        | Record<string, unknown>
+        | null;
+
     created_at: string;
 
     import: {
@@ -113,23 +166,30 @@ export interface BackofficeTvdeOperatorDetail {
     active: boolean;
     is_customer: boolean;
 
-    sources: BackofficeTvdeSource[];
+    sources:
+        BackofficeTvdeSource[];
 
     source_presence: {
         imt: boolean;
         ram: boolean;
     };
 
-    customers: BackofficeTvdeCustomerDetail[];
-    registrations: BackofficeTvdeRegistrationDetail[];
-    changes: BackofficeTvdeOperatorChange[];
+    customers:
+        BackofficeTvdeCustomerDetail[];
+
+    registrations:
+        BackofficeTvdeRegistrationDetail[];
+
+    changes:
+        BackofficeTvdeOperatorChange[];
 
     created_at: string;
     updated_at: string;
 }
 
 export interface BackofficeTvdeOperatorResponse {
-    data: BackofficeTvdeOperatorDetail;
+    data:
+        BackofficeTvdeOperatorDetail;
 }
 
 export interface BackofficeTvdeImportSummary {
@@ -155,20 +215,38 @@ export interface BackofficeTvdeImportedBy {
 export interface BackofficeTvdeImportListItem
     extends BackofficeTvdeImportSummary {
     original_filename: string;
-    imported_by: BackofficeTvdeImportedBy | null;
+
+    imported_by:
+        | BackofficeTvdeImportedBy
+        | null;
 }
 
 export interface BackofficeTvdeImportListResponse {
-    data: BackofficeTvdeImportListItem[];
-    meta: BackofficePagination;
+    data:
+        BackofficeTvdeImportListItem[];
+
+    meta:
+        BackofficePagination;
 }
 
 export interface BackofficeTvdeImportChange {
     id: string;
-    change_type: BackofficeTvdeChangeType;
-    changed_fields: string[] | null;
-    before_data: Record<string, unknown> | null;
-    after_data: Record<string, unknown> | null;
+
+    change_type:
+        BackofficeTvdeChangeType;
+
+    changed_fields:
+        | string[]
+        | null;
+
+    before_data:
+        | Record<string, unknown>
+        | null;
+
+    after_data:
+        | Record<string, unknown>
+        | null;
+
     created_at: string;
 
     operator: {
@@ -181,20 +259,44 @@ export interface BackofficeTvdeImportChange {
         id: string;
         source: BackofficeTvdeSource;
         jurisdiction: string;
-        license_number: string | null;
-        district: string | null;
-        municipality: string | null;
-        postal_locality: string | null;
+
+        license_number:
+            | string
+            | null;
+
+        district:
+            | string
+            | null;
+
+        municipality:
+            | string
+            | null;
+
+        postal_locality:
+            | string
+            | null;
     } | null;
 }
 
 export interface BackofficeTvdeImportDetail
     extends BackofficeTvdeImportListItem {
-    metadata: Record<string, unknown> | null;
+    metadata:
+        | Record<string, unknown>
+        | null;
+
     file_hash: string;
-    error_message: string | null;
-    started_at: string | null;
-    completed_at: string | null;
+
+    error_message:
+        | string
+        | null;
+
+    started_at:
+        | string
+        | null;
+
+    completed_at:
+        | string
+        | null;
 
     change_counts: {
         created: number;
@@ -204,13 +306,17 @@ export interface BackofficeTvdeImportDetail
     };
 
     changes: {
-        data: BackofficeTvdeImportChange[];
-        meta: BackofficePagination;
+        data:
+            BackofficeTvdeImportChange[];
+
+        meta:
+            BackofficePagination;
     };
 }
 
 export interface BackofficeTvdeImportResponse {
-    data: BackofficeTvdeImportDetail;
+    data:
+        BackofficeTvdeImportDetail;
 }
 
 export interface BackofficeCrmMetrics {
@@ -226,7 +332,20 @@ export interface BackofficeCrmMetrics {
 }
 
 export interface BackofficeCrmDashboardData {
-    metrics: BackofficeCrmMetrics;
+    metrics:
+        BackofficeCrmMetrics;
+
+    commercial:
+        BackofficeCrmCommercialMetrics;
+
+    enrichment:
+        BackofficeCrmEnrichmentMetrics;
+
+    pipeline:
+        BackofficeCrmPipelineStage[];
+
+    recent_activities:
+        BackofficeCrmDashboardActivity[];
 
     latest_import:
         | BackofficeTvdeImportSummary

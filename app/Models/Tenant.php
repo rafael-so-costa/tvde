@@ -34,34 +34,52 @@ class Tenant extends Model
 
     public function users(): BelongsToMany
     {
-        return $this->belongsToMany(User::class, 'tenant_users')
-            ->withPivot(['id', 'status', 'principal'])
+        return $this
+            ->belongsToMany(
+                User::class,
+                'tenant_users'
+            )
+            ->withPivot([
+                'id',
+                'status',
+                'principal',
+            ])
             ->withTimestamps();
     }
 
     public function tenantUsers(): HasMany
     {
-        return $this->hasMany(TenantUser::class);
+        return $this->hasMany(
+            TenantUser::class
+        );
     }
 
     public function empresas(): HasMany
     {
-        return $this->hasMany(Empresa::class);
+        return $this->hasMany(
+            Empresa::class
+        );
     }
 
     public function proprietarios(): HasMany
     {
-        return $this->hasMany(Proprietario::class);
+        return $this->hasMany(
+            Proprietario::class
+        );
     }
 
     public function veiculos(): HasMany
     {
-        return $this->hasMany(Veiculo::class);
+        return $this->hasMany(
+            Veiculo::class
+        );
     }
 
     public function motoristas(): HasMany
     {
-        return $this->hasMany(Motorista::class);
+        return $this->hasMany(
+            Motorista::class
+        );
     }
 
     public function funcionarios(): HasMany
@@ -82,6 +100,14 @@ class Tenant extends Model
     {
         return $this->hasOne(
             SaasSubscription::class
+        );
+    }
+
+    public function convertedCrmLead(): HasOne
+    {
+        return $this->hasOne(
+            CrmLead::class,
+            'converted_tenant_id'
         );
     }
 }

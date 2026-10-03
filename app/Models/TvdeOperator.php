@@ -38,4 +38,18 @@ class TvdeOperator extends Model
             'nif'
         );
     }
+
+    public function crmLead(): HasOne
+    {
+        return $this->hasOne(
+            CrmLead::class
+        );
+    }
+
+    public function nifEnrichmentBatchItems(): HasMany
+    {
+        return $this->hasMany(
+            NifEnrichmentBatchItem::class
+        );
+    }
 }

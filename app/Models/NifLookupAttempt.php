@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class NifLookupAttempt extends Model
 {
@@ -37,7 +38,9 @@ class NifLookupAttempt extends Model
     protected function casts(): array
     {
         return [
+            'http_status' => 'integer',
             'credits' => 'array',
+            'duration_ms' => 'integer',
             'requested_at' => 'datetime',
         ];
     }
@@ -47,6 +50,13 @@ class NifLookupAttempt extends Model
         return $this->belongsTo(
             NifEnrichment::class,
             'nif_enrichment_id'
+        );
+    }
+
+    public function batchItems(): HasMany
+    {
+        return $this->hasMany(
+            NifEnrichmentBatchItem::class
         );
     }
 }

@@ -26,3 +26,9 @@ Schedule::command(
 )
     ->hourly()
     ->withoutOverlapping(30);
+
+Schedule::command(
+    'nif:batches:process'
+)
+    ->everyTenMinutes()
+    ->withoutOverlapping(15);

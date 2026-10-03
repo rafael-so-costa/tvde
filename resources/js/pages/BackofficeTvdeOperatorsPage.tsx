@@ -1,18 +1,29 @@
+import axios from "axios";
 import {
     Building2,
     ChevronLeft,
     ChevronRight,
     Database,
+    DatabaseZap,
     Eye,
     LoaderCircle,
     Search,
+    UserPlus,
+    X,
 } from "lucide-react";
 import {
     useDeferredValue,
     useState,
 } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import {
+    useMutation,
+    useQuery,
+    useQueryClient,
+} from "@tanstack/react-query";
+import {
+    Link,
+    useNavigate,
+} from "react-router-dom";
 
 import api from "../lib/api";
 
@@ -23,7 +34,18 @@ import type {
     BackofficeTvdeSource,
 } from "../types/backofficeCrm";
 
+import type {
+    BackofficeCrmProspectCreationResponse,
+    BackofficeNifBatchMutationResponse,
+} from "../types/backofficeCrmCommercial";
+
 export default function BackofficeTvdeOperatorsPage() {
+    const queryClient =
+        useQueryClient();
+
+    const navigate =
+        useNavigate();
+
     const [search, setSearch] =
         useState("");
 
@@ -54,11 +76,22 @@ export default function BackofficeTvdeOperatorsPage() {
     const [page, setPage] =
         useState(1);
 
+    const [
+        selectedIds,
+        setSelectedIds,
+    ] = useState<
+        Set<string>
+    >(new Set());
+
     const deferredSearch =
-        useDeferredValue(search);
+        useDeferredValue(
+            search,
+        );
 
     const deferredDistrict =
-        useDeferredValue(district);
+        useDeferredValue(
+            district,
+        );
 
     const deferredMunicipality =
         useDeferredValue(
@@ -127,6 +160,96 @@ export default function BackofficeTvdeOperatorsPage() {
             },
         });
 
+    const createLeadsMutation =
+        useMutation({
+            mutationFn:
+                async () => {
+                    const response =
+                        await api.post(
+                            "/api/backoffice/crm/prospects/operadores",
+                            {
+                                operator_ids:
+                                    Array.from(
+                                        selectedIds,
+                                    ),
+
+                                priority:
+                                    "normal",
+                            },
+                        );
+
+                    return response
+                        .data as BackofficeCrmProspectCreationResponse;
+                },
+
+            onSuccess:
+                async () => {
+                    await queryClient.invalidateQueries({
+                        queryKey: [
+                            "backoffice",
+                            "crm",
+                            "dashboard",
+                        ],
+                    });
+
+                    await queryClient.invalidateQueries({
+                        queryKey: [
+                            "backoffice",
+                            "crm",
+                            "leads",
+                        ],
+                    });
+
+                    await queryClient.invalidateQueries({
+                        queryKey: [
+                            "backoffice",
+                            "crm",
+                            "pipeline",
+                        ],
+                    });
+                },
+        });
+
+    const batchMutation =
+        useMutation({
+            mutationFn:
+                async () => {
+                    const response =
+                        await api.post(
+                            "/api/backoffice/crm/enriquecimento/lotes",
+                            {
+                                operator_ids:
+                                    Array.from(
+                                        selectedIds,
+                                    ),
+
+                                force_refresh:
+                                    false,
+                            },
+                        );
+
+                    return response
+                        .data as BackofficeNifBatchMutationResponse;
+                },
+
+            onSuccess:
+                (
+                    response,
+                ) => {
+                    void queryClient.invalidateQueries({
+                        queryKey: [
+                            "backoffice",
+                            "crm",
+                            "nif-batches",
+                        ],
+                    });
+
+                    navigate(
+                        `/backoffice/crm/enriquecimento/lotes/${response.data.id}`,
+                    );
+                },
+        });
+
     const operators =
         operatorsQuery
             .data
@@ -137,9 +260,112 @@ export default function BackofficeTvdeOperatorsPage() {
             .data
             ?.meta;
 
+    const pageIds =
+        operators.map(
+            (
+                operator,
+            ) => operator.id,
+        );
+
+    const allPageSelected =
+        pageIds.length >
+            0 &&
+        pageIds.every(
+            (
+                id,
+            ) =>
+                selectedIds.has(
+                    id,
+                ),
+        );
+
     function resetPage(): void {
         setPage(1);
     }
+
+    function toggleOperator(
+        id: string,
+    ): void {
+        setSelectedIds(
+            (
+                current,
+            ) => {
+                const next =
+                    new Set(
+                        current,
+                    );
+
+                if (
+                    next.has(
+                        id,
+                    )
+                ) {
+                    next.delete(
+                        id,
+                    );
+                } else {
+                    if (
+                        next.size >=
+                        100
+                    ) {
+                        return current;
+                    }
+
+                    next.add(
+                        id,
+                    );
+                }
+
+                return next;
+            },
+        );
+    }
+
+    function toggleCurrentPage(): void {
+        setSelectedIds(
+            (
+                current,
+            ) => {
+                const next =
+                    new Set(
+                        current,
+                    );
+
+                if (
+                    allPageSelected
+                ) {
+                    pageIds.forEach(
+                        (
+                            id,
+                        ) =>
+                            next.delete(
+                                id,
+                            ),
+                    );
+                } else {
+                    pageIds.forEach(
+                        (
+                            id,
+                        ) => {
+                            if (
+                                next.size <
+                                100
+                            ) {
+                                next.add(
+                                    id,
+                                );
+                            }
+                        },
+                    );
+                }
+
+                return next;
+            },
+        );
+    }
+
+    const selectedCount =
+        selectedIds.size;
 
     return (
         <div className="mx-auto max-w-7xl space-y-7">
@@ -172,16 +398,145 @@ export default function BackofficeTvdeOperatorsPage() {
                 </div>
             </section>
 
+            {selectedCount >
+                0 && (
+                <section className="rounded-2xl border border-indigo-200 bg-indigo-50 p-4">
+                    <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
+                        <div>
+                            <div className="font-semibold text-indigo-950">
+                                {selectedCount} operador(es) selecionado(s)
+                            </div>
+
+                            <div className="mt-1 text-sm text-indigo-700">
+                                A seleção pode ser mantida ao navegar entre páginas. Máximo: 100 operadores.
+                            </div>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                            <button
+                                type="button"
+                                disabled={
+                                    createLeadsMutation.isPending
+                                }
+                                onClick={() =>
+                                    createLeadsMutation.mutate()
+                                }
+                                className="inline-flex h-10 items-center gap-2 rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white disabled:opacity-50"
+                            >
+                                {createLeadsMutation.isPending ? (
+                                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                                ) : (
+                                    <UserPlus className="h-4 w-4" />
+                                )}
+
+                                Criar leads
+                            </button>
+
+                            <button
+                                type="button"
+                                disabled={
+                                    batchMutation.isPending
+                                }
+                                onClick={() =>
+                                    batchMutation.mutate()
+                                }
+                                className="inline-flex h-10 items-center gap-2 rounded-xl bg-violet-600 px-4 text-sm font-semibold text-white disabled:opacity-50"
+                            >
+                                {batchMutation.isPending ? (
+                                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                                ) : (
+                                    <DatabaseZap className="h-4 w-4" />
+                                )}
+
+                                Enriquecer NIF.PT
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    setSelectedIds(
+                                        new Set(),
+                                    )
+                                }
+                                className="inline-flex h-10 items-center gap-2 rounded-xl border border-indigo-200 bg-white px-4 text-sm font-semibold text-indigo-700"
+                            >
+                                <X className="h-4 w-4" />
+                                Limpar
+                            </button>
+                        </div>
+                    </div>
+
+                    {createLeadsMutation.isSuccess && (
+                        <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                            {
+                                createLeadsMutation
+                                    .data
+                                    .message
+                            }
+
+                            {" "}
+                            Criados:{" "}
+                            {
+                                createLeadsMutation
+                                    .data
+                                    .data
+                                    .counts
+                                    .created
+                            }
+                            . Existentes:{" "}
+                            {
+                                createLeadsMutation
+                                    .data
+                                    .data
+                                    .counts
+                                    .existing
+                            }
+                            . Clientes:{" "}
+                            {
+                                createLeadsMutation
+                                    .data
+                                    .data
+                                    .counts
+                                    .customers
+                            }
+                            .
+                        </div>
+                    )}
+
+                    {createLeadsMutation.isError && (
+                        <ErrorBox
+                            error={
+                                createLeadsMutation.error
+                            }
+                        />
+                    )}
+
+                    {batchMutation.isError && (
+                        <ErrorBox
+                            error={
+                                batchMutation.error
+                            }
+                        />
+                    )}
+                </section>
+            )}
+
             <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
                 <div className="grid gap-3 xl:grid-cols-[1.5fr_160px_160px_170px]">
                     <div className="relative">
                         <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
 
                         <input
-                            value={search}
-                            onChange={(event) => {
+                            value={
+                                search
+                            }
+                            onChange={(
+                                event,
+                            ) => {
                                 setSearch(
-                                    event.target.value,
+                                    event
+                                        .target
+                                        .value,
                                 );
 
                                 resetPage();
@@ -192,10 +547,16 @@ export default function BackofficeTvdeOperatorsPage() {
                     </div>
 
                     <select
-                        value={source}
-                        onChange={(event) => {
+                        value={
+                            source
+                        }
+                        onChange={(
+                            event,
+                        ) => {
                             setSource(
-                                event.target.value,
+                                event
+                                    .target
+                                    .value,
                             );
 
                             resetPage();
@@ -216,10 +577,16 @@ export default function BackofficeTvdeOperatorsPage() {
                     </select>
 
                     <select
-                        value={status}
-                        onChange={(event) => {
+                        value={
+                            status
+                        }
+                        onChange={(
+                            event,
+                        ) => {
                             setStatus(
-                                event.target.value,
+                                event
+                                    .target
+                                    .value,
                             );
 
                             resetPage();
@@ -240,10 +607,16 @@ export default function BackofficeTvdeOperatorsPage() {
                     </select>
 
                     <select
-                        value={customer}
-                        onChange={(event) => {
+                        value={
+                            customer
+                        }
+                        onChange={(
+                            event,
+                        ) => {
                             setCustomer(
-                                event.target.value,
+                                event
+                                    .target
+                                    .value,
                             );
 
                             resetPage();
@@ -266,10 +639,16 @@ export default function BackofficeTvdeOperatorsPage() {
 
                 <div className="mt-3 grid gap-3 md:grid-cols-3">
                     <select
-                        value={enrichment}
-                        onChange={(event) => {
+                        value={
+                            enrichment
+                        }
+                        onChange={(
+                            event,
+                        ) => {
                             setEnrichment(
-                                event.target.value,
+                                event
+                                    .target
+                                    .value,
                             );
 
                             resetPage();
@@ -306,10 +685,16 @@ export default function BackofficeTvdeOperatorsPage() {
                     </select>
 
                     <input
-                        value={district}
-                        onChange={(event) => {
+                        value={
+                            district
+                        }
+                        onChange={(
+                            event,
+                        ) => {
                             setDistrict(
-                                event.target.value,
+                                event
+                                    .target
+                                    .value,
                             );
 
                             resetPage();
@@ -319,10 +704,16 @@ export default function BackofficeTvdeOperatorsPage() {
                     />
 
                     <input
-                        value={municipality}
-                        onChange={(event) => {
+                        value={
+                            municipality
+                        }
+                        onChange={(
+                            event,
+                        ) => {
                             setMunicipality(
-                                event.target.value,
+                                event
+                                    .target
+                                    .value,
                             );
 
                             resetPage();
@@ -360,6 +751,19 @@ export default function BackofficeTvdeOperatorsPage() {
                         <table className="w-full text-left">
                             <thead className="border-b border-slate-200 bg-slate-50">
                                 <tr>
+                                    <th className="w-12 px-5 py-3.5">
+                                        <input
+                                            type="checkbox"
+                                            checked={
+                                                allPageSelected
+                                            }
+                                            onChange={
+                                                toggleCurrentPage
+                                            }
+                                            className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                        />
+                                    </th>
+
                                     <th className={thClass}>
                                         Operador
                                     </th>
@@ -384,9 +788,7 @@ export default function BackofficeTvdeOperatorsPage() {
                                         Estado
                                     </th>
 
-                                    <th
-                                        className={`${thClass} text-right`}
-                                    >
+                                    <th className={`${thClass} text-right`}>
                                         Ações
                                     </th>
                                 </tr>
@@ -394,13 +796,25 @@ export default function BackofficeTvdeOperatorsPage() {
 
                             <tbody className="divide-y divide-slate-100">
                                 {operators.map(
-                                    (operator) => (
+                                    (
+                                        operator,
+                                    ) => (
                                         <OperatorRow
                                             key={
                                                 operator.id
                                             }
                                             operator={
                                                 operator
+                                            }
+                                            selected={
+                                                selectedIds.has(
+                                                    operator.id,
+                                                )
+                                            }
+                                            onToggle={() =>
+                                                toggleOperator(
+                                                    operator.id,
+                                                )
                                             }
                                         />
                                     ),
@@ -411,7 +825,8 @@ export default function BackofficeTvdeOperatorsPage() {
                 )}
 
                 {meta &&
-                    meta.last_page > 1 && (
+                    meta.last_page >
+                        1 && (
                         <div className="flex items-center justify-between border-t border-slate-100 px-5 py-4">
                             <div className="text-sm text-slate-500">
                                 {meta.from}–
@@ -437,9 +852,7 @@ export default function BackofficeTvdeOperatorsPage() {
                                                 1,
                                         )
                                     }
-                                    className={
-                                        paginationButtonClass
-                                    }
+                                    className={paginationButtonClass}
                                 >
                                     <ChevronLeft className="h-4 w-4" />
                                 </button>
@@ -459,9 +872,7 @@ export default function BackofficeTvdeOperatorsPage() {
                                                 1,
                                         )
                                     }
-                                    className={
-                                        paginationButtonClass
-                                    }
+                                    className={paginationButtonClass}
                                 >
                                     <ChevronRight className="h-4 w-4" />
                                 </button>
@@ -475,31 +886,70 @@ export default function BackofficeTvdeOperatorsPage() {
 
 function OperatorRow({
     operator,
+    selected,
+    onToggle,
 }: {
     operator: BackofficeTvdeOperator;
+    selected: boolean;
+    onToggle: () => void;
 }) {
     const locations =
         operator.registrations
             .filter(
-                (registration) =>
+                (
+                    registration,
+                ) =>
                     registration.active,
             )
-            .map((registration) => {
-                return [
-                    registration.district,
-                    registration.municipality,
-                ]
-                    .filter(Boolean)
-                    .join(" · ");
-            })
-            .filter(Boolean);
+            .map(
+                (
+                    registration,
+                ) =>
+                    [
+                        registration.district,
+                        registration.municipality,
+                    ]
+                        .filter(
+                            Boolean,
+                        )
+                        .join(
+                            " · ",
+                        ),
+            )
+            .filter(
+                Boolean,
+            );
 
     const uniqueLocations = [
-        ...new Set(locations),
+        ...new Set(
+            locations,
+        ),
     ];
 
     return (
-        <tr className="transition hover:bg-slate-50/70">
+        <tr
+            className={[
+                "transition",
+                selected
+                    ? "bg-indigo-50/60"
+                    : "hover:bg-slate-50/70",
+            ].join(
+                " ",
+            )}
+        >
+            <td className="px-5 py-4">
+                <input
+                    type="checkbox"
+                    checked={
+                        selected
+                    }
+                    onChange={
+                        onToggle
+                    }
+                    className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                />
+            </td>
+
             <td className="px-5 py-4">
                 <div className="flex items-start gap-3">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
@@ -508,11 +958,16 @@ function OperatorRow({
 
                     <div>
                         <div className="font-semibold text-slate-900">
-                            {operator.display_name}
+                            {
+                                operator.display_name
+                            }
                         </div>
 
                         <div className="mt-1 text-xs text-slate-400">
-                            NIF {operator.nif}
+                            NIF{" "}
+                            {
+                                operator.nif
+                            }
                         </div>
                     </div>
                 </div>
@@ -521,10 +976,16 @@ function OperatorRow({
             <td className="px-5 py-4">
                 <div className="flex flex-wrap gap-1.5">
                     {operator.sources.map(
-                        (source) => (
+                        (
+                            item,
+                        ) => (
                             <SourceBadge
-                                key={source}
-                                source={source}
+                                key={
+                                    item
+                                }
+                                source={
+                                    item
+                                }
                             />
                         ),
                     )}
@@ -532,7 +993,8 @@ function OperatorRow({
             </td>
 
             <td className="px-5 py-4 text-sm text-slate-600">
-                {uniqueLocations.length > 0
+                {uniqueLocations.length >
+                0
                     ? uniqueLocations.join(
                           " / ",
                       )
@@ -566,7 +1028,9 @@ function OperatorRow({
                         operator.active
                             ? "bg-emerald-50 text-emerald-700"
                             : "bg-red-50 text-red-700",
-                    ].join(" ")}
+                    ].join(
+                        " ",
+                    )}
                 >
                     {operator.active
                         ? "Ativo"
@@ -589,6 +1053,68 @@ function OperatorRow({
     );
 }
 
+function ErrorBox({
+    error,
+}: {
+    error: unknown;
+}) {
+    return (
+        <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {errorMessage(
+                error,
+            )}
+        </div>
+    );
+}
+
+function errorMessage(
+    error: unknown,
+): string {
+    if (
+        axios.isAxiosError(
+            error,
+        )
+    ) {
+        const message =
+            error.response?.data
+                ?.message;
+
+        if (
+            typeof message ===
+            "string"
+        ) {
+            return message;
+        }
+
+        const errors =
+            error.response?.data
+                ?.errors;
+
+        if (
+            errors &&
+            typeof errors ===
+                "object"
+        ) {
+            const first =
+                Object.values(
+                    errors,
+                )[0];
+
+            if (
+                Array.isArray(
+                    first,
+                )
+            ) {
+                return String(
+                    first[0],
+                );
+            }
+        }
+    }
+
+    return "Não foi possível concluir a operação.";
+}
+
 function NifStatusBadge({
     enrichment,
 }: {
@@ -596,7 +1122,9 @@ function NifStatusBadge({
         | BackofficeTvdeNifEnrichmentSummary
         | null;
 }) {
-    if (!enrichment) {
+    if (
+        !enrichment
+    ) {
         return (
             <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
                 Não consultado
@@ -641,13 +1169,17 @@ function NifStatusBadge({
             "Pendente",
             "bg-amber-50 text-amber-700",
         ],
-    }[enrichment.lookup_status];
+    }[
+        enrichment.lookup_status
+    ];
 
     return (
         <span
             className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${config[1]}`}
         >
-            {config[0]}
+            {
+                config[0]
+            }
         </span>
     );
 }
@@ -658,7 +1190,8 @@ function SourceBadge({
     source: BackofficeTvdeSource;
 }) {
     const ram =
-        source === "ram";
+        source ===
+        "ram";
 
     return (
         <span
@@ -667,7 +1200,9 @@ function SourceBadge({
                 ram
                     ? "bg-violet-50 text-violet-700"
                     : "bg-indigo-50 text-indigo-700",
-            ].join(" ")}
+            ].join(
+                " ",
+            )}
         >
             {ram
                 ? "RAM"
@@ -681,7 +1216,9 @@ function formatNumber(
 ): string {
     return new Intl.NumberFormat(
         "pt-PT",
-    ).format(value);
+    ).format(
+        value,
+    );
 }
 
 const inputClass =

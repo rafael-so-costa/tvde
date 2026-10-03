@@ -1,23 +1,38 @@
 import {
+    Activity,
     Building2,
     CreditCard,
     Database,
+    DatabaseZap,
+    FileClock,
     LayoutDashboard,
     Layers3,
     LogOut,
+    Rows3,
     ShieldCheck,
+    Tag,
     Truck,
     UsersRound,
-    FileClock,
 } from "lucide-react";
-import { Link, NavLink, Outlet } from "react-router-dom";
+import {
+    Link,
+    NavLink,
+    Outlet,
+} from "react-router-dom";
 
 import { useAuth } from "../contexts/AuthContext";
 
 export default function BackofficeShell() {
-    const { user, logout } = useAuth();
+    const {
+        user,
+        logout,
+    } = useAuth();
 
-    const navClass = ({ isActive }: { isActive: boolean }) =>
+    const navClass = ({
+        isActive,
+    }: {
+        isActive: boolean;
+    }) =>
         [
             "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition",
             isActive
@@ -52,24 +67,42 @@ export default function BackofficeShell() {
                     </div>
 
                     <div className="space-y-1">
-                        <NavLink to="/backoffice" end className={navClass}>
+                        <NavLink
+                            to="/backoffice"
+                            end
+                            className={
+                                navClass
+                            }
+                        >
                             <LayoutDashboard className="h-5 w-5" />
                             Dashboard
                         </NavLink>
 
-                        <NavLink to="/backoffice/clientes" className={navClass}>
+                        <NavLink
+                            to="/backoffice/clientes"
+                            className={
+                                navClass
+                            }
+                        >
                             <UsersRound className="h-5 w-5" />
                             Clientes
                         </NavLink>
 
-                        <NavLink to="/backoffice/planos" className={navClass}>
+                        <NavLink
+                            to="/backoffice/planos"
+                            className={
+                                navClass
+                            }
+                        >
                             <Layers3 className="h-5 w-5" />
                             Planos
                         </NavLink>
 
                         <NavLink
                             to="/backoffice/assinaturas"
-                            className={navClass}
+                            className={
+                                navClass
+                            }
                         >
                             <CreditCard className="h-5 w-5" />
                             Assinaturas
@@ -83,21 +116,82 @@ export default function BackofficeShell() {
                     </div>
 
                     <div className="space-y-1">
-                        <NavLink to="/backoffice/crm" end className={navClass}>
+                        <NavLink
+                            to="/backoffice/crm"
+                            end
+                            className={
+                                navClass
+                            }
+                        >
                             <LayoutDashboard className="h-5 w-5" />
                             Dashboard CRM
                         </NavLink>
 
                         <NavLink
+                            to="/backoffice/crm/leads"
+                            className={
+                                navClass
+                            }
+                        >
+                            <UsersRound className="h-5 w-5" />
+                            Leads
+                        </NavLink>
+
+                        <NavLink
+                            to="/backoffice/crm/pipeline"
+                            className={
+                                navClass
+                            }
+                        >
+                            <Rows3 className="h-5 w-5" />
+                            Pipeline
+                        </NavLink>
+
+                        <NavLink
+                            to="/backoffice/crm/atividades"
+                            className={
+                                navClass
+                            }
+                        >
+                            <Activity className="h-5 w-5" />
+                            Atividades
+                        </NavLink>
+
+                        <NavLink
+                            to="/backoffice/crm/tags"
+                            className={
+                                navClass
+                            }
+                        >
+                            <Tag className="h-5 w-5" />
+                            Tags
+                        </NavLink>
+
+                        <NavLink
                             to="/backoffice/crm/operadores"
-                            className={navClass}
+                            className={
+                                navClass
+                            }
                         >
                             <Database className="h-5 w-5" />
                             Base TVDE
                         </NavLink>
+
+                        <NavLink
+                            to="/backoffice/crm/enriquecimento/lotes"
+                            className={
+                                navClass
+                            }
+                        >
+                            <DatabaseZap className="h-5 w-5" />
+                            Lotes NIF.PT
+                        </NavLink>
+
                         <NavLink
                             to="/backoffice/crm/importacoes"
-                            className={navClass}
+                            className={
+                                navClass
+                            }
                         >
                             <FileClock className="h-5 w-5" />
                             Importações
@@ -119,7 +213,9 @@ export default function BackofficeShell() {
 
                     <button
                         type="button"
-                        onClick={() => logout()}
+                        onClick={() =>
+                            logout()
+                        }
                         className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-400 transition hover:bg-red-500/10 hover:text-red-300"
                     >
                         <LogOut className="h-5 w-5" />

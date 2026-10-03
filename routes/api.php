@@ -4,8 +4,16 @@ use App\Http\Controllers\AlertController;
 use App\Http\Controllers\AluguerController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BackofficeClientController;
+use App\Http\Controllers\BackofficeCrmActivityController;
+use App\Http\Controllers\BackofficeCrmConversionController;
 use App\Http\Controllers\BackofficeCrmDashboardController;
+use App\Http\Controllers\BackofficeCrmLeadController;
+use App\Http\Controllers\BackofficeCrmLeadStageController;
+use App\Http\Controllers\BackofficeCrmPipelineController;
+use App\Http\Controllers\BackofficeCrmProspectController;
+use App\Http\Controllers\BackofficeCrmTagController;
 use App\Http\Controllers\BackofficeDashboardController;
+use App\Http\Controllers\BackofficeNifEnrichmentBatchController;
 use App\Http\Controllers\BackofficePlanController;
 use App\Http\Controllers\BackofficeSubscriptionController;
 use App\Http\Controllers\BackofficeTvdeImportController;
@@ -73,6 +81,230 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('super_admin')
         ->prefix('backoffice')
         ->group(function () {
+
+            /*
+             * CRM - Dashboard
+             */
+            Route::get(
+                '/crm/dashboard',
+                [BackofficeCrmDashboardController::class, 'show']
+            );
+
+            /*
+             * CRM - Pipeline
+             */
+            Route::get(
+                '/crm/pipeline',
+                [BackofficeCrmPipelineController::class, 'index']
+            );
+
+            /*
+             * CRM - Leads
+             */
+            Route::get(
+                '/crm/leads',
+                [BackofficeCrmLeadController::class, 'index']
+            );
+
+            Route::post(
+                '/crm/leads',
+                [BackofficeCrmLeadController::class, 'store']
+            );
+
+            Route::get(
+                '/crm/leads/{id}',
+                [BackofficeCrmLeadController::class, 'show']
+            )
+                ->whereUuid(
+                    'id'
+                );
+
+            Route::patch(
+                '/crm/leads/{id}',
+                [BackofficeCrmLeadController::class, 'update']
+            )
+                ->whereUuid(
+                    'id'
+                );
+
+            Route::patch(
+                '/crm/leads/{id}/etapa',
+                [BackofficeCrmLeadStageController::class, 'update']
+            )
+                ->whereUuid(
+                    'id'
+                );
+
+            Route::post(
+                '/crm/leads/{id}/converter',
+                [BackofficeCrmConversionController::class, 'store']
+            )
+                ->whereUuid(
+                    'id'
+                );
+
+            /*
+             * CRM - Criação de leads através da Base TVDE
+             */
+            Route::post(
+                '/crm/prospects/operadores',
+                [BackofficeCrmProspectController::class, 'store']
+            );
+
+            /*
+             * CRM - Atividades
+             */
+            Route::get(
+                '/crm/atividades',
+                [BackofficeCrmActivityController::class, 'index']
+            );
+
+            Route::post(
+                '/crm/leads/{leadId}/atividades',
+                [BackofficeCrmActivityController::class, 'store']
+            )
+                ->whereUuid(
+                    'leadId'
+                );
+
+            Route::post(
+                '/crm/atividades/{id}/concluir',
+                [BackofficeCrmActivityController::class, 'complete']
+            )
+                ->whereUuid(
+                    'id'
+                );
+
+            Route::post(
+                '/crm/atividades/{id}/cancelar',
+                [BackofficeCrmActivityController::class, 'cancel']
+            )
+                ->whereUuid(
+                    'id'
+                );
+
+            /*
+             * CRM - Tags
+             */
+            Route::get(
+                '/crm/tags',
+                [BackofficeCrmTagController::class, 'index']
+            );
+
+            Route::post(
+                '/crm/tags',
+                [BackofficeCrmTagController::class, 'store']
+            );
+
+            Route::patch(
+                '/crm/tags/{id}',
+                [BackofficeCrmTagController::class, 'update']
+            )
+                ->whereUuid(
+                    'id'
+                );
+
+            Route::delete(
+                '/crm/tags/{id}',
+                [BackofficeCrmTagController::class, 'destroy']
+            )
+                ->whereUuid(
+                    'id'
+                );
+
+            /*
+             * CRM - Base oficial TVDE
+             */
+            Route::get(
+                '/crm/operadores',
+                [BackofficeTvdeOperatorController::class, 'index']
+            );
+
+            Route::get(
+                '/crm/operadores/{id}',
+                [BackofficeTvdeOperatorController::class, 'show']
+            )
+                ->whereUuid(
+                    'id'
+                );
+
+            /*
+             * CRM - Enriquecimento individual NIF.PT
+             */
+            Route::get(
+                '/crm/operadores/{id}/enriquecimento',
+                [BackofficeTvdeOperatorEnrichmentController::class, 'show']
+            )
+                ->whereUuid(
+                    'id'
+                );
+
+            Route::post(
+                '/crm/operadores/{id}/enriquecimento',
+                [BackofficeTvdeOperatorEnrichmentController::class, 'store']
+            )
+                ->whereUuid(
+                    'id'
+                )
+                ->middleware(
+                    'throttle:1,1'
+                );
+
+            /*
+             * CRM - Lotes NIF.PT
+             */
+            Route::get(
+                '/crm/enriquecimento/lotes',
+                [BackofficeNifEnrichmentBatchController::class, 'index']
+            );
+
+            Route::post(
+                '/crm/enriquecimento/lotes',
+                [BackofficeNifEnrichmentBatchController::class, 'store']
+            );
+
+            Route::get(
+                '/crm/enriquecimento/lotes/{id}',
+                [BackofficeNifEnrichmentBatchController::class, 'show']
+            )
+                ->whereUuid(
+                    'id'
+                );
+
+            Route::post(
+                '/crm/enriquecimento/lotes/{id}/processar',
+                [BackofficeNifEnrichmentBatchController::class, 'process']
+            )
+                ->whereUuid(
+                    'id'
+                )
+                ->middleware(
+                    'throttle:1,1'
+                );
+
+            Route::post(
+                '/crm/enriquecimento/lotes/{id}/cancelar',
+                [BackofficeNifEnrichmentBatchController::class, 'cancel']
+            )
+                ->whereUuid(
+                    'id'
+                );
+
+            /*
+             * CRM - Importações oficiais TVDE
+             */
+            Route::get(
+                '/crm/importacoes',
+                [BackofficeTvdeImportController::class, 'index']
+            );
+
+            Route::get(
+                '/crm/importacoes/{id}',
+                [BackofficeTvdeImportController::class, 'show']
+            )
+                ->whereUuid(
+                    'id'
+                );
 
             Route::get(
                 '/crm/operadores/{id}/enriquecimento',

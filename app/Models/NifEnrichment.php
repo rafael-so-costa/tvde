@@ -63,6 +63,7 @@ class NifEnrichment extends Model
             'is_nif' => 'boolean',
             'provider_credits' => 'array',
             'raw_data' => 'array',
+            'lookup_count' => 'integer',
             'last_looked_up_at' => 'datetime',
             'last_success_at' => 'datetime',
         ];
@@ -72,6 +73,13 @@ class NifEnrichment extends Model
     {
         return $this->hasMany(
             NifLookupAttempt::class
+        );
+    }
+
+    public function batchItems(): HasMany
+    {
+        return $this->hasMany(
+            NifEnrichmentBatchItem::class
         );
     }
 }
