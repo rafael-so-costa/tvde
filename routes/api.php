@@ -66,6 +66,7 @@ use App\Http\Controllers\ChatController;
 use App\Http\Controllers\TenantCustomFieldController;
 use App\Http\Controllers\TenantSettingsController;
 use App\Http\Controllers\RelatorioController;
+use App\Http\Controllers\AuditoriaController;
 
 Route::get('/assinaturas/remotas/{token}', [RemoteSignatureController::class, 'show'])
     ->whereUuid('token')
@@ -445,6 +446,19 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/tenant-context', [TenantContextController::class, 'clear']);
 
     Route::middleware('tenant')->group(function () {
+        Route::middleware('permission:auditoria,visualizar')
+            ->prefix('auditoria')
+            ->group(function () {
+                Route::get(
+                    '/',
+                    [AuditoriaController::class, 'index']
+                );
+
+                Route::get(
+                    '/{id}',
+                    [AuditoriaController::class, 'show']
+                )->whereUuid('id');
+            });
         Route::middleware('permission:relatorios,visualizar')->prefix('relatorios')->group(function () {
             Route::get('/resumo', [RelatorioController::class, 'resumo']);
             Route::get('/documentos', [RelatorioController::class, 'documentos']);

@@ -70,6 +70,7 @@ import BackofficeAdSettingsPage from "./pages/ads/BackofficeAdSettingsPage";
 import ChatPage from "./pages/ChatPage";
 import ConfiguracoesPage from "./pages/ConfiguracoesPage";
 import RelatoriosPage from "./pages/RelatoriosPage";
+import AuditoriaPage from "./pages/AuditoriaPage";
 
 export default function App() {
     return (
@@ -267,6 +268,10 @@ export default function App() {
                             <Route
                                 path="relatorios"
                                 element={<RelatoriosPage />}
+                            />
+                            <Route
+                                path="auditoria"
+                                element={<AuditoriaPage />}
                             />
 
                             <Route path="painel" element={<DashboardPage />} />

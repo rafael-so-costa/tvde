@@ -13,6 +13,7 @@ import {
     LayoutDashboard,
     LoaderCircle,
     LogOut,
+    History,
     Menu,
     ReceiptText,
     ShieldCheck,
@@ -150,6 +151,12 @@ const navigation = [
         label: "Relatórios",
         icon: BarChart3,
         permission: "relatorios",
+    },
+    {
+        to: "/auditoria",
+        label: "Auditoria",
+        icon: History,
+        permission: "auditoria",
     },
     {
         to: "/minha-conta",

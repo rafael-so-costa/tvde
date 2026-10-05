@@ -2,24 +2,55 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\ServiceProvider;
+use App\Services\AuditService;
 use App\Services\TenantContext;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
     public function register(): void
     {
-        $this->app->scoped(TenantContext::class, fn () => new TenantContext());
+        $this->app->scoped(
+            TenantContext::class,
+            fn()=>new TenantContext()
+        );
     }
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
-        //
+        foreach([
+            'created',
+            'updated',
+            'deleted',
+        ] as $action){
+            Event::listen(
+                "eloquent.{$action}: *",
+                function(
+                    string $eventName,
+                    array $data
+                ) use(
+                    $action
+                ){
+                    $model=
+                        $data[0]??
+                        null;
+
+                    if(
+                        !$model instanceof Model
+                    ){
+                        return;
+                    }
+
+                    app(
+                        AuditService::class
+                    )->capture(
+                        $model,
+                        $action
+                    );
+                }
+            );
+        }
     }
 }

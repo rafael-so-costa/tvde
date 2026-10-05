@@ -33,6 +33,7 @@ class PermissionSeeder extends Seeder
             'registos_criminais'=>'Registos criminais',
             'configuracoes'=>'Configurações',
             'relatorios'=>'Relatórios',
+            'auditoria'=>'Auditoria',
         ];
 
         foreach($modulos as $codigo=>$nome){
