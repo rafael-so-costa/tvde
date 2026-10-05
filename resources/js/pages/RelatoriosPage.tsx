@@ -2518,7 +2518,7 @@ function downloadCsv(
     );
 }
 
-function proprietorName(
+function proprietarioName(
     item:ProprietarioOption
 ):string {
     if(
