@@ -33,8 +33,41 @@ class BackofficeAdCampaignActionRequest extends FormRequest
                     'suspend',
                 ]),
             ],
-            'reason' => ['nullable', 'string', 'max:5000'],
-            'notes' => ['nullable', 'string', 'max:5000'],
+
+            'reason' => [
+                'nullable',
+                'string',
+                'max:5000',
+            ],
+
+            'notes' => [
+                'nullable',
+                'string',
+                'max:5000',
+            ],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'action.required' => 'Informe a ação que pretende executar.',
+            'action.in' => 'A ação selecionada não é suportada.',
+
+            'reason.string' => 'O motivo informado não é válido.',
+            'reason.max' => 'O motivo não pode ter mais de 5.000 caracteres.',
+
+            'notes.string' => 'As notas informadas não são válidas.',
+            'notes.max' => 'As notas não podem ter mais de 5.000 caracteres.',
+        ];
+    }
+
+    public function attributes(): array
+    {
+        return [
+            'action' => 'ação',
+            'reason' => 'motivo',
+            'notes' => 'notas',
         ];
     }
 
@@ -45,15 +78,25 @@ class BackofficeAdCampaignActionRequest extends FormRequest
                 if (
                     in_array(
                         $this->input('action'),
-                        ['request_changes', 'reject', 'suspend'],
+                        [
+                            'request_changes',
+                            'reject',
+                            'suspend',
+                        ],
                         true
                     ) &&
-                    ! trim((string) $this->input('reason'))
+                    ! trim(
+                        (string) $this->input(
+                            'reason'
+                        )
+                    )
                 ) {
-                    $validator->errors()->add(
-                        'reason',
-                        'Informe o motivo desta decisão.'
-                    );
+                    $validator
+                        ->errors()
+                        ->add(
+                            'reason',
+                            'Informe o motivo desta decisão.'
+                        );
                 }
             },
         ];
