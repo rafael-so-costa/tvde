@@ -32,3 +32,9 @@ Schedule::command(
 )
     ->everyTenMinutes()
     ->withoutOverlapping(15);
+
+Schedule::command(
+    'ads:sync-statuses'
+)
+    ->everyMinute()
+    ->withoutOverlapping(5);

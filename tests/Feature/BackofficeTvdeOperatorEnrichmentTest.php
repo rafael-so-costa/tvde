@@ -374,6 +374,14 @@ test(
             )
             ->assertOk();
 
+        /*
+         * O force ignora o cache, mas continua sujeito
+         * à quota operacional de 1 consulta externa/minuto.
+         */
+        $this->travel(
+            61
+        )->seconds();
+
         $this
             ->withHeaders(
                 backofficeNifHeaders()

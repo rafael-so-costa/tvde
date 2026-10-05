@@ -29,6 +29,7 @@ import BackofficePlanPage from "./pages/BackofficePlanPage";
 import BackofficePlansPage from "./pages/BackofficePlansPage";
 import BackofficeSubscriptionPage from "./pages/BackofficeSubscriptionPage";
 import BackofficeSubscriptionsPage from "./pages/BackofficeSubscriptionsPage";
+import BackofficeTvdeImportCreatePage from "./pages/BackofficeTvdeImportCreatePage";
 import BackofficeTvdeImportPage from "./pages/BackofficeTvdeImportPage";
 import BackofficeTvdeImportsPage from "./pages/BackofficeTvdeImportsPage";
 import BackofficeTvdeOperatorPage from "./pages/BackofficeTvdeOperatorPage";
@@ -56,12 +57,24 @@ import RemoteSignaturePage from "./pages/RemoteSignaturePage";
 import SinistrosPage from "./pages/SinistrosPage";
 import TemplatesPage from "./pages/TemplatesPage";
 import VeiculosPage from "./pages/VeiculosPage";
-import BackofficeTvdeImportCreatePage from "./pages/BackofficeTvdeImportCreatePage";
+
+import BackofficeAdAdvertisersPage from "./pages/ads/BackofficeAdAdvertisersPage";
+import BackofficeAdApprovalsPage from "./pages/ads/BackofficeAdApprovalsPage";
+import BackofficeAdCampaignPage from "./pages/ads/BackofficeAdCampaignPage";
+import BackofficeAdCampaignsPage from "./pages/ads/BackofficeAdCampaignsPage";
+import BackofficeAdInventoryPage from "./pages/ads/BackofficeAdInventoryPage";
+import BackofficeAdOrdersPage from "./pages/ads/BackofficeAdOrdersPage";
+import BackofficeAdsDashboardPage from "./pages/ads/BackofficeAdsDashboardPage";
+import BackofficeAdsRouterPage from "./pages/ads/BackofficeAdsRouterPage";
+import BackofficeAdSettingsPage from "./pages/ads/BackofficeAdSettingsPage";
 
 export default function App() {
     return (
         <Routes>
-            <Route path="/login" element={<LoginPage />} />
+            <Route
+                path="/login"
+                element={<LoginPage />}
+            />
 
             <Route
                 path="/assinaturas/remotas/:token"
@@ -85,8 +98,14 @@ export default function App() {
 
             <Route element={<ProtectedRoute />}>
                 <Route element={<SuperAdminRoute />}>
-                    <Route path="backoffice" element={<BackofficeShell />}>
-                        <Route index element={<BackofficeDashboardPage />} />
+                    <Route
+                        path="backoffice"
+                        element={<BackofficeShell />}
+                    >
+                        <Route
+                            index
+                            element={<BackofficeDashboardPage />}
+                        />
 
                         <Route
                             path="clientes"
@@ -122,6 +141,56 @@ export default function App() {
                             path="assinaturas/:id"
                             element={<BackofficeSubscriptionPage />}
                         />
+
+                        <Route
+                            path="ads"
+                            element={<BackofficeAdsRouterPage />}
+                        >
+                            <Route
+                                index
+                                element={<BackofficeAdsDashboardPage />}
+                            />
+
+                            <Route
+                                path="campanhas"
+                                element={<BackofficeAdCampaignsPage />}
+                            />
+
+                            <Route
+                                path="campanhas/nova"
+                                element={<BackofficeAdCampaignPage />}
+                            />
+
+                            <Route
+                                path="campanhas/:id"
+                                element={<BackofficeAdCampaignPage />}
+                            />
+
+                            <Route
+                                path="aprovacoes"
+                                element={<BackofficeAdApprovalsPage />}
+                            />
+
+                            <Route
+                                path="anunciantes"
+                                element={<BackofficeAdAdvertisersPage />}
+                            />
+
+                            <Route
+                                path="inventario"
+                                element={<BackofficeAdInventoryPage />}
+                            />
+
+                            <Route
+                                path="pedidos"
+                                element={<BackofficeAdOrdersPage />}
+                            />
+
+                            <Route
+                                path="configuracoes"
+                                element={<BackofficeAdSettingsPage />}
+                            />
+                        </Route>
 
                         <Route
                             path="crm"
@@ -192,24 +261,41 @@ export default function App() {
 
                 <Route element={<ManagementRoute />}>
                     <Route element={<TenantOnboardingGate />}>
-                        <Route path="onboarding" element={<OnboardingPage />} />
+                        <Route
+                            path="onboarding"
+                            element={<OnboardingPage />}
+                        />
 
                         <Route element={<AppShell />}>
                             <Route
                                 index
-                                element={<Navigate to="/painel" replace />}
+                                element={
+                                    <Navigate
+                                        to="/painel"
+                                        replace
+                                    />
+                                }
                             />
 
-                            <Route path="painel" element={<DashboardPage />} />
+                            <Route
+                                path="painel"
+                                element={<DashboardPage />}
+                            />
 
                             <Route
                                 path="minha-conta"
                                 element={<MyAccountPage />}
                             />
 
-                            <Route path="alertas" element={<AlertsPage />} />
+                            <Route
+                                path="alertas"
+                                element={<AlertsPage />}
+                            />
 
-                            <Route path="empresas" element={<EmpresasPage />} />
+                            <Route
+                                path="empresas"
+                                element={<EmpresasPage />}
+                            />
 
                             <Route
                                 path="funcionarios"
@@ -238,17 +324,23 @@ export default function App() {
 
                             <Route
                                 path="expediente"
-                                element={<ExpedientePage mode="management" />}
+                                element={
+                                    <ExpedientePage mode="management" />
+                                }
                             />
 
                             <Route
                                 path="multas"
-                                element={<MultasPage mode="management" />}
+                                element={
+                                    <MultasPage mode="management" />
+                                }
                             />
 
                             <Route
                                 path="sinistros"
-                                element={<SinistrosPage mode="management" />}
+                                element={
+                                    <SinistrosPage mode="management" />
+                                }
                             />
 
                             <Route
@@ -256,7 +348,10 @@ export default function App() {
                                 element={<ManutencaoPage />}
                             />
 
-                            <Route path="veiculos" element={<VeiculosPage />} />
+                            <Route
+                                path="veiculos"
+                                element={<VeiculosPage />}
+                            />
 
                             <Route
                                 path="checklists"
@@ -281,25 +376,44 @@ export default function App() {
                     </Route>
                 </Route>
 
-                <Route element={<PortalAreaRoute area="motorista" />}>
-                    <Route path="portal/motorista" element={<MotoristaShell />}>
-                        <Route index element={<MotoristaDashboardPage />} />
+                <Route
+                    element={
+                        <PortalAreaRoute area="motorista" />
+                    }
+                >
+                    <Route
+                        path="portal/motorista"
+                        element={<MotoristaShell />}
+                    >
+                        <Route
+                            index
+                            element={<MotoristaDashboardPage />}
+                        />
 
-                        <Route path="minha-conta" element={<MyAccountPage />} />
+                        <Route
+                            path="minha-conta"
+                            element={<MyAccountPage />}
+                        />
 
                         <Route
                             path="expediente"
-                            element={<ExpedientePage mode="motorista" />}
+                            element={
+                                <ExpedientePage mode="motorista" />
+                            }
                         />
 
                         <Route
                             path="multas"
-                            element={<MultasPage mode="readonly" />}
+                            element={
+                                <MultasPage mode="readonly" />
+                            }
                         />
 
                         <Route
                             path="sinistros"
-                            element={<SinistrosPage mode="readonly" />}
+                            element={
+                                <SinistrosPage mode="readonly" />
+                            }
                         />
 
                         <Route
@@ -314,29 +428,51 @@ export default function App() {
                     </Route>
                 </Route>
 
-                <Route element={<PortalAreaRoute area="proprietario" />}>
+                <Route
+                    element={
+                        <PortalAreaRoute area="proprietario" />
+                    }
+                >
                     <Route
                         path="portal/proprietario"
                         element={<ProprietarioShell />}
                     >
-                        <Route index element={<ProprietarioDashboardPage />} />
+                        <Route
+                            index
+                            element={<ProprietarioDashboardPage />}
+                        />
 
-                        <Route path="minha-conta" element={<MyAccountPage />} />
+                        <Route
+                            path="minha-conta"
+                            element={<MyAccountPage />}
+                        />
 
                         <Route
                             path="multas"
-                            element={<MultasPage mode="readonly" />}
+                            element={
+                                <MultasPage mode="readonly" />
+                            }
                         />
 
                         <Route
                             path="sinistros"
-                            element={<SinistrosPage mode="readonly" />}
+                            element={
+                                <SinistrosPage mode="readonly" />
+                            }
                         />
                     </Route>
                 </Route>
             </Route>
 
-            <Route path="*" element={<Navigate to="/painel" replace />} />
+            <Route
+                path="*"
+                element={
+                    <Navigate
+                        to="/painel"
+                        replace
+                    />
+                }
+            />
         </Routes>
     );
 }

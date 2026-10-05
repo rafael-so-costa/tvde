@@ -13,6 +13,7 @@ class DatabaseSeeder extends Seeder
             PermissionSeeder::class,
             SaasPlanSeeder::class,
             CrmPipelineStageSeeder::class,
+            AdSeeder::class,
         ]);
     }
 }

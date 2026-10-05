@@ -247,16 +247,9 @@ Route::middleware('auth:sanctum')->group(function () {
                     'id'
                 );
 
-            Route::post(
-                '/crm/operadores/{id}/enriquecimento',
-                [BackofficeTvdeOperatorEnrichmentController::class, 'store']
-            )
-                ->whereUuid(
-                    'id'
-                )
-                ->middleware(
-                    'throttle:1,1'
-                );
+
+            Route::post('/crm/operadores/{id}/enriquecimento', [BackofficeTvdeOperatorEnrichmentController::class, 'store'])
+                ->whereUuid('id');
 
             /*
              * CRM - Lotes NIF.PT
@@ -775,3 +768,5 @@ Route::middleware('auth:sanctum')->group(function () {
         });
     });
 });
+
+require __DIR__ . '/backoffice_ads.php';
