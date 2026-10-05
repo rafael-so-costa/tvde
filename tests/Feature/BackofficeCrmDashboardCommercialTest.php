@@ -12,14 +12,25 @@ use Database\Seeders\CrmPipelineStageSeeder;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Carbon;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
+    Carbon::setTestNow(
+        Carbon::parse(
+            '2026-10-05 12:00:00'
+        )
+    );
+
     $this->seed([
         RoleSeeder::class,
         CrmPipelineStageSeeder::class,
     ]);
+});
+
+afterEach(function () {
+    Carbon::setTestNow();
 });
 
 function crmDashboardCommercialHeaders(): array
