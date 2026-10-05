@@ -3,9 +3,20 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\SaasRegistrationController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\PublicAdsController;
 
 Route::view('/', 'site.home')
     ->name('site.home');
+Route::get(
+    '/anuncios',
+    [
+        PublicAdsController::class,
+        'index',
+    ]
+)
+    ->name(
+        'site.ads.index'
+    );
 
 Route::view('/registar', 'site.register')
     ->name('site.register');

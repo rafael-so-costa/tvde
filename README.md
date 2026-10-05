@@ -56,3 +56,12 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+
+| Perfil          | E-mail                    | Senha           |
+| --------------- | ------------------------- | --------------- |
+| Super Admin     | `superadmin1@frota.pro`   | `superadmin1`   |
+| Gestor de Frota | `gestor1@frota.pro`       | `gestor1`       |
+| Funcionário     | `funcionario1@frota.pro`  | `funcionario1`  |
+| Motorista       | `motorista1@frota.pro`    | `motorista1`    |
+| Proprietário    | `proprietario1@frota.pro` | `proprietario1` |

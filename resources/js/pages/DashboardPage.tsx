@@ -37,6 +37,8 @@ import type {
 
 import type { AlertItem, AlertSeverity, AlertSummary } from "../types/alerts";
 
+import AdDisplay from "../components/ads/AdDisplay";
+
 export default function DashboardPage() {
     const { user } = useAuth();
 
@@ -89,6 +91,7 @@ export default function DashboardPage() {
                         </p>
                     </div>
                 </section>
+                <AdDisplay surface="manager_panel"/>
             </div>
         );
     }

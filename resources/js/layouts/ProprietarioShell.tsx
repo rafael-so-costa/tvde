@@ -10,22 +10,38 @@ import {
     ReceiptText,
     Truck,
     X,
+    MessageSquareText,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useTenant } from "../contexts/TenantContext";
 import { resolvePortalDestination } from "../lib/portal";
+import ChatUnreadBadge from "../components/chat/ChatUnreadBadge";
 
-interface NavItem{
-    to:string;
-    label:string;
-    icon:typeof LayoutDashboard;
-    end?:boolean;
+interface NavItem {
+    to: string;
+    label: string;
+    icon: typeof LayoutDashboard;
+    end?: boolean;
 }
 
 const navigation = [
-    {to:"/portal/proprietario",label:"Início",icon:LayoutDashboard,end:true},
-    {to:"/portal/proprietario/multas",label:"Multas",icon:ReceiptText},
-    {to:"/portal/proprietario/sinistros",label:"Sinistros",icon:AlertTriangle},
+    {
+        to: "/portal/proprietario",
+        label: "Início",
+        icon: LayoutDashboard,
+        end: true,
+    },
+    { to: "/portal/proprietario/multas", label: "Multas", icon: ReceiptText },
+    {
+        to: "/portal/proprietario/sinistros",
+        label: "Sinistros",
+        icon: AlertTriangle,
+    },
+    {
+        to: "/portal/proprietario/mensagens",
+        label: "Mensagens",
+        icon: MessageSquareText,
+    },
     {
         to: "/portal/proprietario/minha-conta",
         label: "Minha Conta",
@@ -53,7 +69,9 @@ export default function ProprietarioShell() {
         try {
             await selectTenant(id);
 
-            const destination = await resolvePortalDestination("/portal/proprietario");
+            const destination = await resolvePortalDestination(
+                "/portal/proprietario",
+            );
 
             navigate(destination);
         } finally {

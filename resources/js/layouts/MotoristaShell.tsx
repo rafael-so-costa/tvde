@@ -12,10 +12,12 @@ import {
     Truck,
     X,
     LayoutDashboard,
+    MessageSquareText,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useTenant } from "../contexts/TenantContext";
 import { resolvePortalDestination } from "../lib/portal";
+import ChatUnreadBadge from "../components/chat/ChatUnreadBadge";
 
 const navigation = [
     {
@@ -50,6 +52,11 @@ const navigation = [
         icon: ReceiptText,
     },
     {
+        to: "/portal/motorista/mensagens",
+        label: "Mensagens",
+        icon: MessageSquareText,
+    },
+    {
         to: "/portal/motorista/minha-conta",
         label: "Minha Conta",
         icon: CircleUserRound,
@@ -74,7 +81,8 @@ export default function MotoristaShell() {
         try {
             await selectTenant(id);
 
-            const destination = await resolvePortalDestination("/portal/motorista");
+            const destination =
+                await resolvePortalDestination("/portal/motorista");
 
             navigate(destination);
         } finally {
@@ -123,6 +131,9 @@ export default function MotoristaShell() {
                     >
                         <Icon className="w-5 h-5" />
                         {label}
+                        {to === "/portal/motorista/mensagens" && (
+                            <ChatUnreadBadge mode="tenant" />
+                        )}
                     </NavLink>
                 ))}
             </nav>

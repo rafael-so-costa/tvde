@@ -52,6 +52,10 @@
                         Integrações
                     </a>
 
+                    <a href="{{ route('site.ads.index') }}" class="text-sm font-medium text-slate-600 transition hover:text-indigo-600">
+                        Anúncios
+                    </a>
+
                     <a href="#faq" class="text-sm font-medium text-slate-600 transition hover:text-indigo-600">
                         FAQ
                     </a>
@@ -99,6 +103,10 @@
 
                             <a href="#integracoes" class="block rounded-xl px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
                                 Integrações
+                            </a>
+
+                            <a href="{{ route('site.ads.index') }}" class="block rounded-xl px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                                Anúncios
                             </a>
 
                             <a href="#faq" class="block rounded-xl px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
@@ -1219,6 +1227,9 @@
 
                             <a href="#como-funciona" class="block hover:text-white">
                                 Como funciona
+                            </a>
+                            <a href="{{ route('site.ads.index') }}" class="block hover:text-white">
+                                Anúncios
                             </a>
 
                         </div>

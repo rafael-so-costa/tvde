@@ -60,6 +60,12 @@ use App\Http\Controllers\VeiculoController;
 use App\Http\Controllers\VeiculoDiagnosticoController;
 use App\Services\TenantContext;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\BackofficeChatController;
+use App\Http\Controllers\ChatAttachmentController;
+use App\Http\Controllers\ChatController;
+use App\Http\Controllers\TenantCustomFieldController;
+use App\Http\Controllers\TenantSettingsController;
+use App\Http\Controllers\RelatorioController;
 
 Route::get('/assinaturas/remotas/{token}', [RemoteSignatureController::class, 'show'])
     ->whereUuid('token')
@@ -78,9 +84,19 @@ Route::post('/funcionario-convites/{token}/aceitar', [FuncionarioInvitationContr
     ->middleware('throttle:5,1');
 
 Route::middleware('auth:sanctum')->group(function () {
+
+    Route::get('/chat/anexos/{id}/arquivo', [ChatAttachmentController::class, 'show'])->whereUuid('id');
+    Route::get('/chat/anexos/{id}/download', [ChatAttachmentController::class, 'download'])->whereUuid('id');
     Route::middleware('super_admin')
         ->prefix('backoffice')
         ->group(function () {
+
+            Route::get('/chat', [BackofficeChatController::class, 'index']);
+            Route::get('/chat/resumo', [BackofficeChatController::class, 'summary']);
+            Route::get('/chat/destinatarios', [BackofficeChatController::class, 'recipients']);
+            Route::post('/chat', [BackofficeChatController::class, 'store']);
+            Route::get('/chat/{id}', [BackofficeChatController::class, 'show'])->whereUuid('id');
+            Route::post('/chat/{id}/mensagens', [BackofficeChatController::class, 'message'])->whereUuid('id');
 
             /*
              * CRM - Dashboard
@@ -429,6 +445,32 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/tenant-context', [TenantContextController::class, 'clear']);
 
     Route::middleware('tenant')->group(function () {
+        Route::middleware('permission:relatorios,visualizar')->prefix('relatorios')->group(function () {
+            Route::get('/resumo', [RelatorioController::class, 'resumo']);
+            Route::get('/documentos', [RelatorioController::class, 'documentos']);
+            Route::get('/veiculos', [RelatorioController::class, 'veiculos']);
+            Route::get('/motoristas', [RelatorioController::class, 'motoristas']);
+            Route::get('/ocorrencias', [RelatorioController::class, 'ocorrencias']);
+            Route::get('/alugueres', [RelatorioController::class, 'alugueres']);
+        });
+        Route::middleware('permission:configuracoes,visualizar')->group(function () {
+            Route::get('/configuracoes', [TenantSettingsController::class, 'show']);
+            Route::get('/configuracoes/campos', [TenantCustomFieldController::class, 'index']);
+        });
+
+        Route::middleware('permission:configuracoes,configurar')->group(function () {
+            Route::patch('/configuracoes', [TenantSettingsController::class, 'update']);
+            Route::post('/configuracoes/campos', [TenantCustomFieldController::class, 'store']);
+            Route::patch('/configuracoes/campos/{id}', [TenantCustomFieldController::class, 'update'])->whereUuid('id');
+            Route::delete('/configuracoes/campos/{id}', [TenantCustomFieldController::class, 'destroy'])->whereUuid('id');
+        });
+        Route::get('/chat', [ChatController::class, 'index']);
+        Route::get('/chat/resumo', [ChatController::class, 'summary']);
+        Route::get('/chat/destinatarios', [ChatController::class, 'recipients']);
+        Route::post('/chat', [ChatController::class, 'store']);
+        Route::get('/chat/{id}', [ChatController::class, 'show'])->whereUuid('id');
+        Route::post('/chat/{id}/mensagens', [ChatController::class, 'message'])->whereUuid('id');
+        Route::post('/chat/{id}/lido', [ChatController::class, 'read'])->whereUuid('id');
         Route::get(
             '/onboarding',
             [SaasOnboardingController::class, 'show']
@@ -768,5 +810,5 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 });
 
-require __DIR__.'/backoffice_ads.php';
-require __DIR__.'/ads.php';
+require __DIR__ . '/backoffice_ads.php';
+require __DIR__ . '/ads.php';

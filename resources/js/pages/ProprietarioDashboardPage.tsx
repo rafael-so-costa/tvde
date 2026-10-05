@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import api from "../lib/api";
 import {useTenant} from "../contexts/TenantContext";
+import AdDisplay from "../components/ads/AdDisplay";
 
 interface Documento{
     codigo:string;
@@ -124,6 +125,8 @@ export default function ProprietarioDashboardPage(){
                 <h1 className="mt-1 text-2xl font-bold text-slate-950">Olá, {data.proprietario.nome||"Proprietário"}</h1>
                 <p className="mt-1 text-sm text-slate-500">Resumo da sua frota, ocorrências e pendências.</p>
             </div>
+
+            <AdDisplay surface="owner_portal"/>
 
             <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-4">
                 <SummaryCard icon={Car} label="Frota" value={String(data.frota.total)} detail={`${data.frota.ativos} veículo(s) ativo(s)`}/>

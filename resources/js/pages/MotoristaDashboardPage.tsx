@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import api from "../lib/api";
 import {useTenant} from "../contexts/TenantContext";
+import AdDisplay from "../components/ads/AdDisplay";
 
 interface DashboardData{
     motorista:{id:string;nome:string;ativo:boolean;status_cadastro:string};
@@ -99,6 +100,7 @@ export default function MotoristaDashboardPage(){
                 <h1 className="mt-1 text-2xl font-bold text-slate-950">Olá, {data.motorista.nome}</h1>
                 <p className="mt-1 text-sm text-slate-500">Aqui está o resumo da sua atividade e das pendências que precisam da sua atenção.</p>
             </div>
+            <AdDisplay surface="driver_portal"/>
 
             <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-4">
                 <SummaryCard

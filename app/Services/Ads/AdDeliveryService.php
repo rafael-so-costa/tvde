@@ -67,11 +67,11 @@ class AdDeliveryService
 
         $campaigns =
             $this
-                ->tracking
-                ->filterEligible(
-                    $query->get(),
-                    $viewerKey
-                );
+            ->tracking
+            ->filterEligible(
+                $query->get(),
+                $viewerKey
+            );
 
         $campaign =
             $this->selectCampaign(
@@ -84,8 +84,8 @@ class AdDeliveryService
 
         $creative =
             $campaign
-                ->creatives
-                ->first();
+            ->creatives
+            ->first();
 
         if (! $creative) {
             return null;
@@ -93,20 +93,20 @@ class AdDeliveryService
 
         $deliveryToken =
             $this
-                ->tracking
-                ->recordServed(
-                    campaign: $campaign,
+            ->tracking
+            ->recordServed(
+                campaign: $campaign,
 
-                    creative: $creative,
+                creative: $creative,
 
-                    surface: $surface,
+                surface: $surface,
 
-                    viewerKey: $viewerKey,
+                viewerKey: $viewerKey,
 
-                    userId: $userId,
+                userId: $userId,
 
-                    tenantId: $tenantId
-                );
+                tenantId: $tenantId
+            );
 
         return $this->serialize(
             $campaign,
@@ -115,7 +115,25 @@ class AdDeliveryService
             $deliveryToken
         );
     }
+    public function publicCatalogQuery(): Builder
+    {
+        if (
+            ! $this->publicMarketplaceEnabled()
+        ) {
+            return AdCampaign::query()
+                ->whereRaw('1 = 0');
+        }
 
+        $query = $this->baseQuery(
+            self::SURFACE_PUBLIC
+        );
+
+        $this->publicEligibility(
+            $query
+        );
+
+        return $query;
+    }
     private function baseQuery(
         string $surface
     ): Builder {
@@ -128,7 +146,7 @@ class AdDeliveryService
             ->with([
                 'advertiser:id,name,type,status',
 
-                'creatives' => fn ($query) => $query
+                'creatives' => fn($query) => $query
                     ->where(
                         'active',
                         true
@@ -146,14 +164,14 @@ class AdDeliveryService
             )
             ->whereHas(
                 'advertiser',
-                fn ($query) => $query->where(
+                fn($query) => $query->where(
                     'status',
                     AdAdvertiser::STATUS_ACTIVE
                 )
             )
             ->whereHas(
                 'creatives',
-                fn ($query) => $query->where(
+                fn($query) => $query->where(
                     'active',
                     true
                 )
@@ -204,7 +222,7 @@ class AdDeliveryService
                 }
             )
             ->whereExists(
-                fn ($query) => $query
+                fn($query) => $query
                     ->selectRaw(
                         '1'
                     )
@@ -419,7 +437,7 @@ class AdDeliveryService
     private function audienceExists(
         string $audience
     ): callable {
-        return fn ($query) => $query
+        return fn($query) => $query
             ->selectRaw(
                 '1'
             )
@@ -473,9 +491,7 @@ class AdDeliveryService
 
         if ($total <= 1) {
             return $weighted
-                ->first()[
-                    'campaign'
-                ];
+                ->first()['campaign'];
         }
 
         $draw =
@@ -490,24 +506,18 @@ class AdDeliveryService
             $weighted as $item
         ) {
             $cursor +=
-                $item[
-                    'weight'
-                ];
+                $item['weight'];
 
             if (
                 $draw <=
                 $cursor
             ) {
-                return $item[
-                    'campaign'
-                ];
+                return $item['campaign'];
             }
         }
 
         return $weighted
-            ->last()[
-                'campaign'
-            ];
+            ->last()['campaign'];
     }
 
     private function serialize(
@@ -559,32 +569,32 @@ class AdDeliveryService
                  */
                 'click_url' => $creative->destination_type !==
                     AdCreative::DESTINATION_NONE
-                        ? "/api/ads/c/{$deliveryToken}"
-                        : null,
+                    ? "/api/ads/c/{$deliveryToken}"
+                    : null,
 
                 'image_url' => $creative->image_path
-                        ? Storage::disk(
-                            'public'
-                        )->url(
-                            $creative->image_path
-                        )
-                        : null,
+                    ? Storage::disk(
+                        'public'
+                    )->url(
+                        $creative->image_path
+                    )
+                    : null,
 
                 'mobile_image_url' => $creative->mobile_image_path
-                        ? Storage::disk(
-                            'public'
-                        )->url(
-                            $creative->mobile_image_path
-                        )
-                        : null,
+                    ? Storage::disk(
+                        'public'
+                    )->url(
+                        $creative->mobile_image_path
+                    )
+                    : null,
 
                 'video_url' => $creative->video_path
-                        ? Storage::disk(
-                            'public'
-                        )->url(
-                            $creative->video_path
-                        )
-                        : $creative->video_url,
+                    ? Storage::disk(
+                        'public'
+                    )->url(
+                        $creative->video_path
+                    )
+                    : $creative->video_url,
 
                 'alt_text' => $creative->alt_text,
             ],
@@ -611,13 +621,13 @@ class AdDeliveryService
     {
         return (bool) (
             AdSetting::query()
-                ->where(
-                    'scope',
-                    'global'
-                )
-                ->value(
-                    'tenant_internal_free_enabled'
-                )
+            ->where(
+                'scope',
+                'global'
+            )
+            ->value(
+                'tenant_internal_free_enabled'
+            )
             ?? true
         );
     }
@@ -626,13 +636,13 @@ class AdDeliveryService
     {
         return (bool) (
             AdSetting::query()
-                ->where(
-                    'scope',
-                    'global'
-                )
-                ->value(
-                    'public_marketplace_enabled'
-                )
+            ->where(
+                'scope',
+                'global'
+            )
+            ->value(
+                'public_marketplace_enabled'
+            )
             ?? true
         );
     }

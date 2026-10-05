@@ -9,38 +9,39 @@ class PermissionSeeder extends Seeder
 {
     public function run(): void
     {
-        $modulos = [
-            'alertas' => 'Alertas',
-            'dashboard' => 'Dashboard',
-            'empresas' => 'Empresas',
-            'proprietarios' => 'Proprietários',
-            'motoristas' => 'Motoristas',
-            'veiculos' => 'Veículos',
-            'contratos' => 'Contratos',
-            'declaracoes' => 'Declarações',
-            'templates' => 'Templates',
-            'alugueres' => 'Alugueres',
-            'checklist' => 'Checklists',
-            'multas' => 'Multas',
-            'sinistros' => 'Sinistros',
-            'manutencao' => 'Manutenção',
-            'assinaturas' => 'Assinaturas',
-            'funcionarios' => 'Funcionários',
-            'chat' => 'Chat',
-            'chat_interno' => 'Chat interno',
-            'expediente' => 'Registo de expediente',
-            'recibos_verdes' => 'Recibos verdes',
-            'registos_criminais' => 'Registos criminais',
-            'configuracoes' => 'Configurações',
+        $modulos=[
+            'alertas'=>'Alertas',
+            'dashboard'=>'Dashboard',
+            'empresas'=>'Empresas',
+            'proprietarios'=>'Proprietários',
+            'motoristas'=>'Motoristas',
+            'veiculos'=>'Veículos',
+            'contratos'=>'Contratos',
+            'declaracoes'=>'Declarações',
+            'templates'=>'Templates',
+            'alugueres'=>'Alugueres',
+            'checklist'=>'Checklists',
+            'multas'=>'Multas',
+            'sinistros'=>'Sinistros',
+            'manutencao'=>'Manutenção',
+            'assinaturas'=>'Assinaturas',
+            'funcionarios'=>'Funcionários',
+            'chat'=>'Chat',
+            'chat_interno'=>'Chat interno',
+            'expediente'=>'Registo de expediente',
+            'recibos_verdes'=>'Recibos verdes',
+            'registos_criminais'=>'Registos criminais',
+            'configuracoes'=>'Configurações',
+            'relatorios'=>'Relatórios',
         ];
 
-        foreach ($modulos as $codigo => $nome) {
+        foreach($modulos as $codigo=>$nome){
             Permission::updateOrCreate(
-                ['codigo' => $codigo],
+                ['codigo'=>$codigo],
                 [
-                    'modulo' => $codigo,
-                    'nome' => $nome,
-                    'descricao' => "Acesso ao módulo {$nome}",
+                    'modulo'=>$codigo,
+                    'nome'=>$nome,
+                    'descricao'=>"Acesso ao módulo {$nome}",
                 ]
             );
         }

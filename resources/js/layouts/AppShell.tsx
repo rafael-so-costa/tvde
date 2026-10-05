@@ -19,15 +19,19 @@ import {
     Truck,
     UserCog,
     UserRound,
+    Settings2,
     UsersRound,
     Wrench,
+    BarChart3,
     X,
+    MessageSquareText,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useTenant } from "../contexts/TenantContext";
 import { useCurrentPermissions } from "../hooks/useCurrentPermissions";
 import AlertBell from "../components/alerts/AlertBell";
 import { resolvePortalDestination } from "../lib/portal";
+import ChatUnreadBadge from "../components/chat/ChatUnreadBadge";
 
 const navigation = [
     {
@@ -39,6 +43,11 @@ const navigation = [
         to: "/alertas",
         label: "Alertas",
         icon: BellRing,
+    },
+    {
+        to: "/mensagens",
+        label: "Mensagens",
+        icon: MessageSquareText,
     },
     {
         to: "/empresas",
@@ -129,6 +138,18 @@ const navigation = [
         label: "Checklists",
         icon: ClipboardCheck,
         permission: "checklist",
+    },
+    {
+        to: "/configuracoes",
+        label: "Configurações",
+        icon: Settings2,
+        permission: "configuracoes",
+    },
+    {
+        to: "/relatorios",
+        label: "Relatórios",
+        icon: BarChart3,
+        permission: "relatorios",
     },
     {
         to: "/minha-conta",
@@ -241,6 +262,9 @@ export default function AppShell() {
                     >
                         <Icon className="w-5 h-5" />
                         {label}
+                        {to === "/mensagens" && (
+                            <ChatUnreadBadge mode="tenant" />
+                        )}
                     </NavLink>
                 ))}
             </nav>
