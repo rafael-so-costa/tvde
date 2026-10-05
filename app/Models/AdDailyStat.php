@@ -14,6 +14,7 @@ class AdDailyStat extends Model
         'campaign_id',
         'creative_id',
         'zone_id',
+        'surface',
         'date',
         'impressions',
         'viewable_impressions',
@@ -26,21 +27,32 @@ class AdDailyStat extends Model
     {
         return [
             'date' => 'date',
+            'impressions' => 'integer',
+            'viewable_impressions' => 'integer',
+            'unique_impressions' => 'integer',
+            'clicks' => 'integer',
+            'unique_clicks' => 'integer',
         ];
     }
 
     public function campaign(): BelongsTo
     {
-        return $this->belongsTo(AdCampaign::class);
+        return $this->belongsTo(
+            AdCampaign::class
+        );
     }
 
     public function creative(): BelongsTo
     {
-        return $this->belongsTo(AdCreative::class);
+        return $this->belongsTo(
+            AdCreative::class
+        );
     }
 
     public function zone(): BelongsTo
     {
-        return $this->belongsTo(AdZone::class);
+        return $this->belongsTo(
+            AdZone::class
+        );
     }
 }

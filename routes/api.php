@@ -247,7 +247,6 @@ Route::middleware('auth:sanctum')->group(function () {
                     'id'
                 );
 
-
             Route::post('/crm/operadores/{id}/enriquecimento', [BackofficeTvdeOperatorEnrichmentController::class, 'store'])
                 ->whereUuid('id');
 
@@ -769,4 +768,5 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 });
 
-require __DIR__ . '/backoffice_ads.php';
+require __DIR__.'/backoffice_ads.php';
+require __DIR__.'/ads.php';
