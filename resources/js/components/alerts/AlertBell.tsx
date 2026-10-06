@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 
 import {
+    useLocation,
     useNavigate,
 } from "react-router-dom";
 
@@ -29,6 +30,10 @@ import {
 } from "../../lib/alerts";
 
 import {
+    resolveNotificationUrl,
+} from "../../lib/notification-links";
+
+import {
     useTenant,
 } from "../../contexts/TenantContext";
 
@@ -37,10 +42,15 @@ import type {
     AlertSeverity,
 } from "../../types/alerts";
 
-export default function AlertBell() {
-    const { tenant }=useTenant();
+export default function AlertBell({
+    alertsPath="/alertas",
+}:{
+    alertsPath?:string;
+}){
+    const {tenant}=useTenant();
 
     const navigate=useNavigate();
+    const location=useLocation();
 
     const queryClient=
         useQueryClient();
@@ -49,7 +59,7 @@ export default function AlertBell() {
         useState(false);
 
     const containerRef=
-        useRef<HTMLDivElement | null>(
+        useRef<HTMLDivElement|null>(
             null,
         );
 
@@ -59,7 +69,9 @@ export default function AlertBell() {
                 tenant?.id,
             ),
 
-        enabled:Boolean(tenant),
+        enabled:Boolean(
+            tenant
+        ),
 
         queryFn:
             fetchAlertSummary,
@@ -86,7 +98,7 @@ export default function AlertBell() {
                 invalidate,
         });
 
-    function invalidate() {
+    function invalidate(){
         queryClient
             .invalidateQueries({
                 queryKey:
@@ -95,49 +107,59 @@ export default function AlertBell() {
     }
 
     function handleItem(
-        item: AlertItem,
-    ) {
+        item:AlertItem
+    ){
         if(
             !item
                 .recipient
                 ?.read_at
         ){
             markReadMutation
-                .mutate(item.id);
+                .mutate(
+                    item.id
+                );
         }
 
-        setOpen(false);
+        setOpen(
+            false
+        );
 
         navigate(
-            "/alertas",
+            resolveNotificationUrl(
+                item.action_url,
+                location.pathname,
+                alertsPath
+            )
         );
     }
 
     useEffect(()=>{
         function handleOutside(
-            event: MouseEvent,
-        ) {
+            event:MouseEvent
+        ){
             if(
                 containerRef.current &&
                 !containerRef
                     .current
                     .contains(
-                        event.target as Node,
+                        event.target as Node
                     )
             ){
-                setOpen(false);
+                setOpen(
+                    false
+                );
             }
         }
 
         document.addEventListener(
             "mousedown",
-            handleOutside,
+            handleOutside
         );
 
         return ()=>{
             document.removeEventListener(
                 "mousedown",
-                handleOutside,
+                handleOutside
             );
         };
     },[]);
@@ -150,7 +172,7 @@ export default function AlertBell() {
         summaryQuery.data;
 
     const unread=
-        summary?.unread ?? 0;
+        summary?.unread??0;
 
     return (
         <div
@@ -161,40 +183,42 @@ export default function AlertBell() {
                 type="button"
                 onClick={()=>
                     setOpen(
-                        value=>!value,
+                        value=>!value
                     )
                 }
-                aria-label="Alertas"
+                aria-label="Notificações"
                 className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600"
             >
-                <Bell className="h-5 w-5" />
+                <Bell className="h-5 w-5"/>
 
-                {unread>0 && (
+                {unread>0&&(
                     <span className="absolute -right-1 -top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white">
                         {unread>99
-                            ? "99+"
-                            : unread}
+                            ?"99+"
+                            :unread
+                        }
                     </span>
                 )}
             </button>
 
-            {open && (
+            {open&&(
                 <div className="absolute right-0 top-12 z-50 w-[min(92vw,390px)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/10">
                     <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
                         <div>
                             <div className="font-semibold text-slate-900">
-                                Alertas
+                                Notificações
                             </div>
 
                             <div className="text-xs text-slate-400">
                                 {unread} não lido
                                 {unread===1
-                                    ? ""
-                                    : "s"}
+                                    ?""
+                                    :"s"
+                                }
                             </div>
                         </div>
 
-                        {unread>0 && (
+                        {unread>0&&(
                             <button
                                 type="button"
                                 disabled={
@@ -207,30 +231,32 @@ export default function AlertBell() {
                                 }
                                 className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-indigo-600 transition hover:bg-indigo-50 disabled:opacity-50"
                             >
-                                {markAllMutation.isPending
-                                    ? (
-                                        <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                                {markAllMutation
+                                    .isPending
+                                    ?(
+                                        <LoaderCircle className="h-3.5 w-3.5 animate-spin"/>
                                     )
-                                    : (
-                                        <CheckCheck className="h-3.5 w-3.5" />
-                                    )}
+                                    :(
+                                        <CheckCheck className="h-3.5 w-3.5"/>
+                                    )
+                                }
 
                                 Marcar lidos
                             </button>
                         )}
                     </div>
 
-                    {summaryQuery.isLoading ? (
+                    {summaryQuery.isLoading?(
                         <div className="flex items-center justify-center gap-2 px-5 py-10 text-sm text-slate-400">
-                            <LoaderCircle className="h-4 w-4 animate-spin" />
+                            <LoaderCircle className="h-4 w-4 animate-spin"/>
                             A carregar...
                         </div>
-                    ) : !summary ||
-                        summary.items.length===0 ? (
+                    ):!summary||
+                    summary.items.length===0?(
                         <div className="px-5 py-10 text-center text-sm text-slate-400">
-                            Nenhum alerta ativo.
+                            Nenhuma notificação ativa.
                         </div>
-                    ) : (
+                    ):(
                         <div className="max-h-[430px] divide-y divide-slate-100 overflow-y-auto">
                             {summary.items.map(
                                 item=>(
@@ -239,7 +265,7 @@ export default function AlertBell() {
                                         type="button"
                                         onClick={()=>
                                             handleItem(
-                                                item,
+                                                item
                                             )
                                         }
                                         className="flex w-full items-start gap-3 px-4 py-3 text-left transition hover:bg-slate-50"
@@ -251,28 +277,34 @@ export default function AlertBell() {
                                         <span className="min-w-0 flex-1">
                                             <span className="flex items-center gap-2">
                                                 <span
-                                                    className={`truncate text-sm ${item.recipient?.read_at ? "font-medium text-slate-700" : "font-semibold text-slate-950"}`}
+                                                    className={`truncate text-sm ${
+                                                        item
+                                                            .recipient
+                                                            ?.read_at
+                                                            ?"font-medium text-slate-700"
+                                                            :"font-semibold text-slate-950"
+                                                    }`}
                                                 >
                                                     {item.title}
                                                 </span>
 
                                                 {!item
                                                     .recipient
-                                                    ?.read_at && (
-                                                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-500" />
+                                                    ?.read_at&&(
+                                                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-500"/>
                                                 )}
                                             </span>
 
-                                            {item.message && (
+                                            {item.message&&(
                                                 <span className="mt-1 block line-clamp-2 text-xs leading-5 text-slate-400">
                                                     {item.message}
                                                 </span>
                                             )}
                                         </span>
 
-                                        <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-slate-300" />
+                                        <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-slate-300"/>
                                     </button>
-                                ),
+                                )
                             )}
                         </div>
                     )}
@@ -280,15 +312,18 @@ export default function AlertBell() {
                     <button
                         type="button"
                         onClick={()=>{
-                            setOpen(false);
+                            setOpen(
+                                false
+                            );
+
                             navigate(
-                                "/alertas",
+                                alertsPath
                             );
                         }}
                         className="flex w-full items-center justify-center gap-1.5 border-t border-slate-100 px-4 py-3 text-sm font-semibold text-indigo-600 transition hover:bg-indigo-50"
                     >
-                        Ver todos os alertas
-                        <ChevronRight className="h-4 w-4" />
+                        Ver todas as notificações
+                        <ChevronRight className="h-4 w-4"/>
                     </button>
                 </div>
             )}
@@ -297,8 +332,8 @@ export default function AlertBell() {
 }
 
 function severityDot(
-    severity: AlertSeverity,
-): string {
+    severity:AlertSeverity
+):string{
     return {
         critical:"bg-red-500",
         high:"bg-orange-500",

@@ -15,7 +15,7 @@ class HelpContent extends Model
         'category_id','type','title','slug','excerpt','body',
         'youtube_url','youtube_video_id','feature_key','position',
         'featured','active','published_at',
-        'created_by_user_id','updated_by_user_id',
+        'created_by_user_id','updated_by_user_id', 'notification_synced_at',
     ];
 
     protected function casts(): array
@@ -25,6 +25,7 @@ class HelpContent extends Model
             'featured'=>'boolean',
             'active'=>'boolean',
             'published_at'=>'datetime',
+            'notification_synced_at'=>'datetime',
         ];
     }
 

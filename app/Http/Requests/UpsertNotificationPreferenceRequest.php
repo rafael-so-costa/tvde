@@ -16,7 +16,7 @@ class UpsertNotificationPreferenceRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'category'=>[
+            'category' => [
                 'required',
                 Rule::in([
                     '*',
@@ -28,15 +28,21 @@ class UpsertNotificationPreferenceRequest extends FormRequest
                     'diagnostic',
                     'inventory',
                     'purchase',
+                    'helpdesk',
+                    'news',
+                    'platform',
+                    'training',
+                    'account',
+                    'system',
                 ]),
             ],
 
-            'enabled'=>[
+            'enabled' => [
                 'required',
                 'boolean',
             ],
 
-            'minimum_severity'=>[
+            'minimum_severity' => [
                 'required',
                 Rule::in([
                     'low',
@@ -46,7 +52,7 @@ class UpsertNotificationPreferenceRequest extends FormRequest
                 ]),
             ],
 
-            'delivery_mode'=>[
+            'delivery_mode' => [
                 'required',
                 Rule::in([
                     'immediate',
@@ -54,35 +60,35 @@ class UpsertNotificationPreferenceRequest extends FormRequest
                 ]),
             ],
 
-            'quiet_hours_start'=>[
+            'quiet_hours_start' => [
                 'nullable',
                 'date_format:H:i',
                 'required_with:quiet_hours_end',
             ],
 
-            'quiet_hours_end'=>[
+            'quiet_hours_end' => [
                 'nullable',
                 'date_format:H:i',
                 'required_with:quiet_hours_start',
             ],
 
-            'timezone'=>[
+            'timezone' => [
                 'nullable',
                 'string',
                 'max:64',
-                function(
+                function (
                     string $attribute,
                     mixed $value,
                     \Closure $fail
-                ){
-                    if(
+                ) {
+                    if (
                         filled($value) &&
                         !in_array(
                             $value,
                             timezone_identifiers_list(),
                             true
                         )
-                    ){
+                    ) {
                         $fail(
                             'O fuso horário selecionado é inválido.'
                         );
@@ -95,24 +101,24 @@ class UpsertNotificationPreferenceRequest extends FormRequest
     public function after(): array
     {
         return [
-            function(
+            function (
                 Validator $validator
-            ){
-                $start=
+            ) {
+                $start =
                     $this->input(
                         'quiet_hours_start'
                     );
 
-                $end=
+                $end =
                     $this->input(
                         'quiet_hours_end'
                     );
 
-                if(
+                if (
                     filled($start) &&
                     filled($end) &&
-                    $start===$end
-                ){
+                    $start === $end
+                ) {
                     $validator
                         ->errors()
                         ->add(

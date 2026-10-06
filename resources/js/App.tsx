@@ -25,6 +25,7 @@ import BackofficeCrmTagsPage from "./pages/BackofficeCrmTagsPage";
 import BackofficeDashboardPage from "./pages/BackofficeDashboardPage";
 import BackofficeNifEnrichmentBatchPage from "./pages/BackofficeNifEnrichmentBatchPage";
 import BackofficeNifEnrichmentBatchesPage from "./pages/BackofficeNifEnrichmentBatchesPage";
+import BackofficeNotificationsPage from "./pages/BackofficeNotificationsPage";
 import BackofficePlanPage from "./pages/BackofficePlanPage";
 import BackofficePlansPage from "./pages/BackofficePlansPage";
 import BackofficeSubscriptionPage from "./pages/BackofficeSubscriptionPage";
@@ -67,6 +68,7 @@ import BackofficeAdOrdersPage from "./pages/ads/BackofficeAdOrdersPage";
 import BackofficeAdsDashboardPage from "./pages/ads/BackofficeAdsDashboardPage";
 import BackofficeAdsRouterPage from "./pages/ads/BackofficeAdsRouterPage";
 import BackofficeAdSettingsPage from "./pages/ads/BackofficeAdSettingsPage";
+
 import ChatPage from "./pages/ChatPage";
 import ConfiguracoesPage from "./pages/ConfiguracoesPage";
 import RelatoriosPage from "./pages/RelatoriosPage";
@@ -108,14 +110,22 @@ export default function App() {
                             path="helpdesk"
                             element={<HelpdeskPage mode="backoffice" />}
                         />
+
                         <Route
                             path="ajuda"
                             element={<BackofficeHelpCenterPage />}
                         />
+
+                        <Route
+                            path="notificacoes"
+                            element={<BackofficeNotificationsPage />}
+                        />
+
                         <Route
                             path="mensagens"
                             element={<ChatPage mode="backoffice" />}
                         />
+
                         <Route index element={<BackofficeDashboardPage />} />
 
                         <Route
@@ -276,6 +286,7 @@ export default function App() {
                                 path="helpdesk"
                                 element={<HelpdeskPage mode="tenant" />}
                             />
+
                             <Route
                                 path="ajuda"
                                 element={<HelpCenterPage basePath="/ajuda" />}
@@ -285,15 +296,19 @@ export default function App() {
                                 path="ajuda/:slug"
                                 element={<HelpContentPage basePath="/ajuda" />}
                             />
+
                             <Route path="mensagens" element={<ChatPage />} />
+
                             <Route
                                 index
                                 element={<Navigate to="/painel" replace />}
                             />
+
                             <Route
                                 path="relatorios"
                                 element={<RelatoriosPage />}
                             />
+
                             <Route
                                 path="auditoria"
                                 element={<AuditoriaPage />}
@@ -305,6 +320,7 @@ export default function App() {
                                 path="minha-conta"
                                 element={<MyAccountPage />}
                             />
+
                             <Route
                                 path="configuracoes"
                                 element={<ConfiguracoesPage />}
@@ -390,6 +406,8 @@ export default function App() {
 
                         <Route path="minha-conta" element={<MyAccountPage />} />
 
+                        <Route path="alertas" element={<AlertsPage />} />
+
                         <Route
                             path="ajuda"
                             element={
@@ -408,6 +426,7 @@ export default function App() {
                             path="expediente"
                             element={<ExpedientePage mode="motorista" />}
                         />
+
                         <Route path="mensagens" element={<ChatPage />} />
 
                         <Route
@@ -438,6 +457,9 @@ export default function App() {
                         element={<ProprietarioShell />}
                     >
                         <Route index element={<ProprietarioDashboardPage />} />
+
+                        <Route path="alertas" element={<AlertsPage />} />
+
                         <Route
                             path="ajuda"
                             element={
@@ -458,6 +480,7 @@ export default function App() {
                             path="multas"
                             element={<MultasPage mode="readonly" />}
                         />
+
                         <Route path="mensagens" element={<ChatPage />} />
 
                         <Route

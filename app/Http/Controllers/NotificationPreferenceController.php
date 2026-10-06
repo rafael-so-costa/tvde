@@ -12,7 +12,7 @@ use Illuminate\Validation\Rule;
 
 class NotificationPreferenceController extends Controller
 {
-    private const CATEGORIES=[
+    private const CATEGORIES = [
         'document',
         'contract',
         'rental',
@@ -21,141 +21,147 @@ class NotificationPreferenceController extends Controller
         'diagnostic',
         'inventory',
         'purchase',
+        'helpdesk',
+        'news',
+        'platform',
+        'training',
+        'account',
+        'system',
     ];
 
     public function __construct(
         private TenantContext $tenantContext
-    ){}
+    ) {}
 
     public function index(
         Request $request
     ): JsonResponse {
-        $tenantId=
+        $tenantId =
             $this->tenantId();
 
-        $userId=
+        $userId =
             $request->user()->id;
 
-        $preferences=
+        $preferences =
             NotificationPreference::query()
-                ->where(
-                    'tenant_id',
-                    $tenantId
-                )
-                ->where(
-                    'user_id',
-                    $userId
-                )
-                ->orderBy('channel')
-                ->orderBy('category')
-                ->get();
+            ->where(
+                'tenant_id',
+                $tenantId
+            )
+            ->where(
+                'user_id',
+                $userId
+            )
+            ->orderBy('channel')
+            ->orderBy('category')
+            ->get();
 
-        $emailPreferences=
+        $emailPreferences =
             $preferences
-                ->where(
-                    'channel',
-                    'email'
-                )
-                ->values();
+            ->where(
+                'channel',
+                'email'
+            )
+            ->values();
 
-        $wildcard=
+        $wildcard =
             $emailPreferences
-                ->firstWhere(
-                    'category',
-                    '*'
-                );
+            ->firstWhere(
+                'category',
+                '*'
+            );
 
-        $effective=
+        $effective =
             collect(
                 self::CATEGORIES
             )
-                ->map(
-                    function(
-                        string $category
-                    ) use(
-                        $emailPreferences,
-                        $wildcard
-                    ){
-                        $specific=
-                            $emailPreferences
-                                ->firstWhere(
-                                    'category',
-                                    $category
-                                );
+            ->map(
+                function (
+                    string $category
+                ) use (
+                    $emailPreferences,
+                    $wildcard
+                ) {
+                    $specific =
+                        $emailPreferences
+                        ->firstWhere(
+                            'category',
+                            $category
+                        );
 
-                        $source=
-                            $specific
-                                ? 'category'
-                                : (
-                                    $wildcard
-                                        ? 'global'
-                                        : 'default'
-                                );
+                    $source =
+                        $specific
+                        ? 'category'
+                        : (
+                            $wildcard
+                            ? 'global'
+                            : 'default'
+                        );
 
-                        $preference=
-                            $specific
-                            ?? $wildcard;
+                    $preference =
+                        $specific
+                        ?? $wildcard;
 
-                        return [
-                            'category'=>$category,
-                            'channel'=>'email',
-                            'enabled'=>
-                                $preference
-                                    ?->enabled
-                                ?? false,
+                    return [
+                        'category' => $category,
+                        'channel' => 'email',
+                        'enabled' =>
+                        $preference
+                            ?->enabled
+                            ?? false,
 
-                            'minimum_severity'=>
-                                $preference
-                                    ?->minimum_severity
-                                ?? 'low',
+                        'minimum_severity' =>
+                        $preference
+                            ?->minimum_severity
+                            ?? 'low',
 
-                            'delivery_mode'=>
-                                $preference
-                                    ?->delivery_mode
-                                ?? 'immediate',
+                        'delivery_mode' =>
+                        $preference
+                            ?->delivery_mode
+                            ?? 'immediate',
 
-                            'quiet_hours_start'=>
-                                $preference
-                                    ?->quiet_hours_start,
+                        'quiet_hours_start' =>
+                        $preference
+                            ?->quiet_hours_start,
 
-                            'quiet_hours_end'=>
-                                $preference
-                                    ?->quiet_hours_end,
+                        'quiet_hours_end' =>
+                        $preference
+                            ?->quiet_hours_end,
 
-                            'timezone'=>
-                                $preference
-                                    ?->timezone
-                                ?? config(
-                                    'app.timezone',
-                                    'Europe/Lisbon'
-                                ),
+                        'timezone' =>
+                        $preference
+                            ?->timezone
+                            ?? config(
+                                'app.timezone',
+                                'Europe/Lisbon'
+                            ),
 
-                            'source'=>$source,
-                        ];
-                    }
-                )
-                ->values();
+                        'source' => $source,
+                    ];
+                }
+            )
+            ->values();
 
         return response()->json([
-            'data'=>$preferences,
-            'effective_email'=>
-                $effective,
-            'options'=>[
-                'categories'=>[
+            'data' => $preferences,
+            'effective_email' =>
+            $effective,
+            'options' => [
+                'categories' => [
                     '*',
                     ...self::CATEGORIES,
                 ],
-                'channels'=>[
+                'channels' => [
                     'in_app',
                     'email',
                 ],
-                'minimum_severities'=>[
+                'minimum_severities' => [
                     'low',
                     'medium',
                     'high',
                     'critical',
                 ],
-                'delivery_modes'=>[
+                'delivery_modes' => [
                     'immediate',
                     'daily_digest',
                 ],
@@ -166,83 +172,75 @@ class NotificationPreferenceController extends Controller
     public function upsertEmail(
         UpsertNotificationPreferenceRequest $request
     ): JsonResponse {
-        $tenantId=
+        $tenantId =
             $this->tenantId();
 
-        $userId=
+        $userId =
             $request->user()->id;
 
-        $data=
+        $data =
             $request->validated();
 
-        $preference=
+        $preference =
             NotificationPreference::query()
-                ->where(
-                    'tenant_id',
-                    $tenantId
-                )
-                ->where(
-                    'user_id',
-                    $userId
-                )
-                ->where(
-                    'category',
-                    $data['category']
-                )
-                ->where(
-                    'channel',
-                    'email'
-                )
-                ->first();
+            ->where(
+                'tenant_id',
+                $tenantId
+            )
+            ->where(
+                'user_id',
+                $userId
+            )
+            ->where(
+                'category',
+                $data['category']
+            )
+            ->where(
+                'channel',
+                'email'
+            )
+            ->first();
 
-        $created=
+        $created =
             !$preference;
 
-        if(!$preference){
-            $preference=
+        if (!$preference) {
+            $preference =
                 new NotificationPreference();
 
-            $preference->tenant_id=
+            $preference->tenant_id =
                 $tenantId;
 
-            $preference->user_id=
+            $preference->user_id =
                 $userId;
 
-            $preference->category=
+            $preference->category =
                 $data['category'];
 
-            $preference->channel=
+            $preference->channel =
                 'email';
         }
 
-        $preference->enabled=
+        $preference->enabled =
             (bool)$data['enabled'];
 
         $preference
-            ->minimum_severity=
-            $data[
-                'minimum_severity'
-            ];
+            ->minimum_severity =
+            $data['minimum_severity'];
 
         $preference
-            ->delivery_mode=
-            $data[
-                'delivery_mode'
-            ];
+            ->delivery_mode =
+            $data['delivery_mode'];
 
         $preference
-            ->quiet_hours_start=
-            $data[
-                'quiet_hours_start'
-            ] ?? null;
+            ->quiet_hours_start =
+            $data['quiet_hours_start'] ?? null;
 
         $preference
-            ->quiet_hours_end=
-            $data[
-                'quiet_hours_end'
-            ] ?? null;
+            ->quiet_hours_end =
+            $data['quiet_hours_end'] ?? null;
 
-        $preference->timezone=
+        $preference->timezone =
             $data['timezone']
             ?? config(
                 'app.timezone',
@@ -252,18 +250,18 @@ class NotificationPreferenceController extends Controller
         $preference->save();
 
         return response()->json([
-            'message'=>
-                'Preferência de notificação atualizada.',
-            'data'=>$preference,
-        ],$created ? 201 : 200);
+            'message' =>
+            'Preferência de notificação atualizada.',
+            'data' => $preference,
+        ], $created ? 201 : 200);
     }
 
     public function destroyEmail(
         Request $request
     ): JsonResponse {
-        $validated=
+        $validated =
             $request->validate([
-                'category'=>[
+                'category' => [
                     'required',
                     Rule::in([
                         '*',
@@ -272,42 +270,40 @@ class NotificationPreferenceController extends Controller
                 ],
             ]);
 
-        $deleted=
+        $deleted =
             NotificationPreference::query()
-                ->where(
-                    'tenant_id',
-                    $this->tenantId()
-                )
-                ->where(
-                    'user_id',
-                    $request->user()->id
-                )
-                ->where(
-                    'category',
-                    $validated[
-                        'category'
-                    ]
-                )
-                ->where(
-                    'channel',
-                    'email'
-                )
-                ->delete();
+            ->where(
+                'tenant_id',
+                $this->tenantId()
+            )
+            ->where(
+                'user_id',
+                $request->user()->id
+            )
+            ->where(
+                'category',
+                $validated['category']
+            )
+            ->where(
+                'channel',
+                'email'
+            )
+            ->delete();
 
         return response()->json([
-            'message'=>
-                'Preferência de email removida.',
-            'deleted'=>
-                $deleted>0,
+            'message' =>
+            'Preferência de email removida.',
+            'deleted' =>
+            $deleted > 0,
         ]);
     }
 
     public function deliveries(
         Request $request
     ): JsonResponse {
-        $validated=
+        $validated =
             $request->validate([
-                'channel'=>[
+                'channel' => [
                     'nullable',
                     Rule::in([
                         'in_app',
@@ -315,7 +311,7 @@ class NotificationPreferenceController extends Controller
                     ]),
                 ],
 
-                'status'=>[
+                'status' => [
                     'nullable',
                     Rule::in([
                         'queued',
@@ -327,13 +323,13 @@ class NotificationPreferenceController extends Controller
                     ]),
                 ],
 
-                'page'=>[
+                'page' => [
                     'nullable',
                     'integer',
                     'min:1',
                 ],
 
-                'per_page'=>[
+                'per_page' => [
                     'nullable',
                     'integer',
                     'min:1',
@@ -341,66 +337,52 @@ class NotificationPreferenceController extends Controller
                 ],
             ]);
 
-        $query=
+        $query =
             AlertDelivery::query()
-                ->where(
-                    'tenant_id',
-                    $this->tenantId()
-                )
-                ->whereHas(
-                    'recipient',
-                    fn($query)=>
-                        $query->where(
-                            'user_id',
-                            $request
-                                ->user()
-                                ->id
-                        )
-                )
-                ->with([
-                    'recipient:id,alert_id,user_id,active',
-                    'recipient.alert:id,rule_code,category,severity,title,message,due_at,action_url,status,triggered_at,resolved_at',
-                ])
-                ->orderByDesc(
-                    'created_at'
-                );
-
-        if(
-            !empty(
-                $validated[
-                    'channel'
-                ]
+            ->where(
+                'tenant_id',
+                $this->tenantId()
             )
-        ){
+            ->whereHas(
+                'recipient',
+                fn($query) =>
+                $query->where(
+                    'user_id',
+                    $request
+                        ->user()
+                        ->id
+                )
+            )
+            ->with([
+                'recipient:id,alert_id,user_id,active',
+                'recipient.alert:id,rule_code,category,severity,title,message,due_at,action_url,status,triggered_at,resolved_at',
+            ])
+            ->orderByDesc(
+                'created_at'
+            );
+
+        if (
+            !empty($validated['channel'])
+        ) {
             $query->where(
                 'channel',
-                $validated[
-                    'channel'
-                ]
+                $validated['channel']
             );
         }
 
-        if(
-            !empty(
-                $validated[
-                    'status'
-                ]
-            )
-        ){
+        if (
+            !empty($validated['status'])
+        ) {
             $query->where(
                 'status',
-                $validated[
-                    'status'
-                ]
+                $validated['status']
             );
         }
 
         return response()->json(
             $query->paginate(
                 (int)(
-                    $validated[
-                        'per_page'
-                    ]
+                    $validated['per_page']
                     ?? 20
                 )
             )
@@ -409,11 +391,11 @@ class NotificationPreferenceController extends Controller
 
     private function tenantId(): string
     {
-        if(
+        if (
             !$this
                 ->tenantContext
                 ->hasTenant()
-        ){
+        ) {
             abort(
                 403,
                 'Selecione uma organização para aceder a este recurso.'

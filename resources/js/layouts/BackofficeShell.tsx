@@ -1,27 +1,31 @@
 import {
     Activity,
+    BellRing,
+    BookOpenText,
     Building2,
     CreditCard,
     Database,
     DatabaseZap,
     FileClock,
-    BookOpenText,
     LayoutDashboard,
     Layers3,
+    LifeBuoy,
     LogOut,
+    Megaphone,
+    MessageSquareText,
     Rows3,
     ShieldCheck,
     Tag,
     Truck,
     UsersRound,
-    LifeBuoy,
-    Megaphone,
-    MessageSquareText,
 } from "lucide-react";
+
 import { Link, NavLink, Outlet } from "react-router-dom";
 
 import { useAuth } from "../contexts/AuthContext";
+
 import ChatUnreadBadge from "../components/chat/ChatUnreadBadge";
+
 import HelpdeskUnreadBadge from "../components/helpdesk/HelpdeskUnreadBadge";
 
 export default function BackofficeShell() {
@@ -30,6 +34,7 @@ export default function BackofficeShell() {
     const navClass = ({ isActive }: { isActive: boolean }) =>
         [
             "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition",
+
             isActive
                 ? "bg-indigo-500 text-white"
                 : "text-slate-400 hover:bg-white/5 hover:text-white",
@@ -71,6 +76,7 @@ export default function BackofficeShell() {
                             <UsersRound className="h-5 w-5" />
                             Clientes
                         </NavLink>
+
                         <NavLink
                             to="/backoffice/mensagens"
                             className={navClass}
@@ -89,6 +95,14 @@ export default function BackofficeShell() {
                         <NavLink to="/backoffice/ajuda" className={navClass}>
                             <BookOpenText className="h-5 w-5" />
                             Central de Ajuda
+                        </NavLink>
+
+                        <NavLink
+                            to="/backoffice/notificacoes"
+                            className={navClass}
+                        >
+                            <BellRing className="h-5 w-5" />
+                            Notificações
                         </NavLink>
 
                         <NavLink to="/backoffice/planos" className={navClass}>

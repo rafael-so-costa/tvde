@@ -1,41 +1,50 @@
 import { useState } from "react";
+
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+
 import {
     AlertTriangle,
+    BarChart3,
     BellRing,
+    BookOpenText,
     Building2,
     Car,
-    ClipboardCheck,
     CircleUserRound,
+    ClipboardCheck,
     Clock3,
     FileStack,
     FileText,
+    History,
     LayoutDashboard,
+    LifeBuoy,
+    ListChecks,
     LoaderCircle,
     LogOut,
-    History,
     Menu,
+    MessageSquareText,
     ReceiptText,
-    BookOpenText,
+    Settings2,
     ShieldCheck,
     Truck,
     UserCog,
     UserRound,
-    Settings2,
     UsersRound,
     Wrench,
-    BarChart3,
-    ListChecks,
-    LifeBuoy,
     X,
-    MessageSquareText,
 } from "lucide-react";
+
 import { useAuth } from "../contexts/AuthContext";
+
 import { useTenant } from "../contexts/TenantContext";
+
 import { useCurrentPermissions } from "../hooks/useCurrentPermissions";
+
 import AlertBell from "../components/alerts/AlertBell";
+
 import { resolvePortalDestination } from "../lib/portal";
+
 import ChatUnreadBadge from "../components/chat/ChatUnreadBadge";
+
 import HelpdeskUnreadBadge from "../components/helpdesk/HelpdeskUnreadBadge";
 
 const navigation = [
@@ -52,7 +61,7 @@ const navigation = [
     },
     {
         to: "/alertas",
-        label: "Alertas",
+        label: "Notificações",
         icon: BellRing,
     },
     {
@@ -200,6 +209,7 @@ export default function AppShell() {
     const { can } = useCurrentPermissions();
 
     const location = useLocation();
+
     const navigate = useNavigate();
 
     const [mobileOpen, setMobileOpen] = useState(false);
@@ -295,6 +305,7 @@ export default function AppShell() {
                         className={({ isActive }) =>
                             [
                                 "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition",
+
                                 isActive
                                     ? "bg-indigo-500 text-white shadow-lg shadow-indigo-950/40"
                                     : "text-slate-400 hover:bg-white/5 hover:text-white",
@@ -302,7 +313,9 @@ export default function AppShell() {
                         }
                     >
                         <Icon className="w-5 h-5" />
+
                         {label}
+
                         {to === "/mensagens" && (
                             <ChatUnreadBadge mode="tenant" />
                         )}

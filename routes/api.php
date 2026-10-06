@@ -73,6 +73,7 @@ use App\Http\Controllers\HelpdeskController;
 use App\Http\Controllers\BackofficeHelpCategoryController;
 use App\Http\Controllers\BackofficeHelpCenterController;
 use App\Http\Controllers\HelpCenterController;
+use App\Http\Controllers\BackofficePlatformNotificationController;
 
 Route::get('/assinaturas/remotas/{token}', [RemoteSignatureController::class, 'show'])
     ->whereUuid('token')
@@ -106,6 +107,74 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('super_admin')
         ->prefix('backoffice')
         ->group(function () {
+
+            Route::prefix(
+                'notificacoes'
+            )->group(function () {
+                Route::get(
+                    '/resumo',
+                    [
+                        BackofficePlatformNotificationController::class,
+                        'summary',
+                    ]
+                );
+
+                Route::get(
+                    '/meta',
+                    [
+                        BackofficePlatformNotificationController::class,
+                        'meta',
+                    ]
+                );
+
+                Route::get(
+                    '/',
+                    [
+                        BackofficePlatformNotificationController::class,
+                        'index',
+                    ]
+                );
+
+                Route::post(
+                    '/',
+                    [
+                        BackofficePlatformNotificationController::class,
+                        'store',
+                    ]
+                );
+
+                Route::get(
+                    '/{id}',
+                    [
+                        BackofficePlatformNotificationController::class,
+                        'show',
+                    ]
+                )->whereUuid('id');
+
+                Route::patch(
+                    '/{id}',
+                    [
+                        BackofficePlatformNotificationController::class,
+                        'update',
+                    ]
+                )->whereUuid('id');
+
+                Route::post(
+                    '/{id}/resolver',
+                    [
+                        BackofficePlatformNotificationController::class,
+                        'resolve',
+                    ]
+                )->whereUuid('id');
+
+                Route::delete(
+                    '/{id}',
+                    [
+                        BackofficePlatformNotificationController::class,
+                        'destroy',
+                    ]
+                )->whereUuid('id');
+            });
 
             Route::prefix('ajuda')->group(function () {
                 Route::get('/resumo', [BackofficeHelpCenterController::class, 'summary']);

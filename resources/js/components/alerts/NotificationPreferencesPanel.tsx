@@ -33,20 +33,24 @@ import type {
     SaveEmailPreferencePayload,
 } from "../../types/alerts";
 
-const CATEGORY_LABELS:Record<
-    string,
-    string
->={
-    "*":"Todas as categorias",
-    document:"Documentos",
-    contract:"Contratos",
-    rental:"Alugueres",
-    claim:"Sinistros",
-    maintenance:"Manutenção",
-    diagnostic:"Diagnósticos",
-    inventory:"Estoque",
-    purchase:"Compras",
-};
+const CATEGORY_LABELS:
+    Record<string,string>={
+        "*":"Todas as categorias",
+        document:"Documentos",
+        contract:"Contratos",
+        rental:"Alugueres",
+        claim:"Sinistros",
+        maintenance:"Manutenção",
+        diagnostic:"Diagnósticos",
+        inventory:"Estoque",
+        purchase:"Compras",
+        helpdesk:"Helpdesk",
+        news:"Novidades",
+        platform:"Plataforma",
+        training:"Treinamentos e ajuda",
+        account:"Conta",
+        system:"Sistema",
+    };
 
 export default function NotificationPreferencesPanel(){
     const {tenant}=useTenant();
@@ -92,7 +96,7 @@ export default function NotificationPreferencesPanel(){
         useState(
             Intl.DateTimeFormat()
                 .resolvedOptions()
-                .timeZone ||
+                .timeZone||
             "Europe/Lisbon"
         );
 
@@ -116,10 +120,10 @@ export default function NotificationPreferencesPanel(){
                 query.data?.data.find(
                     item=>
                         item.channel===
-                            "email" &&
+                        "email"&&
                         item.category===
-                            category
-                ) ?? null,
+                        category
+                )??null,
             [
                 query.data,
                 category,
@@ -130,16 +134,16 @@ export default function NotificationPreferencesPanel(){
         useMemo(
             ()=>
                 category==="*"
-                    ? null
-                    : (
+                    ?null
+                    :(
                         query.data
                             ?.effective_email
                             .find(
                                 item=>
                                     item.category===
-                                        category
+                                    category
                             )
-                        ?? null
+                        ??null
                     ),
             [
                 query.data,
@@ -149,46 +153,52 @@ export default function NotificationPreferencesPanel(){
 
     useEffect(()=>{
         const source:
-            NotificationPreference | null =
-            explicit ??
+            NotificationPreference|null=
+            explicit??
             effective;
 
         setEnabled(
-            source?.enabled ??
+            source?.enabled??
             false
         );
 
         setMinimumSeverity(
             source
-                ?.minimum_severity ??
+                ?.minimum_severity??
             "low"
         );
 
         setDeliveryMode(
             source
-                ?.delivery_mode ??
+                ?.delivery_mode??
             "immediate"
         );
 
         setQuietStart(
             source
                 ?.quiet_hours_start
-                ?.slice(0,5) ??
+                ?.slice(
+                    0,
+                    5
+                )??
             ""
         );
 
         setQuietEnd(
             source
                 ?.quiet_hours_end
-                ?.slice(0,5) ??
+                ?.slice(
+                    0,
+                    5
+                )??
             ""
         );
 
         setTimezone(
-            source?.timezone ??
+            source?.timezone??
             Intl.DateTimeFormat()
                 .resolvedOptions()
-                .timeZone ??
+                .timeZone??
             "Europe/Lisbon"
         );
     },[
@@ -235,15 +245,15 @@ export default function NotificationPreferencesPanel(){
                 deliveryMode,
 
             quiet_hours_start:
-                quietStart ||
+                quietStart||
                 null,
 
             quiet_hours_end:
-                quietEnd ||
+                quietEnd||
                 null,
 
             timezone:
-                timezone ||
+                timezone||
                 "Europe/Lisbon",
         });
     }
@@ -266,12 +276,12 @@ export default function NotificationPreferencesPanel(){
                 </div>
             </div>
 
-            {query.isLoading ? (
+            {query.isLoading?(
                 <div className="flex items-center gap-2 px-5 py-8 text-sm text-slate-400">
                     <LoaderCircle className="h-4 w-4 animate-spin"/>
                     A carregar preferências...
                 </div>
-            ) : (
+            ):(
                 <div className="space-y-5 p-5">
                     <div>
                         <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -279,7 +289,9 @@ export default function NotificationPreferencesPanel(){
                         </label>
 
                         <select
-                            value={category}
+                            value={
+                                category
+                            }
                             onChange={event=>
                                 setCategory(
                                     event.target.value
@@ -295,8 +307,12 @@ export default function NotificationPreferencesPanel(){
                                     label,
                                 ])=>(
                                     <option
-                                        key={value}
-                                        value={value}
+                                        key={
+                                            value
+                                        }
+                                        value={
+                                            value
+                                        }
                                     >
                                         {label}
                                     </option>
@@ -304,8 +320,8 @@ export default function NotificationPreferencesPanel(){
                             )}
                         </select>
 
-                        {!explicit &&
-                            effective && (
+                        {!explicit&&
+                        effective&&(
                             <p className="mt-1.5 text-xs text-slate-400">
                                 Esta categoria está a herdar a preferência global.
                             </p>
@@ -325,10 +341,14 @@ export default function NotificationPreferencesPanel(){
 
                         <input
                             type="checkbox"
-                            checked={enabled}
+                            checked={
+                                enabled
+                            }
                             onChange={event=>
                                 setEnabled(
-                                    event.target.checked
+                                    event
+                                        .target
+                                        .checked
                                 )
                             }
                             className="h-5 w-5 rounded border-slate-300 text-indigo-600"
@@ -347,7 +367,8 @@ export default function NotificationPreferencesPanel(){
                                 }
                                 onChange={event=>
                                     setMinimumSeverity(
-                                        event.target
+                                        event
+                                            .target
                                             .value as SaveEmailPreferencePayload[
                                                 "minimum_severity"
                                             ]
@@ -384,7 +405,8 @@ export default function NotificationPreferencesPanel(){
                                 }
                                 onChange={event=>
                                     setDeliveryMode(
-                                        event.target
+                                        event
+                                            .target
                                             .value as SaveEmailPreferencePayload[
                                                 "delivery_mode"
                                             ]
@@ -411,10 +433,14 @@ export default function NotificationPreferencesPanel(){
 
                             <input
                                 type="time"
-                                value={quietStart}
+                                value={
+                                    quietStart
+                                }
                                 onChange={event=>
                                     setQuietStart(
-                                        event.target.value
+                                        event
+                                            .target
+                                            .value
                                     )
                                 }
                                 className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-indigo-500"
@@ -428,10 +454,14 @@ export default function NotificationPreferencesPanel(){
 
                             <input
                                 type="time"
-                                value={quietEnd}
+                                value={
+                                    quietEnd
+                                }
                                 onChange={event=>
                                     setQuietEnd(
-                                        event.target.value
+                                        event
+                                            .target
+                                            .value
                                     )
                                 }
                                 className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-indigo-500"
@@ -446,10 +476,14 @@ export default function NotificationPreferencesPanel(){
 
                         <input
                             type="text"
-                            value={timezone}
+                            value={
+                                timezone
+                            }
                             onChange={event=>
                                 setTimezone(
-                                    event.target.value
+                                    event
+                                        .target
+                                        .value
                                 )
                             }
                             placeholder="Europe/Lisbon"
@@ -458,9 +492,9 @@ export default function NotificationPreferencesPanel(){
                     </div>
 
                     {(
-                        saveMutation.isError ||
+                        saveMutation.isError||
                         deleteMutation.isError
-                    ) && (
+                    )&&(
                         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                             Não foi possível atualizar a preferência.
                         </div>
@@ -473,21 +507,25 @@ export default function NotificationPreferencesPanel(){
                                 saveMutation
                                     .isPending
                             }
-                            onClick={save}
+                            onClick={
+                                save
+                            }
                             className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-50"
                         >
-                            {saveMutation.isPending
-                                ? (
+                            {saveMutation
+                                .isPending
+                                ?(
                                     <LoaderCircle className="h-4 w-4 animate-spin"/>
                                 )
-                                : (
+                                :(
                                     <Save className="h-4 w-4"/>
-                                )}
+                                )
+                            }
 
                             Guardar
                         </button>
 
-                        {explicit && (
+                        {explicit&&(
                             <button
                                 type="button"
                                 disabled={

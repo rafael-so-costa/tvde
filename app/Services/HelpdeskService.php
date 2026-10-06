@@ -17,88 +17,94 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class HelpdeskService
+
+
 {
-    private const TYPES=[
-        'support'=>'Suporte técnico',
-        'question'=>'Dúvida',
-        'suggestion'=>'Sugestão de melhoria',
-        'feature_request'=>'Nova funcionalidade',
-        'feedback'=>'Feedback',
+
+    public function __construct(
+        private NotificationCenterService $notifications
+    ) {}
+    private const TYPES = [
+        'support' => 'Suporte técnico',
+        'question' => 'Dúvida',
+        'suggestion' => 'Sugestão de melhoria',
+        'feature_request' => 'Nova funcionalidade',
+        'feedback' => 'Feedback',
     ];
 
-    private const IDEA_TYPES=[
+    private const IDEA_TYPES = [
         'suggestion',
         'feature_request',
         'feedback',
     ];
 
-    private const CATEGORIES=[
-        'technical'=>'Técnico',
-        'account_access'=>'Conta e acesso',
-        'billing'=>'Faturação',
-        'contracts_documents'=>'Contratos e documentos',
-        'drivers'=>'Motoristas',
-        'owners'=>'Proprietários',
-        'vehicles'=>'Veículos',
-        'rentals'=>'Alugueres',
-        'maintenance'=>'Manutenção',
-        'fines_claims'=>'Multas e sinistros',
-        'checklists'=>'Checklists',
-        'reports'=>'Relatórios',
-        'integrations'=>'Integrações',
-        'other'=>'Outro',
+    private const CATEGORIES = [
+        'technical' => 'Técnico',
+        'account_access' => 'Conta e acesso',
+        'billing' => 'Faturação',
+        'contracts_documents' => 'Contratos e documentos',
+        'drivers' => 'Motoristas',
+        'owners' => 'Proprietários',
+        'vehicles' => 'Veículos',
+        'rentals' => 'Alugueres',
+        'maintenance' => 'Manutenção',
+        'fines_claims' => 'Multas e sinistros',
+        'checklists' => 'Checklists',
+        'reports' => 'Relatórios',
+        'integrations' => 'Integrações',
+        'other' => 'Outro',
     ];
 
-    private const PRIORITIES=[
-        'low'=>'Baixa',
-        'normal'=>'Normal',
-        'high'=>'Alta',
-        'urgent'=>'Urgente',
+    private const PRIORITIES = [
+        'low' => 'Baixa',
+        'normal' => 'Normal',
+        'high' => 'Alta',
+        'urgent' => 'Urgente',
     ];
 
-    private const SUPPORT_STATUSES=[
-        'open'=>'Aberto',
-        'in_progress'=>'Em atendimento',
-        'waiting_customer'=>'Aguardando gestor',
-        'resolved'=>'Resolvido',
-        'closed'=>'Fechado',
+    private const SUPPORT_STATUSES = [
+        'open' => 'Aberto',
+        'in_progress' => 'Em atendimento',
+        'waiting_customer' => 'Aguardando gestor',
+        'resolved' => 'Resolvido',
+        'closed' => 'Fechado',
     ];
 
-    private const IDEA_STATUSES=[
-        'received'=>'Recebido',
-        'under_review'=>'Em análise',
-        'planned'=>'Planeado',
-        'implemented'=>'Implementado',
-        'not_planned'=>'Não previsto',
-        'closed'=>'Fechado',
+    private const IDEA_STATUSES = [
+        'received' => 'Recebido',
+        'under_review' => 'Em análise',
+        'planned' => 'Planeado',
+        'implemented' => 'Implementado',
+        'not_planned' => 'Não previsto',
+        'closed' => 'Fechado',
     ];
 
-    private const FEATURES=[
-        'dashboard'=>'Dashboard',
-        'empresas'=>'Empresas',
-        'proprietarios'=>'Proprietários',
-        'motoristas'=>'Motoristas',
-        'funcionarios'=>'Funcionários',
-        'veiculos'=>'Veículos',
-        'alugueres'=>'Alugueres',
-        'contratos'=>'Contratos',
-        'templates'=>'Templates',
-        'assinaturas'=>'Assinaturas',
-        'checklists'=>'Checklists',
-        'manutencao'=>'Manutenção',
-        'multas'=>'Multas',
-        'sinistros'=>'Sinistros',
-        'expediente'=>'Expediente',
-        'recibos_verdes'=>'Recibos verdes',
-        'registos_criminais'=>'Registos criminais',
-        'mensagens'=>'Mensagens',
-        'alertas'=>'Alertas',
-        'relatorios'=>'Relatórios',
-        'auditoria'=>'Auditoria',
-        'configuracoes'=>'Configurações',
-        'conta'=>'Minha conta',
-        'helpdesk'=>'Helpdesk',
-        'other'=>'Outro',
+    private const FEATURES = [
+        'dashboard' => 'Dashboard',
+        'empresas' => 'Empresas',
+        'proprietarios' => 'Proprietários',
+        'motoristas' => 'Motoristas',
+        'funcionarios' => 'Funcionários',
+        'veiculos' => 'Veículos',
+        'alugueres' => 'Alugueres',
+        'contratos' => 'Contratos',
+        'templates' => 'Templates',
+        'assinaturas' => 'Assinaturas',
+        'checklists' => 'Checklists',
+        'manutencao' => 'Manutenção',
+        'multas' => 'Multas',
+        'sinistros' => 'Sinistros',
+        'expediente' => 'Expediente',
+        'recibos_verdes' => 'Recibos verdes',
+        'registos_criminais' => 'Registos criminais',
+        'mensagens' => 'Mensagens',
+        'alertas' => 'Alertas',
+        'relatorios' => 'Relatórios',
+        'auditoria' => 'Auditoria',
+        'configuracoes' => 'Configurações',
+        'conta' => 'Minha conta',
+        'helpdesk' => 'Helpdesk',
+        'other' => 'Outro',
     ];
 
     public static function typeCodes(): array
@@ -208,15 +214,15 @@ class HelpdeskService
 
     public function meta(
         User $user,
-        bool $backoffice=false,
-        ?string $tenantId=null
+        bool $backoffice = false,
+        ?string $tenantId = null
     ): array {
-        if($backoffice){
+        if ($backoffice) {
             $this->assertSuperAdmin(
                 $user
             );
-        }else{
-            if(!$tenantId){
+        } else {
+            if (!$tenantId) {
                 abort(403);
             }
 
@@ -227,70 +233,70 @@ class HelpdeskService
         }
 
         return [
-            'types'=>$this->options(
+            'types' => $this->options(
                 self::TYPES,
-                fn(string $value)=>[
-                    'workflow'=>
-                        $this->isIdeaType(
-                            $value
-                        )
-                            ?'idea'
-                            :'support',
+                fn(string $value) => [
+                    'workflow' =>
+                    $this->isIdeaType(
+                        $value
+                    )
+                        ? 'idea'
+                        : 'support',
                 ]
             ),
 
-            'categories'=>
-                $this->options(
-                    self::CATEGORIES
-                ),
+            'categories' =>
+            $this->options(
+                self::CATEGORIES
+            ),
 
-            'priorities'=>
-                $this->options(
-                    self::PRIORITIES
-                ),
+            'priorities' =>
+            $this->options(
+                self::PRIORITIES
+            ),
 
-            'statuses'=>[
+            'statuses' => [
                 ...$this->options(
                     self::SUPPORT_STATUSES,
-                    fn()=>[
-                        'workflow'=>'support',
+                    fn() => [
+                        'workflow' => 'support',
                     ]
                 ),
                 ...$this->options(
                     self::IDEA_STATUSES,
-                    fn()=>[
-                        'workflow'=>'idea',
+                    fn() => [
+                        'workflow' => 'idea',
                     ]
                 ),
             ],
 
-            'features'=>
-                $this->options(
-                    self::FEATURES
-                ),
+            'features' =>
+            $this->options(
+                self::FEATURES
+            ),
 
-            'assignees'=>
-                $backoffice
-                    ?$this->assignees()
-                    :[],
+            'assignees' =>
+            $backoffice
+                ? $this->assignees()
+                : [],
 
-            'tenants'=>
-                $backoffice
-                    ?Tenant::query()
-                        ->orderBy('nome')
-                        ->get([
-                            'id',
-                            'nome',
-                            'ativo',
-                        ])
-                        ->map(fn(Tenant $tenant)=>[
-                            'id'=>$tenant->id,
-                            'name'=>$tenant->nome,
-                            'active'=>$tenant->ativo,
-                        ])
-                        ->values()
-                        ->all()
-                    :[],
+            'tenants' =>
+            $backoffice
+                ? Tenant::query()
+                ->orderBy('nome')
+                ->get([
+                    'id',
+                    'nome',
+                    'ativo',
+                ])
+                ->map(fn(Tenant $tenant) => [
+                    'id' => $tenant->id,
+                    'name' => $tenant->nome,
+                    'active' => $tenant->ativo,
+                ])
+                ->values()
+                ->all()
+                : [],
         ];
     }
 
@@ -298,7 +304,7 @@ class HelpdeskService
         User $user,
         string $tenantId,
         array $data,
-        array $attachments=[]
+        array $attachments = []
     ): array {
         $this->assertTenantManager(
             $user,
@@ -306,88 +312,84 @@ class HelpdeskService
         );
 
         $this->assertContent(
-            $data['body']??null,
+            $data['body'] ?? null,
             $attachments
         );
 
-        $tenant=
+        $tenant =
             Tenant::query()
-                ->findOrFail(
-                    $tenantId
-                );
+            ->findOrFail(
+                $tenantId
+            );
 
-        $ticket=
+        $ticket =
             DB::transaction(
-                function() use(
+                function () use (
                     $user,
                     $tenant,
                     $data,
                     $attachments
-                ){
-                    $ticket=
+                ) {
+                    $ticket =
                         HelpdeskTicket::create([
-                            'number'=>
-                                $this->number(),
+                            'number' =>
+                            $this->number(),
 
-                            'tenant_id'=>
-                                $tenant->id,
+                            'tenant_id' =>
+                            $tenant->id,
 
-                            'tenant_name'=>
-                                $tenant->nome,
+                            'tenant_name' =>
+                            $tenant->nome,
 
-                            'opened_by_user_id'=>
-                                $user->id,
+                            'opened_by_user_id' =>
+                            $user->id,
 
-                            'type'=>
-                                $data['type'],
+                            'type' =>
+                            $data['type'],
 
-                            'category'=>
-                                $data['category'],
+                            'category' =>
+                            $data['category'],
 
-                            'priority'=>
-                                $data['priority'],
+                            'priority' =>
+                            $data['priority'],
 
-                            'status'=>
-                                $this->initialStatus(
-                                    $data['type']
-                                ),
+                            'status' =>
+                            $this->initialStatus(
+                                $data['type']
+                            ),
 
-                            'feature_key'=>
-                                $data[
-                                    'feature_key'
-                                ]??null,
+                            'feature_key' =>
+                            $data['feature_key'] ?? null,
 
-                            'origin_url'=>
-                                $data[
-                                    'origin_url'
-                                ]??null,
+                            'origin_url' =>
+                            $data['origin_url'] ?? null,
 
-                            'subject'=>
-                                trim(
-                                    $data['subject']
-                                ),
+                            'subject' =>
+                            trim(
+                                $data['subject']
+                            ),
                         ]);
 
-                    $message=
+                    $message =
                         HelpdeskMessage::create([
-                            'ticket_id'=>
-                                $ticket->id,
+                            'ticket_id' =>
+                            $ticket->id,
 
-                            'sender_user_id'=>
-                                $user->id,
+                            'sender_user_id' =>
+                            $user->id,
 
-                            'sender_side'=>
-                                'tenant',
+                            'sender_side' =>
+                            'tenant',
 
-                            'body'=>
-                                filled(
-                                    $data['body']??
+                            'body' =>
+                            filled(
+                                $data['body'] ??
                                     null
+                            )
+                                ? trim(
+                                    $data['body']
                                 )
-                                    ?trim(
-                                        $data['body']
-                                    )
-                                    :null,
+                                : null,
                         ]);
 
                     $this->storeAttachments(
@@ -396,8 +398,8 @@ class HelpdeskService
                         $attachments
                     );
 
-                    $ticket->saas_unread_count=1;
-                    $ticket->last_message_at=
+                    $ticket->saas_unread_count = 1;
+                    $ticket->last_message_at =
                         $message->created_at;
 
                     $ticket->save();
@@ -416,7 +418,7 @@ class HelpdeskService
         string $tenantId,
         string $id
     ): array {
-        $ticket=
+        $ticket =
             $this->ticketForTenant(
                 $user,
                 $tenantId,
@@ -437,7 +439,7 @@ class HelpdeskService
         User $user,
         string $id
     ): array {
-        $ticket=
+        $ticket =
             $this->ticketForBackoffice(
                 $user,
                 $id
@@ -458,9 +460,9 @@ class HelpdeskService
         string $tenantId,
         string $id,
         ?string $body,
-        array $attachments=[]
+        array $attachments = []
     ): array {
-        $ticket=
+        $ticket =
             $this->ticketForTenant(
                 $user,
                 $tenantId,
@@ -480,9 +482,9 @@ class HelpdeskService
         User $user,
         string $id,
         ?string $body,
-        array $attachments=[]
+        array $attachments = []
     ): array {
-        $ticket=
+        $ticket =
             $this->ticketForBackoffice(
                 $user,
                 $id
@@ -502,85 +504,85 @@ class HelpdeskService
         string $id,
         array $data
     ): array {
-        $ticket=
+        $ticket =
             $this->ticketForBackoffice(
                 $user,
                 $id
             );
 
-        $oldStatus=
+        $oldStatus =
             $ticket->status;
 
-        $newType=
-            $data['type']??
+        $newType =
+            $data['type'] ??
             $ticket->type;
 
-        if(
+        if (
             array_key_exists(
                 'type',
                 $data
             )
-        ){
-            $ticket->type=
+        ) {
+            $ticket->type =
                 $newType;
 
-            if(
+            if (
                 !array_key_exists(
                     'status',
                     $data
                 )
-            ){
-                $ticket->status=
+            ) {
+                $ticket->status =
                     $this->initialStatus(
                         $newType
                     );
             }
         }
 
-        foreach([
-            'category',
-            'priority',
-            'feature_key',
-        ] as $field){
-            if(
+        foreach (
+            [
+                'category',
+                'priority',
+                'feature_key',
+            ] as $field
+        ) {
+            if (
                 array_key_exists(
                     $field,
                     $data
                 )
-            ){
-                $ticket->{$field}=
+            ) {
+                $ticket->{$field} =
                     $data[$field];
             }
         }
 
-        if(
+        if (
             array_key_exists(
                 'assigned_to_user_id',
                 $data
             )
-        ){
-            $assigned=
-                $data[
-                    'assigned_to_user_id'
-                ];
+        ) {
+            $assigned =
+                $data['assigned_to_user_id'];
 
-            if($assigned){
+            if ($assigned) {
                 $this->assertSuperAdminId(
                     $assigned
                 );
             }
 
-            $ticket->assigned_to_user_id=
+            $ticket->assigned_to_user_id =
                 $assigned;
         }
 
-        if(
+        if (
             array_key_exists(
                 'status',
                 $data
             )
-        ){
-            $ticket->status=
+        ) {
+            $ticket->status =
                 $data['status'];
         }
 
@@ -589,10 +591,10 @@ class HelpdeskService
             $ticket->status
         );
 
-        if(
-            $ticket->status!==
+        if (
+            $ticket->status !==
             $oldStatus
-        ){
+        ) {
             $this->applyStatus(
                 $ticket,
                 $user
@@ -601,10 +603,10 @@ class HelpdeskService
 
         $ticket->save();
 
-        if(
-            $ticket->status!==
+        if (
+            $ticket->status !==
             $oldStatus
-        ){
+        ) {
             $this->systemMessage(
                 $ticket,
                 $user,
@@ -631,25 +633,25 @@ class HelpdeskService
         string $tenantId,
         string $id
     ): array {
-        $ticket=
+        $ticket =
             $this->ticketForTenant(
                 $user,
                 $tenantId,
                 $id
             );
 
-        if(
-            $ticket->status===
+        if (
+            $ticket->status ===
             'closed'
-        ){
+        ) {
             return $this->detail(
                 $ticket
             );
         }
 
-        $ticket->status='closed';
-        $ticket->closed_at=now();
-        $ticket->closed_by_user_id=
+        $ticket->status = 'closed';
+        $ticket->closed_at = now();
+        $ticket->closed_by_user_id =
             $user->id;
 
         $ticket->save();
@@ -671,42 +673,42 @@ class HelpdeskService
         string $tenantId,
         string $id
     ): array {
-        $ticket=
+        $ticket =
             $this->ticketForTenant(
                 $user,
                 $tenantId,
                 $id
             );
 
-        if(
+        if (
             $ticket->rating()
-                ->exists()
-        ){
+            ->exists()
+        ) {
             throw ValidationException::withMessages([
-                'ticket'=>
-                    'Um chamado já avaliado não pode ser reaberto. Abra um novo chamado.',
+                'ticket' =>
+                'Um chamado já avaliado não pode ser reaberto. Abra um novo chamado.',
             ]);
         }
 
-        if(
-            $ticket->status!==
+        if (
+            $ticket->status !==
             'closed'
-        ){
+        ) {
             return $this->detail(
                 $ticket
             );
         }
 
-        $ticket->status=
+        $ticket->status =
             $this->initialStatus(
                 $ticket->type
             );
 
-        $ticket->closed_at=null;
-        $ticket->closed_by_user_id=null;
-        $ticket->resolved_at=null;
-        $ticket->resolved_by_user_id=null;
-        $ticket->reopened_at=now();
+        $ticket->closed_at = null;
+        $ticket->closed_by_user_id = null;
+        $ticket->resolved_at = null;
+        $ticket->resolved_by_user_id = null;
+        $ticket->reopened_at = now();
 
         $ticket->save();
 
@@ -728,56 +730,56 @@ class HelpdeskService
         string $id,
         array $data
     ): array {
-        $ticket=
+        $ticket =
             $this->ticketForTenant(
                 $user,
                 $tenantId,
                 $id
             );
 
-        if(
-            $ticket->status!==
+        if (
+            $ticket->status !==
             'closed'
-        ){
+        ) {
             throw ValidationException::withMessages([
-                'ticket'=>
-                    'O atendimento só pode ser avaliado depois do chamado ser fechado.',
+                'ticket' =>
+                'O atendimento só pode ser avaliado depois do chamado ser fechado.',
             ]);
         }
 
-        if(
+        if (
             $ticket->rating()
-                ->exists()
-        ){
+            ->exists()
+        ) {
             throw ValidationException::withMessages([
-                'rating'=>
-                    'Este atendimento já foi avaliado.',
+                'rating' =>
+                'Este atendimento já foi avaliado.',
             ]);
         }
 
-        $rating=
+        $rating =
             HelpdeskRating::create([
-                'ticket_id'=>
-                    $ticket->id,
+                'ticket_id' =>
+                $ticket->id,
 
-                'tenant_id'=>
-                    $tenantId,
+                'tenant_id' =>
+                $tenantId,
 
-                'submitted_by_user_id'=>
-                    $user->id,
+                'submitted_by_user_id' =>
+                $user->id,
 
-                'rating'=>
-                    $data['rating'],
+                'rating' =>
+                $data['rating'],
 
-                'comment'=>
-                    filled(
-                        $data['comment']??
+                'comment' =>
+                filled(
+                    $data['comment'] ??
                         null
+                )
+                    ? trim(
+                        $data['comment']
                     )
-                        ?trim(
-                            $data['comment']
-                        )
-                        :null,
+                    : null,
             ]);
 
         return $this->serializeRating(
@@ -791,40 +793,40 @@ class HelpdeskService
         User $user,
         string $id
     ): HelpdeskAttachment {
-        $attachment=
+        $attachment =
             HelpdeskAttachment::query()
-                ->whereKey($id)
-                ->with(
-                    'message.ticket'
-                )
-                ->firstOrFail();
+            ->whereKey($id)
+            ->with(
+                'message.ticket'
+            )
+            ->firstOrFail();
 
-        $ticket=
+        $ticket =
             $attachment
-                ->message
-                ->ticket;
+            ->message
+            ->ticket;
 
-        if(
+        if (
             !$user->isSuperAdmin()
-        ){
-            if(
+        ) {
+            if (
                 !$ticket->tenant_id ||
                 !$user->hasRole(
                     'admin_empresa',
                     $ticket->tenant_id
                 )
-            ){
+            ) {
                 abort(404);
             }
         }
 
-        if(
+        if (
             !Storage::disk(
                 $attachment->disk
             )->exists(
                 $attachment->path
             )
-        ){
+        ) {
             abort(
                 404,
                 'Ficheiro não encontrado.'
@@ -837,16 +839,16 @@ class HelpdeskService
     private function index(
         array $filters,
         bool $backoffice,
-        ?string $tenantId=null
+        ?string $tenantId = null
     ): array {
-        $query=
+        $query =
             $this->filteredQuery(
                 $filters,
                 $backoffice,
                 $tenantId
             );
 
-        $summaryFilters=
+        $summaryFilters =
             $filters;
 
         unset(
@@ -856,91 +858,89 @@ class HelpdeskService
             $summaryFilters['per_page']
         );
 
-        $summaryQuery=
+        $summaryQuery =
             $this->filteredQuery(
                 $summaryFilters,
                 $backoffice,
                 $tenantId
             );
 
-        $perPage=
+        $perPage =
             (int)(
-                $filters[
-                    'per_page'
-                ]??25
+                $filters['per_page'] ?? 25
             );
 
-        $paginator=
+        $paginator =
             $query
-                ->with([
-                    'openedBy:id,name,email',
-                    'assignedTo:id,name,email',
-                    'latestMessage.sender:id,name,email',
-                    'rating',
-                ])
-                ->withCount(
-                    'messages'
-                )
-                ->orderByDesc(
-                    'last_message_at'
-                )
-                ->orderByDesc(
-                    'created_at'
-                )
-                ->paginate(
-                    $perPage
-                );
+            ->with([
+                'openedBy:id,name,email',
+                'assignedTo:id,name,email',
+                'latestMessage.sender:id,name,email',
+                'rating',
+            ])
+            ->withCount(
+                'messages'
+            )
+            ->orderByDesc(
+                'last_message_at'
+            )
+            ->orderByDesc(
+                'created_at'
+            )
+            ->paginate(
+                $perPage
+            );
 
         return [
-            'data'=>
-                $paginator
-                    ->getCollection()
-                    ->map(
-                        fn(
-                            HelpdeskTicket $ticket
-                        )=>
-                            $this->serializeTicket(
-                                $ticket,
-                                $backoffice
-                                    ?'saas'
-                                    :'tenant'
-                            )
+            'data' =>
+            $paginator
+                ->getCollection()
+                ->map(
+                    fn(
+                        HelpdeskTicket $ticket
+                    ) =>
+                    $this->serializeTicket(
+                        $ticket,
+                        $backoffice
+                            ? 'saas'
+                            : 'tenant'
                     )
-                    ->values()
-                    ->all(),
+                )
+                ->values()
+                ->all(),
 
-            'summary'=>
-                $this->summary(
-                    $summaryQuery,
-                    $backoffice
-                        ?'saas'
-                        :'tenant'
-                ),
+            'summary' =>
+            $this->summary(
+                $summaryQuery,
+                $backoffice
+                    ? 'saas'
+                    : 'tenant'
+            ),
 
-            'meta'=>[
-                'current_page'=>
-                    $paginator
-                        ->currentPage(),
+            'meta' => [
+                'current_page' =>
+                $paginator
+                    ->currentPage(),
 
-                'last_page'=>
-                    $paginator
-                        ->lastPage(),
+                'last_page' =>
+                $paginator
+                    ->lastPage(),
 
-                'per_page'=>
-                    $paginator
-                        ->perPage(),
+                'per_page' =>
+                $paginator
+                    ->perPage(),
 
-                'total'=>
-                    $paginator
-                        ->total(),
+                'total' =>
+                $paginator
+                    ->total(),
 
-                'from'=>
-                    $paginator
-                        ->firstItem(),
+                'from' =>
+                $paginator
+                    ->firstItem(),
 
-                'to'=>
-                    $paginator
-                        ->lastItem(),
+                'to' =>
+                $paginator
+                    ->lastItem(),
             ],
         ];
     }
@@ -948,43 +948,37 @@ class HelpdeskService
     private function filteredQuery(
         array $filters,
         bool $backoffice,
-        ?string $tenantId=null
+        ?string $tenantId = null
     ): Builder {
-        $query=
+        $query =
             HelpdeskTicket::query();
 
-        if(!$backoffice){
+        if (!$backoffice) {
             $query->where(
                 'tenant_id',
                 $tenantId
             );
-        }elseif(
-            !empty(
-                $filters[
-                    'tenant_id'
-                ]
-            )
-        ){
+        } elseif (
+            !empty($filters['tenant_id'])
+        ) {
             $query->where(
                 'tenant_id',
-                $filters[
-                    'tenant_id'
-                ]
+                $filters['tenant_id']
             );
         }
 
-        foreach([
-            'type',
-            'category',
-            'priority',
-            'status',
-            'assigned_to_user_id',
-        ] as $field){
-            if(
-                !empty(
-                    $filters[$field]
-                )
-            ){
+        foreach (
+            [
+                'type',
+                'category',
+                'priority',
+                'status',
+                'assigned_to_user_id',
+            ] as $field
+        ) {
+            if (
+                !empty($filters[$field])
+            ) {
                 $query->where(
                     $field,
                     $filters[$field]
@@ -992,11 +986,9 @@ class HelpdeskService
             }
         }
 
-        if(
-            !empty(
-                $filters['inicio']
-            )
-        ){
+        if (
+            !empty($filters['inicio'])
+        ) {
             $query->whereDate(
                 'created_at',
                 '>=',
@@ -1004,11 +996,9 @@ class HelpdeskService
             );
         }
 
-        if(
-            !empty(
-                $filters['fim']
-            )
-        ){
+        if (
+            !empty($filters['fim'])
+        ) {
             $query->whereDate(
                 'created_at',
                 '<=',
@@ -1016,38 +1006,36 @@ class HelpdeskService
             );
         }
 
-        if(
+        if (
             isset(
                 $filters['unread']
             ) &&
             $filters['unread']
-        ){
+        ) {
             $query->where(
                 $backoffice
-                    ?'saas_unread_count'
-                    :'tenant_unread_count',
+                    ? 'saas_unread_count'
+                    : 'tenant_unread_count',
                 '>',
                 0
             );
         }
 
-        if(
-            !empty(
-                $filters['search']
-            )
-        ){
-            $term=
+        if (
+            !empty($filters['search'])
+        ) {
+            $term =
                 trim(
                     $filters['search']
                 );
 
             $query->where(
-                function(
+                function (
                     Builder $query
-                ) use(
+                ) use (
                     $term
-                ){
-                    $like=
+                ) {
+                    $like =
                         "%{$term}%";
 
                     $query
@@ -1078,60 +1066,55 @@ class HelpdeskService
         string $side
     ): array {
         return [
-            'total'=>
-                (clone $query)
-                    ->count(),
+            'total' => (clone $query)
+                ->count(),
 
-            'active'=>
-                (clone $query)
-                    ->whereNotIn(
-                        'status',
-                        [
-                            'resolved',
-                            'implemented',
-                            'not_planned',
-                            'closed',
-                        ]
-                    )
-                    ->count(),
+            'active' => (clone $query)
+                ->whereNotIn(
+                    'status',
+                    [
+                        'resolved',
+                        'implemented',
+                        'not_planned',
+                        'closed',
+                    ]
+                )
+                ->count(),
 
-            'waiting_customer'=>
-                (clone $query)
-                    ->where(
-                        'status',
-                        'waiting_customer'
-                    )
-                    ->count(),
+            'waiting_customer' => (clone $query)
+                ->where(
+                    'status',
+                    'waiting_customer'
+                )
+                ->count(),
 
-            'resolved'=>
-                (clone $query)
-                    ->whereIn(
-                        'status',
-                        [
-                            'resolved',
-                            'implemented',
-                            'not_planned',
-                        ]
-                    )
-                    ->count(),
+            'resolved' => (clone $query)
+                ->whereIn(
+                    'status',
+                    [
+                        'resolved',
+                        'implemented',
+                        'not_planned',
+                    ]
+                )
+                ->count(),
 
-            'closed'=>
-                (clone $query)
-                    ->where(
-                        'status',
-                        'closed'
-                    )
-                    ->count(),
+            'closed' => (clone $query)
+                ->where(
+                    'status',
+                    'closed'
+                )
+                ->count(),
 
-            'unread'=>
-                (int)(
-                    (clone $query)
-                        ->sum(
-                            $side==='saas'
-                                ?'saas_unread_count'
-                                :'tenant_unread_count'
-                        )
-                ),
+            'unread' =>
+            (int)(
+                (clone $query)
+                ->sum(
+                    $side === 'saas'
+                        ? 'saas_unread_count'
+                        : 'tenant_unread_count'
+                )
+            ),
         ];
     }
 
@@ -1142,13 +1125,12 @@ class HelpdeskService
         ?string $body,
         array $attachments
     ): array {
-        if(
-            $ticket->status===
+        if (
+            $ticket->status ===
             'closed'
-        ){
+        ) {
             throw ValidationException::withMessages([
-                'ticket'=>
-                    'O chamado está fechado.',
+                'ticket' => 'O chamado está fechado.',
             ]);
         }
 
@@ -1157,32 +1139,29 @@ class HelpdeskService
             $attachments
         );
 
+        $messageId = null;
+
         DB::transaction(
-            function() use(
+            function () use (
                 $ticket,
                 $user,
                 $side,
                 $body,
-                $attachments
-            ){
-                $message=
+                $attachments,
+                &$messageId
+            ) {
+                $message =
                     HelpdeskMessage::create([
-                        'ticket_id'=>
-                            $ticket->id,
-
-                        'sender_user_id'=>
-                            $user->id,
-
-                        'sender_side'=>
-                            $side,
-
-                        'body'=>
-                            filled($body)
-                                ?trim(
-                                    $body
-                                )
-                                :null,
+                        'ticket_id' => $ticket->id,
+                        'sender_user_id' => $user->id,
+                        'sender_side' => $side,
+                        'body' => filled($body)
+                            ? trim($body)
+                            : null,
                     ]);
+
+                $messageId =
+                    $message->id;
 
                 $this->storeAttachments(
                     $ticket,
@@ -1190,13 +1169,13 @@ class HelpdeskService
                     $attachments
                 );
 
-                if(
-                    $side==='tenant'
-                ){
-                    $ticket->tenant_unread_count=0;
+                if (
+                    $side === 'tenant'
+                ) {
+                    $ticket->tenant_unread_count = 0;
                     $ticket->saas_unread_count++;
 
-                    if(
+                    if (
                         !$this->isIdeaType(
                             $ticket->type
                         ) &&
@@ -1208,14 +1187,14 @@ class HelpdeskService
                             ],
                             true
                         )
-                    ){
-                        $ticket->status='open';
-                        $ticket->resolved_at=null;
-                        $ticket->resolved_by_user_id=null;
-                        $ticket->reopened_at=now();
+                    ) {
+                        $ticket->status = 'open';
+                        $ticket->resolved_at = null;
+                        $ticket->resolved_by_user_id = null;
+                        $ticket->reopened_at = now();
                     }
 
-                    if(
+                    if (
                         $this->isIdeaType(
                             $ticket->type
                         ) &&
@@ -1227,52 +1206,63 @@ class HelpdeskService
                             ],
                             true
                         )
-                    ){
-                        $ticket->status='received';
-                        $ticket->resolved_at=null;
-                        $ticket->resolved_by_user_id=null;
-                        $ticket->reopened_at=now();
+                    ) {
+                        $ticket->status = 'received';
+                        $ticket->resolved_at = null;
+                        $ticket->resolved_by_user_id = null;
+                        $ticket->reopened_at = now();
                     }
-                }else{
-                    $ticket->saas_unread_count=0;
+                } else {
+                    $ticket->saas_unread_count = 0;
                     $ticket->tenant_unread_count++;
 
-                    if(
+                    if (
                         !$ticket->first_response_at
-                    ){
-                        $ticket->first_response_at=
+                    ) {
+                        $ticket->first_response_at =
                             now();
                     }
 
-                    if(
+                    if (
                         !$this->isIdeaType(
                             $ticket->type
                         ) &&
-                        $ticket->status===
+                        $ticket->status ===
                         'open'
-                    ){
-                        $ticket->status=
+                    ) {
+                        $ticket->status =
                             'in_progress';
                     }
 
-                    if(
+                    if (
                         $this->isIdeaType(
                             $ticket->type
                         ) &&
-                        $ticket->status===
+                        $ticket->status ===
                         'received'
-                    ){
-                        $ticket->status=
+                    ) {
+                        $ticket->status =
                             'under_review';
                     }
                 }
 
-                $ticket->last_message_at=
+                $ticket->last_message_at =
                     $message->created_at;
 
                 $ticket->save();
             }
         );
+
+        if (
+            $side === 'saas' &&
+            $messageId
+        ) {
+            $this->notifications
+                ->notifyHelpdeskReply(
+                    $ticket->refresh(),
+                    $messageId
+                );
+        }
 
         return $this->detail(
             $ticket->refresh()
@@ -1285,30 +1275,30 @@ class HelpdeskService
         string $side,
         string $body
     ): void {
-        $message=
+        $message =
             HelpdeskMessage::create([
-                'ticket_id'=>
-                    $ticket->id,
+                'ticket_id' =>
+                $ticket->id,
 
-                'sender_user_id'=>
-                    $actor->id,
+                'sender_user_id' =>
+                $actor->id,
 
-                'sender_side'=>
-                    $side,
+                'sender_side' =>
+                $side,
 
-                'body'=>$body,
-                'system'=>true,
+                'body' => $body,
+                'system' => true,
             ]);
 
-        if(
-            $side==='saas'
-        ){
+        if (
+            $side === 'saas'
+        ) {
             $ticket->tenant_unread_count++;
-        }else{
+        } else {
             $ticket->saas_unread_count++;
         }
 
-        $ticket->last_message_at=
+        $ticket->last_message_at =
             $message->created_at;
 
         $ticket->save();
@@ -1318,7 +1308,7 @@ class HelpdeskService
         HelpdeskTicket $ticket,
         User $actor
     ): void {
-        if(
+        if (
             in_array(
                 $ticket->status,
                 [
@@ -1328,37 +1318,37 @@ class HelpdeskService
                 ],
                 true
             )
-        ){
-            $ticket->resolved_at=
-                $ticket->resolved_at??
+        ) {
+            $ticket->resolved_at =
+                $ticket->resolved_at ??
                 now();
 
-            $ticket->resolved_by_user_id=
+            $ticket->resolved_by_user_id =
                 $actor->id;
-        }elseif(
-            $ticket->status!==
+        } elseif (
+            $ticket->status !==
             'closed'
-        ){
-            $ticket->resolved_at=null;
-            $ticket->resolved_by_user_id=null;
+        ) {
+            $ticket->resolved_at = null;
+            $ticket->resolved_by_user_id = null;
         }
 
-        if(
-            $ticket->status===
+        if (
+            $ticket->status ===
             'closed'
-        ){
-            $ticket->closed_at=now();
-            $ticket->closed_by_user_id=
+        ) {
+            $ticket->closed_at = now();
+            $ticket->closed_by_user_id =
                 $actor->id;
-        }else{
-            if(
+        } else {
+            if (
                 $ticket->closed_at
-            ){
-                $ticket->reopened_at=now();
+            ) {
+                $ticket->reopened_at = now();
             }
 
-            $ticket->closed_at=null;
-            $ticket->closed_by_user_id=null;
+            $ticket->closed_at = null;
+            $ticket->closed_by_user_id = null;
         }
     }
 
@@ -1368,10 +1358,10 @@ class HelpdeskService
         $ticket->load([
             'openedBy:id,name,email',
             'assignedTo:id,name,email',
-            'messages'=>fn($query)=>
-                $query->orderBy(
-                    'created_at'
-                ),
+            'messages' => fn($query) =>
+            $query->orderBy(
+                'created_at'
+            ),
             'messages.sender:id,name,email',
             'messages.attachments',
             'rating.submittedBy:id,name,email',
@@ -1387,32 +1377,32 @@ class HelpdeskService
                 'tenant'
             ),
 
-            'origin_url'=>
-                $ticket->origin_url,
+            'origin_url' =>
+            $ticket->origin_url,
 
-            'feature_key'=>
-                $ticket->feature_key,
+            'feature_key' =>
+            $ticket->feature_key,
 
-            'messages'=>
-                $ticket
-                    ->messages
-                    ->map(
-                        fn(
-                            HelpdeskMessage $message
-                        )=>
-                            $this->serializeMessage(
-                                $message
-                            )
+            'messages' =>
+            $ticket
+                ->messages
+                ->map(
+                    fn(
+                        HelpdeskMessage $message
+                    ) =>
+                    $this->serializeMessage(
+                        $message
                     )
-                    ->values()
-                    ->all(),
+                )
+                ->values()
+                ->all(),
 
-            'rating'=>
-                $ticket->rating
-                    ?$this->serializeRating(
-                        $ticket->rating
-                    )
-                    :null,
+            'rating' =>
+            $ticket->rating
+                ? $this->serializeRating(
+                    $ticket->rating
+                )
+                : null,
         ];
     }
 
@@ -1421,161 +1411,153 @@ class HelpdeskService
         string $side
     ): array {
         return [
-            'id'=>$ticket->id,
-            'number'=>$ticket->number,
+            'id' => $ticket->id,
+            'number' => $ticket->number,
 
-            'tenant'=>[
-                'id'=>$ticket->tenant_id,
-                'name'=>$ticket->tenant_name,
+            'tenant' => [
+                'id' => $ticket->tenant_id,
+                'name' => $ticket->tenant_name,
             ],
 
-            'opened_by'=>
-                $ticket->openedBy
-                    ?[
-                        'id'=>
-                            $ticket
-                                ->openedBy
-                                ->id,
-
-                        'name'=>
-                            $ticket
-                                ->openedBy
-                                ->name,
-
-                        'email'=>
-                            $ticket
-                                ->openedBy
-                                ->email,
-                    ]
-                    :null,
-
-            'assigned_to'=>
-                $ticket->assignedTo
-                    ?[
-                        'id'=>
-                            $ticket
-                                ->assignedTo
-                                ->id,
-
-                        'name'=>
-                            $ticket
-                                ->assignedTo
-                                ->name,
-
-                        'email'=>
-                            $ticket
-                                ->assignedTo
-                                ->email,
-                    ]
-                    :null,
-
-            'subject'=>$ticket->subject,
-
-            'type'=>$ticket->type,
-            'type_label'=>
-                self::TYPES[
-                    $ticket->type
-                ]??$ticket->type,
-
-            'category'=>$ticket->category,
-            'category_label'=>
-                self::CATEGORIES[
-                    $ticket->category
-                ]??$ticket->category,
-
-            'priority'=>$ticket->priority,
-            'priority_label'=>
-                self::PRIORITIES[
-                    $ticket->priority
-                ]??$ticket->priority,
-
-            'status'=>$ticket->status,
-            'status_label'=>
-                $this->statusLabel(
-                    $ticket->status
-                ),
-
-            'workflow'=>
-                $this->isIdeaType(
-                    $ticket->type
-                )
-                    ?'idea'
-                    :'support',
-
-            'feature_key'=>
-                $ticket->feature_key,
-
-            'feature_label'=>
-                $ticket->feature_key
-                    ?(
-                        self::FEATURES[
-                            $ticket->feature_key
-                        ]??
-                        $ticket->feature_key
-                    )
-                    :null,
-
-            'origin_url'=>
-                $ticket->origin_url,
-
-            'unread_count'=>
-                $side==='saas'
-                    ?$ticket
-                        ->saas_unread_count
-                    :$ticket
-                        ->tenant_unread_count,
-
-            'messages_count'=>
-                (int)(
+            'opened_by' =>
+            $ticket->openedBy
+                ? [
+                    'id' =>
                     $ticket
-                        ->messages_count??
-                    0
-                ),
+                        ->openedBy
+                        ->id,
 
-            'first_response_at'=>
+                    'name' =>
+                    $ticket
+                        ->openedBy
+                        ->name,
+
+                    'email' =>
+                    $ticket
+                        ->openedBy
+                        ->email,
+                ]
+                : null,
+
+            'assigned_to' =>
+            $ticket->assignedTo
+                ? [
+                    'id' =>
+                    $ticket
+                        ->assignedTo
+                        ->id,
+
+                    'name' =>
+                    $ticket
+                        ->assignedTo
+                        ->name,
+
+                    'email' =>
+                    $ticket
+                        ->assignedTo
+                        ->email,
+                ]
+                : null,
+
+            'subject' => $ticket->subject,
+
+            'type' => $ticket->type,
+            'type_label' =>
+            self::TYPES[$ticket->type] ?? $ticket->type,
+
+            'category' => $ticket->category,
+            'category_label' =>
+            self::CATEGORIES[$ticket->category] ?? $ticket->category,
+
+            'priority' => $ticket->priority,
+            'priority_label' =>
+            self::PRIORITIES[$ticket->priority] ?? $ticket->priority,
+
+            'status' => $ticket->status,
+            'status_label' =>
+            $this->statusLabel(
+                $ticket->status
+            ),
+
+            'workflow' =>
+            $this->isIdeaType(
+                $ticket->type
+            )
+                ? 'idea'
+                : 'support',
+
+            'feature_key' =>
+            $ticket->feature_key,
+
+            'feature_label' =>
+            $ticket->feature_key
+                ? (
+                    self::FEATURES[$ticket->feature_key] ??
+                    $ticket->feature_key
+                )
+                : null,
+
+            'origin_url' =>
+            $ticket->origin_url,
+
+            'unread_count' =>
+            $side === 'saas'
+                ? $ticket
+                ->saas_unread_count
+                : $ticket
+                ->tenant_unread_count,
+
+            'messages_count' =>
+            (int)(
                 $ticket
-                    ->first_response_at
-                    ?->toISOString(),
+                ->messages_count ??
+                0
+            ),
 
-            'last_message_at'=>
-                $ticket
-                    ->last_message_at
-                    ?->toISOString(),
+            'first_response_at' =>
+            $ticket
+                ->first_response_at
+                ?->toISOString(),
 
-            'resolved_at'=>
-                $ticket
-                    ->resolved_at
-                    ?->toISOString(),
+            'last_message_at' =>
+            $ticket
+                ->last_message_at
+                ?->toISOString(),
 
-            'closed_at'=>
-                $ticket
-                    ->closed_at
-                    ?->toISOString(),
+            'resolved_at' =>
+            $ticket
+                ->resolved_at
+                ?->toISOString(),
 
-            'reopened_at'=>
-                $ticket
-                    ->reopened_at
-                    ?->toISOString(),
+            'closed_at' =>
+            $ticket
+                ->closed_at
+                ?->toISOString(),
 
-            'created_at'=>
-                $ticket
-                    ->created_at
-                    ?->toISOString(),
+            'reopened_at' =>
+            $ticket
+                ->reopened_at
+                ?->toISOString(),
 
-            'updated_at'=>
-                $ticket
-                    ->updated_at
-                    ?->toISOString(),
+            'created_at' =>
+            $ticket
+                ->created_at
+                ?->toISOString(),
 
-            'rating'=>
-                $ticket->relationLoaded(
-                    'rating'
-                ) &&
+            'updated_at' =>
+            $ticket
+                ->updated_at
+                ?->toISOString(),
+
+            'rating' =>
+            $ticket->relationLoaded(
+                'rating'
+            ) &&
                 $ticket->rating
-                    ?$this->serializeRating(
-                        $ticket->rating
-                    )
-                    :null,
+                ? $this->serializeRating(
+                    $ticket->rating
+                )
+                : null,
         ];
     }
 
@@ -1583,59 +1565,59 @@ class HelpdeskService
         HelpdeskMessage $message
     ): array {
         return [
-            'id'=>$message->id,
+            'id' => $message->id,
 
-            'sender_side'=>
-                $message->sender_side,
+            'sender_side' =>
+            $message->sender_side,
 
-            'sender'=>
-                $message->sender
-                    ?[
-                        'id'=>
-                            $message
-                                ->sender
-                                ->id,
+            'sender' =>
+            $message->sender
+                ? [
+                    'id' =>
+                    $message
+                        ->sender
+                        ->id,
 
-                        'name'=>
-                            $message
-                                ->sender
-                                ->name,
+                    'name' =>
+                    $message
+                        ->sender
+                        ->name,
 
-                        'email'=>
-                            $message
-                                ->sender
-                                ->email,
+                    'email' =>
+                    $message
+                        ->sender
+                        ->email,
+                ]
+                : null,
+
+            'body' => $message->body,
+            'system' => $message->system,
+
+            'attachments' =>
+            $message
+                ->attachments
+                ->map(
+                    fn(
+                        HelpdeskAttachment $attachment
+                    ) => [
+                        'id' => $attachment->id,
+                        'name' => $attachment->original_name,
+                        'mime_type' => $attachment->mime_type,
+                        'size' => $attachment->size,
+                        'kind' => $attachment->kind,
+                        'inline_url' =>
+                        "/api/helpdesk/anexos/{$attachment->id}/arquivo",
+                        'download_url' =>
+                        "/api/helpdesk/anexos/{$attachment->id}/download",
                     ]
-                    :null,
+                )
+                ->values()
+                ->all(),
 
-            'body'=>$message->body,
-            'system'=>$message->system,
-
-            'attachments'=>
-                $message
-                    ->attachments
-                    ->map(
-                        fn(
-                            HelpdeskAttachment $attachment
-                        )=>[
-                            'id'=>$attachment->id,
-                            'name'=>$attachment->original_name,
-                            'mime_type'=>$attachment->mime_type,
-                            'size'=>$attachment->size,
-                            'kind'=>$attachment->kind,
-                            'inline_url'=>
-                                "/api/helpdesk/anexos/{$attachment->id}/arquivo",
-                            'download_url'=>
-                                "/api/helpdesk/anexos/{$attachment->id}/download",
-                        ]
-                    )
-                    ->values()
-                    ->all(),
-
-            'created_at'=>
-                $message
-                    ->created_at
-                    ?->toISOString(),
+            'created_at' =>
+            $message
+                ->created_at
+                ?->toISOString(),
         ];
     }
 
@@ -1643,29 +1625,29 @@ class HelpdeskService
         HelpdeskRating $rating
     ): array {
         return [
-            'id'=>$rating->id,
-            'rating'=>$rating->rating,
-            'comment'=>$rating->comment,
+            'id' => $rating->id,
+            'rating' => $rating->rating,
+            'comment' => $rating->comment,
 
-            'submitted_by'=>
-                $rating->submittedBy
-                    ?[
-                        'id'=>
-                            $rating
-                                ->submittedBy
-                                ->id,
+            'submitted_by' =>
+            $rating->submittedBy
+                ? [
+                    'id' =>
+                    $rating
+                        ->submittedBy
+                        ->id,
 
-                        'name'=>
-                            $rating
-                                ->submittedBy
-                                ->name,
-                    ]
-                    :null,
+                    'name' =>
+                    $rating
+                        ->submittedBy
+                        ->name,
+                ]
+                : null,
 
-            'created_at'=>
-                $rating
-                    ->created_at
-                    ?->toISOString(),
+            'created_at' =>
+            $rating
+                ->created_at
+                ?->toISOString(),
         ];
     }
 
@@ -1714,13 +1696,13 @@ class HelpdeskService
                 $ticket->id
             )
             ->update([
-                $side==='saas'
-                    ?'saas_unread_count'
-                    :'tenant_unread_count'
-                    =>0,
+                $side === 'saas'
+                    ? 'saas_unread_count'
+                    : 'tenant_unread_count'
+                => 0,
 
-                'updated_at'=>
-                    $ticket->updated_at,
+                'updated_at' =>
+                $ticket->updated_at,
             ]);
     }
 
@@ -1729,90 +1711,90 @@ class HelpdeskService
         HelpdeskMessage $message,
         array $attachments
     ): void {
-        foreach(
+        foreach (
             $attachments
             as $file
-        ){
-            if(
+        ) {
+            if (
                 !$file instanceof
                     UploadedFile
-            ){
+            ) {
                 continue;
             }
 
-            $extension=
+            $extension =
                 strtolower(
                     $file
                         ->getClientOriginalExtension()
-                        ?:$file->extension()
-                        ?:'bin'
+                        ?: $file->extension()
+                        ?: 'bin'
                 );
 
-            $filename=
-                Str::uuid().
-                '.'.
+            $filename =
+                Str::uuid() .
+                '.' .
                 $extension;
 
-            $path=
+            $path =
                 $file->storeAs(
                     "helpdesk/{$ticket->id}/{$message->id}",
                     $filename,
                     'local'
                 );
 
-            if(!$path){
+            if (!$path) {
                 throw ValidationException::withMessages([
-                    'attachments'=>
-                        'Não foi possível guardar o anexo.',
+                    'attachments' =>
+                    'Não foi possível guardar o anexo.',
                 ]);
             }
 
-            $fullPath=
+            $fullPath =
                 Storage::disk(
                     'local'
                 )->path(
                     $path
                 );
 
-            $mime=
+            $mime =
                 $file->getMimeType()
-                ?:'application/octet-stream';
+                ?: 'application/octet-stream';
 
             HelpdeskAttachment::create([
-                'message_id'=>
-                    $message->id,
+                'message_id' =>
+                $message->id,
 
-                'disk'=>'local',
-                'path'=>$path,
+                'disk' => 'local',
+                'path' => $path,
 
-                'original_name'=>
-                    $file
-                        ->getClientOriginalName(),
+                'original_name' =>
+                $file
+                    ->getClientOriginalName(),
 
-                'mime_type'=>$mime,
+                'mime_type' => $mime,
 
-                'size'=>
-                    $file->getSize(),
+                'size' =>
+                $file->getSize(),
 
-                'kind'=>
-                    str_starts_with(
-                        $mime,
-                        'image/'
-                    )
-                        ?'image'
-                        :(
-                            $mime===
-                            'application/pdf'
-                                ?'pdf'
-                                :'file'
-                        ),
+                'kind' =>
+                str_starts_with(
+                    $mime,
+                    'image/'
+                )
+                    ? 'image'
+                    : (
+                        $mime ===
+                        'application/pdf'
+                        ? 'pdf'
+                        : 'file'
+                    ),
 
-                'metadata'=>[
-                    'sha256'=>
-                        hash_file(
-                            'sha256',
-                            $fullPath
-                        ),
+                'metadata' => [
+                    'sha256' =>
+                    hash_file(
+                        'sha256',
+                        $fullPath
+                    ),
                 ],
             ]);
         }
@@ -1820,23 +1802,23 @@ class HelpdeskService
 
     private function number(): string
     {
-        do{
-            $number=
-                'SUP-'.
+        do {
+            $number =
+                'SUP-' .
                 now()->format(
                     'Ymd'
-                ).
-                '-'.
+                ) .
+                '-' .
                 Str::upper(
                     Str::random(6)
                 );
-        }while(
+        } while (
             HelpdeskTicket::query()
-                ->where(
-                    'number',
-                    $number
-                )
-                ->exists()
+            ->where(
+                'number',
+                $number
+            )
+            ->exists()
         );
 
         return $number;
@@ -1848,8 +1830,8 @@ class HelpdeskService
         return $this->isIdeaType(
             $type
         )
-            ?'received'
-            :'open';
+            ? 'received'
+            : 'open';
     }
 
     private function isIdeaType(
@@ -1866,27 +1848,27 @@ class HelpdeskService
         string $type,
         string $status
     ): void {
-        $valid=
+        $valid =
             $this->isIdeaType(
                 $type
             )
-                ?array_keys(
-                    self::IDEA_STATUSES
-                )
-                :array_keys(
-                    self::SUPPORT_STATUSES
-                );
+            ? array_keys(
+                self::IDEA_STATUSES
+            )
+            : array_keys(
+                self::SUPPORT_STATUSES
+            );
 
-        if(
+        if (
             !in_array(
                 $status,
                 $valid,
                 true
             )
-        ){
+        ) {
             throw ValidationException::withMessages([
-                'status'=>
-                    'O estado selecionado não pertence ao fluxo deste tipo de chamado.',
+                'status' =>
+                'O estado selecionado não pertence ao fluxo deste tipo de chamado.',
             ]);
         }
     }
@@ -1894,28 +1876,24 @@ class HelpdeskService
     private function statusLabel(
         string $status
     ): string {
-        return self::SUPPORT_STATUSES[
-            $status
-        ]
-        ??
-        self::IDEA_STATUSES[
-            $status
-        ]
-        ??
-        $status;
+        return self::SUPPORT_STATUSES[$status]
+            ??
+            self::IDEA_STATUSES[$status]
+            ??
+            $status;
     }
 
     private function assertContent(
         ?string $body,
         array $attachments
     ): void {
-        if(
+        if (
             blank($body) &&
             empty($attachments)
-        ){
+        ) {
             throw ValidationException::withMessages([
-                'body'=>
-                    'Escreva uma mensagem ou adicione um anexo.',
+                'body' =>
+                'Escreva uma mensagem ou adicione um anexo.',
             ]);
         }
     }
@@ -1924,12 +1902,12 @@ class HelpdeskService
         User $user,
         string $tenantId
     ): void {
-        if(
+        if (
             !$user->hasRole(
                 'admin_empresa',
                 $tenantId
             )
-        ){
+        ) {
             abort(
                 403,
                 'Apenas gestores de frota podem utilizar o Helpdesk.'
@@ -1940,9 +1918,9 @@ class HelpdeskService
     private function assertSuperAdmin(
         User $user
     ): void {
-        if(
+        if (
             !$user->isSuperAdmin()
-        ){
+        ) {
             abort(403);
         }
     }
@@ -1950,51 +1928,51 @@ class HelpdeskService
     private function assertSuperAdminId(
         string $userId
     ): void {
-        $valid=
+        $valid =
             UserRole::query()
-                ->where(
-                    'user_id',
-                    $userId
+            ->where(
+                'user_id',
+                $userId
+            )
+            ->whereNull(
+                'tenant_id'
+            )
+            ->whereHas(
+                'role',
+                fn($query) =>
+                $query->where(
+                    'codigo',
+                    'super_admin'
                 )
-                ->whereNull(
-                    'tenant_id'
-                )
-                ->whereHas(
-                    'role',
-                    fn($query)=>
-                        $query->where(
-                            'codigo',
-                            'super_admin'
-                        )
-                )
-                ->exists();
+            )
+            ->exists();
 
-        if(!$valid){
+        if (!$valid) {
             throw ValidationException::withMessages([
-                'assigned_to_user_id'=>
-                    'O responsável selecionado não pertence à equipa SaaS.',
+                'assigned_to_user_id' =>
+                'O responsável selecionado não pertence à equipa SaaS.',
             ]);
         }
     }
 
     private function assignees(): array
     {
-        $ids=
+        $ids =
             UserRole::query()
-                ->whereNull(
-                    'tenant_id'
+            ->whereNull(
+                'tenant_id'
+            )
+            ->whereHas(
+                'role',
+                fn($query) =>
+                $query->where(
+                    'codigo',
+                    'super_admin'
                 )
-                ->whereHas(
-                    'role',
-                    fn($query)=>
-                        $query->where(
-                            'codigo',
-                            'super_admin'
-                        )
-                )
-                ->pluck(
-                    'user_id'
-                );
+            )
+            ->pluck(
+                'user_id'
+            );
 
         return User::query()
             ->whereIn(
@@ -2013,10 +1991,10 @@ class HelpdeskService
                 'name',
                 'email',
             ])
-            ->map(fn(User $user)=>[
-                'id'=>$user->id,
-                'name'=>$user->name,
-                'email'=>$user->email,
+            ->map(fn(User $user) => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
             ])
             ->values()
             ->all();
@@ -2024,21 +2002,21 @@ class HelpdeskService
 
     private function options(
         array $items,
-        ?callable $extra=null
+        ?callable $extra = null
     ): array {
-        $result=[];
+        $result = [];
 
-        foreach(
+        foreach (
             $items
-            as $value=>$label
-        ){
-            $item=[
-                'value'=>$value,
-                'label'=>$label,
+            as $value => $label
+        ) {
+            $item = [
+                'value' => $value,
+                'label' => $label,
             ];
 
-            if($extra){
-                $item=[
+            if ($extra) {
+                $item = [
                     ...$item,
                     ...$extra(
                         $value,
@@ -2047,7 +2025,7 @@ class HelpdeskService
                 ];
             }
 
-            $result[]=$item;
+            $result[] = $item;
         }
 
         return $result;
