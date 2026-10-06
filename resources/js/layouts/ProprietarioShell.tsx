@@ -10,6 +10,7 @@ import {
     ReceiptText,
     Truck,
     X,
+    BookOpenText,
     MessageSquareText,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
@@ -41,6 +42,11 @@ const navigation = [
         to: "/portal/proprietario/mensagens",
         label: "Mensagens",
         icon: MessageSquareText,
+    },  
+    {
+        to: "/portal/proprietario/ajuda",
+        label: "Central de Ajuda",
+        icon: BookOpenText,
     },
     {
         to: "/portal/proprietario/minha-conta",

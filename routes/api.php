@@ -70,6 +70,9 @@ use App\Http\Controllers\AuditoriaController;
 use App\Http\Controllers\BackofficeHelpdeskController;
 use App\Http\Controllers\HelpdeskAttachmentController;
 use App\Http\Controllers\HelpdeskController;
+use App\Http\Controllers\BackofficeHelpCategoryController;
+use App\Http\Controllers\BackofficeHelpCenterController;
+use App\Http\Controllers\HelpCenterController;
 
 Route::get('/assinaturas/remotas/{token}', [RemoteSignatureController::class, 'show'])
     ->whereUuid('token')
@@ -103,6 +106,22 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('super_admin')
         ->prefix('backoffice')
         ->group(function () {
+
+            Route::prefix('ajuda')->group(function () {
+                Route::get('/resumo', [BackofficeHelpCenterController::class, 'summary']);
+                Route::get('/meta', [BackofficeHelpCenterController::class, 'meta']);
+
+                Route::get('/categorias', [BackofficeHelpCategoryController::class, 'index']);
+                Route::post('/categorias', [BackofficeHelpCategoryController::class, 'store']);
+                Route::patch('/categorias/{id}', [BackofficeHelpCategoryController::class, 'update'])->whereUuid('id');
+                Route::delete('/categorias/{id}', [BackofficeHelpCategoryController::class, 'destroy'])->whereUuid('id');
+
+                Route::get('/conteudos', [BackofficeHelpCenterController::class, 'index']);
+                Route::post('/conteudos', [BackofficeHelpCenterController::class, 'store']);
+                Route::get('/conteudos/{id}', [BackofficeHelpCenterController::class, 'show'])->whereUuid('id');
+                Route::patch('/conteudos/{id}', [BackofficeHelpCenterController::class, 'update'])->whereUuid('id');
+                Route::delete('/conteudos/{id}', [BackofficeHelpCenterController::class, 'destroy'])->whereUuid('id');
+            });
 
             Route::get(
                 '/helpdesk/resumo',
@@ -488,6 +507,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/tenant-context', [TenantContextController::class, 'clear']);
 
     Route::middleware('tenant')->group(function () {
+
+        Route::get('/ajuda/meta', [HelpCenterController::class, 'meta']);
+        Route::get('/ajuda', [HelpCenterController::class, 'index']);
+        Route::get('/ajuda/conteudos/{slug}', [HelpCenterController::class, 'show']);
+        Route::post('/ajuda/conteudos/{id}/visualizacao', [HelpCenterController::class, 'view'])->whereUuid('id');
 
         Route::get(
             '/helpdesk/resumo',

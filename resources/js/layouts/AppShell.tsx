@@ -16,6 +16,7 @@ import {
     History,
     Menu,
     ReceiptText,
+    BookOpenText,
     ShieldCheck,
     Truck,
     UserCog,
@@ -165,6 +166,11 @@ const navigation = [
         label: "Auditoria",
         icon: History,
         permission: "auditoria",
+    },
+    {
+        to: "/ajuda",
+        label: "Central de Ajuda",
+        icon: BookOpenText,
     },
     {
         to: "/minha-conta",

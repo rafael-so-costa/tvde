@@ -5,6 +5,7 @@ import {
     Database,
     DatabaseZap,
     FileClock,
+    BookOpenText,
     LayoutDashboard,
     Layers3,
     LogOut,
@@ -83,6 +84,11 @@ export default function BackofficeShell() {
                             <LifeBuoy className="h-5 w-5" />
                             Helpdesk
                             <HelpdeskUnreadBadge mode="backoffice" />
+                        </NavLink>
+
+                        <NavLink to="/backoffice/ajuda" className={navClass}>
+                            <BookOpenText className="h-5 w-5" />
+                            Central de Ajuda
                         </NavLink>
 
                         <NavLink to="/backoffice/planos" className={navClass}>

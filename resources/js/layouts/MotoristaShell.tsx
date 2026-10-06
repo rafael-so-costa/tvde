@@ -10,6 +10,7 @@ import {
     Menu,
     ReceiptText,
     Truck,
+    BookOpenText,
     X,
     LayoutDashboard,
     MessageSquareText,
@@ -55,6 +56,11 @@ const navigation = [
         to: "/portal/motorista/mensagens",
         label: "Mensagens",
         icon: MessageSquareText,
+    },
+    {
+        to: "/portal/motorista/ajuda",
+        label: "Central de Ajuda",
+        icon: BookOpenText,
     },
     {
         to: "/portal/motorista/minha-conta",

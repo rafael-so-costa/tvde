@@ -72,6 +72,9 @@ import ConfiguracoesPage from "./pages/ConfiguracoesPage";
 import RelatoriosPage from "./pages/RelatoriosPage";
 import AuditoriaPage from "./pages/AuditoriaPage";
 import HelpdeskPage from "./pages/HelpdeskPage";
+import BackofficeHelpCenterPage from "./pages/BackofficeHelpCenterPage";
+import HelpCenterPage from "./pages/HelpCenterPage";
+import HelpContentPage from "./pages/HelpContentPage";
 
 export default function App() {
     return (
@@ -104,6 +107,10 @@ export default function App() {
                         <Route
                             path="helpdesk"
                             element={<HelpdeskPage mode="backoffice" />}
+                        />
+                        <Route
+                            path="ajuda"
+                            element={<BackofficeHelpCenterPage />}
                         />
                         <Route
                             path="mensagens"
@@ -269,6 +276,15 @@ export default function App() {
                                 path="helpdesk"
                                 element={<HelpdeskPage mode="tenant" />}
                             />
+                            <Route
+                                path="ajuda"
+                                element={<HelpCenterPage basePath="/ajuda" />}
+                            />
+
+                            <Route
+                                path="ajuda/:slug"
+                                element={<HelpContentPage basePath="/ajuda" />}
+                            />
                             <Route path="mensagens" element={<ChatPage />} />
                             <Route
                                 index
@@ -375,6 +391,20 @@ export default function App() {
                         <Route path="minha-conta" element={<MyAccountPage />} />
 
                         <Route
+                            path="ajuda"
+                            element={
+                                <HelpCenterPage basePath="/portal/motorista/ajuda" />
+                            }
+                        />
+
+                        <Route
+                            path="ajuda/:slug"
+                            element={
+                                <HelpContentPage basePath="/portal/motorista/ajuda" />
+                            }
+                        />
+
+                        <Route
                             path="expediente"
                             element={<ExpedientePage mode="motorista" />}
                         />
@@ -408,6 +438,19 @@ export default function App() {
                         element={<ProprietarioShell />}
                     >
                         <Route index element={<ProprietarioDashboardPage />} />
+                        <Route
+                            path="ajuda"
+                            element={
+                                <HelpCenterPage basePath="/portal/proprietario/ajuda" />
+                            }
+                        />
+
+                        <Route
+                            path="ajuda/:slug"
+                            element={
+                                <HelpContentPage basePath="/portal/proprietario/ajuda" />
+                            }
+                        />
 
                         <Route path="minha-conta" element={<MyAccountPage />} />
 
