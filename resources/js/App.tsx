@@ -71,6 +71,7 @@ import ChatPage from "./pages/ChatPage";
 import ConfiguracoesPage from "./pages/ConfiguracoesPage";
 import RelatoriosPage from "./pages/RelatoriosPage";
 import AuditoriaPage from "./pages/AuditoriaPage";
+import HelpdeskPage from "./pages/HelpdeskPage";
 
 export default function App() {
     return (
@@ -100,6 +101,10 @@ export default function App() {
             <Route element={<ProtectedRoute />}>
                 <Route element={<SuperAdminRoute />}>
                     <Route path="backoffice" element={<BackofficeShell />}>
+                        <Route
+                            path="helpdesk"
+                            element={<HelpdeskPage mode="backoffice" />}
+                        />
                         <Route
                             path="mensagens"
                             element={<ChatPage mode="backoffice" />}
@@ -260,6 +265,10 @@ export default function App() {
                         <Route path="onboarding" element={<OnboardingPage />} />
 
                         <Route element={<AppShell />}>
+                            <Route
+                                path="helpdesk"
+                                element={<HelpdeskPage mode="tenant" />}
+                            />
                             <Route path="mensagens" element={<ChatPage />} />
                             <Route
                                 index

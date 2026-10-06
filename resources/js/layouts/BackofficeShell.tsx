@@ -13,6 +13,7 @@ import {
     Tag,
     Truck,
     UsersRound,
+    LifeBuoy,
     Megaphone,
     MessageSquareText,
 } from "lucide-react";
@@ -20,6 +21,7 @@ import { Link, NavLink, Outlet } from "react-router-dom";
 
 import { useAuth } from "../contexts/AuthContext";
 import ChatUnreadBadge from "../components/chat/ChatUnreadBadge";
+import HelpdeskUnreadBadge from "../components/helpdesk/HelpdeskUnreadBadge";
 
 export default function BackofficeShell() {
     const { user, logout } = useAuth();
@@ -75,6 +77,12 @@ export default function BackofficeShell() {
                             <MessageSquareText className="h-5 w-5" />
                             Mensagens
                             <ChatUnreadBadge mode="backoffice" />
+                        </NavLink>
+
+                        <NavLink to="/backoffice/helpdesk" className={navClass}>
+                            <LifeBuoy className="h-5 w-5" />
+                            Helpdesk
+                            <HelpdeskUnreadBadge mode="backoffice" />
                         </NavLink>
 
                         <NavLink to="/backoffice/planos" className={navClass}>

@@ -24,6 +24,7 @@ import {
     UsersRound,
     Wrench,
     BarChart3,
+    LifeBuoy,
     X,
     MessageSquareText,
 } from "lucide-react";
@@ -33,6 +34,7 @@ import { useCurrentPermissions } from "../hooks/useCurrentPermissions";
 import AlertBell from "../components/alerts/AlertBell";
 import { resolvePortalDestination } from "../lib/portal";
 import ChatUnreadBadge from "../components/chat/ChatUnreadBadge";
+import HelpdeskUnreadBadge from "../components/helpdesk/HelpdeskUnreadBadge";
 
 const navigation = [
     {
@@ -153,6 +155,12 @@ const navigation = [
         permission: "relatorios",
     },
     {
+        to: "/helpdesk",
+        label: "Helpdesk",
+        icon: LifeBuoy,
+        managerOnly: true,
+    },
+    {
         to: "/auditoria",
         label: "Auditoria",
         icon: History,
@@ -216,9 +224,22 @@ export default function AppShell() {
         ),
     );
 
-    const visibleNavigation = navigation.filter(
-        (item) => isTenantAdmin || !item.permission || can(item.permission),
+    const isFleetManager = Boolean(
+        tenant &&
+        user?.roles?.some(
+            (role) =>
+                role.codigo === "admin_empresa" &&
+                role.pivot?.tenant_id === tenant.id,
+        ),
     );
+
+    const visibleNavigation = navigation.filter((item) => {
+        if ("managerOnly" in item && item.managerOnly) {
+            return isFleetManager;
+        }
+
+        return isTenantAdmin || !item.permission || can(item.permission);
+    });
 
     const visibleRoles =
         user?.roles?.filter(
@@ -271,6 +292,10 @@ export default function AppShell() {
                         {label}
                         {to === "/mensagens" && (
                             <ChatUnreadBadge mode="tenant" />
+                        )}
+
+                        {to === "/helpdesk" && (
+                            <HelpdeskUnreadBadge mode="tenant" />
                         )}
                     </NavLink>
                 ))}

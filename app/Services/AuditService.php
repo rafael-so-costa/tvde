@@ -47,20 +47,25 @@ use Illuminate\Support\Str;
 use JsonSerializable;
 use Stringable;
 use UnitEnum;
+use App\Models\HelpdeskTicket;
 
 class AuditService
 {
-    private static ?bool $tableReady=null;
+    private static ?bool $tableReady = null;
 
-    private const IGNORED_FIELDS=[
+    private const IGNORED_FIELDS = [
         'id',
         'tenant_id',
         'created_at',
         'updated_at',
         'deleted_at',
+        'tenant_unread_count',
+        'saas_unread_count',
+        'last_message_at',
+        'first_response_at',
     ];
 
-    private const SENSITIVE_FRAGMENTS=[
+    private const SENSITIVE_FRAGMENTS = [
         'password',
         'senha',
         'secret',
@@ -73,32 +78,33 @@ class AuditService
     public static function moduleLabels(): array
     {
         return [
-            'configuracoes'=>'Configurações',
-            'empresas'=>'Empresas',
-            'proprietarios'=>'Proprietários',
-            'motoristas'=>'Motoristas',
-            'funcionarios'=>'Funcionários',
-            'veiculos'=>'Veículos',
-            'alugueres'=>'Alugueres',
-            'contratos'=>'Contratos',
-            'declaracoes'=>'Declarações',
-            'templates'=>'Templates',
-            'checklist'=>'Checklists',
-            'multas'=>'Multas',
-            'sinistros'=>'Sinistros',
-            'manutencao'=>'Manutenção',
-            'expediente'=>'Expediente',
-            'recibos_verdes'=>'Recibos verdes',
-            'registos_criminais'=>'Registos criminais',
+            'configuracoes' => 'Configurações',
+            'empresas' => 'Empresas',
+            'proprietarios' => 'Proprietários',
+            'motoristas' => 'Motoristas',
+            'funcionarios' => 'Funcionários',
+            'veiculos' => 'Veículos',
+            'alugueres' => 'Alugueres',
+            'contratos' => 'Contratos',
+            'declaracoes' => 'Declarações',
+            'templates' => 'Templates',
+            'checklist' => 'Checklists',
+            'multas' => 'Multas',
+            'sinistros' => 'Sinistros',
+            'manutencao' => 'Manutenção',
+            'expediente' => 'Expediente',
+            'recibos_verdes' => 'Recibos verdes',
+            'registos_criminais' => 'Registos criminais',
+            'helpdesk' => 'Helpdesk',
         ];
     }
 
     public static function actionLabels(): array
     {
         return [
-            'created'=>'Criação',
-            'updated'=>'Alteração',
-            'deleted'=>'Eliminação',
+            'created' => 'Criação',
+            'updated' => 'Alteração',
+            'deleted' => 'Eliminação',
         ];
     }
 
@@ -106,128 +112,128 @@ class AuditService
         Model $model,
         string $action
     ): void {
-        if($model instanceof AuditLog){
+        if ($model instanceof AuditLog) {
             return;
         }
 
-        $module=$this->moduleFor(
+        $module = $this->moduleFor(
             $model
         );
 
-        if(!$module){
+        if (!$module) {
             return;
         }
 
-        if(!$this->tableReady()){
+        if (!$this->tableReady()) {
             return;
         }
 
-        $tenantId=$this->tenantIdFor(
+        $tenantId = $this->tenantIdFor(
             $model
         );
 
-        if(!$tenantId){
+        if (!$tenantId) {
             return;
         }
 
         [
             $oldValues,
             $newValues,
-        ]=$this->valuesFor(
+        ] = $this->valuesFor(
             $model,
             $action
         );
 
-        if(
-            $action==='updated' &&
+        if (
+            $action === 'updated' &&
             empty($oldValues) &&
             empty($newValues)
-        ){
+        ) {
             return;
         }
 
-        $actor=Auth::user();
+        $actor = Auth::user();
 
-        $request=
+        $request =
             app()->bound('request')
-                ?request()
-                :null;
+            ? request()
+            : null;
 
-        $hasWebRequest=
+        $hasWebRequest =
             $request &&
-            $request->route()!==null;
+            $request->route() !== null;
 
-        $subjectLabel=
+        $subjectLabel =
             $this->subjectLabel(
                 $model
             );
 
         AuditLog::query()->create([
-            'tenant_id'=>$tenantId,
+            'tenant_id' => $tenantId,
 
-            'actor_user_id'=>
-                $actor?->id,
+            'actor_user_id' =>
+            $actor?->id,
 
-            'module'=>$module,
-            'action'=>$action,
+            'module' => $module,
+            'action' => $action,
 
-            'source'=>
-                $hasWebRequest
-                    ?'web'
-                    :'system',
+            'source' =>
+            $hasWebRequest
+                ? 'web'
+                : 'system',
 
-            'auditable_type'=>
-                $model::class,
+            'auditable_type' =>
+            $model::class,
 
-            'auditable_id'=>
-                (string)$model->getKey(),
+            'auditable_id' =>
+            (string)$model->getKey(),
 
-            'subject_label'=>
-                $subjectLabel,
+            'subject_label' =>
+            $subjectLabel,
 
-            'description'=>
-                $this->description(
-                    $action,
-                    $subjectLabel
-                ),
+            'description' =>
+            $this->description(
+                $action,
+                $subjectLabel
+            ),
 
-            'old_values'=>$oldValues,
-            'new_values'=>$newValues,
+            'old_values' => $oldValues,
+            'new_values' => $newValues,
 
-            'actor_name'=>
-                $actor?->name,
+            'actor_name' =>
+            $actor?->name,
 
-            'actor_email'=>
-                $actor?->email,
+            'actor_email' =>
+            $actor?->email,
 
-            'ip_address'=>
-                $hasWebRequest
-                    ?$request->ip()
-                    :null,
+            'ip_address' =>
+            $hasWebRequest
+                ? $request->ip()
+                : null,
 
-            'request_method'=>
-                $hasWebRequest
-                    ?$request->method()
-                    :null,
+            'request_method' =>
+            $hasWebRequest
+                ? $request->method()
+                : null,
 
-            'request_path'=>
-                $hasWebRequest
-                    ?Str::limit(
-                        $request->path(),
-                        1000,
-                        ''
-                    )
-                    :null,
+            'request_path' =>
+            $hasWebRequest
+                ? Str::limit(
+                    $request->path(),
+                    1000,
+                    ''
+                )
+                : null,
 
-            'user_agent'=>
-                $hasWebRequest
-                    ?Str::limit(
-                        (string)$request
-                            ->userAgent(),
-                        1000,
-                        ''
-                    )
-                    :null,
+            'user_agent' =>
+            $hasWebRequest
+                ? Str::limit(
+                    (string)$request
+                        ->userAgent(),
+                    1000,
+                    ''
+                )
+                : null,
         ]);
     }
 
@@ -235,13 +241,13 @@ class AuditService
         string $tenantId,
         array $filters
     ): array {
-        $query=
+        $query =
             $this->filteredQuery(
                 $tenantId,
                 $filters
             );
 
-        $kpiFilters=$filters;
+        $kpiFilters = $filters;
 
         unset(
             $kpiFilters['action'],
@@ -249,149 +255,143 @@ class AuditService
             $kpiFilters['per_page']
         );
 
-        $kpiQuery=
+        $kpiQuery =
             $this->filteredQuery(
                 $tenantId,
                 $kpiFilters
             );
 
-        $kpis=[
-            'total'=>
-                (clone $kpiQuery)
-                    ->count(),
+        $kpis = [
+            'total' => (clone $kpiQuery)
+                ->count(),
 
-            'created'=>
-                (clone $kpiQuery)
-                    ->where(
-                        'action',
-                        'created'
-                    )
-                    ->count(),
+            'created' => (clone $kpiQuery)
+                ->where(
+                    'action',
+                    'created'
+                )
+                ->count(),
 
-            'updated'=>
-                (clone $kpiQuery)
-                    ->where(
-                        'action',
-                        'updated'
-                    )
-                    ->count(),
+            'updated' => (clone $kpiQuery)
+                ->where(
+                    'action',
+                    'updated'
+                )
+                ->count(),
 
-            'deleted'=>
-                (clone $kpiQuery)
-                    ->where(
-                        'action',
-                        'deleted'
-                    )
-                    ->count(),
+            'deleted' => (clone $kpiQuery)
+                ->where(
+                    'action',
+                    'deleted'
+                )
+                ->count(),
         ];
 
-        $perPage=
+        $perPage =
             (int)(
-                $filters[
-                    'per_page'
-                ] ?? 25
+                $filters['per_page'] ?? 25
             );
 
-        $paginator=
+        $paginator =
             $query
-                ->orderByDesc(
-                    'created_at'
-                )
-                ->paginate(
-                    $perPage
-                );
+            ->orderByDesc(
+                'created_at'
+            )
+            ->paginate(
+                $perPage
+            );
 
-        $rows=
+        $rows =
             $paginator
-                ->getCollection()
-                ->map(
-                    fn(AuditLog $log)=>
-                        $this->summary(
-                            $log
-                        )
+            ->getCollection()
+            ->map(
+                fn(AuditLog $log) =>
+                $this->summary(
+                    $log
                 )
-                ->values()
-                ->all();
+            )
+            ->values()
+            ->all();
 
         return [
-            'data'=>$rows,
+            'data' => $rows,
 
-            'kpis'=>$kpis,
+            'kpis' => $kpis,
 
-            'meta'=>[
-                'current_page'=>
-                    $paginator
-                        ->currentPage(),
+            'meta' => [
+                'current_page' =>
+                $paginator
+                    ->currentPage(),
 
-                'last_page'=>
-                    $paginator
-                        ->lastPage(),
+                'last_page' =>
+                $paginator
+                    ->lastPage(),
 
-                'per_page'=>
-                    $paginator
-                        ->perPage(),
+                'per_page' =>
+                $paginator
+                    ->perPage(),
 
-                'total'=>
-                    $paginator
-                        ->total(),
+                'total' =>
+                $paginator
+                    ->total(),
 
-                'from'=>
-                    $paginator
-                        ->firstItem(),
+                'from' =>
+                $paginator
+                    ->firstItem(),
 
-                'to'=>
-                    $paginator
-                        ->lastItem(),
+                'to' =>
+                $paginator
+                    ->lastItem(),
             ],
 
-            'filters'=>[
-                'modules'=>
-                    collect(
-                        self::moduleLabels()
+            'filters' => [
+                'modules' =>
+                collect(
+                    self::moduleLabels()
+                )
+                    ->map(
+                        fn(
+                            string $label,
+                            string $value
+                        ) => [
+                            'value' => $value,
+                            'label' => $label,
+                        ]
                     )
-                        ->map(
-                            fn(
-                                string $label,
-                                string $value
-                            )=>[
-                                'value'=>$value,
-                                'label'=>$label,
-                            ]
-                        )
-                        ->values()
-                        ->all(),
+                    ->values()
+                    ->all(),
 
-                'actions'=>
-                    collect(
-                        self::actionLabels()
+                'actions' =>
+                collect(
+                    self::actionLabels()
+                )
+                    ->map(
+                        fn(
+                            string $label,
+                            string $value
+                        ) => [
+                            'value' => $value,
+                            'label' => $label,
+                        ]
                     )
-                        ->map(
-                            fn(
-                                string $label,
-                                string $value
-                            )=>[
-                                'value'=>$value,
-                                'label'=>$label,
-                            ]
-                        )
-                        ->values()
-                        ->all(),
+                    ->values()
+                    ->all(),
 
-                'sources'=>[
+                'sources' => [
                     [
-                        'value'=>'web',
-                        'label'=>'Utilizador',
+                        'value' => 'web',
+                        'label' => 'Utilizador',
                     ],
                     [
-                        'value'=>'system',
-                        'label'=>'Sistema',
+                        'value' => 'system',
+                        'label' => 'Sistema',
                     ],
                 ],
 
-                'users'=>
-                    $this->users(
-                        $tenantId
-                    ),
+                'users' =>
+                $this->users(
+                    $tenantId
+                ),
             ],
         ];
     }
@@ -400,46 +400,46 @@ class AuditService
         string $tenantId,
         string $id
     ): array {
-        $log=
+        $log =
             AuditLog::query()
-                ->where(
-                    'tenant_id',
-                    $tenantId
-                )
-                ->whereKey(
-                    $id
-                )
-                ->firstOrFail();
+            ->where(
+                'tenant_id',
+                $tenantId
+            )
+            ->whereKey(
+                $id
+            )
+            ->firstOrFail();
 
         return [
             ...$this->summary(
                 $log
             ),
 
-            'old_values'=>
-                $log->old_values??
+            'old_values' =>
+            $log->old_values ??
                 [],
 
-            'new_values'=>
-                $log->new_values??
+            'new_values' =>
+            $log->new_values ??
                 [],
 
-            'request'=>[
-                'method'=>
-                    $log
-                        ->request_method,
+            'request' => [
+                'method' =>
+                $log
+                    ->request_method,
 
-                'path'=>
-                    $log
-                        ->request_path,
+                'path' =>
+                $log
+                    ->request_path,
 
-                'ip'=>
-                    $log
-                        ->ip_address,
+                'ip' =>
+                $log
+                    ->ip_address,
 
-                'user_agent'=>
-                    $log
-                        ->user_agent,
+                'user_agent' =>
+                $log
+                    ->user_agent,
             ],
         ];
     }
@@ -448,18 +448,16 @@ class AuditService
         string $tenantId,
         array $filters
     ): Builder {
-        $query=
+        $query =
             AuditLog::query()
-                ->where(
-                    'tenant_id',
-                    $tenantId
-                );
+            ->where(
+                'tenant_id',
+                $tenantId
+            );
 
-        if(
-            !empty(
-                $filters['inicio']
-            )
-        ){
+        if (
+            !empty($filters['inicio'])
+        ) {
             $query->where(
                 'created_at',
                 '>=',
@@ -470,11 +468,9 @@ class AuditService
             );
         }
 
-        if(
-            !empty(
-                $filters['fim']
-            )
-        ){
+        if (
+            !empty($filters['fim'])
+        ) {
             $query->where(
                 'created_at',
                 '<=',
@@ -485,16 +481,16 @@ class AuditService
             );
         }
 
-        foreach([
-            'module',
-            'action',
-            'source',
-        ] as $field){
-            if(
-                !empty(
-                    $filters[$field]
-                )
-            ){
+        foreach (
+            [
+                'module',
+                'action',
+                'source',
+            ] as $field
+        ) {
+            if (
+                !empty($filters[$field])
+            ) {
                 $query->where(
                     $field,
                     $filters[$field]
@@ -502,38 +498,30 @@ class AuditService
             }
         }
 
-        if(
-            !empty(
-                $filters[
-                    'user_id'
-                ]
-            )
-        ){
+        if (
+            !empty($filters['user_id'])
+        ) {
             $query->where(
                 'actor_user_id',
-                $filters[
-                    'user_id'
-                ]
+                $filters['user_id']
             );
         }
 
-        if(
-            !empty(
-                $filters['search']
-            )
-        ){
-            $search=
+        if (
+            !empty($filters['search'])
+        ) {
+            $search =
                 trim(
                     $filters['search']
                 );
 
             $query->where(
-                function(
+                function (
                     Builder $query
-                ) use(
+                ) use (
                     $search
-                ){
-                    $like=
+                ) {
+                    $like =
                         "%{$search}%";
 
                     $query
@@ -597,18 +585,18 @@ class AuditService
                 'actor_user_id'
             )
             ->map(
-                fn(AuditLog $log)=>[
-                    'id'=>
-                        $log
-                            ->actor_user_id,
+                fn(AuditLog $log) => [
+                    'id' =>
+                    $log
+                        ->actor_user_id,
 
-                    'name'=>
-                        $log
-                            ->actor_name,
+                    'name' =>
+                    $log
+                        ->actor_name,
 
-                    'email'=>
-                        $log
-                            ->actor_email,
+                    'email' =>
+                    $log
+                        ->actor_email,
                 ]
             )
             ->values()
@@ -618,15 +606,15 @@ class AuditService
     private function summary(
         AuditLog $log
     ): array {
-        $old=
-            $log->old_values??
+        $old =
+            $log->old_values ??
             [];
 
-        $new=
-            $log->new_values??
+        $new =
+            $log->new_values ??
             [];
 
-        $keys=
+        $keys =
             array_unique([
                 ...array_keys(
                     $old
@@ -637,132 +625,126 @@ class AuditService
             ]);
 
         return [
-            'id'=>$log->id,
+            'id' => $log->id,
 
-            'module'=>$log
+            'module' => $log
                 ->module,
 
-            'module_label'=>
-                self::moduleLabels()[
-                    $log->module
-                ] ??
+            'module_label' =>
+            self::moduleLabels()[$log->module] ??
                 $log->module,
 
-            'action'=>$log
+            'action' => $log
                 ->action,
 
-            'action_label'=>
-                self::actionLabels()[
-                    $log->action
-                ] ??
+            'action_label' =>
+            self::actionLabels()[$log->action] ??
                 $log->action,
 
-            'source'=>$log
+            'source' => $log
                 ->source,
 
-            'subject_type'=>
-                class_basename(
+            'subject_type' =>
+            class_basename(
+                $log
+                    ->auditable_type
+            ),
+
+            'subject_id' =>
+            $log
+                ->auditable_id,
+
+            'subject_label' =>
+            $log
+                ->subject_label,
+
+            'description' =>
+            $log
+                ->description,
+
+            'changes_count' =>
+            count(
+                $keys
+            ),
+
+            'actor' =>
+            $log
+                ->actor_user_id
+                ? [
+                    'id' =>
                     $log
-                        ->auditable_type
-                ),
+                        ->actor_user_id,
 
-            'subject_id'=>
-                $log
-                    ->auditable_id,
+                    'name' =>
+                    $log
+                        ->actor_name,
 
-            'subject_label'=>
-                $log
-                    ->subject_label,
+                    'email' =>
+                    $log
+                        ->actor_email,
+                ]
+                : null,
 
-            'description'=>
-                $log
-                    ->description,
+            'ip_address' =>
+            $log
+                ->ip_address,
 
-            'changes_count'=>
-                count(
-                    $keys
-                ),
-
-            'actor'=>
-                $log
-                    ->actor_user_id
-                    ?[
-                        'id'=>
-                            $log
-                                ->actor_user_id,
-
-                        'name'=>
-                            $log
-                                ->actor_name,
-
-                        'email'=>
-                            $log
-                                ->actor_email,
-                    ]
-                    :null,
-
-            'ip_address'=>
-                $log
-                    ->ip_address,
-
-            'created_at'=>
-                $log
-                    ->created_at
-                    ?->toISOString(),
+            'created_at' =>
+            $log
+                ->created_at
+                ?->toISOString(),
         ];
     }
 
     private function moduleFor(
         Model $model
     ): ?string {
-        return match(
-            $model::class
-        ){
+        return match ($model::class) {
             Tenant::class,
             TenantCustomField::class
-                =>'configuracoes',
+            => 'configuracoes',
 
             Empresa::class
-                =>'empresas',
+            => 'empresas',
 
             Proprietario::class
-                =>'proprietarios',
+            => 'proprietarios',
 
             Motorista::class
-                =>'motoristas',
+            => 'motoristas',
 
             Funcionario::class,
             TenantUser::class,
             UserPermission::class,
             UserRole::class
-                =>'funcionarios',
+            => 'funcionarios',
 
             Veiculo::class
-                =>'veiculos',
+            => 'veiculos',
 
             Aluguer::class
-                =>'alugueres',
+            => 'alugueres',
 
             Contrato::class,
             ContratoAtivoVeiculo::class
-                =>'contratos',
+            => 'contratos',
 
             Declaracao::class
-                =>'declaracoes',
+            => 'declaracoes',
 
             TemplateContrato::class
-                =>'templates',
+            => 'templates',
 
             ChecklistRecord::class
-                =>'checklist',
+            => 'checklist',
 
             Multa::class,
             MultaDocumento::class
-                =>'multas',
+            => 'multas',
 
             Sinistro::class,
             SinistroDocumento::class
-                =>'sinistros',
+            => 'sinistros',
 
             Manutencao::class,
             ManutencaoDocumento::class,
@@ -773,61 +755,63 @@ class AuditService
             Peca::class,
             Compra::class,
             VeiculoDiagnostico::class
-                =>'manutencao',
+            => 'manutencao',
 
             RegistoExpediente::class
-                =>'expediente',
+            => 'expediente',
 
             ReciboVerde::class
-                =>'recibos_verdes',
+            => 'recibos_verdes',
 
             RegistoCriminal::class
-                =>'registos_criminais',
+            => 'registos_criminais',
+            HelpdeskTicket::class
+            => 'helpdesk',
 
-            default=>null,
+            default => null,
         };
     }
 
     private function tenantIdFor(
         Model $model
     ): ?string {
-        if(
+        if (
             $model instanceof Tenant
-        ){
+        ) {
             return (string)
-                $model->getKey();
+            $model->getKey();
         }
 
-        $attributes=
+        $attributes =
             $model->getAttributes();
 
-        if(
+        if (
             !array_key_exists(
                 'tenant_id',
                 $attributes
             )
-        ){
+        ) {
             return null;
         }
 
-        $tenantId=
+        $tenantId =
             $model->getAttribute(
                 'tenant_id'
             );
 
         return $tenantId
-            ?(string)$tenantId
-            :null;
+            ? (string)$tenantId
+            : null;
     }
 
     private function valuesFor(
         Model $model,
         string $action
     ): array {
-        if(
-            $action==='created'
-        ){
-            $keys=
+        if (
+            $action === 'created'
+        ) {
+            $keys =
                 array_keys(
                     $model
                         ->getAttributes()
@@ -843,10 +827,10 @@ class AuditService
             ];
         }
 
-        if(
-            $action==='deleted'
-        ){
-            $keys=
+        if (
+            $action === 'deleted'
+        ) {
+            $keys =
                 array_keys(
                     $model
                         ->getAttributes()
@@ -862,28 +846,28 @@ class AuditService
             ];
         }
 
-        $keys=
+        $keys =
             array_keys(
                 $model
                     ->getChanges()
             );
 
-        $old=[];
-        $new=[];
+        $old = [];
+        $new = [];
 
-        foreach(
+        foreach (
             $keys
             as $key
-        ){
-            if(
+        ) {
+            if (
                 $this->ignoreField(
                     $key
                 )
-            ){
+            ) {
                 continue;
             }
 
-            $old[$key]=
+            $old[$key] =
                 $this->sanitize(
                     $key,
                     $model
@@ -892,7 +876,7 @@ class AuditService
                         )
                 );
 
-            $new[$key]=
+            $new[$key] =
                 $this->sanitize(
                     $key,
                     $model
@@ -903,8 +887,8 @@ class AuditService
         }
 
         return [
-            $old?:null,
-            $new?:null,
+            $old ?: null,
+            $new ?: null,
         ];
     }
 
@@ -913,39 +897,39 @@ class AuditService
         array $keys,
         bool $original
     ): ?array {
-        $values=[];
+        $values = [];
 
-        foreach(
+        foreach (
             $keys
             as $key
-        ){
-            if(
+        ) {
+            if (
                 $this->ignoreField(
                     $key
                 )
-            ){
+            ) {
                 continue;
             }
 
-            $value=
+            $value =
                 $original
-                    ?$model
-                        ->getRawOriginal(
-                            $key
-                        )
-                    :$model
-                        ->getAttribute(
-                            $key
-                        );
+                ? $model
+                ->getRawOriginal(
+                    $key
+                )
+                : $model
+                ->getAttribute(
+                    $key
+                );
 
-            $values[$key]=
+            $values[$key] =
                 $this->sanitize(
                     $key,
                     $value
                 );
         }
 
-        return $values?:null;
+        return $values ?: null;
     }
 
     private function ignoreField(
@@ -961,130 +945,126 @@ class AuditService
     private function sanitize(
         string $key,
         mixed $value,
-        int $depth=0
+        int $depth = 0
     ): mixed {
-        $lower=
+        $lower =
             Str::lower(
                 $key
             );
 
-        foreach(
+        foreach (
             self::SENSITIVE_FRAGMENTS
             as $fragment
-        ){
-            if(
+        ) {
+            if (
                 str_contains(
                     $lower,
                     $fragment
                 )
-            ){
+            ) {
                 return '[PROTEGIDO]';
             }
         }
 
-        if(
-            $depth>=5
-        ){
+        if (
+            $depth >= 5
+        ) {
             return '[LIMITE]';
         }
 
-        if(
-            $value===null ||
+        if (
+            $value === null ||
             is_bool($value) ||
             is_int($value) ||
             is_float($value)
-        ){
+        ) {
             return $value;
         }
 
-        if(
+        if (
             $value instanceof DateTimeInterface
-        ){
+        ) {
             return $value->format(
                 DATE_ATOM
             );
         }
 
-        if(
+        if (
             $value instanceof BackedEnum
-        ){
+        ) {
             return $value->value;
         }
 
-        if(
+        if (
             $value instanceof UnitEnum
-        ){
+        ) {
             return $value->name;
         }
 
-        if(
+        if (
             $value instanceof Collection
-        ){
-            $value=
+        ) {
+            $value =
                 $value->all();
         }
 
-        if(
+        if (
             $value instanceof JsonSerializable
-        ){
-            $value=
+        ) {
+            $value =
                 $value->jsonSerialize();
         }
 
-        if(
+        if (
             is_array(
                 $value
             )
-        ){
-            $result=[];
+        ) {
+            $result = [];
 
-            foreach(
+            foreach (
                 array_slice(
                     $value,
                     0,
                     50,
                     true
                 )
-                as $nestedKey=>$nestedValue
-            ){
-                $result[
-                    (string)$nestedKey
-                ]=$this->sanitize(
+                as $nestedKey => $nestedValue
+            ) {
+                $result[(string)$nestedKey] = $this->sanitize(
                     (string)$nestedKey,
                     $nestedValue,
-                    $depth+1
+                    $depth + 1
                 );
             }
 
-            if(
-                count($value)>50
-            ){
-                $result[
-                    '__truncated'
-                ]=true;
+            if (
+                count($value) > 50
+            ) {
+                $result['__truncated'] = true;
             }
 
             return $result;
         }
 
-        if(
+        if (
             $value instanceof Stringable
-        ){
-            $value=
+        ) {
+            $value =
                 (string)$value;
         }
 
-        if(
+        if (
             is_string(
                 $value
             )
-        ){
-            $trimmed=
+        ) {
+            $trimmed =
                 ltrim(
                     $value
                 );
 
-            if(
+            if (
                 str_starts_with(
                     $trimmed,
                     '{'
@@ -1093,21 +1073,21 @@ class AuditService
                     $trimmed,
                     '['
                 )
-            ){
-                $decoded=
+            ) {
+                $decoded =
                     json_decode(
                         $value,
                         true
                     );
 
-                if(
-                    json_last_error()===
+                if (
+                    json_last_error() ===
                     JSON_ERROR_NONE
-                ){
+                ) {
                     return $this->sanitize(
                         $key,
                         $decoded,
-                        $depth+1
+                        $depth + 1
                     );
                 }
             }
@@ -1119,11 +1099,11 @@ class AuditService
             );
         }
 
-        if(
+        if (
             is_scalar(
                 $value
             )
-        ){
+        ) {
             return $value;
         }
 
@@ -1138,35 +1118,37 @@ class AuditService
     private function subjectLabel(
         Model $model
     ): string {
-        foreach([
-            'matricula',
-            'nome_empresa',
-            'nome_completo',
-            'nome',
-            'titulo',
-            'assunto',
-            'numero_contrato',
-            'numero_processo',
-            'numero_auto',
-            'referencia',
-            'nome_original',
-            'codigo',
-            'nif',
-            'email',
-        ] as $field){
-            $value=
+        foreach (
+            [
+                'matricula',
+                'nome_empresa',
+                'nome_completo',
+                'nome',
+                'titulo',
+                'assunto',
+                'numero_contrato',
+                'numero_processo',
+                'numero_auto',
+                'referencia',
+                'nome_original',
+                'codigo',
+                'nif',
+                'email',
+            ] as $field
+        ) {
+            $value =
                 $model->getAttribute(
                     $field
                 );
 
-            if(
+            if (
                 is_scalar(
                     $value
                 ) &&
                 trim(
                     (string)$value
-                )!==''
-            ){
+                ) !== ''
+            ) {
                 return Str::limit(
                     (string)$value,
                     180,
@@ -1192,14 +1174,12 @@ class AuditService
         string $action,
         string $subject
     ): string {
-        $verb=
-            match(
-                $action
-            ){
-                'created'=>'Criou',
-                'updated'=>'Atualizou',
-                'deleted'=>'Eliminou',
-                default=>'Alterou',
+        $verb =
+            match ($action) {
+                'created' => 'Criou',
+                'updated' => 'Atualizou',
+                'deleted' => 'Eliminou',
+                default => 'Alterou',
             };
 
         return "{$verb} {$subject}";
@@ -1207,13 +1187,13 @@ class AuditService
 
     private function tableReady(): bool
     {
-        if(
-            self::$tableReady!==null
-        ){
+        if (
+            self::$tableReady !== null
+        ) {
             return self::$tableReady;
         }
 
-        return self::$tableReady=
+        return self::$tableReady =
             Schema::hasTable(
                 'audit_logs'
             );

@@ -67,6 +67,9 @@ use App\Http\Controllers\TenantCustomFieldController;
 use App\Http\Controllers\TenantSettingsController;
 use App\Http\Controllers\RelatorioController;
 use App\Http\Controllers\AuditoriaController;
+use App\Http\Controllers\BackofficeHelpdeskController;
+use App\Http\Controllers\HelpdeskAttachmentController;
+use App\Http\Controllers\HelpdeskController;
 
 Route::get('/assinaturas/remotas/{token}', [RemoteSignatureController::class, 'show'])
     ->whereUuid('token')
@@ -88,9 +91,48 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/chat/anexos/{id}/arquivo', [ChatAttachmentController::class, 'show'])->whereUuid('id');
     Route::get('/chat/anexos/{id}/download', [ChatAttachmentController::class, 'download'])->whereUuid('id');
+    Route::get(
+        '/helpdesk/anexos/{id}/arquivo',
+        [HelpdeskAttachmentController::class, 'show']
+    )->whereUuid('id');
+
+    Route::get(
+        '/helpdesk/anexos/{id}/download',
+        [HelpdeskAttachmentController::class, 'download']
+    )->whereUuid('id');
     Route::middleware('super_admin')
         ->prefix('backoffice')
         ->group(function () {
+
+            Route::get(
+                '/helpdesk/resumo',
+                [BackofficeHelpdeskController::class, 'summary']
+            );
+
+            Route::get(
+                '/helpdesk/meta',
+                [BackofficeHelpdeskController::class, 'meta']
+            );
+
+            Route::get(
+                '/helpdesk',
+                [BackofficeHelpdeskController::class, 'index']
+            );
+
+            Route::get(
+                '/helpdesk/{id}',
+                [BackofficeHelpdeskController::class, 'show']
+            )->whereUuid('id');
+
+            Route::post(
+                '/helpdesk/{id}/mensagens',
+                [BackofficeHelpdeskController::class, 'message']
+            )->whereUuid('id');
+
+            Route::patch(
+                '/helpdesk/{id}',
+                [BackofficeHelpdeskController::class, 'update']
+            )->whereUuid('id');
 
             Route::get('/chat', [BackofficeChatController::class, 'index']);
             Route::get('/chat/resumo', [BackofficeChatController::class, 'summary']);
@@ -446,6 +488,51 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/tenant-context', [TenantContextController::class, 'clear']);
 
     Route::middleware('tenant')->group(function () {
+
+        Route::get(
+            '/helpdesk/resumo',
+            [HelpdeskController::class, 'summary']
+        );
+
+        Route::get(
+            '/helpdesk/meta',
+            [HelpdeskController::class, 'meta']
+        );
+
+        Route::get(
+            '/helpdesk',
+            [HelpdeskController::class, 'index']
+        );
+
+        Route::post(
+            '/helpdesk',
+            [HelpdeskController::class, 'store']
+        );
+
+        Route::get(
+            '/helpdesk/{id}',
+            [HelpdeskController::class, 'show']
+        )->whereUuid('id');
+
+        Route::post(
+            '/helpdesk/{id}/mensagens',
+            [HelpdeskController::class, 'message']
+        )->whereUuid('id');
+
+        Route::post(
+            '/helpdesk/{id}/fechar',
+            [HelpdeskController::class, 'close']
+        )->whereUuid('id');
+
+        Route::post(
+            '/helpdesk/{id}/reabrir',
+            [HelpdeskController::class, 'reopen']
+        )->whereUuid('id');
+
+        Route::post(
+            '/helpdesk/{id}/avaliacao',
+            [HelpdeskController::class, 'rate']
+        )->whereUuid('id');
         Route::middleware('permission:auditoria,visualizar')
             ->prefix('auditoria')
             ->group(function () {
