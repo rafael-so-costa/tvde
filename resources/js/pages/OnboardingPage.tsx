@@ -1,16 +1,8 @@
 import axios from "axios";
 
-import {
-    FormEvent,
-    useEffect,
-    useState,
-} from "react";
+import { FormEvent, useEffect, useState } from "react";
 
-import {
-    useMutation,
-    useQuery,
-    useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
     Building2,
@@ -21,19 +13,15 @@ import {
     Truck,
 } from "lucide-react";
 
-import {
-    useNavigate,
-} from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import api from "../lib/api";
 
-import {
-    useTenant,
-} from "../contexts/TenantContext";
+import { useTenant } from "../contexts/TenantContext";
 
-import type {
-    Empresa,
-} from "../types/empresa";
+import type { Empresa } from "../types/empresa";
+
+import OnboardingChecklist from "../components/onboarding/OnboardingChecklist";
 
 interface OnboardingResponse {
     required: boolean;
@@ -70,260 +58,135 @@ const emptyForm: FormState = {
 };
 
 export default function OnboardingPage() {
-    const navigate =
-        useNavigate();
+    const navigate = useNavigate();
 
-    const queryClient =
-        useQueryClient();
+    const queryClient = useQueryClient();
 
-    const {
-        tenant,
-        refreshTenant,
-    } = useTenant();
+    const { tenant, refreshTenant } = useTenant();
 
-    const [
-        form,
-        setForm,
-    ] = useState<FormState>(
-        emptyForm
-    );
+    const [form, setForm] = useState<FormState>(emptyForm);
 
-    const [
-        errors,
-        setErrors,
-    ] = useState<
-        Record<
-            string,
-            string[]
-        >
-    >({});
+    const [errors, setErrors] = useState<Record<string, string[]>>({});
 
-    const [
-        generalError,
-        setGeneralError,
-    ] = useState("");
+    const [generalError, setGeneralError] = useState("");
 
-    const query =
-        useQuery({
-            queryKey: [
-                "saas-onboarding",
-                tenant?.id,
-            ],
+    const query = useQuery({
+        queryKey: ["saas-onboarding", tenant?.id],
 
-            enabled:
-                Boolean(
-                    tenant?.id
-                ),
+        enabled: Boolean(tenant?.id),
 
-            queryFn: async () => {
-                const response =
-                    await api.get(
-                        "/api/onboarding"
-                    );
+        queryFn: async () => {
+            const response = await api.get("/api/onboarding");
 
-                return response.data
-                    .data as OnboardingResponse;
-            },
-        });
+            return response.data.data as OnboardingResponse;
+        },
+    });
 
     useEffect(() => {
-        const empresa =
-            query.data?.empresa;
+        const empresa = query.data?.empresa;
 
         if (!empresa) {
             return;
         }
 
         setForm({
-            company_name:
-                empresa.nome_empresa ??
-                "",
+            company_name: empresa.nome_empresa ?? "",
 
-            company_email:
-                empresa.email ??
-                "",
+            company_email: empresa.email ?? "",
 
-            company_phone:
-                empresa.telemovel ??
-                "",
+            company_phone: empresa.telemovel ?? "",
 
-            manager_name:
-                empresa.nome_gerente ??
-                "",
+            manager_name: empresa.nome_gerente ?? "",
 
-            address_street:
-                empresa.endereco_rua ??
-                "",
+            address_street: empresa.endereco_rua ?? "",
 
-            address_number:
-                empresa
-                    .endereco_numero ??
-                "",
+            address_number: empresa.endereco_numero ?? "",
 
-            address_complement:
-                empresa
-                    .endereco_complemento ??
-                "",
+            address_complement: empresa.endereco_complemento ?? "",
 
-            address_postal_code:
-                empresa.endereco_cep ??
-                "",
+            address_postal_code: empresa.endereco_cep ?? "",
 
-            address_city:
-                empresa
-                    .endereco_cidade ??
-                "",
+            address_city: empresa.endereco_cidade ?? "",
 
-            certificate_tvde:
-                empresa
-                    .certificado_tvde ??
-                "",
+            certificate_tvde: empresa.certificado_tvde ?? "",
 
             certificate_tvde_valid_until:
-                empresa
-                    .certificado_tvde_valid_until
-                    ?.slice(
-                        0,
-                        10
-                    ) ??
-                "",
+                empresa.certificado_tvde_valid_until?.slice(0, 10) ?? "",
         });
-    }, [
-        query.data,
-    ]);
+    }, [query.data]);
 
-    const mutation =
-        useMutation({
-            mutationFn:
-                async (
-                    payload: FormState
-                ) => {
-                    const response =
-                        await api.patch(
-                            "/api/onboarding",
-                            {
-                                ...payload,
+    const mutation = useMutation({
+        mutationFn: async (payload: FormState) => {
+            const response = await api.patch("/api/onboarding", {
+                ...payload,
 
-                                address_complement:
-                                    payload
-                                        .address_complement
-                                        .trim() ||
-                                    null,
+                address_complement: payload.address_complement.trim() || null,
 
-                                certificate_tvde:
-                                    payload
-                                        .certificate_tvde
-                                        .trim() ||
-                                    null,
+                certificate_tvde: payload.certificate_tvde.trim() || null,
 
-                                certificate_tvde_valid_until:
-                                    payload
-                                        .certificate_tvde_valid_until ||
-                                    null,
-                            }
-                        );
+                certificate_tvde_valid_until:
+                    payload.certificate_tvde_valid_until || null,
+            });
 
-                    return response
-                        .data
-                        .data as OnboardingResponse;
-                },
+            return response.data.data as OnboardingResponse;
+        },
 
-            onSuccess:
-                async () => {
-                    await queryClient
-                        .invalidateQueries({
-                            queryKey: [
-                                "saas-onboarding",
-                            ],
-                        });
+        onSuccess: async () => {
+            await queryClient.invalidateQueries({
+                queryKey: ["saas-onboarding"],
+            });
 
-                    await refreshTenant();
+            await refreshTenant();
 
-                    navigate(
-                        "/painel",
-                        {
-                            replace:
-                                true,
-                        }
-                    );
-                },
-        });
+            navigate("/painel", {
+                replace: true,
+            });
+        },
+    });
 
-    function update(
-        field:
-            keyof FormState,
-        value: string
-    ) {
-        setForm(
-            (current) => ({
+    function update(field: keyof FormState, value: string) {
+        setForm((current) => ({
+            ...current,
+            [field]: value,
+        }));
+
+        if (errors[field]) {
+            setErrors((current) => ({
                 ...current,
-                [field]: value,
-            })
-        );
-
-        if (
-            errors[field]
-        ) {
-            setErrors(
-                (current) => ({
-                    ...current,
-                    [field]: [],
-                })
-            );
+                [field]: [],
+            }));
         }
     }
 
-    async function submit(
-        event: FormEvent
-    ) {
+    async function submit(event: FormEvent) {
         event.preventDefault();
 
         setErrors({});
         setGeneralError("");
 
         try {
-            await mutation
-                .mutateAsync(
-                    form
-                );
+            await mutation.mutateAsync(form);
         } catch (error) {
-            if (
-                axios.isAxiosError(
-                    error
-                )
-            ) {
-                const response =
-                    error.response
-                        ?.data;
+            if (axios.isAxiosError(error)) {
+                const response = error.response?.data;
 
-                if (
-                    response
-                        ?.errors
-                ) {
-                    setErrors(
-                        response
-                            .errors
-                    );
+                if (response?.errors) {
+                    setErrors(response.errors);
                 }
 
                 setGeneralError(
-                    response
-                        ?.message ??
-                    "Não foi possível concluir a configuração."
+                    response?.message ??
+                        "Não foi possível concluir a configuração.",
                 );
 
                 return;
             }
 
-            setGeneralError(
-                "Não foi possível concluir a configuração."
-            );
+            setGeneralError("Não foi possível concluir a configuração.");
         }
     }
 
-    if (
-        query.isLoading
-    ) {
+    if (query.isLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-slate-50">
                 <LoaderCircle className="w-8 h-8 animate-spin text-indigo-600" />
@@ -331,30 +194,25 @@ export default function OnboardingPage() {
         );
     }
 
-    const empresa =
-        query.data?.empresa;
+    if (query.data && !query.data.required) {
+        return <OnboardingChecklist />;
+    }
+
+    const empresa = query.data?.empresa;
 
     const fieldClass =
         "w-full h-12 rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10";
 
-    const labelClass =
-        "block text-sm font-medium text-slate-700 mb-2";
+    const labelClass = "block text-sm font-medium text-slate-700 mb-2";
 
-    function fieldError(
-        field: keyof FormState
-    ) {
-        const message =
-            errors[field]?.[0];
+    function fieldError(field: keyof FormState) {
+        const message = errors[field]?.[0];
 
         if (!message) {
             return null;
         }
 
-        return (
-            <p className="mt-1.5 text-xs text-red-600">
-                {message}
-            </p>
-        );
+        return <p className="mt-1.5 text-xs text-red-600">{message}</p>;
     }
 
     return (
@@ -369,9 +227,7 @@ export default function OnboardingPage() {
                         <div>
                             <div className="text-xl font-bold text-slate-950">
                                 Frota
-                                <span className="text-indigo-600">
-                                    PRO
-                                </span>
+                                <span className="text-indigo-600">PRO</span>
                             </div>
 
                             <div className="text-[10px] uppercase tracking-[0.16em] text-slate-400">
@@ -400,7 +256,8 @@ export default function OnboardingPage() {
 
                         <p className="mt-4 leading-7 text-slate-600">
                             Estes dados identificam a empresa dentro do FrotaPRO
-                            e serão utilizados nos processos administrativos da operação.
+                            e serão utilizados nos processos administrativos da
+                            operação.
                         </p>
 
                         <div className="mt-8 space-y-5">
@@ -413,7 +270,8 @@ export default function OnboardingPage() {
                                     </p>
 
                                     <p className="mt-1 text-sm text-slate-500">
-                                        O administrador e a organização já foram configurados.
+                                        O administrador e a organização já foram
+                                        configurados.
                                     </p>
                                 </div>
                             </div>
@@ -427,7 +285,8 @@ export default function OnboardingPage() {
                                     </p>
 
                                     <p className="mt-1 text-sm text-slate-500">
-                                        Complete agora as informações essenciais.
+                                        Complete agora as informações
+                                        essenciais.
                                     </p>
                                 </div>
                             </div>
@@ -441,7 +300,8 @@ export default function OnboardingPage() {
                                     </p>
 
                                     <p className="mt-1 text-sm text-slate-500">
-                                        Em seguida poderá cadastrar proprietários, veículos e motoristas.
+                                        Em seguida poderá cadastrar
+                                        proprietários, veículos e motoristas.
                                     </p>
                                 </div>
                             </div>
@@ -471,12 +331,7 @@ export default function OnboardingPage() {
                             </div>
                         )}
 
-                        <form
-                            onSubmit={
-                                submit
-                            }
-                            className="mt-8 space-y-8"
-                        >
+                        <form onSubmit={submit} className="mt-8 space-y-8">
                             <section>
                                 <h3 className="font-semibold text-slate-900">
                                     Identificação
@@ -489,24 +344,18 @@ export default function OnboardingPage() {
                                         </label>
 
                                         <input
-                                            value={
-                                                form.company_name
-                                            }
-                                            onChange={(
-                                                event
-                                            ) =>
+                                            value={form.company_name}
+                                            onChange={(event) =>
                                                 update(
                                                     "company_name",
-                                                    event.target.value
+                                                    event.target.value,
                                                 )
                                             }
                                             required
                                             className={fieldClass}
                                         />
 
-                                        {fieldError(
-                                            "company_name"
-                                        )}
+                                        {fieldError("company_name")}
                                     </div>
 
                                     <div>
@@ -516,24 +365,18 @@ export default function OnboardingPage() {
 
                                         <input
                                             type="email"
-                                            value={
-                                                form.company_email
-                                            }
-                                            onChange={(
-                                                event
-                                            ) =>
+                                            value={form.company_email}
+                                            onChange={(event) =>
                                                 update(
                                                     "company_email",
-                                                    event.target.value
+                                                    event.target.value,
                                                 )
                                             }
                                             required
                                             className={fieldClass}
                                         />
 
-                                        {fieldError(
-                                            "company_email"
-                                        )}
+                                        {fieldError("company_email")}
                                     </div>
 
                                     <div>
@@ -542,24 +385,18 @@ export default function OnboardingPage() {
                                         </label>
 
                                         <input
-                                            value={
-                                                form.company_phone
-                                            }
-                                            onChange={(
-                                                event
-                                            ) =>
+                                            value={form.company_phone}
+                                            onChange={(event) =>
                                                 update(
                                                     "company_phone",
-                                                    event.target.value
+                                                    event.target.value,
                                                 )
                                             }
                                             required
                                             className={fieldClass}
                                         />
 
-                                        {fieldError(
-                                            "company_phone"
-                                        )}
+                                        {fieldError("company_phone")}
                                     </div>
 
                                     <div className="sm:col-span-2">
@@ -568,24 +405,18 @@ export default function OnboardingPage() {
                                         </label>
 
                                         <input
-                                            value={
-                                                form.manager_name
-                                            }
-                                            onChange={(
-                                                event
-                                            ) =>
+                                            value={form.manager_name}
+                                            onChange={(event) =>
                                                 update(
                                                     "manager_name",
-                                                    event.target.value
+                                                    event.target.value,
                                                 )
                                             }
                                             required
                                             className={fieldClass}
                                         />
 
-                                        {fieldError(
-                                            "manager_name"
-                                        )}
+                                        {fieldError("manager_name")}
                                     </div>
                                 </div>
                             </section>
@@ -602,24 +433,18 @@ export default function OnboardingPage() {
                                         </label>
 
                                         <input
-                                            value={
-                                                form.address_street
-                                            }
-                                            onChange={(
-                                                event
-                                            ) =>
+                                            value={form.address_street}
+                                            onChange={(event) =>
                                                 update(
                                                     "address_street",
-                                                    event.target.value
+                                                    event.target.value,
                                                 )
                                             }
                                             required
                                             className={fieldClass}
                                         />
 
-                                        {fieldError(
-                                            "address_street"
-                                        )}
+                                        {fieldError("address_street")}
                                     </div>
 
                                     <div>
@@ -628,24 +453,18 @@ export default function OnboardingPage() {
                                         </label>
 
                                         <input
-                                            value={
-                                                form.address_number
-                                            }
-                                            onChange={(
-                                                event
-                                            ) =>
+                                            value={form.address_number}
+                                            onChange={(event) =>
                                                 update(
                                                     "address_number",
-                                                    event.target.value
+                                                    event.target.value,
                                                 )
                                             }
                                             required
                                             className={fieldClass}
                                         />
 
-                                        {fieldError(
-                                            "address_number"
-                                        )}
+                                        {fieldError("address_number")}
                                     </div>
 
                                     <div>
@@ -654,15 +473,11 @@ export default function OnboardingPage() {
                                         </label>
 
                                         <input
-                                            value={
-                                                form.address_complement
-                                            }
-                                            onChange={(
-                                                event
-                                            ) =>
+                                            value={form.address_complement}
+                                            onChange={(event) =>
                                                 update(
                                                     "address_complement",
-                                                    event.target.value
+                                                    event.target.value,
                                                 )
                                             }
                                             className={fieldClass}
@@ -675,24 +490,18 @@ export default function OnboardingPage() {
                                         </label>
 
                                         <input
-                                            value={
-                                                form.address_postal_code
-                                            }
-                                            onChange={(
-                                                event
-                                            ) =>
+                                            value={form.address_postal_code}
+                                            onChange={(event) =>
                                                 update(
                                                     "address_postal_code",
-                                                    event.target.value
+                                                    event.target.value,
                                                 )
                                             }
                                             required
                                             className={fieldClass}
                                         />
 
-                                        {fieldError(
-                                            "address_postal_code"
-                                        )}
+                                        {fieldError("address_postal_code")}
                                     </div>
 
                                     <div>
@@ -701,24 +510,18 @@ export default function OnboardingPage() {
                                         </label>
 
                                         <input
-                                            value={
-                                                form.address_city
-                                            }
-                                            onChange={(
-                                                event
-                                            ) =>
+                                            value={form.address_city}
+                                            onChange={(event) =>
                                                 update(
                                                     "address_city",
-                                                    event.target.value
+                                                    event.target.value,
                                                 )
                                             }
                                             required
                                             className={fieldClass}
                                         />
 
-                                        {fieldError(
-                                            "address_city"
-                                        )}
+                                        {fieldError("address_city")}
                                     </div>
                                 </div>
                             </section>
@@ -729,7 +532,8 @@ export default function OnboardingPage() {
                                 </h3>
 
                                 <p className="mt-1 text-sm text-slate-500">
-                                    Pode completar esta informação agora ou posteriormente.
+                                    Pode completar esta informação agora ou
+                                    posteriormente.
                                 </p>
 
                                 <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -739,15 +543,11 @@ export default function OnboardingPage() {
                                         </label>
 
                                         <input
-                                            value={
-                                                form.certificate_tvde
-                                            }
-                                            onChange={(
-                                                event
-                                            ) =>
+                                            value={form.certificate_tvde}
+                                            onChange={(event) =>
                                                 update(
                                                     "certificate_tvde",
-                                                    event.target.value
+                                                    event.target.value,
                                                 )
                                             }
                                             className={fieldClass}
@@ -764,12 +564,10 @@ export default function OnboardingPage() {
                                             value={
                                                 form.certificate_tvde_valid_until
                                             }
-                                            onChange={(
-                                                event
-                                            ) =>
+                                            onChange={(event) =>
                                                 update(
                                                     "certificate_tvde_valid_until",
-                                                    event.target.value
+                                                    event.target.value,
                                                 )
                                             }
                                             className={fieldClass}
@@ -781,15 +579,12 @@ export default function OnboardingPage() {
                             <div className="border-t border-slate-200 pt-6">
                                 <button
                                     type="submit"
-                                    disabled={
-                                        mutation.isPending
-                                    }
+                                    disabled={mutation.isPending}
                                     className="w-full sm:w-auto h-12 px-7 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-semibold transition flex items-center justify-center gap-2"
                                 >
                                     {mutation.isPending && (
                                         <LoaderCircle className="w-5 h-5 animate-spin" />
                                     )}
-
                                     Concluir configuração
                                 </button>
                             </div>

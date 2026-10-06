@@ -121,18 +121,7 @@ export default function TenantOnboardingGate() {
         );
     }
 
-    if (
-        !required &&
-        location.pathname ===
-            "/onboarding"
-    ) {
-        return (
-            <Navigate
-                to="/painel"
-                replace
-            />
-        );
-    }
+
 
     return <Outlet />;
 }

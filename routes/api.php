@@ -508,6 +508,14 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::middleware('tenant')->group(function () {
 
+        Route::get(
+            '/onboarding/progresso',
+            [
+                SaasOnboardingController::class,
+                'progress',
+            ]
+        );
+
         Route::get('/ajuda/meta', [HelpCenterController::class, 'meta']);
         Route::get('/ajuda', [HelpCenterController::class, 'index']);
         Route::get('/ajuda/conteudos/{slug}', [HelpCenterController::class, 'show']);

@@ -25,6 +25,7 @@ import {
     UsersRound,
     Wrench,
     BarChart3,
+    ListChecks,
     LifeBuoy,
     X,
     MessageSquareText,
@@ -42,6 +43,12 @@ const navigation = [
         to: "/painel",
         label: "Dashboard",
         icon: LayoutDashboard,
+    },
+    {
+        to: "/onboarding",
+        label: "Primeiros passos",
+        icon: ListChecks,
+        managerOnly: true,
     },
     {
         to: "/alertas",
