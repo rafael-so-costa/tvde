@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   deploy:
-    name: Deploy staging
+    name: Preparar e enviar staging
     runs-on: ubuntu-latest
     timeout-minutes: 120
 
@@ -51,6 +51,8 @@ jobs:
           set -euo pipefail
 
           rm -rf deploy
+          rm -f frotapro-staging.zip
+
           mkdir -p deploy/core
 
           rsync -a ./ deploy/core/ \
@@ -125,207 +127,100 @@ jobs:
           touch deploy/core/storage/framework/views/deploy.keep
           touch deploy/core/bootstrap/cache/deploy.keep
 
-      - name: Validar pacote de deploy
+      - name: Validar pacote
         shell: bash
         run: |
           set -euo pipefail
 
-          echo "Validando raiz publica..."
-
           test -f deploy/index.php
           test -f deploy/.htaccess
-
-          echo "Validando Laravel..."
 
           test -f deploy/core/artisan
           test -f deploy/core/bootstrap/app.php
           test -f deploy/core/composer.json
           test -f deploy/core/vendor/autoload.php
 
-          echo "Validando frontend..."
-
           test -f deploy/build/manifest.json
           test -f deploy/core/public/build/manifest.json
 
-          echo ""
-          echo "Raiz publica:"
-          find deploy \
-            -maxdepth 1 \
-            -mindepth 1 \
-            -printf "%f\n" \
-            | sort
+          if [ -f deploy/core/.env ]; then
+            echo "ERRO: .env foi incluido no pacote."
+            exit 1
+          fi
 
-          echo ""
-          echo "Core:"
-          find deploy/core \
-            -maxdepth 1 \
-            -mindepth 1 \
-            -printf "%f\n" \
-            | sort
-
-          echo ""
           echo "Pacote validado com sucesso."
 
-      - name: Enviar core base por FTPS
-        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
-        with:
-          server: ${{ secrets.FROTAPRO_FTP_SERVER }}
-          username: ${{ secrets.FROTAPRO_FTP_USERNAME }}
-          password: ${{ secrets.FROTAPRO_FTP_PASSWORD }}
-          protocol: ftps
-          port: 21
-          local-dir: ./deploy/core/
-          server-dir: ./core/
-          dangerous-clean-slate: false
-          security: loose
-          timeout: 60000
-          log-level: standard
-          state-name: .ftp-deploy-core-base.json
-          exclude: |
-            **/.git
-            **/.git/**
-            **/.env
-            app/**
-            database/**
-            public/**
-            resources/**
-            routes/**
-            storage/**
-            vendor/**
-            tests/**
-            node_modules/**
+      - name: Instalar ferramentas de deploy
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zip lftp
 
-      - name: Enviar app por FTPS
-        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
-        with:
-          server: ${{ secrets.FROTAPRO_FTP_SERVER }}
-          username: ${{ secrets.FROTAPRO_FTP_USERNAME }}
-          password: ${{ secrets.FROTAPRO_FTP_PASSWORD }}
-          protocol: ftps
-          port: 21
-          local-dir: ./deploy/core/app/
-          server-dir: ./core/app/
-          dangerous-clean-slate: false
-          security: loose
-          timeout: 60000
-          log-level: standard
-          state-name: .ftp-deploy-app.json
+      - name: Compactar projeto
+        shell: bash
+        run: |
+          set -euo pipefail
 
-      - name: Enviar database por FTPS
-        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
-        with:
-          server: ${{ secrets.FROTAPRO_FTP_SERVER }}
-          username: ${{ secrets.FROTAPRO_FTP_USERNAME }}
-          password: ${{ secrets.FROTAPRO_FTP_PASSWORD }}
-          protocol: ftps
-          port: 21
-          local-dir: ./deploy/core/database/
-          server-dir: ./core/database/
-          dangerous-clean-slate: false
-          security: loose
-          timeout: 60000
-          log-level: standard
-          state-name: .ftp-deploy-database.json
+          cd deploy
+          zip -rq ../frotapro-staging.zip .
+          cd ..
 
-      - name: Enviar resources por FTPS
-        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
-        with:
-          server: ${{ secrets.FROTAPRO_FTP_SERVER }}
-          username: ${{ secrets.FROTAPRO_FTP_USERNAME }}
-          password: ${{ secrets.FROTAPRO_FTP_PASSWORD }}
-          protocol: ftps
-          port: 21
-          local-dir: ./deploy/core/resources/
-          server-dir: ./core/resources/
-          dangerous-clean-slate: false
-          security: loose
-          timeout: 60000
-          log-level: standard
-          state-name: .ftp-deploy-resources.json
+          test -f frotapro-staging.zip
 
-      - name: Enviar routes por FTPS
-        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
-        with:
-          server: ${{ secrets.FROTAPRO_FTP_SERVER }}
-          username: ${{ secrets.FROTAPRO_FTP_USERNAME }}
-          password: ${{ secrets.FROTAPRO_FTP_PASSWORD }}
-          protocol: ftps
-          port: 21
-          local-dir: ./deploy/core/routes/
-          server-dir: ./core/routes/
-          dangerous-clean-slate: false
-          security: loose
-          timeout: 60000
-          log-level: standard
-          state-name: .ftp-deploy-routes.json
+          echo ""
+          echo "Arquivo gerado:"
+          ls -lh frotapro-staging.zip
 
-      - name: Enviar public interno por FTPS
-        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
-        with:
-          server: ${{ secrets.FROTAPRO_FTP_SERVER }}
-          username: ${{ secrets.FROTAPRO_FTP_USERNAME }}
-          password: ${{ secrets.FROTAPRO_FTP_PASSWORD }}
-          protocol: ftps
-          port: 21
-          local-dir: ./deploy/core/public/
-          server-dir: ./core/public/
-          dangerous-clean-slate: false
-          security: loose
-          timeout: 60000
-          log-level: standard
-          state-name: .ftp-deploy-core-public.json
+          echo ""
+          echo "SHA256:"
+          sha256sum frotapro-staging.zip
 
-      - name: Enviar vendor por FTPS
-        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
-        with:
-          server: ${{ secrets.FROTAPRO_FTP_SERVER }}
-          username: ${{ secrets.FROTAPRO_FTP_USERNAME }}
-          password: ${{ secrets.FROTAPRO_FTP_PASSWORD }}
-          protocol: ftps
-          port: 21
-          local-dir: ./deploy/core/vendor/
-          server-dir: ./core/vendor/
-          dangerous-clean-slate: false
-          security: loose
-          timeout: 60000
-          log-level: standard
-          state-name: .ftp-deploy-vendor.json
+          echo ""
+          echo "Estrutura principal do ZIP:"
+          unzip -l frotapro-staging.zip | head -80
 
-      - name: Enviar storage estrutural por FTPS
-        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
-        with:
-          server: ${{ secrets.FROTAPRO_FTP_SERVER }}
-          username: ${{ secrets.FROTAPRO_FTP_USERNAME }}
-          password: ${{ secrets.FROTAPRO_FTP_PASSWORD }}
-          protocol: ftps
-          port: 21
-          local-dir: ./deploy/core/storage/
-          server-dir: ./core/storage/
-          dangerous-clean-slate: false
-          security: loose
-          timeout: 60000
-          log-level: standard
-          state-name: .ftp-deploy-storage.json
+      - name: Enviar ZIP por FTPS
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FROTAPRO_FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FROTAPRO_FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FROTAPRO_FTP_PASSWORD }}
+        run: |
+          set -euo pipefail
 
-      - name: Enviar raiz publica por FTPS
-        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
-        with:
-          server: ${{ secrets.FROTAPRO_FTP_SERVER }}
-          username: ${{ secrets.FROTAPRO_FTP_USERNAME }}
-          password: ${{ secrets.FROTAPRO_FTP_PASSWORD }}
-          protocol: ftps
-          port: 21
-          local-dir: ./deploy/
-          server-dir: ./
-          dangerous-clean-slate: false
-          security: loose
-          timeout: 60000
-          log-level: standard
-          state-name: .ftp-deploy-public.json
-          exclude: |
-            **/.git
-            **/.git/**
-            **/node_modules/**
-            **/vendor/**
-            **/.env
-            core/**
+          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" <<'EOF'
+          set ftp:ssl-force true
+          set ftp:ssl-protect-data true
+          set ftp:passive-mode true
+
+          set ssl:verify-certificate no
+
+          set net:max-retries 10
+          set net:timeout 60
+          set net:reconnect-interval-base 5
+          set net:reconnect-interval-max 30
+
+          set xfer:clobber true
+
+          pwd
+
+          put frotapro-staging.zip -o frotapro-staging.zip
+
+          bye
+          EOF
+
+      - name: Deploy preparado
+        shell: bash
+        run: |
+          echo "=========================================="
+          echo "FrotaPro Staging preparado com sucesso."
+          echo ""
+          echo "Arquivo enviado:"
+          echo "frotapro-staging.zip"
+          echo ""
+          echo "Proximo passo:"
+          echo "1. Abrir o File Manager do cPanel"
+          echo "2. Localizar frotapro-staging.zip"
+          echo "3. Extrair diretamente na raiz do staging"
+          echo "4. Nao extrair dentro da pasta core"
+          echo "=========================================="
