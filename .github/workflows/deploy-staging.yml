@@ -154,7 +154,9 @@ jobs:
 
           echo ""
           echo "Amostra de arquivos do vendor:"
-          find deploy/core/vendor -type f -print0 | head -z -n 5 | xargs -0 -r stat -c "%a %n"
+          find deploy/core/vendor -type f | sed -n '1,5p' | while IFS= read -r file; do
+            stat -c "%a %n" "$file"
+          done
 
       - name: Validar pacote
         shell: bash
