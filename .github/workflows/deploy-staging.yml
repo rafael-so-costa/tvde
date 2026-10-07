@@ -50,14 +50,14 @@ jobs:
           rm -rf deploy
           mkdir -p deploy/core
 
-         rsync -a ./ deploy/core/ \
-          --exclude='/deploy/' \
-          --exclude='/.git/' \
-          --exclude='/.github/' \
-          --exclude='/node_modules/' \
-          --exclude='/vendor/' \
-          --exclude='/tests/' \
-          --exclude='/.env'
+          rsync -a ./ deploy/core/ \
+            --exclude='/deploy/' \
+            --exclude='/.git/' \
+            --exclude='/.github/' \
+            --exclude='/node_modules/' \
+            --exclude='/vendor/' \
+            --exclude='/tests/' \
+            --exclude='/.env'
 
           rsync -a public/ deploy/ \
             --exclude='index.php' \
