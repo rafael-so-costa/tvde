@@ -14,7 +14,7 @@ jobs:
   deploy:
     name: Deploy staging
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 120
 
     steps:
       - name: Checkout
@@ -50,13 +50,14 @@ jobs:
           rm -rf deploy
           mkdir -p deploy/core
 
-          rsync -a ./ deploy/core/ \
-            --exclude='/deploy/' \
-            --exclude='/.git/' \
-            --exclude='/.github/' \
-            --exclude='/node_modules/' \
-            --exclude='/tests/' \
-            --exclude='/.env'
+         rsync -a ./ deploy/core/ \
+          --exclude='/deploy/' \
+          --exclude='/.git/' \
+          --exclude='/.github/' \
+          --exclude='/node_modules/' \
+          --exclude='/vendor/' \
+          --exclude='/tests/' \
+          --exclude='/.env'
 
           rsync -a public/ deploy/ \
             --exclude='index.php' \
@@ -154,4 +155,5 @@ jobs:
             **/.git
             **/.git/**
             **/node_modules/**
+            **/vendor/**
             **/.env
