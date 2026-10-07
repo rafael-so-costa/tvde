@@ -146,7 +146,7 @@ jobs:
           local-dir: ./deploy/
           server-dir: ./
           dangerous-clean-slate: false
-          security: strict
+          security: loose
           timeout: 60000
           log-level: standard
           state-name: .ftp-deploy-sync-state.json
