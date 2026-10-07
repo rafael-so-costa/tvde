@@ -127,6 +127,35 @@ jobs:
           touch deploy/core/storage/framework/views/deploy.keep
           touch deploy/core/bootstrap/cache/deploy.keep
 
+      - name: Normalizar permissoes do pacote
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Aplicando permissoes padrao..."
+
+          find deploy -type d -exec chmod 755 {} \;
+          find deploy -type f -exec chmod 644 {} \;
+
+          chmod -R 775 deploy/core/storage
+          chmod -R 775 deploy/core/bootstrap/cache
+
+          chmod 644 deploy/index.php
+          chmod 644 deploy/.htaccess
+
+          echo ""
+          echo "Permissoes principais:"
+          stat -c "%a %n" deploy/index.php
+          stat -c "%a %n" deploy/.htaccess
+          stat -c "%a %n" deploy/core
+          stat -c "%a %n" deploy/core/vendor
+          stat -c "%a %n" deploy/core/storage
+          stat -c "%a %n" deploy/core/bootstrap/cache
+
+          echo ""
+          echo "Amostra de arquivos do vendor:"
+          find deploy/core/vendor -type f -print0 | head -z -n 5 | xargs -0 -r stat -c "%a %n"
+
       - name: Validar pacote
         shell: bash
         run: |
@@ -145,6 +174,18 @@ jobs:
 
           if [ -f deploy/core/.env ]; then
             echo "ERRO: .env foi incluido no pacote."
+            exit 1
+          fi
+
+          if find deploy/core/vendor -type f ! -perm 0644 -print -quit | grep -q .; then
+            echo "ERRO: Existem arquivos no vendor com permissao diferente de 644."
+            find deploy/core/vendor -type f ! -perm 0644 | head -20
+            exit 1
+          fi
+
+          if find deploy/core/vendor -type d ! -perm 0755 -print -quit | grep -q .; then
+            echo "ERRO: Existem diretorios no vendor com permissao diferente de 755."
+            find deploy/core/vendor -type d ! -perm 0755 | head -20
             exit 1
           fi
 
@@ -217,6 +258,12 @@ jobs:
           echo ""
           echo "Arquivo enviado:"
           echo "frotapro-staging.zip"
+          echo ""
+          echo "Permissoes do pacote:"
+          echo "Diretorios normais: 755"
+          echo "Arquivos normais: 644"
+          echo "storage: 775"
+          echo "bootstrap/cache: 775"
           echo ""
           echo "Proximo passo:"
           echo "1. Abrir o File Manager do cPanel"
