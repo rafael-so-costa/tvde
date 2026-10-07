@@ -1,30 +1,31 @@
-import { defineConfig } from "vite";
+import {defineConfig} from "vite";
 import laravel from "laravel-vite-plugin";
-import { bunny } from "laravel-vite-plugin/fonts";
+import {bunny} from "laravel-vite-plugin/fonts";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 
 export default defineConfig({
-    plugins: [
+    base:"./",
+    plugins:[
         laravel({
-            input: [
+            input:[
                 "resources/css/app.css",
                 "resources/js/main.tsx",
                 "resources/js/public-ads-marketplace.ts",
             ],
-            refresh: true,
-            fonts: [
-                bunny("Instrument Sans", {
-                    weights: [400, 500, 600, 700],
+            refresh:true,
+            fonts:[
+                bunny("Instrument Sans",{
+                    weights:[400,500,600,700],
                 }),
             ],
         }),
         react(),
         tailwindcss(),
     ],
-    server: {
-        watch: {
-            ignored: ["**/storage/framework/views/**"],
+    server:{
+        watch:{
+            ignored:["**/storage/framework/views/**"],
         },
     },
 });
