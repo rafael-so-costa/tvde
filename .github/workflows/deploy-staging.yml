@@ -1,0 +1,157 @@
+name: Deploy FrotaPro Staging
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: frotapro-staging
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Configurar PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: mbstring, pdo_mysql, bcmath, intl, gd, zip
+          coverage: none
+
+      - name: Configurar Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Instalar dependencias PHP
+        run: composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
+
+      - name: Instalar dependencias frontend
+        run: npm ci
+
+      - name: Compilar frontend
+        run: npm run build
+
+      - name: Montar pacote de deploy
+        shell: bash
+        run: |
+          set -e
+
+          rm -rf deploy
+          mkdir -p deploy/core
+
+          rsync -a ./ deploy/core/ \
+            --exclude='/deploy/' \
+            --exclude='/.git/' \
+            --exclude='/.github/' \
+            --exclude='/node_modules/' \
+            --exclude='/tests/' \
+            --exclude='/.env'
+
+          rsync -a public/ deploy/ \
+            --exclude='index.php' \
+            --exclude='.htaccess'
+
+          cat > deploy/index.php <<'PHP'
+          <?php
+
+          use Illuminate\Foundation\Application;
+          use Illuminate\Http\Request;
+
+          define('LARAVEL_START',microtime(true));
+
+          if(file_exists($maintenance=__DIR__.'/core/storage/framework/maintenance.php')){
+              require $maintenance;
+          }
+
+          require __DIR__.'/core/vendor/autoload.php';
+
+          /** @var Application $app */
+          $app=require_once __DIR__.'/core/bootstrap/app.php';
+
+          $app->handleRequest(Request::capture());
+          PHP
+
+          cat > deploy/.htaccess <<'HTACCESS'
+          <IfModule mod_rewrite.c>
+              <IfModule mod_negotiation.c>
+                  Options -MultiViews -Indexes
+              </IfModule>
+
+              RewriteEngine On
+              DirectoryIndex index.php
+
+              RewriteRule ^core(?:/|$) - [F,L,NC]
+              RewriteRule ^\. - [F,L,NC]
+
+              RewriteCond %{HTTP:Authorization} .
+              RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+              RewriteCond %{HTTP:x-xsrf-token} .
+              RewriteRule .* - [E=HTTP_X_XSRF_TOKEN:%{HTTP:X-XSRF-Token}]
+
+              RewriteCond %{REQUEST_FILENAME} !-d
+              RewriteCond %{REQUEST_FILENAME} !-f
+              RewriteRule ^ index.php [L]
+          </IfModule>
+          HTACCESS
+
+          mkdir -p deploy/core/storage/logs
+          mkdir -p deploy/core/storage/framework/cache/data
+          mkdir -p deploy/core/storage/framework/sessions
+          mkdir -p deploy/core/storage/framework/views
+          mkdir -p deploy/core/bootstrap/cache
+
+          touch deploy/core/storage/logs/deploy.keep
+          touch deploy/core/storage/framework/cache/data/deploy.keep
+          touch deploy/core/storage/framework/sessions/deploy.keep
+          touch deploy/core/storage/framework/views/deploy.keep
+          touch deploy/core/bootstrap/cache/deploy.keep
+
+      - name: Mostrar estrutura do pacote
+        shell: bash
+        run: |
+          echo "Raiz publica:"
+          find deploy -maxdepth 1 -type f -printf "%f\n" | sort
+
+          echo ""
+          echo "Core:"
+          find deploy/core -maxdepth 1 -mindepth 1 -printf "%f\n" | sort
+
+          echo ""
+          echo "Build:"
+          test -f deploy/build/manifest.json
+          test -f deploy/core/public/build/manifest.json
+
+          echo "Pacote validado."
+
+      - name: Enviar por FTPS
+        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
+        with:
+          server: ${{ secrets.FROTAPRO_FTP_SERVER }}
+          username: ${{ secrets.FROTAPRO_FTP_USERNAME }}
+          password: ${{ secrets.FROTAPRO_FTP_PASSWORD }}
+          protocol: ftps
+          port: 21
+          local-dir: ./deploy/
+          server-dir: ./
+          dangerous-clean-slate: false
+          security: strict
+          timeout: 60000
+          log-level: standard
+          state-name: .ftp-deploy-sync-state.json
+          exclude: |
+            **/.git
+            **/.git/**
+            **/node_modules/**
+            **/.env
