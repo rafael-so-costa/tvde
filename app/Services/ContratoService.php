@@ -20,13 +20,15 @@ use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 use Throwable;
+use App\Models\TipoContrato;
 
 class ContratoService
 {
 
     public function __construct(
         private ChecklistProcessService $checklistProcessService,
-        private RemoteSignatureMailService $remoteSignatureMailService
+        private RemoteSignatureMailService $remoteSignatureMailService,
+        private ContratoTipoResolverService $tipoResolver
     ) {}
 
 
@@ -53,12 +55,30 @@ class ContratoService
             $ip,
             $userAgent
         ) {
-            $assinaturasInput = $data['assinaturas'] ?? [];
-            $empresaId = $data['empresa_id'] ?? null;
+            $resolved = $this
+                ->tipoResolver
+                ->resolve(
+                    $data,
+                    $tenantId
+                );
+
+            $data = $resolved['data'];
+
+            /** @var TipoContrato|null $tipoContrato */
+            $tipoContrato =
+                $resolved['tipo_contrato'];
+
+            $workflowTemplate =
+                $resolved['workflow'];
+
+            $signatureConfiguration =
+                $resolved['assinaturas_configuracao'];
+
+            $assinaturasInput =
+                $data['assinaturas'] ?? [];
 
             unset(
-                $data['assinaturas'],
-                $data['empresa_id']
+                $data['assinaturas']
             );
 
             $template = $this->template(
@@ -83,41 +103,79 @@ class ContratoService
 
             $empresa = $this->empresa(
                 $tenantId,
-                $empresaId
+                $data['empresa_id'] ?? null
             );
 
-            $obrigatorias = $this
-                ->assinaturasObrigatorias($template);
+            if ($tipoContrato) {
+                $assinaturas =
+                    $this
+                    ->prepararAssinaturasConfiguradas(
+                        $signatureConfiguration,
+                        $assinaturasInput,
+                        $motorista,
+                        $proprietario,
+                        $empresa,
+                        $actor
+                    );
+            } else {
+                $obrigatorias =
+                    $this
+                    ->assinaturasObrigatorias(
+                        $template
+                    );
 
-            $assinaturas = $this->prepararAssinaturas(
-                $obrigatorias,
-                $assinaturasInput,
-                $motorista,
-                $proprietario,
-                $empresa,
-                $actor
-            );
+                $assinaturas =
+                    $this
+                    ->prepararAssinaturas(
+                        $obrigatorias,
+                        $assinaturasInput,
+                        $motorista,
+                        $proprietario,
+                        $empresa,
+                        $actor
+                    );
+            }
 
-            $campos = $data['campos_preenchidos'] ?? [];
+            $campos =
+                $data['campos_preenchidos']
+                ?? [];
 
-            foreach ($assinaturas as $assinatura) {
+            foreach (
+                $assinaturas as
+                $assinatura
+            ) {
                 if (
-                    $assinatura['modo'] === 'presencial' &&
-                    filled($assinatura['assinatura_url'])
+                    $assinatura['modo']
+                    === 'presencial' &&
+                    filled(
+                        $assinatura['assinatura_url']
+                    )
                 ) {
                     $campos[$assinatura['placeholder']] =
                         $assinatura['assinatura_url'];
                 }
             }
 
-            $data['campos_preenchidos'] = $campos;
+            $data['campos_preenchidos'] =
+                $campos;
 
-            $contrato = new Contrato($data);
+            $contrato =
+                new Contrato(
+                    $data
+                );
 
-            $contrato->tenant_id = $tenantId;
-            $contrato->status = 'rascunho';
-            $contrato->versao_atual = 1;
-            $contrato->bloqueado = false;
+            $contrato->tenant_id =
+                $tenantId;
+
+            $contrato->status =
+                'rascunho';
+
+            $contrato->versao_atual =
+                1;
+
+            $contrato->bloqueado =
+                false;
+
             $contrato->valor_semanal =
                 $veiculo?->valor_aluguel;
 
@@ -126,60 +184,82 @@ class ContratoService
             );
 
             if ($assinaturas !== []) {
-                $todasAssinadas = collect($assinaturas)
-                    ->every(
+                $todasAssinadas =
+                    collect(
+                        $assinaturas
+                    )->every(
                         fn(array $assinatura) =>
-                        $assinatura['modo'] === 'presencial'
+                        $assinatura['modo']
+                            === 'presencial'
                     );
 
-                $contrato->status = $todasAssinadas
+                $contrato->status =
+                    $todasAssinadas
                     ? 'assinado'
                     : 'enviado';
 
                 if ($todasAssinadas) {
-                    $contrato->data_assinatura = now();
+                    $contrato
+                        ->data_assinatura =
+                        now();
                 }
             }
 
-            foreach ($assinaturas as $assinatura) {
+            foreach (
+                $assinaturas as
+                $assinatura
+            ) {
                 if (
                     $assinatura['placeholder'] ===
                     'ASSINATURA_MOTORISTA' &&
-                    $assinatura['modo'] === 'presencial'
+                    $assinatura['modo'] ===
+                    'presencial'
                 ) {
-                    $contrato->assinatura_motorista_url =
+                    $contrato
+                        ->assinatura_motorista_url =
                         $assinatura['assinatura_url'];
                 }
 
                 if (
                     $assinatura['placeholder'] ===
                     'ASSINATURA_PROPRIETARIO' &&
-                    $assinatura['modo'] === 'presencial'
+                    $assinatura['modo'] ===
+                    'presencial'
                 ) {
-                    $contrato->assinatura_proprietario_url =
+                    $contrato
+                        ->assinatura_proprietario_url =
                         $assinatura['assinatura_url'];
                 }
             }
 
             $contrato->save();
 
-            if (
-                $template
-                ?->checklistProcessTemplate
-            ) {
-                $this->checklistProcessService
+            $processTemplate =
+                $tipoContrato
+                ? $workflowTemplate
+                : $template
+                ?->checklistProcessTemplate;
+
+            if ($processTemplate) {
+                $this
+                    ->checklistProcessService
                     ->start(
                         $tenantId,
-                        $template
-                            ->checklistProcessTemplate,
+                        $processTemplate,
                         ChecklistProcessService::ENTITY_CONTRATO,
                         $contrato->id,
                         [
                             'contrato_tipo' =>
                             $contrato->tipo,
 
+                            'tipo_contrato_id' =>
+                            $tipoContrato?->id,
+
+                            'tipo_contrato_codigo' =>
+                            $tipoContrato?->codigo,
+
                             'template_contrato_id' =>
-                            $template->id,
+                            $template?->id,
                         ]
                     );
             }
@@ -197,8 +277,7 @@ class ContratoService
                 );
 
                 if (
-                    $dadosAssinatura['modo'] ===
-                    'presencial'
+                    $dadosAssinatura['modo'] === 'presencial'
                 ) {
                     $this
                         ->checklistProcessService
@@ -226,23 +305,39 @@ class ContratoService
                 $actor,
                 'criacao',
                 [
-                    'tipo' => $contrato->tipo,
-                    'status' => $contrato->status,
+                    'tipo' =>
+                    $contrato->tipo,
+
+                    'tipo_contrato_id' =>
+                    $contrato
+                        ->tipo_contrato_id,
+
+                    'status' =>
+                    $contrato->status,
+
                     'versao' => 1,
                 ],
                 $ip
             );
 
             if (
-                $contrato->tipo === 'aluguer' &&
-                $contrato->status === 'assinado'
+                $contrato->status ===
+                'assinado' &&
+                $this
+                ->deveAssociarMotoristaVeiculo(
+                    $contrato,
+                    $tipoContrato
+                )
             ) {
-                $this->associarMotoristaVeiculo(
-                    $contrato
-                );
+                $this
+                    ->associarMotoristaVeiculo(
+                        $contrato
+                    );
             }
 
-            return $this->carregar($contrato);
+            return $this->carregar(
+                $contrato
+            );
         });
     }
 
@@ -909,8 +1004,10 @@ class ContratoService
 
                     if (
                         $contratoAssinado &&
-                        $contrato->tipo ===
-                        'aluguer'
+                        $this
+                        ->deveAssociarMotoristaVeiculo(
+                            $contrato
+                        )
                     ) {
                         $this
                             ->associarMotoristaVeiculo(
@@ -1805,6 +1902,227 @@ class ContratoService
         return $resultado;
     }
 
+    private function prepararAssinaturasConfiguradas(
+        array $configuracoes,
+        array $input,
+        ?Motorista $motorista,
+        ?Proprietario $proprietario,
+        ?Empresa $empresa,
+        User $actor
+    ): array {
+        $porPlaceholder = [];
+
+        foreach (
+            $input as
+            $indice => $assinatura
+        ) {
+            $placeholder =
+                mb_strtoupper(
+                    trim(
+                        (string)(
+                            $assinatura['placeholder'] ?? ''
+                        )
+                    )
+                );
+
+            if (
+                !in_array(
+                    $placeholder,
+                    self::ASSINATURAS,
+                    true
+                )
+            ) {
+                throw ValidationException::withMessages([
+                    "assinaturas.{$indice}.placeholder" =>
+                    'Placeholder de assinatura inválido.',
+                ]);
+            }
+
+            if (
+                isset(
+                    $porPlaceholder[$placeholder]
+                )
+            ) {
+                throw ValidationException::withMessages([
+                    'assinaturas' =>
+                    'Não é permitido repetir o mesmo placeholder de assinatura.',
+                ]);
+            }
+
+            $porPlaceholder[$placeholder] = $assinatura;
+        }
+
+        $configByPlaceholder = [];
+
+        foreach (
+            $configuracoes as
+            $configuracao
+        ) {
+            $placeholder =
+                $configuracao['placeholder'] ?? null;
+
+            if (!$placeholder) {
+                continue;
+            }
+
+            $configByPlaceholder[$placeholder] = $configuracao;
+        }
+
+        $obrigatorias =
+            collect(
+                $configByPlaceholder
+            )
+            ->filter(
+                fn(array $config) =>
+                (bool)(
+                    $config['obrigatoria'] ?? true
+                )
+            )
+            ->keys()
+            ->values()
+            ->all();
+
+        $faltantes = array_diff(
+            $obrigatorias,
+            array_keys(
+                $porPlaceholder
+            )
+        );
+
+        if ($faltantes !== []) {
+            throw ValidationException::withMessages([
+                'assinaturas' =>
+                'Faltam assinaturas obrigatórias: ' .
+                    implode(
+                        ', ',
+                        $faltantes
+                    ) .
+                    '.',
+            ]);
+        }
+
+        $extras = array_diff(
+            array_keys(
+                $porPlaceholder
+            ),
+            array_keys(
+                $configByPlaceholder
+            )
+        );
+
+        if ($extras !== []) {
+            throw ValidationException::withMessages([
+                'assinaturas' =>
+                'Foram enviadas assinaturas não permitidas para este tipo de contrato.',
+            ]);
+        }
+
+        $resultado = [];
+
+        foreach (
+            $configByPlaceholder as
+            $placeholder => $configuracao
+        ) {
+            if (
+                !isset(
+                    $porPlaceholder[$placeholder]
+                )
+            ) {
+                continue;
+            }
+
+            $assinatura =
+                $porPlaceholder[$placeholder];
+
+            $modo =
+                strtolower(
+                    trim(
+                        (string)(
+                            $assinatura['modo'] ?? ''
+                        )
+                    )
+                );
+
+            $modosPermitidos =
+                (array)(
+                    $configuracao['modos'] ?? [
+                        'presencial',
+                        'remota',
+                    ]
+                );
+
+            if (
+                !in_array(
+                    $modo,
+                    $modosPermitidos,
+                    true
+                )
+            ) {
+                throw ValidationException::withMessages([
+                    'assinaturas' =>
+                    "O modo {$modo} não é permitido para {$placeholder}.",
+                ]);
+            }
+
+            $target =
+                $this
+                ->resolverSignatario(
+                    $placeholder,
+                    $assinatura,
+                    $motorista,
+                    $proprietario,
+                    $empresa
+                );
+
+            if (
+                $modo === 'presencial' &&
+                blank(
+                    $assinatura['assinatura_url'] ?? null
+                )
+            ) {
+                throw ValidationException::withMessages([
+                    'assinaturas' =>
+                    "A assinatura presencial {$placeholder} não possui imagem.",
+                ]);
+            }
+
+            if (
+                $modo === 'remota' &&
+                (
+                    blank(
+                        $target['signatario_email']
+                    ) ||
+                    !filter_var(
+                        $target['signatario_email'],
+                        FILTER_VALIDATE_EMAIL
+                    )
+                )
+            ) {
+                throw ValidationException::withMessages([
+                    'assinaturas' =>
+                    "O signatário de {$placeholder} precisa de um e-mail válido para assinatura remota.",
+                ]);
+            }
+
+            $resultado[] =
+                array_merge(
+                    $target,
+                    [
+                        'placeholder' =>
+                        $placeholder,
+
+                        'modo' =>
+                        $modo,
+
+                        'assinatura_url' =>
+                        $assinatura['assinatura_url'] ?? null,
+                    ]
+                );
+        }
+
+        return $resultado;
+    }
+
     private function resolverSignatario(
         string $placeholder,
         array $input,
@@ -2054,6 +2372,34 @@ class ContratoService
         );
     }
 
+    private function deveAssociarMotoristaVeiculo(
+        Contrato $contrato,
+        ?TipoContrato $tipoContrato = null
+    ): bool {
+        if ($contrato->tipo_contrato_id) {
+            $tipoContrato ??=
+                TipoContrato::query()
+                ->where(
+                    'tenant_id',
+                    $contrato->tenant_id
+                )
+                ->find(
+                    $contrato
+                        ->tipo_contrato_id
+                );
+
+            return (bool)data_get(
+                $tipoContrato
+                    ?->configuracao,
+                'associar_motorista_veiculo',
+                false
+            );
+        }
+
+        return $contrato->tipo ===
+            'aluguer';
+    }
+
     private function associarMotoristaVeiculo(
         Contrato $contrato
     ): void {
@@ -2298,12 +2644,15 @@ class ContratoService
         Contrato $contrato
     ): Contrato {
         return $contrato->load([
+            'tipoContrato',
             'template.checklistProcessTemplate.items',
+            'empresa',
             'motorista',
             'proprietario',
             'veiculo',
             'versoes',
             'assinaturas',
+            'checklists',
             'checklistProcessRun.items',
         ]);
     }

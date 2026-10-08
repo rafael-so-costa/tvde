@@ -943,15 +943,37 @@ Route::middleware('auth:sanctum')->group(function () {
         });
 
         Route::middleware('permission:checklist,visualizar')->group(function () {
-            Route::get('/checklists', [ChecklistRecordController::class, 'index']);
-            Route::get('/checklists/{id}', [ChecklistRecordController::class, 'show']);
+            Route::get(
+                '/checklists',
+                [ChecklistRecordController::class, 'index']
+            );
+
+            Route::get(
+                '/checklists/{id}',
+                [ChecklistRecordController::class, 'show']
+            )->whereUuid('id');
         });
 
         Route::middleware('permission:checklist,configurar')->group(function () {
-            Route::post('/checklists', [ChecklistRecordController::class, 'store']);
-            Route::patch('/checklists/{id}', [ChecklistRecordController::class, 'update']);
-            Route::post('/checklists/{id}/finalizar', [ChecklistRecordController::class, 'finalize']);
-            Route::delete('/checklists/{id}', [ChecklistRecordController::class, 'destroy']);
+            Route::post(
+                '/checklists',
+                [ChecklistRecordController::class, 'store']
+            );
+
+            Route::patch(
+                '/checklists/{id}',
+                [ChecklistRecordController::class, 'update']
+            )->whereUuid('id');
+
+            Route::post(
+                '/checklists/{id}/finalizar',
+                [ChecklistRecordController::class, 'finalize']
+            )->whereUuid('id');
+
+            Route::delete(
+                '/checklists/{id}',
+                [ChecklistRecordController::class, 'destroy']
+            )->whereUuid('id');
         });
 
         Route::get('/multas', [MultaController::class, 'index']);
@@ -1014,3 +1036,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
 require __DIR__ . '/backoffice_ads.php';
 require __DIR__ . '/ads.php';
+require __DIR__ . '/documentos.php';
+require __DIR__ . '/contratos_config.php';
+require __DIR__ . '/checklists_workflow.php';
+require __DIR__ . '/backoffice_content.php';
+require __DIR__ . '/public_analytics.php';

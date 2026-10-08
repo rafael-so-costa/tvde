@@ -12,16 +12,18 @@ class Contrato extends Model
 {
     use HasUuids;
 
-    protected $attributes = [
-        'status' => 'rascunho',
-        'renovacao_count' => 0,
-        'campos_preenchidos' => '{}',
-        'versao_atual' => 1,
-        'bloqueado' => false,
+    protected $attributes=[
+        'status'=>'rascunho',
+        'renovacao_count'=>0,
+        'campos_preenchidos'=>'{}',
+        'versao_atual'=>1,
+        'bloqueado'=>false,
     ];
 
-    protected $fillable = [
+    protected $fillable=[
         'template_id',
+        'tipo_contrato_id',
+        'empresa_id',
         'tipo',
         'proprietario_id',
         'motorista_id',
@@ -37,17 +39,17 @@ class Contrato extends Model
     protected function casts(): array
     {
         return [
-            'data_inicio' => 'date',
-            'data_fim' => 'date',
-            'data_assinatura' => 'datetime',
-            'valor_diaria' => 'decimal:2',
-            'valor_semanal' => 'decimal:2',
-            'valor_caucao' => 'decimal:2',
-            'valor_total' => 'decimal:2',
-            'renovacao_count' => 'integer',
-            'campos_preenchidos' => 'array',
-            'versao_atual' => 'integer',
-            'bloqueado' => 'boolean',
+            'data_inicio'=>'date',
+            'data_fim'=>'date',
+            'data_assinatura'=>'datetime',
+            'valor_diaria'=>'decimal:2',
+            'valor_semanal'=>'decimal:2',
+            'valor_caucao'=>'decimal:2',
+            'valor_total'=>'decimal:2',
+            'renovacao_count'=>'integer',
+            'campos_preenchidos'=>'array',
+            'versao_atual'=>'integer',
+            'bloqueado'=>'boolean',
         ];
     }
 
@@ -56,12 +58,25 @@ class Contrato extends Model
         return $this->belongsTo(Tenant::class);
     }
 
+    public function tipoContrato(): BelongsTo
+    {
+        return $this->belongsTo(
+            TipoContrato::class,
+            'tipo_contrato_id'
+        );
+    }
+
     public function template(): BelongsTo
     {
         return $this->belongsTo(
             TemplateContrato::class,
             'template_id'
         );
+    }
+
+    public function empresa(): BelongsTo
+    {
+        return $this->belongsTo(Empresa::class);
     }
 
     public function motorista(): BelongsTo
@@ -126,6 +141,15 @@ class Contrato extends Model
             'contrato_id'
         );
     }
+
+    public function checklists(): HasMany
+    {
+        return $this->hasMany(
+            ChecklistRecord::class,
+            'contrato_id'
+        );
+    }
+
     public function checklistProcessRun(): HasOne
     {
         return $this->hasOne(

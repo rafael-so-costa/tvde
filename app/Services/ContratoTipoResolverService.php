@@ -1,0 +1,397 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\ChecklistProcessTemplate;
+use App\Models\TemplateContrato;
+use App\Models\TipoContrato;
+use Illuminate\Validation\ValidationException;
+
+class ContratoTipoResolverService
+{
+    public function resolve(
+        array $data,
+        string $tenantId
+    ): array {
+        $tipoId=$data['tipo_contrato_id']??null;
+
+        if(!$tipoId){
+            return [
+                'data'=>$data,
+                'tipo_contrato'=>null,
+                'template'=>null,
+                'workflow'=>null,
+                'assinaturas_configuracao'=>[],
+            ];
+        }
+
+        $tipo=TipoContrato::query()
+            ->where('tenant_id',$tenantId)
+            ->where('ativo',true)
+            ->find($tipoId);
+
+        if(!$tipo){
+            throw ValidationException::withMessages([
+                'tipo_contrato_id'=>
+                    'Tipo de contrato inválido ou inativo para esta organização.',
+            ]);
+        }
+
+        if(
+            array_key_exists('template_id',$data) &&
+            filled($data['template_id']) &&
+            $data['template_id']!==$tipo->template_id
+        ){
+            throw ValidationException::withMessages([
+                'template_id'=>
+                    'O template é definido pelo tipo de contrato e não pode ser substituído.',
+            ]);
+        }
+
+        $template=$this->template(
+            $tenantId,
+            $tipo->template_id
+        );
+
+        $workflow=$this->workflow(
+            $tenantId,
+            $tipo->checklist_process_template_id
+        );
+
+        $this->validateEntities(
+            $tipo,
+            $data
+        );
+
+        $this->validateFields(
+            $tipo,
+            $data
+        );
+
+        $data['tipo_contrato_id']=$tipo->id;
+        $data['tipo']=$tipo->codigo;
+        $data['template_id']=$template?->id;
+
+        return [
+            'data'=>$data,
+            'tipo_contrato'=>$tipo,
+            'template'=>$template,
+            'workflow'=>$workflow,
+            'assinaturas_configuracao'=>
+                $this->normalizeSignatures(
+                    (array)($tipo->assinaturas_configuracao??[])
+                ),
+        ];
+    }
+
+    private function template(
+        string $tenantId,
+        ?string $id
+    ): ?TemplateContrato {
+        if(!$id){
+            return null;
+        }
+
+        $template=TemplateContrato::query()
+            ->where('tenant_id',$tenantId)
+            ->where('ativo',true)
+            ->find($id);
+
+        if(!$template){
+            throw ValidationException::withMessages([
+                'tipo_contrato_id'=>
+                    'O tipo de contrato possui um template inexistente, inativo ou pertencente a outra organização.',
+            ]);
+        }
+
+        return $template;
+    }
+
+    private function workflow(
+        string $tenantId,
+        ?string $id
+    ): ?ChecklistProcessTemplate {
+        if(!$id){
+            return null;
+        }
+
+        $workflow=ChecklistProcessTemplate::query()
+            ->where('tenant_id',$tenantId)
+            ->where('ativo',true)
+            ->with('items')
+            ->find($id);
+
+        if(!$workflow){
+            throw ValidationException::withMessages([
+                'tipo_contrato_id'=>
+                    'O tipo de contrato possui um workflow inexistente, inativo ou pertencente a outra organização.',
+            ]);
+        }
+
+        return $workflow;
+    }
+
+    private function validateEntities(
+        TipoContrato $tipo,
+        array $data
+    ): void {
+        $entities=(array)($tipo->entidades??[]);
+
+        $map=[
+            'empresa'=>'empresa_id',
+            'proprietario'=>'proprietario_id',
+            'motorista'=>'motorista_id',
+            'veiculo'=>'veiculo_id',
+        ];
+
+        $errors=[];
+
+        foreach($map as $entity=>$field){
+            if(
+                !filter_var(
+                    $entities[$entity]??false,
+                    FILTER_VALIDATE_BOOLEAN
+                )
+            ){
+                continue;
+            }
+
+            if(blank($data[$field]??null)){
+                $errors[$field]=
+                    "O tipo de contrato exige {$this->entityLabel($entity)}.";
+            }
+        }
+
+        if($errors!==[]){
+            throw ValidationException::withMessages(
+                $errors
+            );
+        }
+    }
+
+    private function validateFields(
+        TipoContrato $tipo,
+        array $data
+    ): void {
+        $configurations=
+            (array)($tipo->campos_configuracao??[]);
+
+        if($configurations===[]){
+            return;
+        }
+
+        $filledFields=
+            (array)($data['campos_preenchidos']??[]);
+
+        $errors=[];
+
+        foreach($configurations as $index=>$configuration){
+            if(!is_array($configuration)){
+                continue;
+            }
+
+            $required=filter_var(
+                $configuration['obrigatorio']
+                    ??$configuration['obrigatoria']
+                    ??false,
+                FILTER_VALIDATE_BOOLEAN
+            );
+
+            if(!$required){
+                continue;
+            }
+
+            $origin=strtolower(
+                trim(
+                    (string)(
+                        $configuration['origem']
+                        ??'manual'
+                    )
+                )
+            );
+
+            if(
+                in_array(
+                    $origin,
+                    [
+                        'automatico',
+                        'automático',
+                        'sistema',
+                    ],
+                    true
+                )
+            ){
+                continue;
+            }
+
+            $field=trim(
+                (string)(
+                    $configuration['campo']
+                    ??$configuration['name']
+                    ??$configuration['chave']
+                    ??''
+                )
+            );
+
+            if($field===''){
+                continue;
+            }
+
+            if(
+                $this->hasValue(
+                    $field,
+                    $filledFields,
+                    $data
+                )
+            ){
+                continue;
+            }
+
+            $errors["campos_preenchidos.{$field}"]=
+                "O campo {$field} é obrigatório para este tipo de contrato.";
+        }
+
+        if($errors!==[]){
+            throw ValidationException::withMessages(
+                $errors
+            );
+        }
+    }
+
+    private function hasValue(
+        string $field,
+        array $filledFields,
+        array $data
+    ): bool {
+        if(
+            array_key_exists(
+                $field,
+                $filledFields
+            ) &&
+            filled(
+                $filledFields[$field]
+            )
+        ){
+            return true;
+        }
+
+        $normalized=mb_strtoupper(
+            trim($field)
+        );
+
+        foreach($filledFields as $key=>$value){
+            if(
+                mb_strtoupper(
+                    trim((string)$key)
+                )===$normalized &&
+                filled($value)
+            ){
+                return true;
+            }
+        }
+
+        $topLevelKey=strtolower(
+            $normalized
+        );
+
+        if(
+            array_key_exists(
+                $topLevelKey,
+                $data
+            ) &&
+            filled(
+                $data[$topLevelKey]
+            )
+        ){
+            return true;
+        }
+
+        return false;
+    }
+
+    private function normalizeSignatures(
+        array $configurations
+    ): array {
+        $result=[];
+
+        foreach($configurations as $configuration){
+            if(!is_array($configuration)){
+                continue;
+            }
+
+            $placeholder=mb_strtoupper(
+                trim(
+                    (string)(
+                        $configuration['placeholder']
+                        ??''
+                    )
+                )
+            );
+
+            if($placeholder===''){
+                continue;
+            }
+
+            $modes=array_values(
+                array_unique(
+                    array_filter(
+                        array_map(
+                            fn($mode)=>strtolower(
+                                trim((string)$mode)
+                            ),
+                            (array)(
+                                $configuration['modos']
+                                ??[
+                                    'presencial',
+                                    'remota',
+                                ]
+                            )
+                        ),
+                        fn($mode)=>in_array(
+                            $mode,
+                            [
+                                'presencial',
+                                'remota',
+                            ],
+                            true
+                        )
+                    )
+                )
+            );
+
+            if($modes===[]){
+                $modes=[
+                    'presencial',
+                    'remota',
+                ];
+            }
+
+            $result[]=[
+                'placeholder'=>$placeholder,
+
+                'obrigatoria'=>filter_var(
+                    $configuration['obrigatoria']
+                        ??$configuration['obrigatorio']
+                        ??true,
+                    FILTER_VALIDATE_BOOLEAN
+                ),
+
+                'modos'=>$modes,
+            ];
+        }
+
+        return $result;
+    }
+
+    private function entityLabel(
+        string $entity
+    ): string {
+        return match($entity){
+            'empresa'=>'uma empresa',
+            'proprietario'=>'um proprietário',
+            'motorista'=>'um motorista',
+            'veiculo'=>'um veículo',
+            default=>"a entidade {$entity}",
+        };
+    }
+}

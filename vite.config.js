@@ -12,6 +12,7 @@ export default defineConfig({
                 "resources/css/app.css",
                 "resources/js/main.tsx",
                 "resources/js/public-ads-marketplace.ts",
+                "resources/js/public-analytics.ts",
             ],
             refresh:true,
             fonts:[
