@@ -44,6 +44,6 @@ class SaasRegistrationController extends Controller
             'last_login_at' => now(),
         ])->save();
 
-        return redirect('/onboarding');
+        return to_route('app.onboarding');
     }
 }

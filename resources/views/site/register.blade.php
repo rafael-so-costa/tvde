@@ -22,7 +22,7 @@ $initialStep = $companyErrors ? 2 : 1;
 
         <div class="mx-auto flex h-20 max-w-7xl items-center justify-between px-5 sm:px-6 lg:px-8">
 
-            <a href="/" class="flex items-center gap-3">
+            <a href="{{ route('site.home') }}" class="flex items-center gap-3">
 
                 <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 shadow-lg shadow-indigo-600/20">
 
@@ -55,7 +55,7 @@ $initialStep = $companyErrors ? 2 : 1;
                     Já tem conta?
                 </span>
 
-                <a href="/login" class="text-sm font-semibold text-indigo-600 hover:text-indigo-700">
+                <a href="{{ route('login') }}" class="text-sm font-semibold text-indigo-600 hover:text-indigo-700">
                     Entrar
                 </a>
 

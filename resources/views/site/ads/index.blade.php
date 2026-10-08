@@ -11,7 +11,7 @@
         <div class="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
             <div class="flex h-20 items-center justify-between">
 
-                <a href="/" class="flex items-center gap-3">
+                <a href="{{ route('site.home') }}" class="flex items-center gap-3">
                     <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 shadow-lg shadow-indigo-600/20">
                         <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M3 17V8.5A2.5 2.5 0 0 1 5.5 6H14v11" />
@@ -52,7 +52,7 @@
                 </nav>
 
                 <div class="flex items-center gap-3">
-                    <a href="/login" class="hidden text-sm font-semibold text-slate-700 transition hover:text-indigo-600 sm:block">
+                    <a href="{{ route('login') }}" class="hidden text-sm font-semibold text-slate-700 transition hover:text-indigo-600 sm:block">
                         Entrar
                     </a>
 
@@ -281,15 +281,15 @@
 
             <div class="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
 
-                <a href="/" class="text-lg font-bold text-white">
+                <a href="{{ route('site.home') }}" class="text-lg font-bold text-white">
                     Frota<span class="text-indigo-400">PRO</span>
                 </a>
 
                 <div class="flex flex-wrap gap-5 text-sm">
-                    <a href="/" class="hover:text-white">Início</a>
+                    <a href="{{ route('site.home') }}" class="hover:text-white">Início</a>
                     <a href="{{ route('site.ads.index') }}" class="hover:text-white">Anúncios</a>
-                    <a href="/#funcionalidades" class="hover:text-white">Funcionalidades</a>
-                    <a href="/#faq" class="hover:text-white">FAQ</a>
+                    <a href="{{ route('site.home') }}#funcionalidades" class="hover:text-white">Funcionalidades</a>
+                    <a href="{{ route('site.home') }}#faq" class="hover:text-white">FAQ</a>
                 </div>
 
                 <p class="text-xs">

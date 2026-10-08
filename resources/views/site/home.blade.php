@@ -13,7 +13,7 @@
 
             <div class="flex h-20 items-center justify-between">
 
-                <a href="/" class="flex items-center gap-3">
+                <a href="{{ route('site.home') }}" class="flex items-center gap-3">
 
                     <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 shadow-lg shadow-indigo-600/20">
                         <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -65,7 +65,7 @@
 
                 <div class="hidden items-center gap-4 lg:flex">
 
-                    <a href="/login" class="text-sm font-semibold text-slate-700 transition hover:text-indigo-600">
+                    <a href="{{ route('login') }}" class="text-sm font-semibold text-slate-700 transition hover:text-indigo-600">
                         Entrar
                     </a>
 
@@ -118,7 +118,7 @@
 
                         <div class="mt-3 border-t border-slate-100 pt-3">
 
-                            <a href="/login" class="flex h-11 items-center justify-center rounded-xl text-sm font-semibold text-slate-700">
+                            <a href="{{ route('login') }}" class="flex h-11 items-center justify-center rounded-xl text-sm font-semibold text-slate-700">
                                 Entrar
                             </a>
 
@@ -1164,7 +1164,7 @@
                         </svg>
                     </a>
 
-                    <a href="/login" class="inline-flex h-12 items-center justify-center rounded-xl border border-white/20 bg-white/10 px-7 font-semibold text-white transition hover:bg-white/15">
+                    <a href="{{ route('login') }}" class="inline-flex h-12 items-center justify-center rounded-xl border border-white/20 bg-white/10 px-7 font-semibold text-white transition hover:bg-white/15">
                         Já sou cliente
                     </a>
 
@@ -1183,7 +1183,7 @@
 
                     <div class="lg:col-span-2">
 
-                        <a href="/" class="inline-flex items-center gap-3">
+                        <a href="{{ route('site.home') }}" class="inline-flex items-center gap-3">
 
                             <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500">
                                 <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -1249,7 +1249,7 @@
                                 Criar conta
                             </a>
 
-                            <a href="/login" class="block hover:text-white">
+                            <a href="{{ route('login') }}" class="block hover:text-white">
                                 Entrar
                             </a>
 
