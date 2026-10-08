@@ -14,8 +14,288 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy:
-    name: Preparar e enviar staging
+  incremental:
+    name: Deploy incremental
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Detectar alteracoes
+        id: changes
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          BEFORE="${{ github.event.before }}"
+          AFTER="${{ github.sha }}"
+
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            BEFORE="$(git rev-parse "${AFTER}^" 2>/dev/null || true)"
+          fi
+
+          if [ -n "$BEFORE" ]; then
+            git diff --name-status "$BEFORE" "$AFTER" > changed-files.txt
+          else
+            git show --pretty="" --name-status "$AFTER" > changed-files.txt
+          fi
+
+          echo "Alteracoes detectadas:"
+          cat changed-files.txt || true
+
+          FRONTEND=false
+          FULL_REQUIRED=false
+          MIGRATIONS=false
+          DEPLOY=false
+
+          while IFS=$'\t' read -r STATUS PATH1 PATH2; do
+            [ -n "${STATUS:-}" ] || continue
+
+            PATH="$PATH1"
+
+            case "$STATUS" in
+              R*|C*) PATH="$PATH2" ;;
+            esac
+
+            case "$PATH" in
+              composer.json|composer.lock)
+                FULL_REQUIRED=true
+                ;;
+            esac
+
+            case "$PATH" in
+              resources/js/*|resources/css/*|resources/views/*|package.json|package-lock.json|vite.config.*)
+                FRONTEND=true
+                ;;
+            esac
+
+            case "$PATH" in
+              database/migrations/*)
+                MIGRATIONS=true
+                ;;
+            esac
+
+            case "$PATH" in
+              .github/*|tests/*|node_modules/*|vendor/*|storage/*|.env|.gitignore|frotapro-staging.zip)
+                ;;
+              *)
+                DEPLOY=true
+                ;;
+            esac
+          done < changed-files.txt
+
+          echo "frontend=$FRONTEND" >> "$GITHUB_OUTPUT"
+          echo "full_required=$FULL_REQUIRED" >> "$GITHUB_OUTPUT"
+          echo "migrations=$MIGRATIONS" >> "$GITHUB_OUTPUT"
+          echo "deploy=$DEPLOY" >> "$GITHUB_OUTPUT"
+
+      - name: Bloquear alteracao de dependencias PHP
+        if: steps.changes.outputs.full_required == 'true'
+        shell: bash
+        run: |
+          echo "composer.json ou composer.lock foi alterado."
+          echo "O deploy incremental foi interrompido para evitar vendor inconsistente."
+          echo "Execute manualmente o workflow Deploy FrotaPro Staging para gerar o pacote completo."
+          exit 1
+
+      - name: Configurar Node
+        if: steps.changes.outputs.frontend == 'true'
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Instalar dependencias frontend
+        if: steps.changes.outputs.frontend == 'true'
+        run: npm ci
+
+      - name: Compilar frontend
+        if: steps.changes.outputs.frontend == 'true'
+        run: npm run build
+
+      - name: Preparar arquivos incrementais
+        if: steps.changes.outputs.deploy == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          rm -rf deploy-incremental
+          rm -f deploy-delete.txt
+          mkdir -p deploy-incremental
+          touch deploy-delete.txt
+
+          ignorar() {
+            case "$1" in
+              .github/*|tests/*|node_modules/*|vendor/*|storage/*|.env|.gitignore|frotapro-staging.zip|public/build/*)
+                return 0
+                ;;
+              *)
+                return 1
+                ;;
+            esac
+          }
+
+          adicionar() {
+            SRC="$1"
+
+            ignorar "$SRC" && return 0
+            [ -f "$SRC" ] || return 0
+
+            if [[ "$SRC" == public/* ]]; then
+              REL="${SRC#public/}"
+
+              mkdir -p "deploy-incremental/core/public/$(dirname "$REL")"
+              cp -p "$SRC" "deploy-incremental/core/public/$REL"
+
+              if [ "$REL" != "index.php" ] && [ "$REL" != ".htaccess" ]; then
+                mkdir -p "deploy-incremental/$(dirname "$REL")"
+                cp -p "$SRC" "deploy-incremental/$REL"
+              fi
+            else
+              mkdir -p "deploy-incremental/core/$(dirname "$SRC")"
+              cp -p "$SRC" "deploy-incremental/core/$SRC"
+            fi
+          }
+
+          remover() {
+            SRC="$1"
+
+            ignorar "$SRC" && return 0
+
+            if [[ "$SRC" == public/* ]]; then
+              REL="${SRC#public/}"
+
+              echo "core/public/$REL" >> deploy-delete.txt
+
+              if [ "$REL" != "index.php" ] && [ "$REL" != ".htaccess" ]; then
+                echo "$REL" >> deploy-delete.txt
+              fi
+            else
+              echo "core/$SRC" >> deploy-delete.txt
+            fi
+          }
+
+          while IFS=$'\t' read -r STATUS PATH1 PATH2; do
+            [ -n "${STATUS:-}" ] || continue
+
+            case "$STATUS" in
+              A*|M*|T*)
+                adicionar "$PATH1"
+                ;;
+              D*)
+                remover "$PATH1"
+                ;;
+              R*)
+                remover "$PATH1"
+                adicionar "$PATH2"
+                ;;
+              C*)
+                adicionar "$PATH2"
+                ;;
+            esac
+          done < changed-files.txt
+
+          echo ""
+          echo "Arquivos preparados:"
+          find deploy-incremental -type f -print | sort || true
+
+          echo ""
+          echo "Arquivos a remover:"
+          cat deploy-delete.txt || true
+
+      - name: Instalar lftp
+        if: steps.changes.outputs.deploy == 'true' || steps.changes.outputs.frontend == 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lftp
+
+      - name: Enviar alteracoes por FTPS
+        if: steps.changes.outputs.deploy == 'true' || steps.changes.outputs.frontend == 'true'
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FROTAPRO_FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FROTAPRO_FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FROTAPRO_FTP_PASSWORD }}
+          FRONTEND_CHANGED: ${{ steps.changes.outputs.frontend }}
+          FILES_CHANGED: ${{ steps.changes.outputs.deploy }}
+        run: |
+          set -euo pipefail
+
+          cat > deploy.lftp <<'EOF'
+          set ftp:ssl-force true
+          set ftp:ssl-protect-data true
+          set ftp:passive-mode true
+          set ssl:verify-certificate no
+          set net:max-retries 10
+          set net:timeout 60
+          set net:reconnect-interval-base 5
+          set net:reconnect-interval-max 30
+          set xfer:clobber true
+          EOF
+
+          if [ "$FILES_CHANGED" = "true" ] && [ -d deploy-incremental ]; then
+            while IFS= read -r LOCAL; do
+              REMOTE="${LOCAL#deploy-incremental/}"
+              DIR="$(dirname "$REMOTE")"
+
+              ESC_LOCAL="${LOCAL//\\/\\\\}"
+              ESC_LOCAL="${ESC_LOCAL//\"/\\\"}"
+
+              ESC_REMOTE="${REMOTE//\\/\\\\}"
+              ESC_REMOTE="${ESC_REMOTE//\"/\\\"}"
+
+              ESC_DIR="${DIR//\\/\\\\}"
+              ESC_DIR="${ESC_DIR//\"/\\\"}"
+
+              printf 'mkdir -p "%s"\n' "$ESC_DIR" >> deploy.lftp
+              printf 'put "%s" -o "%s"\n' "$ESC_LOCAL" "$ESC_REMOTE" >> deploy.lftp
+            done < <(find deploy-incremental -type f -print | sort)
+          fi
+
+          if [ "$FRONTEND_CHANGED" = "true" ]; then
+            echo 'mirror --reverse --delete --no-perms --parallel=2 --verbose=1 public/build/ build/' >> deploy.lftp
+            echo 'mirror --reverse --delete --no-perms --parallel=2 --verbose=1 public/build/ core/public/build/' >> deploy.lftp
+          fi
+
+          if [ -s deploy-delete.txt ]; then
+            while IFS= read -r REMOTE; do
+              [ -n "$REMOTE" ] || continue
+
+              ESCAPED="${REMOTE//\\/\\\\}"
+              ESCAPED="${ESCAPED//\"/\\\"}"
+
+              printf 'rm -f "%s"\n' "$ESCAPED" >> deploy.lftp
+            done < deploy-delete.txt
+          fi
+
+          echo 'bye' >> deploy.lftp
+
+          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" < deploy.lftp
+
+      - name: Avisar sobre migrations
+        if: steps.changes.outputs.migrations == 'true'
+        run: |
+          echo "::warning::Foram alteradas migrations. Os arquivos foram enviados, mas o banco de dados nao foi migrado automaticamente."
+
+      - name: Resumo incremental
+        run: |
+          echo "=========================================="
+          echo "FrotaPro Staging - deploy incremental"
+          echo "Frontend recompilado: ${{ steps.changes.outputs.frontend }}"
+          echo "Arquivos de aplicacao: ${{ steps.changes.outputs.deploy }}"
+          echo "Migrations alteradas: ${{ steps.changes.outputs.migrations }}"
+          echo ".env preservado"
+          echo "storage preservado"
+          echo "=========================================="
+
+  full:
+    name: Gerar pacote completo
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 120
 
@@ -45,14 +325,13 @@ jobs:
       - name: Compilar frontend
         run: npm run build
 
-      - name: Montar pacote de deploy
+      - name: Montar pacote completo
         shell: bash
         run: |
           set -euo pipefail
 
           rm -rf deploy
           rm -f frotapro-staging.zip
-
           mkdir -p deploy/core
 
           rsync -a ./ deploy/core/ \
@@ -62,7 +341,11 @@ jobs:
             --exclude='/node_modules/' \
             --exclude='/vendor/' \
             --exclude='/tests/' \
-            --exclude='/.env'
+            --exclude='/.env' \
+            --exclude='/storage/logs/*' \
+            --exclude='/storage/framework/cache/*' \
+            --exclude='/storage/framework/sessions/*' \
+            --exclude='/storage/framework/views/*'
 
           mkdir -p deploy/core/vendor
           rsync -a vendor/ deploy/core/vendor/
@@ -127,36 +410,22 @@ jobs:
           touch deploy/core/storage/framework/views/deploy.keep
           touch deploy/core/bootstrap/cache/deploy.keep
 
-      - name: Normalizar permissoes do pacote
+      - name: Normalizar permissoes
         shell: bash
         run: |
           set -euo pipefail
 
-          echo "Aplicando permissoes padrao..."
-
           find deploy -type d -exec chmod 755 {} \;
           find deploy -type f -exec chmod 644 {} \;
 
-          chmod -R 775 deploy/core/storage
-          chmod -R 775 deploy/core/bootstrap/cache
+          find deploy/core/storage -type d -exec chmod 775 {} \;
+          find deploy/core/storage -type f -exec chmod 664 {} \;
+
+          find deploy/core/bootstrap/cache -type d -exec chmod 775 {} \;
+          find deploy/core/bootstrap/cache -type f -exec chmod 664 {} \;
 
           chmod 644 deploy/index.php
           chmod 644 deploy/.htaccess
-
-          echo ""
-          echo "Permissoes principais:"
-          stat -c "%a %n" deploy/index.php
-          stat -c "%a %n" deploy/.htaccess
-          stat -c "%a %n" deploy/core
-          stat -c "%a %n" deploy/core/vendor
-          stat -c "%a %n" deploy/core/storage
-          stat -c "%a %n" deploy/core/bootstrap/cache
-
-          echo ""
-          echo "Amostra de arquivos do vendor:"
-          find deploy/core/vendor -type f | sed -n '1,5p' | while IFS= read -r file; do
-            stat -c "%a %n" "$file"
-          done
 
       - name: Validar pacote
         shell: bash
@@ -165,12 +434,10 @@ jobs:
 
           test -f deploy/index.php
           test -f deploy/.htaccess
-
           test -f deploy/core/artisan
           test -f deploy/core/bootstrap/app.php
           test -f deploy/core/composer.json
           test -f deploy/core/vendor/autoload.php
-
           test -f deploy/build/manifest.json
           test -f deploy/core/public/build/manifest.json
 
@@ -179,22 +446,9 @@ jobs:
             exit 1
           fi
 
-          if find deploy/core/vendor -type f ! -perm 0644 -print -quit | grep -q .; then
-            echo "ERRO: Existem arquivos no vendor com permissao diferente de 644."
-            find deploy/core/vendor -type f ! -perm 0644 | head -20
-            exit 1
-          fi
+          echo "Pacote completo validado."
 
-          if find deploy/core/vendor -type d ! -perm 0755 -print -quit | grep -q .; then
-            echo "ERRO: Existem diretorios no vendor com permissao diferente de 755."
-            find deploy/core/vendor -type d ! -perm 0755 | head -20
-            exit 1
-          fi
-
-          echo "Pacote validado com sucesso."
-
-      - name: Instalar ferramentas de deploy
-        shell: bash
+      - name: Instalar ferramentas
         run: |
           sudo apt-get update
           sudo apt-get install -y zip lftp
@@ -208,19 +462,8 @@ jobs:
           zip -rq ../frotapro-staging.zip .
           cd ..
 
-          test -f frotapro-staging.zip
-
-          echo ""
-          echo "Arquivo gerado:"
           ls -lh frotapro-staging.zip
-
-          echo ""
-          echo "SHA256:"
           sha256sum frotapro-staging.zip
-
-          echo ""
-          echo "Estrutura principal do ZIP:"
-          unzip -l frotapro-staging.zip | head -80
 
       - name: Enviar ZIP por FTPS
         shell: bash
@@ -235,41 +478,26 @@ jobs:
           set ftp:ssl-force true
           set ftp:ssl-protect-data true
           set ftp:passive-mode true
-
           set ssl:verify-certificate no
-
           set net:max-retries 10
           set net:timeout 60
           set net:reconnect-interval-base 5
           set net:reconnect-interval-max 30
-
           set xfer:clobber true
-
-          pwd
 
           put frotapro-staging.zip -o frotapro-staging.zip
 
           bye
           EOF
 
-      - name: Deploy preparado
-        shell: bash
+      - name: Resumo pacote completo
         run: |
           echo "=========================================="
-          echo "FrotaPro Staging preparado com sucesso."
-          echo ""
-          echo "Arquivo enviado:"
+          echo "Pacote completo enviado:"
           echo "frotapro-staging.zip"
           echo ""
-          echo "Permissoes do pacote:"
-          echo "Diretorios normais: 755"
-          echo "Arquivos normais: 644"
-          echo "storage: 775"
-          echo "bootstrap/cache: 775"
+          echo "Extrair pelo File Manager em:"
+          echo "/public_html/sistemas/frotapro/"
           echo ""
-          echo "Proximo passo:"
-          echo "1. Abrir o File Manager do cPanel"
-          echo "2. Localizar frotapro-staging.zip"
-          echo "3. Extrair diretamente na raiz do staging"
-          echo "4. Nao extrair dentro da pasta core"
+          echo "O .env nao faz parte do ZIP."
           echo "=========================================="
