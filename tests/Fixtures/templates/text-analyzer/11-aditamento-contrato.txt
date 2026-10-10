@@ -1,0 +1,19 @@
+ADITAMENTO AO CONTRATO
+
+O presente documento constitui aditamento ao contrato
+{{NUMERO_CONTRATO_ORIGINAL}} celebrado entre
+{{EMPRESA_NOME_EMPRESA}}
+e
+{{MOTORISTA_NOME_COMPLETO}}.
+
+A partir de {{DATA_INICIO}}, o valor semanal passa a ser
+{{VALOR_SEMANAL}}.
+
+Fica ainda convencionado o valor de
+{{VALOR_SEGURO_SEMANAL}}
+a título de comparticipação semanal no seguro.
+
+Todas as restantes cláusulas mantêm-se inalteradas.
+
+{{ASSINATURA_EMPRESA}}
+{{ASSINATURA_MOTORISTA}}

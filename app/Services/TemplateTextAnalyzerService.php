@@ -516,9 +516,29 @@ class TemplateTextAnalyzerService
             $content
         ) === 1;
 
+        [
+            $content,
+            $ocrNormalized,
+        ] = $this->normalizeOcrSpacing(
+            $content
+        );
+
         $plain = $this->plainText(
             $content
         );
+
+        if ($ocrNormalized) {
+            $warnings[] = [
+                'code' =>
+                'OCR_SPACING_NORMALIZED',
+
+                'severity' =>
+                'info',
+
+                'message' =>
+                'Foram normalizados espaçamentos típicos de texto obtido por OCR.',
+            ];
+        }
 
         if ($hadHtml) {
             $warnings[] = [
@@ -546,7 +566,19 @@ class TemplateTextAnalyzerService
             $detectedValues
         );
 
+        $parameterized =
+            $this->detectAdditionalContextValues(
+                $parameterized,
+                $fields,
+                $detectedValues
+            );
+
         $this->validateChronology(
+            $detectedValues,
+            $warnings
+        );
+
+        $this->validateMultipleValues(
             $detectedValues,
             $warnings
         );
@@ -619,6 +651,156 @@ class TemplateTextAnalyzerService
                     $warnings
                 ),
             ],
+        ];
+    }
+
+    private function normalizeOcrSpacing(
+        string $content
+    ): array {
+        $changed =
+            false;
+
+        $content =
+            preg_replace_callback(
+                '/^[^\r\n]+$/mu',
+                function (
+                    array $match
+                ) use (
+                    &$changed
+                ): string {
+                    $line =
+                        $match[0];
+
+                    if (
+                        !preg_match(
+                            '/(?:[\p{L}\p{N}]\s+){2,}[\p{L}\p{N}]/u',
+                            $line
+                        )
+                    ) {
+                        return $line;
+                    }
+
+                    $chunks =
+                        preg_split(
+                            '/[ \t]{2,}/u',
+                            $line
+                        );
+
+                    if (
+                        !$chunks
+                    ) {
+                        return $line;
+                    }
+
+                    $normalizedChunks =
+                        array_map(
+                            function (
+                                string $chunk
+                            ): string {
+                                $tokens =
+                                    preg_split(
+                                        '/[ \t]+/u',
+                                        trim(
+                                            $chunk
+                                        )
+                                    );
+
+                                if (
+                                    !$tokens ||
+                                    count(
+                                        $tokens
+                                    ) < 2
+                                ) {
+                                    return trim(
+                                        $chunk
+                                    );
+                                }
+
+                                $singleCount =
+                                    0;
+
+                                foreach (
+                                    $tokens
+                                    as $token
+                                ) {
+                                    if (
+                                        preg_match(
+                                            '/^[\p{L}\p{N}]$/u',
+                                            $token
+                                        )
+                                    ) {
+                                        $singleCount++;
+
+                                        continue;
+                                    }
+
+                                    if (
+                                        preg_match(
+                                            '/^[.,;:]$/u',
+                                            $token
+                                        )
+                                    ) {
+                                        continue;
+                                    }
+
+                                    return trim(
+                                        $chunk
+                                    );
+                                }
+
+                                if (
+                                    $singleCount < 2
+                                ) {
+                                    return trim(
+                                        $chunk
+                                    );
+                                }
+
+                                return implode(
+                                    '',
+                                    $tokens
+                                );
+                            },
+                            $chunks
+                        );
+
+                    $normalized =
+                        implode(
+                            ' ',
+                            $normalizedChunks
+                        );
+
+                    if (
+                        $normalized !==
+                        $line
+                    ) {
+                        $changed =
+                            true;
+                    }
+
+                    return $normalized;
+                },
+                $content
+            ) ?? $content;
+
+        $datesNormalized =
+            preg_replace(
+                '/(?<=\d)\s*\/\s*(?=\d)/u',
+                '/',
+                $content
+            ) ?? $content;
+
+        if (
+            $datesNormalized !==
+            $content
+        ) {
+            $changed =
+                true;
+        }
+
+        return [
+            $datesNormalized,
+            $changed,
         ];
     }
 
@@ -850,7 +1032,7 @@ class TemplateTextAnalyzerService
                 'field' => 'PROPRIETARIO_ENDERECO_COMPLETO',
                 'confidence' => 0.9,
                 'pattern' =>
-                '/residente\s+em\s+(?<value>[^,{}\n]{5,180}),\s+na\s+qualidade\s+de\s+locador[ao]/iu',
+                '/residente\s+em\s+(?<value>[^,{}\n]{5,180}),\s+na\s+qualidade\s+de\s+locador(?:a)?/iu',
             ],
             [
                 'field' => 'MOTORISTA_NOME_COMPLETO',
@@ -1037,6 +1219,379 @@ class TemplateTextAnalyzerService
         return $content;
     }
 
+
+    private function detectAdditionalContextValues(
+        string $content,
+        array &$fields,
+        array &$detectedValues
+    ): string {
+        $rules = [
+            /*
+         * Moradas com vírgulas.
+         */
+            [
+                'field' =>
+                'EMPRESA_ENDERECO_COMPLETO',
+
+                'confidence' =>
+                0.95,
+
+                'pattern' =>
+                '/\bcom\s+sede\s+(?:na|em)\s+(?<value>[^{}\n]{5,220}?)(?=,\s*com\s+o\s+capital\b)/iu',
+            ],
+
+            [
+                'field' =>
+                'PROPRIETARIO_ENDERECO_COMPLETO',
+
+                'confidence' =>
+                0.96,
+
+                'pattern' =>
+                '/\{\{PROPRIETARIO_NIF\}\}\s*,\s*residente\s+(?:em|na|no)\s+(?<value>[^\n{}]{3,220}?)(?=,\s*na\s+qualidade\s+de\s+locador(?:a)?\b)/iu',
+            ],
+
+            [
+                'field' =>
+                'MOTORISTA_ENDERECO_COMPLETO',
+
+                'confidence' =>
+                0.95,
+
+                'pattern' =>
+                '/\bE\s+(?:\{\{MOTORISTA_NOME_COMPLETO\}\}|[^,{}\n]{2,120}),\s+residente\s+em\s+(?<value>[^{}\n]{3,220}?)(?=,\s*(?:portador|contribuinte)\b)/iu',
+            ],
+
+            /*
+         * Autorização em que o motorista
+         * é simultaneamente proprietário.
+         */
+            [
+                'field' =>
+                'MOTORISTA_NOME_COMPLETO',
+
+                'confidence' =>
+                0.94,
+
+                'pattern' =>
+                '/\bEu,\s+(?<value>[^,{}\n]{2,120}),\s+NIF\s+[0-9]{9},\s+residente\s+em\s+[^{}\n]+?,\s+declaro\s+ser\s+propriet[aá]rio\s+e\s+condutor\b/iu',
+            ],
+
+            [
+                'field' =>
+                'MOTORISTA_NIF',
+
+                'confidence' =>
+                0.96,
+
+                'pattern' =>
+                '/\bEu,\s+\{\{MOTORISTA_NOME_COMPLETO\}\},\s+NIF\s+(?<value>[0-9]{9}),\s+residente\s+em\s+[^{}\n]+?,\s+declaro\s+ser\s+propriet[aá]rio\s+e\s+condutor\b/iu',
+            ],
+
+            [
+                'field' =>
+                'MOTORISTA_ENDERECO_COMPLETO',
+
+                'confidence' =>
+                0.93,
+
+                'pattern' =>
+                '/\bEu,\s+\{\{MOTORISTA_NOME_COMPLETO\}\},\s+NIF\s+\{\{MOTORISTA_NIF\}\},\s+residente\s+em\s+(?<value>[^{}\n]{3,220}?)(?=,\s+declaro\s+ser\s+propriet[aá]rio\s+e\s+condutor\b)/iu',
+            ],
+
+            /*
+         * Autorização emitida por terceiro proprietário.
+         */
+            [
+                'field' =>
+                'PROPRIETARIO_NOME_COMPLETO',
+
+                'confidence' =>
+                0.97,
+
+                'pattern' =>
+                '/\bEu,\s+(?<value>[^,{}\n]{2,120}),\s+NIF\s+[0-9]{9},\s+residente\s+(?:em|na|no)\s+[^\n{}]+?,\s+na\s+qualidade\s+de\s+propriet[aá]ri[oa]\s+do\s+ve[ií]culo\b/iu',
+            ],
+
+            [
+                'field' =>
+                'PROPRIETARIO_NIF',
+
+                'confidence' =>
+                0.98,
+
+                'pattern' =>
+                '/\bEu,\s+\{\{PROPRIETARIO_NOME_COMPLETO\}\},\s+NIF\s+(?<value>[0-9]{9}),\s+residente\s+(?:em|na|no)\s+[^\n{}]+?,\s+na\s+qualidade\s+de\s+propriet[aá]ri[oa]\s+do\s+ve[ií]culo\b/iu',
+            ],
+
+            [
+                'field' =>
+                'PROPRIETARIO_ENDERECO_COMPLETO',
+
+                'confidence' =>
+                0.96,
+
+                'pattern' =>
+                '/\bEu,\s+\{\{PROPRIETARIO_NOME_COMPLETO\}\},\s+NIF\s+\{\{PROPRIETARIO_NIF\}\},\s+residente\s+(?:em|na|no)\s+(?<value>[^\n{}]{3,220}?)(?=,\s+na\s+qualidade\s+de\s+propriet[aá]ri[oa]\s+do\s+ve[ií]culo\b)/iu',
+            ],
+
+            [
+                'field' =>
+                'MOTORISTA_NOME_COMPLETO',
+
+                'confidence' =>
+                0.97,
+
+                'pattern' =>
+                '/\bautorizo\s+o\s+motorista\s+(?<value>[^,{}\n]{2,120}),\s+NIF\s+[0-9]{9}\b/iu',
+            ],
+
+            [
+                'field' =>
+                'MOTORISTA_NIF',
+
+                'confidence' =>
+                0.98,
+
+                'pattern' =>
+                '/\bautorizo\s+o\s+motorista\s+\{\{MOTORISTA_NOME_COMPLETO\}\},\s+NIF\s+(?<value>[0-9]{9})\b/iu',
+            ],
+
+            [
+                'field' =>
+                'EMPRESA_NOME_EMPRESA',
+
+                'confidence' =>
+                0.96,
+
+                'pattern' =>
+                '/\batrav[eé]s\s+da\s+empresa\s+(?<value>[^,{}\n]{2,120}),\s+NIPC\s+[0-9]{9}\b/iu',
+            ],
+
+            [
+                'field' =>
+                'EMPRESA_NIF',
+
+                'confidence' =>
+                0.98,
+
+                'pattern' =>
+                '/\batrav[eé]s\s+da\s+empresa\s+\{\{EMPRESA_NOME_EMPRESA\}\},\s+NIPC\s+(?<value>[0-9]{9})\b/iu',
+            ],
+
+            /*
+         * Declarações emitidas pela empresa.
+         */
+            [
+                'field' =>
+                'EMPRESA_NOME_EMPRESA',
+
+                'confidence' =>
+                0.95,
+
+                'pattern' =>
+                '/(?:^|\n)(?<value>[^,\n{}]{2,120}),\s+NIPC\s+[0-9]{9},\s+declara\b/imu',
+            ],
+
+            [
+                'field' =>
+                'EMPRESA_NIF',
+
+                'confidence' =>
+                0.98,
+
+                'pattern' =>
+                '/(?:^|\n)\{\{EMPRESA_NOME_EMPRESA\}\},\s+NIPC\s+(?<value>[0-9]{9}),\s+declara\b/imu',
+            ],
+
+            [
+                'field' =>
+                'MOTORISTA_NOME_COMPLETO',
+
+                'confidence' =>
+                0.96,
+
+                'pattern' =>
+                '/\bdeclara\s+para\s+os\s+devidos\s+efeitos\s+que\s+(?<value>[^,{}\n]{2,120}),\s+contribuinte\s+fiscal\s+(?:n[uú]mero|n[.º°]*)\s*[0-9]{9}\b/iu',
+            ],
+
+            [
+                'field' =>
+                'MOTORISTA_NIF',
+
+                'confidence' =>
+                0.98,
+
+                'pattern' =>
+                '/\bdeclara\s+para\s+os\s+devidos\s+efeitos\s+que\s+\{\{MOTORISTA_NOME_COMPLETO\}\},\s+contribuinte\s+fiscal\s+(?:n[uú]mero|n[.º°]*)\s*(?<value>[0-9]{9})\b/iu',
+            ],
+
+            /*
+         * Marca/modelo com redação mais simples.
+         */
+            [
+                'field' =>
+                'VEICULO_MARCA',
+
+                'confidence' =>
+                0.94,
+
+                'pattern' =>
+                '/\bmarca\s+(?<value>[^,{}\n]{1,60}),\s*modelo\b/iu',
+            ],
+
+            [
+                'field' =>
+                'VEICULO_MODELO',
+
+                'confidence' =>
+                0.94,
+
+                'pattern' =>
+                '/\bmodelo\s+(?<value>[^,{}\n.]{1,80})(?=,\s*chassis\b|[.\n]|$)/iu',
+            ],
+
+            /*
+         * Texto normalizado de OCR.
+         */
+            [
+                'field' =>
+                'EMPRESA_NOME_EMPRESA',
+
+                'confidence' =>
+                0.88,
+
+                'pattern' =>
+                '/\bENTRE\s+(?<value>[^\n{}]{2,120})\s*\n\s*NIPC\s+[0-9]{9}\b/iu',
+            ],
+
+            [
+                'field' =>
+                'EMPRESA_NIF',
+
+                'confidence' =>
+                0.92,
+
+                'pattern' =>
+                '/\bENTRE\s+\{\{EMPRESA_NOME_EMPRESA\}\}\s*\n\s*NIPC\s+(?<value>[0-9]{9})\b/iu',
+            ],
+
+            [
+                'field' =>
+                'EMPRESA_NOME_GERENTE',
+
+                'confidence' =>
+                0.86,
+
+                'pattern' =>
+                '/\brepresentad[ao]\s+por\s*\n+\s*(?<value>[^\n{},]{2,120})(?=\s*\n+\s*E\b)/iu',
+            ],
+
+            [
+                'field' =>
+                'MOTORISTA_NOME_COMPLETO',
+
+                'confidence' =>
+                0.88,
+
+                'pattern' =>
+                '/(?:^|\n)E\s*\n+\s*(?<value>[^\n{},]{2,120})\s*\n+\s*NIF\s+[0-9]{9}\b/imu',
+            ],
+
+            [
+                'field' =>
+                'MOTORISTA_NIF',
+
+                'confidence' =>
+                0.92,
+
+                'pattern' =>
+                '/(?:^|\n)E\s*\n+\s*\{\{MOTORISTA_NOME_COMPLETO\}\}\s*\n+\s*NIF\s+(?<value>[0-9]{9})\b/imu',
+            ],
+
+            [
+                'field' =>
+                'DATA_INICIO',
+
+                'confidence' =>
+                0.92,
+
+                'pattern' =>
+                '/\bcontrato\s+inicia-se\s+em\s*\n*\s*(?<value>[0-9]{2}\/[0-9]{2}\/[0-9]{4}|[0-9]{4}-[0-9]{2}-[0-9]{2})/iu',
+            ],
+
+            [
+                'field' =>
+                'DATA_FIM',
+
+                'confidence' =>
+                0.92,
+
+                'pattern' =>
+                '/\be\s+termina\s+em\s*\n*\s*(?<value>[0-9]{2}\/[0-9]{2}\/[0-9]{4}|[0-9]{4}-[0-9]{2}-[0-9]{2})/iu',
+            ],
+        ];
+
+        foreach (
+            $rules as $rule
+        ) {
+            $fieldName =
+                $rule['field'];
+
+            $confidence =
+                $rule['confidence'];
+
+            $content =
+                preg_replace_callback(
+                    $rule['pattern'],
+                    function (
+                        array $match
+                    ) use (
+                        &$fields,
+                        &$detectedValues,
+                        $fieldName,
+                        $confidence
+                    ): string {
+                        $value =
+                            trim(
+                                $match['value'] ?? ''
+                            );
+
+                        if (
+                            $value === '' ||
+                            str_contains(
+                                $value,
+                                '{{'
+                            )
+                        ) {
+                            return $match[0];
+                        }
+
+                        $this->registerField(
+                            $fields,
+                            $fieldName,
+                            null,
+                            $value,
+                            $confidence
+                        );
+
+                        $detectedValues[$fieldName][] =
+                            $value;
+
+                        return str_replace(
+                            $value,
+                            '{{' .
+                                $fieldName .
+                                '}}',
+                            $match[0]
+                        );
+                    },
+                    $content
+                ) ?? $content;
+        }
+
+        return $content;
+    }
     private function registerField(
         array &$fields,
         string $canonical,
@@ -1293,6 +1848,74 @@ class TemplateTextAnalyzerService
                 'message' =>
                 "O campo {$field} não possui mapeamento automático conhecido.",
                 'field' => $field,
+            ];
+        }
+    }
+
+    private function validateMultipleValues(
+        array $values,
+        array &$warnings
+    ): void {
+        foreach (
+            $values as $field => $detected
+        ) {
+            if (
+                count(
+                    $detected
+                ) < 2
+            ) {
+                continue;
+            }
+
+            $unique = [];
+
+            foreach (
+                $detected as $value
+            ) {
+                $normalized =
+                    mb_strtolower(
+                        preg_replace(
+                            '/\s+/u',
+                            ' ',
+                            trim(
+                                $value
+                            )
+                        ) ?? trim(
+                            $value
+                        )
+                    );
+
+                $unique[$normalized] =
+                    $value;
+            }
+
+            if (
+                count(
+                    $unique
+                ) < 2
+            ) {
+                continue;
+            }
+
+            $warnings[] = [
+                'code' =>
+                'MULTIPLE_VALUES_CONFLICT',
+
+                'severity' =>
+                'warning',
+
+                'message' =>
+                "Foram encontrados valores diferentes para o campo {$field}. Confirme qual valor deve ser utilizado.",
+
+                'field' =>
+                $field,
+
+                'context' => [
+                    'values' =>
+                    array_values(
+                        $unique
+                    ),
+                ],
             ];
         }
     }

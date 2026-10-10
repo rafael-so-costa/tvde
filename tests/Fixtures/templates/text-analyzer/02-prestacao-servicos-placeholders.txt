@@ -1,0 +1,18 @@
+CONTRATO DE PRESTAÇÃO DE SERVIÇOS
+
+ENTRE {{NOME_DA_EMPRESA}},
+com sede em {{MORADA_DA_ EMPRESA}},
+NIF {{NIF_DA_EMPRESA}},
+representada por {{NOME_DO_GERENTE_DA_EMPRESA}}.
+
+E {{NOME_DO_MOTORISTA}},
+residente em {{MORADA_DO_MOTORISTA}},
+NIF {{NIF_DO_MOTORISTA}}.
+
+O contrato inicia em {{DATA_INICIO_CONTRATO}}
+e termina em {{DATA_FIM_CONTRATO}}.
+
+Percentagem contratual: {{PERCENTAGEM}}%.
+
+{{ASSINATURA_EMPRESA}}
+{{ASSINATURA_MOTORISTA}}

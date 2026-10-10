@@ -1,0 +1,14 @@
+DENÚNCIA DE CONTRATO
+
+{{EMPRESA_NOME_EMPRESA}},
+NIF {{EMPRESA_NIF}},
+
+e
+
+{{MOTORISTA_NOME_COMPLETO}},
+NIF {{MOTORISTA_NIF}},
+
+declaram que o contrato n.º {{NUMERO_CONTRATO_ORIGINAL}}, iniciado em {{DATA_INICIO}}, será denunciado com efeitos a partir de {{DATA_DENUNCIA}}.
+
+{{ASSINATURA_EMPRESA}}
+{{ASSINATURA_MOTORISTA}}

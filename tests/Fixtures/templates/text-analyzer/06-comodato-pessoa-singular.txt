@@ -1,0 +1,10 @@
+CONTRATO DE COMODATO
+
+ENTRE António Rodrigues, portador do Cartão de Cidadão n.º 87654321, com o contribuinte n.º 234567890, residente em Rua Principal, 50, Torres Vedras, na qualidade de locador.
+
+O primeiro outorgante entrega gratuitamente à sociedade {{EMPRESA_NOME_EMPRESA}}, NIF {{EMPRESA_NIF}}, o veículo de matrícula CC-CC-CC.
+
+A utilização do veículo destina-se exclusivamente à atividade TVDE.
+
+{{ASSINATURA_PROPRIETARIO}}
+{{ASSINATURA_EMPRESA}}
