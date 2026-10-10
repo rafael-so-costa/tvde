@@ -1,17 +1,11 @@
-import axios from 'axios';
-import {
-    useMemo,
-    useState,
-} from 'react';
-import {
-    useMutation,
-    useQuery,
-    useQueryClient,
-} from '@tanstack/react-query';
+import axios from "axios";
+import type { ReactNode } from "react";
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
     AlertCircle,
-    CheckCircle2,
-    ChevronDown,
+    ArrowLeft,
+    ClipboardPaste,
     FileStack,
     FileText,
     GitBranch,
@@ -19,430 +13,236 @@ import {
     Pencil,
     Plus,
     RefreshCw,
-    Search,
     Trash2,
     Upload,
+    Workflow,
     X,
-} from 'lucide-react';
-import api from '../lib/api';
-import {
-    useTenant,
-} from '../contexts/TenantContext';
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import api from "../lib/api";
+import { useTenant } from "../contexts/TenantContext";
 import type {
     ChecklistProcessItemPayload,
     ChecklistProcessItemType,
     ChecklistProcessTemplate,
     ChecklistProcessTemplatePayload,
+    ChecklistSystemAction,
+    ChecklistVehicleType,
     PerfilTemplate,
     SignaturePlaceholder,
     TemplateContrato,
-} from '../types/template';
+} from "../types/template";
 
-type Tab =
-    | 'documentos'
-    | 'processos';
+import TemplateTextModal from "../components/contratos/templates/TemplateTextModal";
 
-const itemTypeLabels:
-    Record<
-        ChecklistProcessItemType,
-        string
-    > = {
-        tarefa: 'Tarefa',
-        preenchimento:
-            'Preenchimento',
-        assinatura:
-            'Assinatura',
-        upload:
-            'Upload',
-        aprovacao:
-            'Aprovação',
-        gerar_documento:
-            'Gerar documento',
-        checklist_veiculo:
-            'Checklist do veículo',
-        validacao:
-            'Validação',
-    };
+type Tab = "documentos" | "workflows";
 
-const signatureLabels:
-    Record<
-        SignaturePlaceholder,
-        string
-    > = {
-        ASSINATURA_MOTORISTA:
-            'Motorista',
-        ASSINATURA_PROPRIETARIO:
-            'Proprietário',
-        ASSINATURA_EMPRESA:
-            'Empresa',
-        ASSINATURA_TESTEMUNHA:
-            'Testemunha',
-    };
+const itemTypeLabels: Record<ChecklistProcessItemType, string> = {
+    tarefa: "Tarefa",
 
-function errorMessage(
-    error: unknown,
-    fallback: string
-): string {
-    if (
-        axios.isAxiosError(
-            error
-        )
-    ) {
-        const errors =
-            error.response?.data
-                ?.errors;
+    preenchimento: "Preenchimento",
 
-        if (
-            errors &&
-            typeof errors ===
-                'object'
-        ) {
-            const first =
-                Object.values(
-                    errors
-                )
-                    .flat()
-                    .find(
-                        (
-                            value
-                        ) =>
-                            typeof value ===
-                            'string'
-                    );
+    assinatura: "Assinatura",
 
-            if (
-                typeof first ===
-                'string'
-            ) {
+    upload: "Upload",
+
+    aprovacao: "Aprovação",
+
+    gerar_documento: "Gerar documento",
+
+    checklist_veiculo: "Checklist do veículo",
+
+    validacao: "Validação",
+
+    acao_sistema: "Ação do sistema",
+};
+
+const signatureLabels: Record<SignaturePlaceholder, string> = {
+    ASSINATURA_MOTORISTA: "Motorista",
+
+    ASSINATURA_PROPRIETARIO: "Proprietário",
+
+    ASSINATURA_EMPRESA: "Empresa",
+
+    ASSINATURA_TESTEMUNHA: "Testemunha",
+};
+
+const systemActionLabels: Record<ChecklistSystemAction, string> = {
+    motorista_acesso: "Criar/validar acesso do motorista",
+};
+
+const vehicleChecklistLabels: Record<ChecklistVehicleType, string> = {
+    entrega: "Entrega do veículo",
+
+    recolha: "Recolha do veículo",
+};
+
+function errorMessage(error: unknown, fallback: string): string {
+    if (axios.isAxiosError(error)) {
+        const errors = error.response?.data?.errors;
+
+        if (errors && typeof errors === "object") {
+            const first = Object.values(errors)
+                .flat()
+                .find((value) => typeof value === "string");
+
+            if (typeof first === "string") {
                 return first;
             }
         }
 
-        return (
-            error.response?.data
-                ?.message ??
-            fallback
-        );
+        return error.response?.data?.message ?? fallback;
     }
 
     return fallback;
 }
 
-function emptyItem(
-    order: number
-): ChecklistProcessItemPayload {
+function emptyItem(order: number): ChecklistProcessItemPayload {
     return {
-        codigo: '',
+        codigo: "",
+
         ordem: order,
-        titulo: '',
+
+        titulo: "",
+
         descricao: null,
-        tipo: 'tarefa',
+
+        tipo: "tarefa",
+
         obrigatorio: true,
+
         configuracao: {},
     };
 }
 
 export default function TemplatesPage() {
-    const {
-        tenant,
-    } = useTenant();
+    const { tenant } = useTenant();
 
-    const queryClient =
-        useQueryClient();
+    const navigate = useNavigate();
 
-    const [
-        tab,
-        setTab,
-    ] = useState<Tab>(
-        'documentos'
-    );
+    const queryClient = useQueryClient();
 
-    const [
-        search,
-        setSearch,
-    ] = useState('');
+    const [tab, setTab] = useState<Tab>("documentos");
 
-    const [
-        processForm,
-        setProcessForm,
-    ] =
-        useState<ChecklistProcessTemplate | null | undefined>(
-            undefined
+    const [search, setSearch] = useState("");
+
+    const [processForm, setProcessForm] = useState<
+        ChecklistProcessTemplate | null | undefined
+    >(undefined);
+
+    const [importOpen, setImportOpen] = useState(false);
+
+    const [textOpen, setTextOpen] = useState(false);
+
+    const [actionError, setActionError] = useState<string | null>(null);
+
+    const profilesQuery = useQuery({
+        queryKey: ["template-profiles", tenant?.id],
+
+        enabled: Boolean(tenant?.id),
+
+        queryFn: async () => {
+            const response = await api.get("/api/perfis-template");
+
+            return response.data.data as PerfilTemplate[];
+        },
+    });
+
+    const templatesQuery = useQuery({
+        queryKey: ["templates", tenant?.id],
+
+        enabled: Boolean(tenant?.id),
+
+        queryFn: async () => {
+            const response = await api.get("/api/templates-contrato");
+
+            return response.data.data as TemplateContrato[];
+        },
+    });
+
+    const workflowsQuery = useQuery({
+        queryKey: ["process-templates", tenant?.id],
+
+        enabled: Boolean(tenant?.id),
+
+        queryFn: async () => {
+            const response = await api.get("/api/checklist-process-templates");
+
+            return response.data.data as ChecklistProcessTemplate[];
+        },
+    });
+
+    const deleteTemplateMutation = useMutation({
+        mutationFn: async (id: string) => {
+            await api.delete(`/api/templates-contrato/${id}`);
+        },
+
+        onSuccess: async () => {
+            await Promise.all([
+                queryClient.invalidateQueries({
+                    queryKey: ["templates", tenant?.id],
+                }),
+
+                queryClient.invalidateQueries({
+                    queryKey: ["template-profiles", tenant?.id],
+                }),
+            ]);
+        },
+    });
+
+    const deleteWorkflowMutation = useMutation({
+        mutationFn: async (id: string) => {
+            await api.delete(`/api/checklist-process-templates/${id}`);
+        },
+
+        onSuccess: async () => {
+            await queryClient.invalidateQueries({
+                queryKey: ["process-templates", tenant?.id],
+            });
+        },
+    });
+
+    const templates = useMemo(() => {
+        const data = templatesQuery.data ?? [];
+
+        const term = search.trim().toLocaleLowerCase("pt-PT");
+
+        if (!term) {
+            return data;
+        }
+
+        return data.filter((item) =>
+            [item.nome, item.tipo_arquivo, item.perfil?.nome]
+                .filter(Boolean)
+                .some((value) =>
+                    String(value).toLocaleLowerCase("pt-PT").includes(term),
+                ),
         );
+    }, [templatesQuery.data, search]);
 
-    const [
-        importOpen,
-        setImportOpen,
-    ] = useState(false);
+    const workflows = useMemo(() => {
+        const data = workflowsQuery.data ?? [];
 
-    const profilesQuery =
-        useQuery({
-            queryKey: [
-                'template-profiles',
-                tenant?.id,
-            ],
-            enabled:
-                Boolean(
-                    tenant?.id
+        const term = search.trim().toLocaleLowerCase("pt-PT");
+
+        if (!term) {
+            return data;
+        }
+
+        return data.filter((item) =>
+            [item.nome, item.codigo, item.descricao]
+                .filter(Boolean)
+                .some((value) =>
+                    String(value).toLocaleLowerCase("pt-PT").includes(term),
                 ),
-            queryFn:
-                async () => {
-                    const response =
-                        await api.get(
-                            '/api/perfis-template'
-                        );
-
-                    return response
-                        .data
-                        .data as PerfilTemplate[];
-                },
-        });
-
-    const templatesQuery =
-        useQuery({
-            queryKey: [
-                'templates',
-                tenant?.id,
-            ],
-            enabled:
-                Boolean(
-                    tenant?.id
-                ),
-            queryFn:
-                async () => {
-                    const response =
-                        await api.get(
-                            '/api/templates-contrato'
-                        );
-
-                    return response
-                        .data
-                        .data as TemplateContrato[];
-                },
-        });
-
-    const processesQuery =
-        useQuery({
-            queryKey: [
-                'process-templates',
-                tenant?.id,
-            ],
-            enabled:
-                Boolean(
-                    tenant?.id
-                ),
-            queryFn:
-                async () => {
-                    const response =
-                        await api.get(
-                            '/api/checklist-process-templates'
-                        );
-
-                    return response
-                        .data
-                        .data as ChecklistProcessTemplate[];
-                },
-        });
-
-    const deleteProcessMutation =
-        useMutation({
-            mutationFn:
-                async (
-                    id: string
-                ) => {
-                    await api.delete(
-                        `/api/checklist-process-templates/${id}`
-                    );
-                },
-
-            onSuccess:
-                async () => {
-                    await queryClient
-                        .invalidateQueries({
-                            queryKey: [
-                                'process-templates',
-                                tenant?.id,
-                            ],
-                        });
-                },
-        });
-
-    const deleteTemplateMutation =
-        useMutation({
-            mutationFn:
-                async (
-                    id: string
-                ) => {
-                    await api.delete(
-                        `/api/templates-contrato/${id}`
-                    );
-                },
-
-            onSuccess:
-                async () => {
-                    await Promise.all([
-                        queryClient
-                            .invalidateQueries({
-                                queryKey: [
-                                    'templates',
-                                    tenant?.id,
-                                ],
-                            }),
-
-                        queryClient
-                            .invalidateQueries({
-                                queryKey: [
-                                    'template-profiles',
-                                    tenant?.id,
-                                ],
-                            }),
-                    ]);
-                },
-        });
-
-    const assignProcessMutation =
-        useMutation({
-            mutationFn:
-                async ({
-                    templateId,
-                    processId,
-                }: {
-                    templateId: string;
-                    processId:
-                        string | null;
-                }) => {
-                    const response =
-                        await api.patch(
-                            `/api/templates-contrato/${templateId}`,
-                            {
-                                checklist_process_template_id:
-                                    processId,
-                            }
-                        );
-
-                    return response
-                        .data
-                        .data as TemplateContrato;
-                },
-
-            onSuccess:
-                async () => {
-                    await queryClient
-                        .invalidateQueries({
-                            queryKey: [
-                                'templates',
-                                tenant?.id,
-                            ],
-                        });
-                },
-        });
-
-    const templates =
-        useMemo(() => {
-            const data =
-                templatesQuery
-                    .data ??
-                [];
-
-            const term =
-                search
-                    .trim()
-                    .toLocaleLowerCase(
-                        'pt-PT'
-                    );
-
-            if (!term) {
-                return data;
-            }
-
-            return data.filter(
-                (item) =>
-                    [
-                        item.nome,
-                        item
-                            .tipo_arquivo,
-                        item.perfil
-                            ?.nome,
-                        item
-                            .checklist_process_template
-                            ?.nome,
-                    ]
-                        .filter(
-                            Boolean
-                        )
-                        .some(
-                            (
-                                value
-                            ) =>
-                                String(
-                                    value
-                                )
-                                    .toLocaleLowerCase(
-                                        'pt-PT'
-                                    )
-                                    .includes(
-                                        term
-                                    )
-                        )
-            );
-        }, [
-            templatesQuery.data,
-            search,
-        ]);
-
-    const processes =
-        useMemo(() => {
-            const data =
-                processesQuery
-                    .data ??
-                [];
-
-            const term =
-                search
-                    .trim()
-                    .toLocaleLowerCase(
-                        'pt-PT'
-                    );
-
-            if (!term) {
-                return data;
-            }
-
-            return data.filter(
-                (item) =>
-                    [
-                        item.nome,
-                        item.codigo,
-                        item.descricao,
-                    ]
-                        .filter(
-                            Boolean
-                        )
-                        .some(
-                            (
-                                value
-                            ) =>
-                                String(
-                                    value
-                                )
-                                    .toLocaleLowerCase(
-                                        'pt-PT'
-                                    )
-                                    .includes(
-                                        term
-                                    )
-                        )
-            );
-        }, [
-            processesQuery.data,
-            search,
-        ]);
+        );
+    }, [workflowsQuery.data, search]);
 
     if (!tenant) {
         return (
-            <div className="max-w-7xl mx-auto">
-                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 flex gap-4">
-                    <AlertCircle className="w-6 h-6 text-amber-600 shrink-0" />
+            <div className="mx-auto max-w-7xl">
+                <div className="flex gap-4 rounded-2xl border border-amber-200 bg-amber-50 p-6">
+                    <AlertCircle className="h-6 w-6 shrink-0 text-amber-600" />
 
                     <div>
                         <h1 className="font-semibold text-amber-900">
@@ -450,7 +250,8 @@ export default function TemplatesPage() {
                         </h1>
 
                         <p className="mt-1 text-sm text-amber-700">
-                            Escolha uma organização antes de gerir templates.
+                            Escolha uma organização antes de gerir os recursos
+                            dos contratos.
                         </p>
                     </div>
                 </div>
@@ -460,36 +261,99 @@ export default function TemplatesPage() {
 
     const loading =
         templatesQuery.isLoading ||
-        processesQuery.isLoading ||
+        workflowsQuery.isLoading ||
         profilesQuery.isLoading;
 
     const hasError =
         templatesQuery.isError ||
-        processesQuery.isError ||
+        workflowsQuery.isError ||
         profilesQuery.isError;
 
+    const activeTemplates = (templatesQuery.data ?? []).filter(
+        (item) => item.ativo,
+    ).length;
+
+    const activeWorkflows = (workflowsQuery.data ?? []).filter(
+        (item) => item.ativo,
+    ).length;
+
     async function refresh() {
+        setActionError(null);
+
         await Promise.all([
             templatesQuery.refetch(),
-            processesQuery.refetch(),
+            workflowsQuery.refetch(),
             profilesQuery.refetch(),
         ]);
     }
 
+    async function deleteTemplate(item: TemplateContrato) {
+        const confirmed = window.confirm(
+            `Eliminar o modelo "${item.nome}"?\n\nSe ele estiver associado a um tipo de contrato, a operação poderá ser recusada.`,
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        setActionError(null);
+
+        try {
+            await deleteTemplateMutation.mutateAsync(item.id);
+        } catch (error) {
+            setActionError(
+                errorMessage(
+                    error,
+                    "Não foi possível eliminar o modelo de documento.",
+                ),
+            );
+        }
+    }
+
+    async function deleteWorkflow(item: ChecklistProcessTemplate) {
+        const confirmed = window.confirm(
+            `Eliminar o workflow "${item.nome}"?\n\nWorkflows já utilizados ou vinculados podem não ser eliminados.`,
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        setActionError(null);
+
+        try {
+            await deleteWorkflowMutation.mutateAsync(item.id);
+        } catch (error) {
+            setActionError(
+                errorMessage(error, "Não foi possível eliminar o workflow."),
+            );
+        }
+    }
+
     return (
-        <div className="max-w-7xl mx-auto">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+        <div className="mx-auto max-w-7xl">
+            <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <p className="text-sm font-medium text-indigo-600 mb-2">
-                        Configuração
+                    <button
+                        type="button"
+                        onClick={() => navigate("/contratos/configuracao")}
+                        className="mb-4 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-slate-900"
+                    >
+                        <ArrowLeft className="h-4 w-4" />
+                        Configuração de contratos
+                    </button>
+
+                    <p className="mb-2 text-sm font-medium text-indigo-600">
+                        Contratos
                     </p>
 
                     <h1 className="text-3xl font-bold tracking-tight text-slate-950">
-                        Templates
+                        Recursos de contratos
                     </h1>
 
-                    <p className="mt-2 text-slate-500">
-                        Documentos e fluxos operacionais de{' '}
+                    <p className="mt-2 max-w-3xl text-slate-500">
+                        Gerencie os modelos de documento e workflows disponíveis
+                        para os tipos de contrato de{" "}
                         <span className="font-medium text-slate-700">
                             {tenant.nome}
                         </span>
@@ -497,168 +361,145 @@ export default function TemplatesPage() {
                     </p>
                 </div>
 
-                <div className="flex gap-2">
-                    {tab ===
-                    'documentos' ? (
+                {tab === "documentos" ? (
+                    <div className="flex flex-wrap gap-2">
                         <button
                             type="button"
-                            onClick={() =>
-                                setImportOpen(
-                                    true
-                                )
-                            }
-                            className="h-11 px-5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition flex items-center justify-center gap-2"
+                            onClick={() => setImportOpen(true)}
+                            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
                         >
-                            <Upload className="w-5 h-5" />
-                            Importar template
+                            <Upload className="h-5 w-5" />
+                            Importar arquivo
                         </button>
-                    ) : (
+
                         <button
                             type="button"
-                            onClick={() =>
-                                setProcessForm(
-                                    null
-                                )
-                            }
-                            className="h-11 px-5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition flex items-center justify-center gap-2"
+                            onClick={() => setTextOpen(true)}
+                            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 text-sm font-semibold text-white transition hover:bg-indigo-700"
                         >
-                            <Plus className="w-5 h-5" />
-                            Novo checklist
+                            <ClipboardPaste className="h-5 w-5" />
+                            Colar texto
                         </button>
-                    )}
+                    </div>
+                ) : (
+                    <button
+                        type="button"
+                        onClick={() => setProcessForm(null)}
+                        className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 text-sm font-semibold text-white transition hover:bg-indigo-700"
+                    >
+                        <Plus className="h-5 w-5" />
+                        Novo workflow
+                    </button>
+                )}
+            </div>
+
+            <div className="mb-6 rounded-2xl border border-indigo-100 bg-indigo-50 p-5">
+                <div className="flex gap-3">
+                    <Workflow className="mt-0.5 h-5 w-5 shrink-0 text-indigo-600" />
+
+                    <div>
+                        <h2 className="font-semibold text-indigo-950">
+                            Recursos independentes
+                        </h2>
+
+                        <p className="mt-1 text-sm leading-6 text-indigo-800">
+                            Modelos de documento e workflows são recursos
+                            reutilizáveis. A combinação correta entre eles é
+                            definida no <strong>Tipo de Contrato</strong>, e não
+                            mais diretamente nesta tela.
+                        </p>
+                    </div>
                 </div>
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
                 <Stat
-                    label="Templates"
-                    value={
-                        templatesQuery
-                            .data
-                            ?.length ??
-                        0
-                    }
+                    label="Modelos"
+                    value={templatesQuery.data?.length ?? 0}
                 />
 
-                <Stat
-                    label="Checklists"
-                    value={
-                        processesQuery
-                            .data
-                            ?.length ??
-                        0
-                    }
-                />
+                <Stat label="Modelos ativos" value={activeTemplates} />
 
                 <Stat
-                    label="Checklists ativos"
-                    value={
-                        processesQuery
-                            .data
-                            ?.filter(
-                                (
-                                    item
-                                ) =>
-                                    item.ativo
-                            )
-                            .length ??
-                        0
-                    }
+                    label="Workflows"
+                    value={workflowsQuery.data?.length ?? 0}
                 />
 
-                <Stat
-                    label="Templates vinculados"
-                    value={
-                        templatesQuery
-                            .data
-                            ?.filter(
-                                (
-                                    item
-                                ) =>
-                                    Boolean(
-                                        item.checklist_process_template_id
-                                    )
-                            )
-                            .length ??
-                        0
-                    }
-                />
+                <Stat label="Workflows ativos" value={activeWorkflows} />
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
-                <div className="border-b border-slate-200 px-4 sm:px-5 pt-4">
+            {actionError && (
+                <div className="mb-6 flex gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                    <AlertCircle className="h-5 w-5 shrink-0" />
+
+                    {actionError}
+                </div>
+            )}
+
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                <div className="border-b border-slate-200 px-4 pt-4 sm:px-5">
                     <div className="flex gap-6">
                         <TabButton
-                            active={
-                                tab ===
-                                'documentos'
-                            }
-                            onClick={() =>
-                                setTab(
-                                    'documentos'
-                                )
-                            }
-                            icon={
-                                FileText
-                            }
+                            active={tab === "documentos"}
+                            onClick={() => {
+                                setTab("documentos");
+
+                                setSearch("");
+                            }}
+                            icon={FileText}
                         >
-                            Templates de documentos
+                            Modelos de documento
                         </TabButton>
 
                         <TabButton
-                            active={
-                                tab ===
-                                'processos'
-                            }
-                            onClick={() =>
-                                setTab(
-                                    'processos'
-                                )
-                            }
-                            icon={
-                                GitBranch
-                            }
+                            active={tab === "workflows"}
+                            onClick={() => {
+                                setTab("workflows");
+
+                                setSearch("");
+                            }}
+                            icon={GitBranch}
                         >
-                            Checklists de processo
+                            Workflows
                         </TabButton>
                     </div>
                 </div>
 
-                <div className="p-4 sm:p-5 border-b border-slate-200 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-                    <div className="relative w-full sm:max-w-sm">
-                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <div className="flex flex-col gap-3 border-b border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+                    <div className="relative w-full sm:max-w-md">
+                        <FileText className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
 
                         <input
-                            value={
-                                search
-                            }
-                            onChange={(
-                                event
-                            ) =>
-                                setSearch(
-                                    event
-                                        .target
-                                        .value
-                                )
-                            }
+                            value={search}
+                            onChange={(event) => setSearch(event.target.value)}
                             placeholder={
-                                tab ===
-                                'documentos'
-                                    ? 'Pesquisar template...'
-                                    : 'Pesquisar checklist...'
+                                tab === "documentos"
+                                    ? "Pesquisar modelo..."
+                                    : "Pesquisar workflow..."
                             }
-                            className="w-full h-11 rounded-xl border border-slate-200 pl-10 pr-4 text-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
+                            className="h-11 w-full rounded-xl border border-slate-200 pl-10 pr-4 text-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
                         />
                     </div>
 
                     <button
                         type="button"
-                        onClick={
-                            refresh
+                        onClick={refresh}
+                        disabled={
+                            templatesQuery.isFetching ||
+                            workflowsQuery.isFetching
                         }
-                        className="h-11 px-4 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 transition flex items-center justify-center gap-2"
+                        className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
                     >
-                        <RefreshCw className="w-4 h-4" />
+                        <RefreshCw
+                            className={[
+                                "h-4 w-4",
+
+                                templatesQuery.isFetching ||
+                                workflowsQuery.isFetching
+                                    ? "animate-spin"
+                                    : "",
+                            ].join(" ")}
+                        />
                         Atualizar
                     </button>
                 </div>
@@ -666,204 +507,82 @@ export default function TemplatesPage() {
                 {loading ? (
                     <Loading />
                 ) : hasError ? (
-                    <ErrorState
-                        onRetry={
-                            refresh
-                        }
-                    />
-                ) : tab ===
-                  'documentos' ? (
+                    <ErrorState onRetry={refresh} />
+                ) : tab === "documentos" ? (
                     <DocumentTemplates
-                        templates={
-                            templates
-                        }
-                        processes={
-                            processesQuery
-                                .data ??
-                            []
-                        }
-                        assigning={
-                            assignProcessMutation
-                                .isPending
-                        }
-                        onAssign={(
-                            templateId,
-                            processId
-                        ) =>
-                            assignProcessMutation
-                                .mutateAsync({
-                                    templateId,
-                                    processId,
-                                })
-                        }
-                        onDelete={async (
-                            item
-                        ) => {
-                            if (
-                                !window.confirm(
-                                    `Eliminar o template "${item.nome}"?`
-                                )
-                            ) {
-                                return;
-                            }
-
-                            await deleteTemplateMutation
-                                .mutateAsync(
-                                    item.id
-                                );
-                        }}
-                        onImport={() =>
-                            setImportOpen(
-                                true
-                            )
-                        }
+                        templates={templates}
+                        deleting={deleteTemplateMutation.isPending}
+                        onDelete={deleteTemplate}
+                        onImport={() => setImportOpen(true)}
+                        onPaste={() => setTextOpen(true)}
                     />
                 ) : (
-                    <ProcessTemplates
-                        processes={
-                            processes
-                        }
-                        onEdit={(
-                            process
-                        ) =>
-                            setProcessForm(
-                                process
-                            )
-                        }
-                        onCreate={() =>
-                            setProcessForm(
-                                null
-                            )
-                        }
-                        onDelete={async (
-                            process
-                        ) => {
-                            if (
-                                !window.confirm(
-                                    `Eliminar o checklist "${process.nome}"?`
-                                )
-                            ) {
-                                return;
-                            }
-
-                            try {
-                                await deleteProcessMutation
-                                    .mutateAsync(
-                                        process.id
-                                    );
-                            } catch (
-                                error
-                            ) {
-                                window.alert(
-                                    errorMessage(
-                                        error,
-                                        'Não foi possível eliminar o checklist.'
-                                    )
-                                );
-                            }
-                        }}
+                    <WorkflowTemplates
+                        workflows={workflows}
+                        deleting={deleteWorkflowMutation.isPending}
+                        onCreate={() => setProcessForm(null)}
+                        onEdit={(workflow) => setProcessForm(workflow)}
+                        onDelete={deleteWorkflow}
                     />
                 )}
             </div>
 
-            {processForm !==
-                undefined && (
-                <ProcessFormModal
-                    record={
-                        processForm
-                    }
-                    onClose={() =>
-                        setProcessForm(
-                            undefined
-                        )
-                    }
-                    onSaved={
-                        async () => {
-                            setProcessForm(
-                                undefined
-                            );
+            {processForm !== undefined && (
+                <WorkflowFormModal
+                    record={processForm}
+                    onClose={() => setProcessForm(undefined)}
+                    onSaved={async () => {
+                        setProcessForm(undefined);
 
-                            await Promise.all([
-                                queryClient
-                                    .invalidateQueries({
-                                        queryKey: [
-                                            'process-templates',
-                                            tenant.id,
-                                        ],
-                                    }),
-
-                                queryClient
-                                    .invalidateQueries({
-                                        queryKey: [
-                                            'templates',
-                                            tenant.id,
-                                        ],
-                                    }),
-                            ]);
-                        }
-                    }
+                        await queryClient.invalidateQueries({
+                            queryKey: ["process-templates", tenant.id],
+                        });
+                    }}
                 />
             )}
 
+            {textOpen && (
+                <TemplateTextModal
+                    profiles={profilesQuery.data ?? []}
+                    onClose={() => setTextOpen(false)}
+                    onSaved={async () => {
+                        setTextOpen(false);
+
+                        await queryClient.invalidateQueries({
+                            queryKey: ["templates", tenant.id],
+                        });
+                    }}
+                />
+            )}
             {importOpen && (
                 <ImportModal
-                    profiles={
-                        profilesQuery
-                            .data ??
-                        []
-                    }
-                    onClose={() =>
-                        setImportOpen(
-                            false
-                        )
-                    }
-                    onSaved={
-                        async () => {
-                            setImportOpen(
-                                false
-                            );
+                    profiles={profilesQuery.data ?? []}
+                    onClose={() => setImportOpen(false)}
+                    onSaved={async () => {
+                        setImportOpen(false);
 
-                            await Promise.all([
-                                queryClient
-                                    .invalidateQueries({
-                                        queryKey: [
-                                            'templates',
-                                            tenant.id,
-                                        ],
-                                    }),
+                        await Promise.all([
+                            queryClient.invalidateQueries({
+                                queryKey: ["templates", tenant.id],
+                            }),
 
-                                queryClient
-                                    .invalidateQueries({
-                                        queryKey: [
-                                            'template-profiles',
-                                            tenant.id,
-                                        ],
-                                    }),
-                            ]);
-                        }
-                    }
+                            queryClient.invalidateQueries({
+                                queryKey: ["template-profiles", tenant.id],
+                            }),
+                        ]);
+                    }}
                 />
             )}
         </div>
     );
 }
 
-function Stat({
-    label,
-    value,
-}: {
-    label: string;
-    value: number;
-}) {
+function Stat({ label, value }: { label: string; value: number }) {
     return (
         <div className="rounded-2xl border border-slate-200 bg-white p-5">
-            <p className="text-sm text-slate-500">
-                {label}
-            </p>
+            <p className="text-sm text-slate-500">{label}</p>
 
-            <p className="mt-2 text-2xl font-bold text-slate-950">
-                {value}
-            </p>
+            <p className="mt-2 text-2xl font-bold text-slate-950">{value}</p>
         </div>
     );
 }
@@ -882,17 +601,17 @@ function TabButton({
     return (
         <button
             type="button"
-            onClick={
-                onClick
-            }
+            onClick={onClick}
             className={[
-                'pb-4 border-b-2 text-sm font-semibold flex items-center gap-2 transition',
+                "flex items-center gap-2 border-b-2 pb-4 text-sm font-semibold transition",
+
                 active
-                    ? 'border-indigo-600 text-indigo-600'
-                    : 'border-transparent text-slate-500 hover:text-slate-800',
-            ].join(' ')}
+                    ? "border-indigo-600 text-indigo-600"
+                    : "border-transparent text-slate-500 hover:text-slate-800",
+            ].join(" ")}
         >
-            <Icon className="w-4 h-4" />
+            <Icon className="h-4 w-4" />
+
             {children}
         </button>
     );
@@ -900,34 +619,31 @@ function TabButton({
 
 function Loading() {
     return (
-        <div className="py-20 flex flex-col items-center justify-center text-slate-500">
-            <LoaderCircle className="w-8 h-8 animate-spin text-indigo-600 mb-3" />
-            <p className="text-sm">
-                A carregar...
-            </p>
+        <div className="flex flex-col items-center justify-center py-20 text-slate-500">
+            <LoaderCircle className="mb-3 h-8 w-8 animate-spin text-indigo-600" />
+
+            <p className="text-sm">A carregar...</p>
         </div>
     );
 }
 
-function ErrorState({
-    onRetry,
-}: {
-    onRetry: () => void;
-}) {
+function ErrorState({ onRetry }: { onRetry: () => void }) {
     return (
-        <div className="py-16 px-6 text-center">
-            <AlertCircle className="w-10 h-10 mx-auto text-red-500 mb-3" />
+        <div className="px-6 py-16 text-center">
+            <AlertCircle className="mx-auto mb-3 h-10 w-10 text-red-500" />
 
             <h3 className="font-semibold text-slate-900">
-                Não foi possível carregar os templates
+                Não foi possível carregar os recursos
             </h3>
+
+            <p className="mt-2 text-sm text-slate-500">
+                Confirme as permissões de templates e tente novamente.
+            </p>
 
             <button
                 type="button"
-                onClick={
-                    onRetry
-                }
-                className="mt-5 h-10 px-4 rounded-xl bg-slate-900 text-white text-sm font-medium"
+                onClick={onRetry}
+                className="mt-5 h-10 rounded-xl bg-slate-900 px-4 text-sm font-medium text-white"
             >
                 Tentar novamente
             </button>
@@ -937,49 +653,54 @@ function ErrorState({
 
 function DocumentTemplates({
     templates,
-    processes,
-    assigning,
-    onAssign,
+    deleting,
     onDelete,
     onImport,
+    onPaste,
 }: {
     templates: TemplateContrato[];
-    processes: ChecklistProcessTemplate[];
-    assigning: boolean;
-    onAssign: (
-        templateId: string,
-        processId: string | null
-    ) => Promise<unknown>;
-    onDelete: (
-        item: TemplateContrato
-    ) => Promise<void>;
+
+    deleting: boolean;
+
+    onDelete: (item: TemplateContrato) => Promise<void>;
+
     onImport: () => void;
+
+    onPaste: () => void;
 }) {
-    if (
-        templates.length ===
-        0
-    ) {
+    if (templates.length === 0) {
         return (
-            <div className="py-20 px-6 text-center">
-                <FileStack className="w-12 h-12 mx-auto text-slate-300" />
+            <div className="px-6 py-20 text-center">
+                <FileStack className="mx-auto h-12 w-12 text-slate-300" />
 
                 <h3 className="mt-4 font-semibold text-slate-900">
-                    Ainda não existem templates
+                    Ainda não existem modelos de documento
                 </h3>
 
-                <p className="mt-2 text-sm text-slate-500">
-                    Importe um PDF, DOCX ou TXT para começar.
+                <p className="mx-auto mt-2 max-w-xl text-sm text-slate-500">
+                    Cole o texto de um documento para o FrotaPro reconhecer os
+                    campos automaticamente ou importe um arquivo existente.
                 </p>
 
-                <button
-                    type="button"
-                    onClick={
-                        onImport
-                    }
-                    className="mt-5 h-10 px-4 rounded-xl bg-indigo-600 text-white text-sm font-semibold"
-                >
-                    Importar template
-                </button>
+                <div className="mt-5 flex flex-wrap justify-center gap-3">
+                    <button
+                        type="button"
+                        onClick={onImport}
+                        className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600"
+                    >
+                        <Upload className="h-4 w-4" />
+                        Importar arquivo
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={onPaste}
+                        className="inline-flex h-10 items-center gap-2 rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white"
+                    >
+                        <ClipboardPaste className="h-4 w-4" />
+                        Colar texto
+                    </button>
+                </div>
             </div>
         );
     }
@@ -987,580 +708,448 @@ function DocumentTemplates({
     return (
         <div className="overflow-x-auto">
             <table className="w-full text-left">
-                <thead className="bg-slate-50 border-b border-slate-200">
+                <thead className="border-b border-slate-200 bg-slate-50">
                     <tr>
-                        <Th>
-                            Template
-                        </Th>
-                        <Th>
-                            Perfil
-                        </Th>
-                        <Th>
-                            Checklist de processo
-                        </Th>
-                        <Th>
-                            Campos
-                        </Th>
-                        <Th>
-                            Ações
-                        </Th>
+                        <Th>Modelo</Th>
+
+                        <Th>Perfil</Th>
+
+                        <Th>Campos</Th>
+
+                        <Th>Origem</Th>
+
+                        <Th>Estado</Th>
+
+                        <Th>Ações</Th>
                     </tr>
                 </thead>
 
                 <tbody className="divide-y divide-slate-100">
-                    {templates.map(
-                        (
-                            item
-                        ) => (
-                            <tr
-                                key={
-                                    item.id
-                                }
-                                className="hover:bg-slate-50"
-                            >
-                                <td className="px-5 py-4">
-                                    <div className="font-semibold text-sm text-slate-900">
-                                        {
-                                            item.nome
-                                        }
-                                    </div>
+                    {templates.map((item) => (
+                        <tr
+                            key={item.id}
+                            className="transition hover:bg-slate-50"
+                        >
+                            <td className="px-5 py-4">
+                                <div className="font-semibold text-slate-900">
+                                    {item.nome}
+                                </div>
 
-                                    <div className="mt-1 text-xs uppercase text-slate-400">
-                                        {
-                                            item.tipo_arquivo
-                                        }
-                                    </div>
-                                </td>
+                                <div className="mt-1 text-xs uppercase text-slate-400">
+                                    {item.tipo_arquivo}
+                                </div>
+                            </td>
 
-                                <td className="px-5 py-4 text-sm text-slate-600">
-                                    {item
-                                        .perfil
-                                        ?.nome ??
-                                        'Sem perfil'}
-                                </td>
+                            <td className="px-5 py-4 text-sm text-slate-600">
+                                {item.perfil?.nome ?? "Sem perfil"}
+                            </td>
 
-                                <td className="px-5 py-4 min-w-[280px]">
-                                    <div className="relative">
-                                        <select
-                                            value={
-                                                item.checklist_process_template_id ??
-                                                ''
-                                            }
-                                            disabled={
-                                                assigning
-                                            }
-                                            onChange={(
-                                                event
-                                            ) =>
-                                                onAssign(
-                                                    item.id,
-                                                    event
-                                                        .target
-                                                        .value ||
-                                                        null
-                                                )
-                                            }
-                                            className="w-full h-10 rounded-xl border border-slate-200 bg-white px-3 pr-9 text-sm outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
-                                        >
-                                            <option value="">
-                                                Sem checklist
-                                            </option>
+                            <td className="px-5 py-4 text-sm text-slate-600">
+                                {item.campos_detectados?.length ?? 0}
+                            </td>
 
-                                            {processes
-                                                .filter(
-                                                    (
-                                                        process
-                                                    ) =>
-                                                        process.ativo
-                                                )
-                                                .map(
-                                                    (
-                                                        process
-                                                    ) => (
-                                                        <option
-                                                            key={
-                                                                process.id
-                                                            }
-                                                            value={
-                                                                process.id
-                                                            }
-                                                        >
-                                                            {
-                                                                process.nome
-                                                            }{' '}
-                                                            · v
-                                                            {
-                                                                process.versao
-                                                            }
-                                                        </option>
-                                                    )
-                                                )}
-                                        </select>
+                            <td className="px-5 py-4">
+                                {item.arquivo_url ? (
+                                    <span className="inline-flex rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
+                                        Arquivo
+                                    </span>
+                                ) : (
+                                    <span className="inline-flex rounded-full bg-violet-50 px-2.5 py-1 text-xs font-semibold text-violet-700">
+                                        Texto
+                                    </span>
+                                )}
+                            </td>
 
-                                        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                    </div>
-                                </td>
+                            <td className="px-5 py-4">
+                                {item.ativo ? (
+                                    <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                                        Ativo
+                                    </span>
+                                ) : (
+                                    <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
+                                        Arquivado
+                                    </span>
+                                )}
+                            </td>
 
-                                <td className="px-5 py-4 text-sm text-slate-600">
-                                    {
-                                        item.campos_detectados
-                                            ?.length ??
-                                        0
-                                    }
-                                </td>
-
-                                <td className="px-5 py-4">
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            onDelete(
-                                                item
-                                            )
-                                        }
-                                        className="w-9 h-9 rounded-lg border border-slate-200 text-slate-400 hover:text-red-600 hover:border-red-200 flex items-center justify-center"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
-                                </td>
-                            </tr>
-                        )
-                    )}
+                            <td className="px-5 py-4">
+                                <button
+                                    type="button"
+                                    disabled={deleting}
+                                    onClick={() => onDelete(item)}
+                                    className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-400 transition hover:border-red-200 hover:text-red-600 disabled:opacity-40"
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                </button>
+                            </td>
+                        </tr>
+                    ))}
                 </tbody>
             </table>
         </div>
     );
 }
 
-function ProcessTemplates({
-    processes,
-    onEdit,
+function WorkflowTemplates({
+    workflows,
+    deleting,
     onCreate,
+    onEdit,
     onDelete,
 }: {
-    processes: ChecklistProcessTemplate[];
-    onEdit: (
-        process: ChecklistProcessTemplate
-    ) => void;
+    workflows: ChecklistProcessTemplate[];
+
+    deleting: boolean;
+
     onCreate: () => void;
-    onDelete: (
-        process: ChecklistProcessTemplate
-    ) => Promise<void>;
+
+    onEdit: (workflow: ChecklistProcessTemplate) => void;
+
+    onDelete: (workflow: ChecklistProcessTemplate) => Promise<void>;
 }) {
-    if (
-        processes.length ===
-        0
-    ) {
+    if (workflows.length === 0) {
         return (
-            <div className="py-20 px-6 text-center">
-                <GitBranch className="w-12 h-12 mx-auto text-slate-300" />
+            <div className="px-6 py-20 text-center">
+                <GitBranch className="mx-auto h-12 w-12 text-slate-300" />
 
                 <h3 className="mt-4 font-semibold text-slate-900">
-                    Ainda não existem checklists de processo
+                    Ainda não existem workflows
                 </h3>
 
                 <p className="mt-2 text-sm text-slate-500">
-                    Crie o fluxo que cada contrato precisa executar.
+                    Crie um fluxo operacional para depois vinculá-lo a um tipo
+                    de contrato.
                 </p>
 
                 <button
                     type="button"
-                    onClick={
-                        onCreate
-                    }
-                    className="mt-5 h-10 px-4 rounded-xl bg-indigo-600 text-white text-sm font-semibold"
+                    onClick={onCreate}
+                    className="mt-5 h-10 rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white"
                 >
-                    Criar checklist
+                    Criar workflow
                 </button>
             </div>
         );
     }
 
     return (
-        <div className="grid lg:grid-cols-2 gap-4 p-5">
-            {processes.map(
-                (
-                    process
-                ) => (
-                    <div
-                        key={
-                            process.id
-                        }
-                        className="rounded-2xl border border-slate-200 p-5"
-                    >
-                        <div className="flex items-start justify-between gap-4">
-                            <div>
-                                <div className="flex items-center gap-2">
-                                    <h3 className="font-semibold text-slate-900">
-                                        {
-                                            process.nome
-                                        }
-                                    </h3>
+        <div className="grid gap-4 p-5 lg:grid-cols-2">
+            {workflows.map((workflow) => (
+                <div
+                    key={workflow.id}
+                    className="rounded-2xl border border-slate-200 p-5"
+                >
+                    <div className="flex items-start justify-between gap-4">
+                        <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <h3 className="font-semibold text-slate-900">
+                                    {workflow.nome}
+                                </h3>
 
-                                    <span
-                                        className={[
-                                            'px-2 py-0.5 rounded-full text-xs font-medium',
-                                            process.ativo
-                                                ? 'bg-emerald-50 text-emerald-700'
-                                                : 'bg-slate-100 text-slate-500',
-                                        ].join(
-                                            ' '
-                                        )}
-                                    >
-                                        {process.ativo
-                                            ? 'Ativo'
-                                            : 'Inativo'}
-                                    </span>
-                                </div>
+                                <span
+                                    className={[
+                                        "rounded-full px-2 py-0.5 text-xs font-medium",
 
-                                <p className="mt-1 text-xs font-mono text-slate-400">
-                                    {
-                                        process.codigo
-                                    }{' '}
-                                    · v
-                                    {
-                                        process.versao
-                                    }
-                                </p>
+                                        workflow.ativo
+                                            ? "bg-emerald-50 text-emerald-700"
+                                            : "bg-slate-100 text-slate-500",
+                                    ].join(" ")}
+                                >
+                                    {workflow.ativo ? "Ativo" : "Inativo"}
+                                </span>
                             </div>
 
-                            <div className="flex gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        onEdit(
-                                            process
-                                        )
-                                    }
-                                    className="w-9 h-9 rounded-lg border border-slate-200 text-slate-500 hover:text-indigo-600 flex items-center justify-center"
-                                >
-                                    <Pencil className="w-4 h-4" />
-                                </button>
-
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        onDelete(
-                                            process
-                                        )
-                                    }
-                                    className="w-9 h-9 rounded-lg border border-slate-200 text-slate-500 hover:text-red-600 flex items-center justify-center"
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                </button>
-                            </div>
+                            <p className="mt-1 font-mono text-xs text-slate-400">
+                                {workflow.codigo} · v{workflow.versao}
+                            </p>
                         </div>
 
-                        {process.descricao && (
-                            <p className="mt-3 text-sm text-slate-500">
-                                {
-                                    process.descricao
-                                }
-                            </p>
-                        )}
+                        <div className="flex gap-2">
+                            <button
+                                type="button"
+                                onClick={() => onEdit(workflow)}
+                                className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:text-indigo-600"
+                            >
+                                <Pencil className="h-4 w-4" />
+                            </button>
 
-                        <div className="mt-4 space-y-2">
-                            {process.items.map(
-                                (
-                                    item
-                                ) => (
-                                    <div
-                                        key={
-                                            item.id
-                                        }
-                                        className="rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 flex items-center gap-3"
-                                    >
-                                        <div className="w-6 h-6 rounded-full bg-white border border-slate-200 flex items-center justify-center text-xs font-semibold text-slate-500">
-                                            {
-                                                item.ordem
-                                            }
-                                        </div>
-
-                                        <div className="min-w-0 flex-1">
-                                            <div className="text-sm font-medium text-slate-800">
-                                                {
-                                                    item.titulo
-                                                }
-                                            </div>
-
-                                            <div className="text-xs text-slate-400">
-                                                {
-                                                    itemTypeLabels[
-                                                        item.tipo
-                                                    ]
-                                                }
-                                                {item.obrigatorio
-                                                    ? ' · obrigatório'
-                                                    : ' · opcional'}
-                                            </div>
-                                        </div>
-
-                                        {item.tipo ===
-                                            'assinatura' &&
-                                            item
-                                                .configuracao
-                                                .placeholder && (
-                                                <span className="text-xs text-indigo-600">
-                                                    {
-                                                        signatureLabels[
-                                                            item
-                                                                .configuracao
-                                                                .placeholder
-                                                        ]
-                                                    }
-                                                </span>
-                                            )}
-                                    </div>
-                                )
-                            )}
+                            <button
+                                type="button"
+                                disabled={deleting}
+                                onClick={() => onDelete(workflow)}
+                                className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:text-red-600 disabled:opacity-40"
+                            >
+                                <Trash2 className="h-4 w-4" />
+                            </button>
                         </div>
                     </div>
-                )
-            )}
+
+                    {workflow.descricao && (
+                        <p className="mt-3 text-sm text-slate-500">
+                            {workflow.descricao}
+                        </p>
+                    )}
+
+                    <div className="mt-4 space-y-2">
+                        {workflow.items.map((item) => (
+                            <div
+                                key={item.id}
+                                className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5"
+                            >
+                                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-xs font-semibold text-slate-500">
+                                    {item.ordem}
+                                </div>
+
+                                <div className="min-w-0 flex-1">
+                                    <div className="text-sm font-medium text-slate-800">
+                                        {item.titulo}
+                                    </div>
+
+                                    <div className="text-xs text-slate-400">
+                                        {itemTypeLabels[item.tipo]}
+
+                                        {item.obrigatorio
+                                            ? " · obrigatório"
+                                            : " · opcional"}
+                                    </div>
+                                </div>
+
+                                <WorkflowItemMeta item={item} />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            ))}
         </div>
     );
 }
 
-function ProcessFormModal({
+function WorkflowItemMeta({
+    item,
+}: {
+    item: ChecklistProcessTemplate["items"][number];
+}) {
+    if (item.tipo === "assinatura" && item.configuracao.placeholder) {
+        return (
+            <span className="text-xs font-medium text-indigo-600">
+                {signatureLabels[item.configuracao.placeholder]}
+            </span>
+        );
+    }
+
+    if (item.tipo === "acao_sistema" && item.configuracao.action) {
+        return (
+            <span className="text-right text-xs font-medium text-blue-600">
+                {systemActionLabels[item.configuracao.action]}
+            </span>
+        );
+    }
+
+    if (item.tipo === "checklist_veiculo" && item.configuracao.checklist_tipo) {
+        return (
+            <span className="text-xs font-medium text-amber-700">
+                {vehicleChecklistLabels[item.configuracao.checklist_tipo]}
+            </span>
+        );
+    }
+
+    return null;
+}
+
+function WorkflowFormModal({
     record,
     onClose,
     onSaved,
 }: {
     record: ChecklistProcessTemplate | null;
+
     onClose: () => void;
+
     onSaved: () => Promise<void>;
 }) {
-    const [
-        name,
-        setName,
-    ] = useState(
-        record?.nome ??
-            ''
+    const [name, setName] = useState(record?.nome ?? "");
+
+    const [code, setCode] = useState(record?.codigo ?? "");
+
+    const [description, setDescription] = useState(record?.descricao ?? "");
+
+    const [active, setActive] = useState(record?.ativo ?? true);
+
+    const [items, setItems] = useState<ChecklistProcessItemPayload[]>(
+        record?.items.map((item) => ({
+            codigo: item.codigo,
+
+            ordem: item.ordem,
+
+            titulo: item.titulo,
+
+            descricao: item.descricao,
+
+            tipo: item.tipo,
+
+            obrigatorio: item.obrigatorio,
+
+            configuracao: {
+                ...item.configuracao,
+            },
+        })) ?? [emptyItem(1)],
     );
 
-    const [
-        code,
-        setCode,
-    ] = useState(
-        record?.codigo ??
-            ''
-    );
+    const [saving, setSaving] = useState(false);
 
-    const [
-        description,
-        setDescription,
-    ] = useState(
-        record?.descricao ??
-            ''
-    );
-
-    const [
-        active,
-        setActive,
-    ] = useState(
-        record?.ativo ??
-            true
-    );
-
-    const [
-        items,
-        setItems,
-    ] =
-        useState<ChecklistProcessItemPayload[]>(
-            record?.items.map(
-                (
-                    item
-                ) => ({
-                    codigo:
-                        item.codigo,
-                    ordem:
-                        item.ordem,
-                    titulo:
-                        item.titulo,
-                    descricao:
-                        item.descricao,
-                    tipo:
-                        item.tipo,
-                    obrigatorio:
-                        item.obrigatorio,
-                    configuracao:
-                        item.configuracao,
-                })
-            ) ?? [
-                emptyItem(
-                    1
-                ),
-            ]
-        );
-
-    const [
-        saving,
-        setSaving,
-    ] = useState(false);
-
-    const [
-        error,
-        setError,
-    ] =
-        useState<string | null>(
-            null
-        );
+    const [error, setError] = useState<string | null>(null);
 
     function patchItem(
         index: number,
-        patch: Partial<ChecklistProcessItemPayload>
+        patch: Partial<ChecklistProcessItemPayload>,
     ) {
-        setItems(
-            (
-                current
-            ) =>
-                current.map(
-                    (
-                        item,
-                        currentIndex
-                    ) =>
-                        currentIndex ===
-                        index
-                            ? {
-                                  ...item,
-                                  ...patch,
-                              }
-                            : item
-                )
+        setItems((current) =>
+            current.map((item, currentIndex) =>
+                currentIndex === index
+                    ? {
+                          ...item,
+                          ...patch,
+                      }
+                    : item,
+            ),
         );
     }
 
     function addItem() {
-        setItems(
-            (
-                current
-            ) => [
-                ...current,
-                emptyItem(
-                    current.length +
-                        1
-                ),
-            ]
+        setItems((current) => [...current, emptyItem(current.length + 1)]);
+    }
+
+    function removeItem(index: number) {
+        setItems((current) =>
+            current
+                .filter((_, currentIndex) => currentIndex !== index)
+                .map((item, currentIndex) => ({
+                    ...item,
+
+                    ordem: currentIndex + 1,
+                })),
         );
     }
 
-    function removeItem(
-        index: number
-    ) {
-        setItems(
-            (
-                current
-            ) =>
-                current
-                    .filter(
-                        (
-                            _,
-                            currentIndex
-                        ) =>
-                            currentIndex !==
-                            index
-                    )
-                    .map(
-                        (
-                            item,
-                            currentIndex
-                        ) => ({
-                            ...item,
-                            ordem:
-                                currentIndex +
-                                1,
-                        })
-                    )
-        );
+    function changeItemType(index: number, type: ChecklistProcessItemType) {
+        const configuracao: ChecklistProcessItemPayload["configuracao"] = {};
+
+        if (type === "assinatura") {
+            configuracao.placeholder = "ASSINATURA_MOTORISTA";
+        }
+
+        if (type === "acao_sistema") {
+            configuracao.action = "motorista_acesso";
+        }
+
+        if (type === "checklist_veiculo") {
+            configuracao.checklist_tipo = "entrega";
+        }
+
+        patchItem(index, {
+            tipo: type,
+
+            configuracao,
+        });
+    }
+
+    function validate(): string | null {
+        if (!name.trim() || !code.trim()) {
+            return "Preencha o nome e o código.";
+        }
+
+        if (!/^[a-z0-9_]+$/.test(code.trim())) {
+            return "O código do workflow pode conter apenas letras minúsculas, números e underscore.";
+        }
+
+        if (items.length === 0) {
+            return "Adicione pelo menos uma etapa.";
+        }
+
+        for (const [index, item] of items.entries()) {
+            if (!item.titulo.trim()) {
+                return `Informe o título da etapa ${index + 1}.`;
+            }
+
+            if (!item.codigo.trim()) {
+                return `Informe o código da etapa ${index + 1}.`;
+            }
+
+            if (item.tipo === "assinatura" && !item.configuracao.placeholder) {
+                return `Selecione o signatário da etapa ${index + 1}.`;
+            }
+
+            if (item.tipo === "acao_sistema" && !item.configuracao.action) {
+                return `Selecione a ação do sistema da etapa ${index + 1}.`;
+            }
+
+            if (
+                item.tipo === "checklist_veiculo" &&
+                !item.configuracao.checklist_tipo
+            ) {
+                return `Selecione o tipo de checklist do veículo da etapa ${index + 1}.`;
+            }
+        }
+
+        return null;
     }
 
     async function submit() {
         setError(null);
 
-        if (
-            !name.trim() ||
-            !code.trim()
-        ) {
-            setError(
-                'Preencha o nome e o código.'
-            );
+        const validation = validate();
 
-            return;
-        }
-
-        if (
-            items.length ===
-            0
-        ) {
-            setError(
-                'Adicione pelo menos uma etapa.'
-            );
+        if (validation) {
+            setError(validation);
 
             return;
         }
 
         setSaving(true);
 
-        const payload:
-            ChecklistProcessTemplatePayload =
-            {
-                codigo:
-                    code.trim(),
-                nome:
-                    name.trim(),
-                descricao:
-                    description.trim() ||
-                    null,
-                ativo:
-                    active,
-                items:
-                    items.map(
-                        (
-                            item,
-                            index
-                        ) => ({
-                            ...item,
-                            ordem:
-                                index +
-                                1,
-                            codigo:
-                                item.codigo.trim(),
-                            titulo:
-                                item.titulo.trim(),
-                            descricao:
-                                item.descricao
-                                    ?.trim() ||
-                                null,
-                            configuracao:
-                                item.tipo ===
-                                    'assinatura'
-                                    ? item.configuracao
-                                    : {},
-                        })
-                    ),
-            };
+        const payload: ChecklistProcessTemplatePayload = {
+            codigo: code.trim(),
+
+            nome: name.trim(),
+
+            descricao: description.trim() || null,
+
+            ativo: active,
+
+            items: items.map((item, index) => ({
+                codigo: item.codigo.trim(),
+
+                ordem: index + 1,
+
+                titulo: item.titulo.trim(),
+
+                descricao: item.descricao?.trim() || null,
+
+                tipo: item.tipo,
+
+                obrigatorio: item.obrigatorio,
+
+                configuracao: normalizeItemConfiguration(item),
+            })),
+        };
 
         try {
             if (record) {
                 await api.patch(
                     `/api/checklist-process-templates/${record.id}`,
-                    payload
+                    payload,
                 );
             } else {
-                await api.post(
-                    '/api/checklist-process-templates',
-                    payload
-                );
+                await api.post("/api/checklist-process-templates", payload);
             }
 
             await onSaved();
-        } catch (
-            requestError
-        ) {
+        } catch (requestError) {
             setError(
                 errorMessage(
                     requestError,
-                    'Não foi possível guardar o checklist.'
-                )
+                    "Não foi possível guardar o workflow.",
+                ),
             );
         } finally {
             setSaving(false);
@@ -1569,380 +1158,341 @@ function ProcessFormModal({
 
     return (
         <Modal
-            title={
-                record
-                    ? 'Editar checklist de processo'
-                    : 'Novo checklist de processo'
-            }
-            onClose={
-                onClose
-            }
-            size="max-w-4xl"
+            title={record ? "Editar workflow" : "Novo workflow"}
+            onClose={onClose}
+            size="max-w-5xl"
         >
-            <div className="p-6 space-y-6">
+            <div className="space-y-6 p-6">
                 {error && (
                     <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                         {error}
                     </div>
                 )}
 
-                <div className="grid sm:grid-cols-2 gap-4">
+                <div className="grid gap-4 sm:grid-cols-2">
                     <Field
                         label="Nome"
-                        value={
-                            name
-                        }
-                        onChange={
-                            setName
-                        }
-                        placeholder="Contrato de aluguer"
+                        value={name}
+                        onChange={setName}
+                        placeholder="Fluxo de aluguer"
                     />
 
                     <Field
                         label="Código"
-                        value={
-                            code
-                        }
-                        onChange={(
-                            value
-                        ) =>
+                        value={code}
+                        onChange={(value) =>
                             setCode(
                                 value
                                     .toLowerCase()
-                                    .replace(
-                                        /[^a-z0-9_]/g,
-                                        '_'
-                                    )
+                                    .replace(/[^a-z0-9_]/g, "_")
+                                    .replace(/_+/g, "_"),
                             )
                         }
-                        placeholder="contrato_aluguer"
+                        placeholder="fluxo_aluguer"
                     />
                 </div>
 
-                <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block">
+                    <span className="mb-2 block text-sm font-medium text-slate-700">
                         Descrição
-                    </label>
+                    </span>
 
                     <textarea
-                        value={
-                            description
-                        }
-                        onChange={(
-                            event
-                        ) =>
-                            setDescription(
-                                event
-                                    .target
-                                    .value
-                            )
-                        }
-                        rows={
-                            2
-                        }
+                        value={description}
+                        onChange={(event) => setDescription(event.target.value)}
+                        rows={2}
                         className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
                     />
-                </div>
+                </label>
 
                 <label className="flex items-center gap-3">
                     <input
                         type="checkbox"
-                        checked={
-                            active
-                        }
-                        onChange={(
-                            event
-                        ) =>
-                            setActive(
-                                event
-                                    .target
-                                    .checked
-                            )
-                        }
+                        checked={active}
+                        onChange={(event) => setActive(event.target.checked)}
+                        className="h-4 w-4 rounded border-slate-300 text-indigo-600"
                     />
 
                     <span className="text-sm font-medium text-slate-700">
-                        Checklist ativo
+                        Workflow ativo
                     </span>
                 </label>
 
                 <div>
-                    <div className="flex items-center justify-between gap-4 mb-3">
+                    <div className="mb-4 flex items-center justify-between gap-4">
                         <div>
                             <h3 className="font-semibold text-slate-900">
                                 Etapas
                             </h3>
 
-                            <p className="text-sm text-slate-500">
-                                A ordem abaixo será copiada para cada contrato.
+                            <p className="mt-1 text-sm text-slate-500">
+                                Estas etapas serão copiadas como snapshot quando
+                                o processo do contrato for iniciado.
                             </p>
                         </div>
 
                         <button
                             type="button"
-                            onClick={
-                                addItem
-                            }
-                            className="h-9 px-3 rounded-lg border border-slate-200 text-sm font-medium flex items-center gap-2"
+                            onClick={addItem}
+                            className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 px-3 text-sm font-medium"
                         >
-                            <Plus className="w-4 h-4" />
+                            <Plus className="h-4 w-4" />
                             Etapa
                         </button>
                     </div>
 
-                    <div className="space-y-3">
-                        {items.map(
-                            (
-                                item,
-                                index
-                            ) => (
-                                <div
-                                    key={
-                                        index
-                                    }
-                                    className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
-                                >
-                                    <div className="flex items-start gap-3">
-                                        <div className="w-8 h-8 shrink-0 rounded-full bg-white border border-slate-200 flex items-center justify-center text-sm font-semibold text-slate-500">
-                                            {index +
-                                                1}
-                                        </div>
+                    <div className="space-y-4">
+                        {items.map((item, index) => (
+                            <div
+                                key={index}
+                                className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                            >
+                                <div className="flex items-start gap-3">
+                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-500">
+                                        {index + 1}
+                                    </div>
 
-                                        <div className="flex-1 grid sm:grid-cols-2 gap-3">
-                                            <Field
-                                                label="Título"
-                                                value={
-                                                    item.titulo
-                                                }
-                                                onChange={(
-                                                    value
-                                                ) =>
-                                                    patchItem(
-                                                        index,
-                                                        {
-                                                            titulo:
-                                                                value,
-                                                        }
-                                                    )
-                                                }
-                                                placeholder="Validar dados"
-                                            />
+                                    <div className="grid flex-1 gap-4 md:grid-cols-2">
+                                        <Field
+                                            label="Título"
+                                            value={item.titulo}
+                                            onChange={(value) =>
+                                                patchItem(index, {
+                                                    titulo: value,
+                                                })
+                                            }
+                                            placeholder="Assinar contrato"
+                                        />
 
-                                            <Field
-                                                label="Código"
-                                                value={
-                                                    item.codigo
-                                                }
-                                                onChange={(
-                                                    value
-                                                ) =>
-                                                    patchItem(
-                                                        index,
-                                                        {
-                                                            codigo:
-                                                                value
-                                                                    .toLowerCase()
-                                                                    .replace(
-                                                                        /[^a-z0-9_]/g,
-                                                                        '_'
-                                                                    ),
-                                                        }
-                                                    )
-                                                }
-                                                placeholder="validar_dados"
-                                            />
-
-                                            <div>
-                                                <label className="block text-sm font-medium text-slate-700 mb-2">
-                                                    Tipo
-                                                </label>
-
-                                                <select
-                                                    value={
-                                                        item.tipo
-                                                    }
-                                                    onChange={(
-                                                        event
-                                                    ) =>
-                                                        patchItem(
-                                                            index,
-                                                            {
-                                                                tipo:
-                                                                    event
-                                                                        .target
-                                                                        .value as ChecklistProcessItemType,
-
-                                                                configuracao:
-                                                                    {},
-                                                            }
+                                        <Field
+                                            label="Código"
+                                            value={item.codigo}
+                                            onChange={(value) =>
+                                                patchItem(index, {
+                                                    codigo: value
+                                                        .toLowerCase()
+                                                        .replace(
+                                                            /[^a-z0-9_]/g,
+                                                            "_",
                                                         )
-                                                    }
-                                                    className="w-full h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm"
-                                                >
-                                                    {Object.entries(
-                                                        itemTypeLabels
-                                                    ).map(
-                                                        ([
-                                                            value,
-                                                            label,
-                                                        ]) => (
-                                                            <option
-                                                                key={
-                                                                    value
-                                                                }
-                                                                value={
-                                                                    value
-                                                                }
-                                                            >
-                                                                {
-                                                                    label
-                                                                }
-                                                            </option>
-                                                        )
-                                                    )}
-                                                </select>
-                                            </div>
+                                                        .replace(/_+/g, "_"),
+                                                })
+                                            }
+                                            placeholder="assinar_contrato"
+                                        />
 
-                                            {item.tipo ===
-                                                'assinatura' && (
-                                                <div>
-                                                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                                                        Signatário
-                                                    </label>
-
-                                                    <select
-                                                        value={
-                                                            item
-                                                                .configuracao
-                                                                .placeholder ??
-                                                            ''
-                                                        }
-                                                        onChange={(
-                                                            event
-                                                        ) =>
-                                                            patchItem(
-                                                                index,
-                                                                {
-                                                                    configuracao:
-                                                                        {
-                                                                            placeholder:
-                                                                                event
-                                                                                    .target
-                                                                                    .value as SignaturePlaceholder,
-                                                                        },
-                                                                }
-                                                            )
-                                                        }
-                                                        className="w-full h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm"
-                                                    >
-                                                        <option value="">
-                                                            Selecionar...
-                                                        </option>
-
-                                                        {Object.entries(
-                                                            signatureLabels
-                                                        ).map(
-                                                            ([
-                                                                value,
-                                                                label,
-                                                            ]) => (
-                                                                <option
-                                                                    key={
-                                                                        value
-                                                                    }
-                                                                    value={
-                                                                        value
-                                                                    }
-                                                                >
-                                                                    {
-                                                                        label
-                                                                    }
-                                                                </option>
-                                                            )
-                                                        )}
-                                                    </select>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                removeItem(
-                                                    index
+                                        <SelectField
+                                            label="Tipo"
+                                            value={item.tipo}
+                                            onChange={(value) =>
+                                                changeItemType(
+                                                    index,
+                                                    value as ChecklistProcessItemType,
                                                 )
                                             }
-                                            disabled={
-                                                items.length ===
-                                                1
-                                            }
-                                            className="w-9 h-9 shrink-0 rounded-lg border border-slate-200 bg-white text-slate-400 hover:text-red-600 disabled:opacity-30 flex items-center justify-center"
                                         >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
-                                    </div>
+                                            {Object.entries(itemTypeLabels).map(
+                                                ([value, label]) => (
+                                                    <option
+                                                        key={value}
+                                                        value={value}
+                                                    >
+                                                        {label}
+                                                    </option>
+                                                ),
+                                            )}
+                                        </SelectField>
 
-                                    <div className="mt-3 pl-11 flex items-center gap-3">
-                                        <label className="flex items-center gap-2 text-sm text-slate-600">
-                                            <input
-                                                type="checkbox"
-                                                checked={
-                                                    item.obrigatorio
+                                        {item.tipo === "assinatura" && (
+                                            <SelectField
+                                                label="Signatário"
+                                                value={
+                                                    item.configuracao
+                                                        .placeholder ?? ""
                                                 }
-                                                onChange={(
-                                                    event
-                                                ) =>
-                                                    patchItem(
-                                                        index,
-                                                        {
-                                                            obrigatorio:
-                                                                event
-                                                                    .target
-                                                                    .checked,
-                                                        }
-                                                    )
+                                                onChange={(value) =>
+                                                    patchItem(index, {
+                                                        configuracao: {
+                                                            ...item.configuracao,
+
+                                                            placeholder:
+                                                                value as SignaturePlaceholder,
+                                                        },
+                                                    })
                                                 }
+                                            >
+                                                {Object.entries(
+                                                    signatureLabels,
+                                                ).map(([value, label]) => (
+                                                    <option
+                                                        key={value}
+                                                        value={value}
+                                                    >
+                                                        {label}
+                                                    </option>
+                                                ))}
+                                            </SelectField>
+                                        )}
+
+                                        {item.tipo === "acao_sistema" && (
+                                            <SelectField
+                                                label="Ação do sistema"
+                                                value={
+                                                    item.configuracao.action ??
+                                                    ""
+                                                }
+                                                onChange={(value) =>
+                                                    patchItem(index, {
+                                                        configuracao: {
+                                                            ...item.configuracao,
+
+                                                            action: value as ChecklistSystemAction,
+                                                        },
+                                                    })
+                                                }
+                                            >
+                                                {Object.entries(
+                                                    systemActionLabels,
+                                                ).map(([value, label]) => (
+                                                    <option
+                                                        key={value}
+                                                        value={value}
+                                                    >
+                                                        {label}
+                                                    </option>
+                                                ))}
+                                            </SelectField>
+                                        )}
+
+                                        {item.tipo === "checklist_veiculo" && (
+                                            <SelectField
+                                                label="Checklist"
+                                                value={
+                                                    item.configuracao
+                                                        .checklist_tipo ?? ""
+                                                }
+                                                onChange={(value) =>
+                                                    patchItem(index, {
+                                                        configuracao: {
+                                                            ...item.configuracao,
+
+                                                            checklist_tipo:
+                                                                value as ChecklistVehicleType,
+                                                        },
+                                                    })
+                                                }
+                                            >
+                                                {Object.entries(
+                                                    vehicleChecklistLabels,
+                                                ).map(([value, label]) => (
+                                                    <option
+                                                        key={value}
+                                                        value={value}
+                                                    >
+                                                        {label}
+                                                    </option>
+                                                ))}
+                                            </SelectField>
+                                        )}
+
+                                        <label className="md:col-span-2">
+                                            <span className="mb-2 block text-sm font-medium text-slate-700">
+                                                Descrição
+                                            </span>
+
+                                            <textarea
+                                                value={item.descricao ?? ""}
+                                                onChange={(event) =>
+                                                    patchItem(index, {
+                                                        descricao:
+                                                            event.target.value,
+                                                    })
+                                                }
+                                                rows={2}
+                                                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
                                             />
-                                            Obrigatória
                                         </label>
                                     </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => removeItem(index)}
+                                        disabled={items.length === 1}
+                                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition hover:text-red-600 disabled:opacity-30"
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </button>
                                 </div>
-                            )
-                        )}
+
+                                <div className="mt-4 pl-11">
+                                    <label className="flex items-center gap-2 text-sm text-slate-600">
+                                        <input
+                                            type="checkbox"
+                                            checked={item.obrigatorio}
+                                            onChange={(event) =>
+                                                patchItem(index, {
+                                                    obrigatorio:
+                                                        event.target.checked,
+                                                })
+                                            }
+                                            className="h-4 w-4 rounded border-slate-300 text-indigo-600"
+                                        />
+                                        Etapa obrigatória
+                                    </label>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </div>
 
-            <div className="px-6 py-4 border-t border-slate-200 flex justify-end gap-3">
+            <div className="flex justify-end gap-3 border-t border-slate-200 px-6 py-4">
                 <button
                     type="button"
-                    onClick={
-                        onClose
-                    }
-                    className="h-10 px-4 rounded-xl border border-slate-200 text-sm font-medium"
+                    onClick={onClose}
+                    className="h-10 rounded-xl border border-slate-200 px-4 text-sm font-medium"
                 >
                     Cancelar
                 </button>
 
                 <button
                     type="button"
-                    onClick={
-                        submit
-                    }
-                    disabled={
-                        saving
-                    }
-                    className="h-10 px-4 rounded-xl bg-indigo-600 text-white text-sm font-semibold flex items-center gap-2 disabled:opacity-60"
+                    onClick={submit}
+                    disabled={saving}
+                    className="flex h-10 items-center gap-2 rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white disabled:opacity-60"
                 >
                     {saving && (
-                        <LoaderCircle className="w-4 h-4 animate-spin" />
+                        <LoaderCircle className="h-4 w-4 animate-spin" />
                     )}
-
-                    Guardar
+                    Guardar workflow
                 </button>
             </div>
         </Modal>
     );
+}
+
+function normalizeItemConfiguration(
+    item: ChecklistProcessItemPayload,
+): ChecklistProcessItemPayload["configuracao"] {
+    if (item.tipo === "assinatura") {
+        return {
+            placeholder: item.configuracao.placeholder,
+        };
+    }
+
+    if (item.tipo === "acao_sistema") {
+        return {
+            action: item.configuracao.action,
+        };
+    }
+
+    if (item.tipo === "checklist_veiculo") {
+        return {
+            checklist_tipo: item.configuracao.checklist_tipo,
+        };
+    }
+
+    return {};
 }
 
 function ImportModal({
@@ -1951,96 +1501,56 @@ function ImportModal({
     onSaved,
 }: {
     profiles: PerfilTemplate[];
+
     onClose: () => void;
+
     onSaved: () => Promise<void>;
 }) {
-    const [
-        name,
-        setName,
-    ] = useState('');
+    const [name, setName] = useState("");
 
-    const [
-        profileId,
-        setProfileId,
-    ] = useState('');
+    const [profileId, setProfileId] = useState("");
 
-    const [
-        file,
-        setFile,
-    ] =
-        useState<File | null>(
-            null
-        );
+    const [file, setFile] = useState<File | null>(null);
 
-    const [
-        saving,
-        setSaving,
-    ] = useState(false);
+    const [saving, setSaving] = useState(false);
 
-    const [
-        error,
-        setError,
-    ] =
-        useState<string | null>(
-            null
-        );
+    const [error, setError] = useState<string | null>(null);
 
     async function submit() {
-        if (
-            !name.trim() ||
-            !file
-        ) {
-            setError(
-                'Informe o nome e selecione o arquivo.'
-            );
+        if (!name.trim() || !file) {
+            setError("Informe o nome e selecione o arquivo.");
 
             return;
         }
 
         setSaving(true);
+
         setError(null);
 
-        const form =
-            new FormData();
+        const form = new FormData();
 
-        form.append(
-            'nome',
-            name.trim()
-        );
+        form.append("nome", name.trim());
 
-        form.append(
-            'arquivo',
-            file
-        );
+        form.append("arquivo", file);
 
         if (profileId) {
-            form.append(
-                'perfil_id',
-                profileId
-            );
+            form.append("perfil_id", profileId);
         }
 
         try {
-            await api.post(
-                '/api/templates-contrato/importar',
-                form,
-                {
-                    headers: {
-                        'Content-Type':
-                            'multipart/form-data',
-                    },
-                }
-            );
+            await api.post("/api/templates-contrato/importar", form, {
+                headers: {
+                    "Content-Type": "multipart/form-data",
+                },
+            });
 
             await onSaved();
-        } catch (
-            requestError
-        ) {
+        } catch (requestError) {
             setError(
                 errorMessage(
                     requestError,
-                    'Não foi possível importar o template.'
-                )
+                    "Não foi possível importar o modelo.",
+                ),
             );
         } finally {
             setSaving(false);
@@ -2049,13 +1559,11 @@ function ImportModal({
 
     return (
         <Modal
-            title="Importar template"
-            onClose={
-                onClose
-            }
+            title="Importar modelo de documento"
+            onClose={onClose}
             size="max-w-lg"
         >
-            <div className="p-6 space-y-4">
+            <div className="space-y-4 p-6">
                 {error && (
                     <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                         {error}
@@ -2064,79 +1572,35 @@ function ImportModal({
 
                 <Field
                     label="Nome"
-                    value={
-                        name
-                    }
-                    onChange={
-                        setName
-                    }
+                    value={name}
+                    onChange={setName}
                     placeholder="Contrato de aluguer"
                 />
 
-                <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Perfil
-                    </label>
+                <SelectField
+                    label="Perfil"
+                    value={profileId}
+                    onChange={setProfileId}
+                >
+                    <option value="">Sem perfil</option>
 
-                    <select
-                        value={
-                            profileId
-                        }
-                        onChange={(
-                            event
-                        ) =>
-                            setProfileId(
-                                event
-                                    .target
-                                    .value
-                            )
-                        }
-                        className="w-full h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm"
-                    >
-                        <option value="">
-                            Sem perfil
+                    {profiles.map((profile) => (
+                        <option key={profile.id} value={profile.id}>
+                            {profile.nome}
                         </option>
-
-                        {profiles.map(
-                            (
-                                profile
-                            ) => (
-                                <option
-                                    key={
-                                        profile.id
-                                    }
-                                    value={
-                                        profile.id
-                                    }
-                                >
-                                    {
-                                        profile.nome
-                                    }
-                                </option>
-                            )
-                        )}
-                    </select>
-                </div>
+                    ))}
+                </SelectField>
 
                 <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                    <label className="mb-2 block text-sm font-medium text-slate-700">
                         Arquivo
                     </label>
 
                     <input
                         type="file"
                         accept=".pdf,.docx,.txt"
-                        onChange={(
-                            event
-                        ) =>
-                            setFile(
-                                event
-                                    .target
-                                    .files?.[
-                                    0
-                                ] ??
-                                    null
-                            )
+                        onChange={(event) =>
+                            setFile(event.target.files?.[0] ?? null)
                         }
                         className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-indigo-700"
                     />
@@ -2147,32 +1611,25 @@ function ImportModal({
                 </div>
             </div>
 
-            <div className="px-6 py-4 border-t border-slate-200 flex justify-end gap-3">
+            <div className="flex justify-end gap-3 border-t border-slate-200 px-6 py-4">
                 <button
                     type="button"
-                    onClick={
-                        onClose
-                    }
-                    className="h-10 px-4 rounded-xl border border-slate-200 text-sm font-medium"
+                    onClick={onClose}
+                    className="h-10 rounded-xl border border-slate-200 px-4 text-sm font-medium"
                 >
                     Cancelar
                 </button>
 
                 <button
                     type="button"
-                    onClick={
-                        submit
-                    }
-                    disabled={
-                        saving
-                    }
-                    className="h-10 px-4 rounded-xl bg-indigo-600 text-white text-sm font-semibold flex items-center gap-2 disabled:opacity-60"
+                    onClick={submit}
+                    disabled={saving}
+                    className="flex h-10 items-center gap-2 rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white disabled:opacity-60"
                 >
                     {saving && (
-                        <LoaderCircle className="w-4 h-4 animate-spin" />
+                        <LoaderCircle className="h-4 w-4 animate-spin" />
                     )}
-
-                    Importar
+                    Importar modelo
                 </button>
             </div>
         </Modal>
@@ -2188,37 +1645,34 @@ function Modal({
     title: string;
     onClose: () => void;
     size: string;
-    children: React.ReactNode;
+    children: ReactNode;
 }) {
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <button
                 type="button"
-                onClick={
-                    onClose
-                }
+                aria-label="Fechar"
+                onClick={onClose}
                 className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm"
             />
 
             <div
                 className={[
-                    'relative w-full max-h-[92vh] overflow-y-auto rounded-2xl bg-white shadow-2xl',
+                    "relative max-h-[92vh] w-full overflow-y-auto rounded-2xl bg-white shadow-2xl",
                     size,
-                ].join(' ')}
+                ].join(" ")}
             >
-                <header className="sticky top-0 z-10 bg-white border-b border-slate-200 px-6 py-5 flex items-center justify-between">
+                <header className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-6 py-5">
                     <h2 className="text-lg font-semibold text-slate-950">
                         {title}
                     </h2>
 
                     <button
                         type="button"
-                        onClick={
-                            onClose
-                        }
-                        className="w-9 h-9 rounded-lg hover:bg-slate-100 flex items-center justify-center"
+                        onClick={onClose}
+                        className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-slate-100"
                     >
-                        <X className="w-5 h-5" />
+                        <X className="h-5 w-5" />
                     </button>
                 </header>
 
@@ -2236,44 +1690,58 @@ function Field({
 }: {
     label: string;
     value: string;
-    onChange: (
-        value: string
-    ) => void;
+
+    onChange: (value: string) => void;
+
     placeholder?: string;
 }) {
     return (
-        <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+        <label className="block">
+            <span className="mb-2 block text-sm font-medium text-slate-700">
                 {label}
-            </label>
+            </span>
 
             <input
-                value={
-                    value
-                }
-                onChange={(
-                    event
-                ) =>
-                    onChange(
-                        event
-                            .target
-                            .value
-                    )
-                }
-                placeholder={
-                    placeholder
-                }
-                className="w-full h-10 rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
+                value={value}
+                onChange={(event) => onChange(event.target.value)}
+                placeholder={placeholder}
+                className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
             />
-        </div>
+        </label>
     );
 }
 
-function Th({
+function SelectField({
+    label,
+    value,
+    onChange,
     children,
 }: {
-    children: string;
+    label: string;
+    value: string;
+
+    onChange: (value: string) => void;
+
+    children: ReactNode;
 }) {
+    return (
+        <label className="block">
+            <span className="mb-2 block text-sm font-medium text-slate-700">
+                {label}
+            </span>
+
+            <select
+                value={value}
+                onChange={(event) => onChange(event.target.value)}
+                className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm"
+            >
+                {children}
+            </select>
+        </label>
+    );
+}
+
+function Th({ children }: { children: string }) {
     return (
         <th className="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
             {children}

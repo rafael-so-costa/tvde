@@ -12,7 +12,6 @@ import {
     CircleUserRound,
     ClipboardCheck,
     Clock3,
-    FileStack,
     FileText,
     History,
     LayoutDashboard,
@@ -146,12 +145,6 @@ const navigation = [
         label: "Contratos",
         icon: FileText,
         permission: "contratos",
-    },
-    {
-        to: "/templates",
-        label: "Templates",
-        icon: FileStack,
-        permission: "templates",
     },
     {
         to: "/checklists",

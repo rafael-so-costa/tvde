@@ -3,10 +3,14 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>{{ $contrato->template?->nome ?? 'Contrato' }}</title>
+
+    <title>
+        {{ $contrato->tipoContrato?->nome ?? $contrato->template?->nome ?? 'Contrato' }}
+    </title>
+
     <style>
         @page {
-            margin: 22mm 18mm 20mm
+            margin: 20mm 18mm 24mm
         }
 
         * {
@@ -21,27 +25,15 @@
         }
 
         .header {
-            border-bottom: 1px solid #cbd5e1;
-            padding-bottom: 12px;
-            margin-bottom: 24px
-        }
-
-        .brand {
-            font-size: 16pt;
-            font-weight: 700;
-            color: #111827
-        }
-
-        .company {
-            font-size: 9pt;
-            color: #64748b;
-            margin-top: 3px
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 8px;
+            margin-bottom: 22px
         }
 
         .meta {
-            margin-top: 10px;
-            font-size: 8.5pt;
-            color: #64748b
+            font-size: 8pt;
+            color: #94a3b8;
+            text-align: right
         }
 
         .title {
@@ -88,13 +80,23 @@
 
         .footer {
             position: fixed;
-            bottom: -12mm;
+            bottom: -17mm;
             left: 0;
             right: 0;
             border-top: 1px solid #e2e8f0;
-            padding-top: 6px;
-            font-size: 7.5pt;
+            padding-top: 5px;
             color: #94a3b8
+        }
+
+        .footer-company {
+            font-size: 7pt;
+            line-height: 1.35
+        }
+
+        .footer-document {
+            margin-top: 3px;
+            font-size: 6.8pt;
+            color: #a8b1bf
         }
 
         .footer-right {
@@ -105,28 +107,52 @@
 
 <body>
     <header class="header">
-        <div class="brand">{{ $empresa?->nome_empresa ?? 'FrotaPRO' }}</div>
-        @if($empresa)
-        <div class="company">
-            @if($empresa->nif)NIF {{ $empresa->nif }}@endif
-            @if($empresa->email) · {{ $empresa->email }}@endif
-            @if($empresa->telemovel) · {{ $empresa->telemovel }}@endif
-        </div>
-        @endif
         <div class="meta">
-            Documento {{ $contrato->id }} · Versão {{ $contrato->versao_atual }}
+            Contrato n.º
+            {{ $contrato->documento?->codigo ?? $contrato->id }}
+            · Versão {{ $contrato->versao_atual }}
         </div>
     </header>
 
-    <h1 class="title">{{ $contrato->template?->nome ?? 'Contrato' }}</h1>
+    <h1 class="title">
+        {{ $contrato->tipoContrato?->nome ?? $contrato->template?->nome ?? 'Contrato' }}
+    </h1>
 
     <main class="document">
         {!! $documentHtml !!}
     </main>
 
     <footer class="footer">
-        Gerado pelo FrotaPRO em {{ $generatedAt->format('d/m/Y H:i') }}
-        <span class="footer-right">Versão {{ $contrato->versao_atual }}</span>
+        @if($empresa)
+            <div class="footer-company">
+                <strong>{{ $empresa->nome_empresa }}</strong>
+
+                @if($empresa->nif)
+                    · NIF {{ $empresa->nif }}
+                @endif
+
+                @if($empresa->telemovel)
+                    · {{ $empresa->telemovel }}
+                @endif
+
+                @if($empresa->email)
+                    · {{ $empresa->email }}
+                @endif
+            </div>
+        @endif
+
+        <div class="footer-document">
+            Gerado pelo FrotaPRO em
+            {{ $generatedAt->format('d/m/Y H:i') }}
+
+            <span class="footer-right">
+                @if($contrato->documento?->codigo)
+                    {{ $contrato->documento->codigo }} ·
+                @endif
+
+                Versão {{ $contrato->versao_atual }}
+            </span>
+        </div>
     </footer>
 </body>
 

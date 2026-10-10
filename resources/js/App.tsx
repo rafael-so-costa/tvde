@@ -36,6 +36,8 @@ import BackofficeTvdeImportsPage from "./pages/BackofficeTvdeImportsPage";
 import BackofficeTvdeOperatorPage from "./pages/BackofficeTvdeOperatorPage";
 import BackofficeTvdeOperatorsPage from "./pages/BackofficeTvdeOperatorsPage";
 import ChecklistsPage from "./pages/ChecklistsPage";
+import ContratoTipoPage from "./pages/ContratoTipoPage";
+import ContratosConfiguracaoPage from "./pages/ContratosConfiguracaoPage";
 import ContratosPage from "./pages/ContratosPage";
 import DashboardPage from "./pages/DashboardPage";
 import EmpresasPage from "./pages/EmpresasPage";
@@ -390,6 +392,21 @@ export default function App() {
                             <Route
                                 path="contratos"
                                 element={<ContratosPage />}
+                            />
+
+                            <Route
+                                path="contratos/configuracao"
+                                element={<ContratosConfiguracaoPage />}
+                            />
+
+                            <Route
+                                path="contratos/configuracao/novo"
+                                element={<ContratoTipoPage />}
+                            />
+
+                            <Route
+                                path="contratos/configuracao/:id"
+                                element={<ContratoTipoPage />}
                             />
 
                             <Route

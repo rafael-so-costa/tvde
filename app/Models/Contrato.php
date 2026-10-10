@@ -12,15 +12,15 @@ class Contrato extends Model
 {
     use HasUuids;
 
-    protected $attributes=[
-        'status'=>'rascunho',
-        'renovacao_count'=>0,
-        'campos_preenchidos'=>'{}',
-        'versao_atual'=>1,
-        'bloqueado'=>false,
+    protected $attributes = [
+        'status' => 'rascunho',
+        'renovacao_count' => 0,
+        'campos_preenchidos' => '{}',
+        'versao_atual' => 1,
+        'bloqueado' => false,
     ];
 
-    protected $fillable=[
+    protected $fillable = [
         'template_id',
         'tipo_contrato_id',
         'empresa_id',
@@ -39,17 +39,17 @@ class Contrato extends Model
     protected function casts(): array
     {
         return [
-            'data_inicio'=>'date',
-            'data_fim'=>'date',
-            'data_assinatura'=>'datetime',
-            'valor_diaria'=>'decimal:2',
-            'valor_semanal'=>'decimal:2',
-            'valor_caucao'=>'decimal:2',
-            'valor_total'=>'decimal:2',
-            'renovacao_count'=>'integer',
-            'campos_preenchidos'=>'array',
-            'versao_atual'=>'integer',
-            'bloqueado'=>'boolean',
+            'data_inicio' => 'date',
+            'data_fim' => 'date',
+            'data_assinatura' => 'datetime',
+            'valor_diaria' => 'decimal:2',
+            'valor_semanal' => 'decimal:2',
+            'valor_caucao' => 'decimal:2',
+            'valor_total' => 'decimal:2',
+            'renovacao_count' => 'integer',
+            'campos_preenchidos' => 'array',
+            'versao_atual' => 'integer',
+            'bloqueado' => 'boolean',
         ];
     }
 
@@ -155,6 +155,17 @@ class Contrato extends Model
         return $this->hasOne(
             ChecklistProcessRun::class,
             'entidade_id'
+        )->where(
+            'entidade_tipo',
+            'contrato'
+        );
+    }
+    public function documento(): HasOne
+    {
+        return $this->hasOne(
+            Documento::class,
+            'entidade_id',
+            'id'
         )->where(
             'entidade_tipo',
             'contrato'

@@ -45,20 +45,25 @@ class ContratoController extends Controller
                     'encerrado',
                 ]),
             ],
+
+            /*
+             * Os tipos de contrato são agora configuráveis.
+             * Não limitar esta validação aos tipos legados.
+             */
             'tipo'=>[
                 'nullable',
-                Rule::in([
-                    'prestacao_servico',
-                    'aluguer',
-                    'checklist_entrega',
-                    'checklist_devolucao',
-                ]),
+                'string',
+                'max:100',
+                'regex:/^[a-z0-9_]+$/',
             ],
         ]);
 
         $query=$this->leituraQuery($request)
             ->with([
                 'template',
+                'tipoContrato',
+                'documento',
+                'empresa',
                 'motorista',
                 'proprietario',
                 'veiculo',
@@ -111,16 +116,26 @@ class ContratoController extends Controller
         $contrato=$this->leituraQuery($request)
             ->with([
                 'template',
+                'tipoContrato',
+                'documento',
+                'empresa',
                 'motorista',
                 'proprietario',
                 'veiculo',
                 'template.checklistProcessTemplate.items',
                 'checklistProcessRun.items',
+
                 'versoes'=>fn($query)=>
-                    $query->orderByDesc('versao_numero'),
+                    $query->orderByDesc(
+                        'versao_numero'
+                    ),
+
                 'assinaturas',
+
                 'logsAuditoria'=>fn($query)=>
-                    $query->latest('created_at'),
+                    $query->latest(
+                        'created_at'
+                    ),
             ])
             ->findOrFail($id);
 
@@ -143,7 +158,9 @@ class ContratoController extends Controller
             );
 
         return response()->json([
-            'message'=>'Contrato atualizado com sucesso.',
+            'message'=>
+                'Contrato atualizado com sucesso.',
+
             'data'=>$contrato,
         ]);
     }
@@ -157,12 +174,16 @@ class ContratoController extends Controller
                 $id,
                 $this->tenantId(),
                 $request->user(),
-                $request->validated('data_fim'),
+                $request->validated(
+                    'data_fim'
+                ),
                 $request->ip()
             );
 
         return response()->json([
-            'message'=>'Contrato encerrado com sucesso.',
+            'message'=>
+                'Contrato encerrado com sucesso.',
+
             'data'=>$contrato,
         ]);
     }
@@ -179,16 +200,36 @@ class ContratoController extends Controller
                 $request->ip()
             );
 
+        $contrato->loadMissing(
+            'documento'
+        );
+
         return response()->json([
-            'message'=>'PDF gerado com sucesso.',
+            'message'=>
+                'PDF gerado com sucesso.',
+
             'data'=>[
-                'id'=>$contrato->id,
+                'id'=>
+                    $contrato->id,
+
+                'codigo_documento'=>
+                    $contrato
+                        ->documento
+                        ?->codigo,
+
                 'pdf_disponivel'=>
-                    filled($contrato->pdf_gerado_url),
+                    filled(
+                        $contrato
+                            ->pdf_gerado_url
+                    ),
+
                 'hash_documento'=>
-                    $contrato->hash_documento,
+                    $contrato
+                        ->hash_documento,
+
                 'versao'=>
-                    $contrato->versao_atual,
+                    $contrato
+                        ->versao_atual,
             ],
         ]);
     }
@@ -203,19 +244,28 @@ class ContratoController extends Controller
         );
 
         $response=response()->file(
-            Storage::disk('local')
-                ->path($contrato->pdf_gerado_url),
+            Storage::disk(
+                'local'
+            )->path(
+                $contrato
+                    ->pdf_gerado_url
+            ),
             [
-                'Content-Type'=>'application/pdf',
+                'Content-Type'=>
+                    'application/pdf',
             ]
         );
 
-        $response->headers->set(
-            'Content-Disposition',
-            'inline; filename="'.
-            $this->pdfFilename($contrato).
-            '"'
-        );
+        $response
+            ->headers
+            ->set(
+                'Content-Disposition',
+                'inline; filename="'.
+                $this->pdfFilename(
+                    $contrato
+                ).
+                '"'
+            );
 
         return $response;
     }
@@ -230,11 +280,18 @@ class ContratoController extends Controller
         );
 
         return response()->download(
-            Storage::disk('local')
-                ->path($contrato->pdf_gerado_url),
-            $this->pdfFilename($contrato),
+            Storage::disk(
+                'local'
+            )->path(
+                $contrato
+                    ->pdf_gerado_url
+            ),
+            $this->pdfFilename(
+                $contrato
+            ),
             [
-                'Content-Type'=>'application/pdf',
+                'Content-Type'=>
+                    'application/pdf',
             ]
         );
     }
@@ -244,7 +301,8 @@ class ContratoController extends Controller
         string $id,
         string $assinaturaId
     ): JsonResponse {
-        $assinatura=$this->contratoService
+        $assinatura=$this
+            ->contratoService
             ->resendRemoteSignature(
                 $id,
                 $assinaturaId,
@@ -254,18 +312,31 @@ class ContratoController extends Controller
             );
 
         return response()->json([
-            'message'=>'Solicitação de assinatura reenviada com sucesso.',
+            'message'=>
+                'Solicitação de assinatura reenviada com sucesso.',
+
             'data'=>[
-                'id'=>$assinatura->id,
-                'status'=>$assinatura->status,
+                'id'=>
+                    $assinatura->id,
+
+                'status'=>
+                    $assinatura->status,
+
                 'signatario_nome'=>
-                    $assinatura->signatario_nome,
+                    $assinatura
+                        ->signatario_nome,
+
                 'signatario_email'=>
-                    $assinatura->signatario_email,
+                    $assinatura
+                        ->signatario_email,
+
                 'solicitado_em'=>
-                    $assinatura->solicitado_em,
+                    $assinatura
+                        ->solicitado_em,
+
                 'otp_expira_em'=>
-                    $assinatura->otp_expira_em,
+                    $assinatura
+                        ->otp_expira_em,
             ],
         ]);
     }
@@ -274,27 +345,45 @@ class ContratoController extends Controller
         Request $request,
         string $id
     ): Response {
-        $this->contratoService->delete(
-            $id,
-            $this->tenantId(),
-            $request->user(),
-            $request->ip()
-        );
+        $this->contratoService
+            ->delete(
+                $id,
+                $this->tenantId(),
+                $request->user(),
+                $request->ip()
+            );
 
-        return response()->noContent();
+        return response()
+            ->noContent();
     }
 
     private function pdfContrato(
         Request $request,
         string $id
     ): Contrato {
-        $contrato=$this->leituraQuery($request)
-            ->findOrFail($id);
+        $contrato=$this
+            ->leituraQuery(
+                $request
+            )
+            ->with([
+                'documento',
+                'tipoContrato',
+            ])
+            ->findOrFail(
+                $id
+            );
 
         if(
-            blank($contrato->pdf_gerado_url) ||
-            !Storage::disk('local')
-                ->exists($contrato->pdf_gerado_url)
+            blank(
+                $contrato
+                    ->pdf_gerado_url
+            ) ||
+            !Storage::disk(
+                'local'
+            )->exists(
+                $contrato
+                    ->pdf_gerado_url
+            )
         ){
             abort(
                 404,
@@ -308,24 +397,56 @@ class ContratoController extends Controller
     private function pdfFilename(
         Contrato $contrato
     ): string {
+        $contrato->loadMissing([
+            'documento',
+            'tipoContrato',
+        ]);
+
+        $codigo=
+            $contrato
+                ->documento
+                ?->codigo
+            ?? substr(
+                $contrato->id,
+                0,
+                8
+            );
+
+        $tipo=
+            $contrato
+                ->tipoContrato
+                ?->nome
+            ?? $contrato->tipo;
+
         return 'contrato-'.
-            Str::slug($contrato->tipo).
+            Str::slug(
+                $tipo
+            ).
             '-'.
-            substr($contrato->id,0,8).
+            Str::lower(
+                $codigo
+            ).
             '.pdf';
     }
 
     private function leituraQuery(
         Request $request
     ): Builder {
-        $tenantId=$this->tenantId();
-        $user=$request->user();
+        $tenantId=
+            $this->tenantId();
+
+        $user=
+            $request->user();
 
         $query=Contrato::query()
-            ->where('tenant_id',$tenantId);
+            ->where(
+                'tenant_id',
+                $tenantId
+            );
 
         if(
-            $this->permissionService
+            $this
+                ->permissionService
                 ->allows(
                     $user,
                     'contratos',
@@ -346,13 +467,24 @@ class ContratoController extends Controller
         ){
             $temEscopoProprio=true;
 
-            $motoristaId=Motorista::query()
-                ->where('tenant_id',$tenantId)
-                ->where('user_id',$user->id)
-                ->value('id');
+            $motoristaId=
+                Motorista::query()
+                    ->where(
+                        'tenant_id',
+                        $tenantId
+                    )
+                    ->where(
+                        'user_id',
+                        $user->id
+                    )
+                    ->value(
+                        'id'
+                    );
 
             if(!$motoristaId){
-                $query->whereRaw('1 = 0');
+                $query->whereRaw(
+                    '1 = 0'
+                );
             }else{
                 $query->where(
                     'motorista_id',
@@ -369,13 +501,24 @@ class ContratoController extends Controller
         ){
             $temEscopoProprio=true;
 
-            $proprietarioId=Proprietario::query()
-                ->where('tenant_id',$tenantId)
-                ->where('user_id',$user->id)
-                ->value('id');
+            $proprietarioId=
+                Proprietario::query()
+                    ->where(
+                        'tenant_id',
+                        $tenantId
+                    )
+                    ->where(
+                        'user_id',
+                        $user->id
+                    )
+                    ->value(
+                        'id'
+                    );
 
             if(!$proprietarioId){
-                $query->whereRaw('1 = 0');
+                $query->whereRaw(
+                    '1 = 0'
+                );
             }else{
                 $query->where(
                     'proprietario_id',
@@ -396,14 +539,19 @@ class ContratoController extends Controller
 
     private function tenantId(): string
     {
-        if(!$this->tenantContext->hasTenant()){
+        if(
+            !$this
+                ->tenantContext
+                ->hasTenant()
+        ){
             abort(
                 403,
                 'Selecione uma organização para aceder a este recurso.'
             );
         }
 
-        return $this->tenantContext
+        return $this
+            ->tenantContext
             ->requireId();
     }
 }

@@ -932,16 +932,86 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/perfis-template', [PerfilTemplateController::class, 'store']);
             Route::patch('/perfis-template/{id}', [PerfilTemplateController::class, 'update']);
             Route::delete('/perfis-template/{id}', [PerfilTemplateController::class, 'destroy']);
-            Route::post('/templates-contrato', [TemplateContratoController::class, 'store']);
-            Route::patch('/templates-contrato/{id}', [TemplateContratoController::class, 'update']);
-            Route::delete('/templates-contrato/{id}', [TemplateContratoController::class, 'destroy']);
-            Route::post('/templates-contrato/importar/preview', [TemplateImportController::class, 'preview']);
-            Route::post('/templates-contrato/importar', [TemplateImportController::class, 'store']);
-            Route::post('/checklist-process-templates', [ChecklistProcessTemplateController::class, 'store']);
-            Route::patch('/checklist-process-templates/{id}', [ChecklistProcessTemplateController::class, 'update']);
-            Route::delete('/checklist-process-templates/{id}', [ChecklistProcessTemplateController::class, 'destroy']);
-        });
 
+            Route::post(
+                '/templates-contrato/texto/preview',
+                [
+                    TemplateImportController::class,
+                    'previewText',
+                ]
+            );
+            Route::post(
+                '/templates-contrato/texto',
+                [
+                    TemplateImportController::class,
+                    'storeText',
+                ]
+            );
+
+            Route::post(
+                '/templates-contrato/importar/preview',
+                [
+                    TemplateImportController::class,
+                    'preview',
+                ]
+            );
+
+            Route::post(
+                '/templates-contrato/importar',
+                [
+                    TemplateImportController::class,
+                    'store',
+                ]
+            );
+
+            Route::post(
+                '/templates-contrato',
+                [
+                    TemplateContratoController::class,
+                    'store',
+                ]
+            );
+
+            Route::patch(
+                '/templates-contrato/{id}',
+                [
+                    TemplateContratoController::class,
+                    'update',
+                ]
+            );
+
+            Route::delete(
+                '/templates-contrato/{id}',
+                [
+                    TemplateContratoController::class,
+                    'destroy',
+                ]
+            );
+
+            Route::post(
+                '/checklist-process-templates',
+                [
+                    ChecklistProcessTemplateController::class,
+                    'store',
+                ]
+            );
+
+            Route::patch(
+                '/checklist-process-templates/{id}',
+                [
+                    ChecklistProcessTemplateController::class,
+                    'update',
+                ]
+            );
+
+            Route::delete(
+                '/checklist-process-templates/{id}',
+                [
+                    ChecklistProcessTemplateController::class,
+                    'destroy',
+                ]
+            );
+        });
         Route::middleware('permission:checklist,visualizar')->group(function () {
             Route::get(
                 '/checklists',

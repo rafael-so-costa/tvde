@@ -22,6 +22,8 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use App\Models\Documento;
+use Smalot\PdfParser\Parser;
 
 uses(RefreshDatabase::class);
 
@@ -124,19 +126,19 @@ function contratoUsuarioComRole(
     $nomes = [
         'motorista' => 'Motorista',
         'proprietario' =>
-            'Proprietário',
+        'Proprietário',
         'funcionario' =>
-            'Funcionário',
+        'Funcionário',
     ];
 
     $role = Role::firstOrCreate(
         [
             'codigo' =>
-                $roleCodigo,
+            $roleCodigo,
         ],
         [
             'nome' =>
-                $nomes[$roleCodigo]
+            $nomes[$roleCodigo]
                 ?? ucfirst(
                     $roleCodigo
                 ),
@@ -146,11 +148,11 @@ function contratoUsuarioComRole(
 
     UserRole::create([
         'user_id' =>
-            $user->id,
+        $user->id,
         'role_id' =>
-            $role->id,
+        $role->id,
         'tenant_id' =>
-            $tenant->id,
+        $tenant->id,
     ]);
 
     return $user;
@@ -1356,7 +1358,7 @@ test('patch não aceita data fim anterior à data início já existente', functi
             [
                 'tipo' => 'aluguer',
                 'data_inicio' =>
-                    '2026-10-10',
+                '2026-10-10',
             ]
         )
         ->assertCreated();
@@ -1367,19 +1369,19 @@ test('patch não aceita data fim anterior à data início já existente', functi
 
     $versoesAntes =
         VersaoContrato::query()
-            ->where(
-                'contrato_id',
-                $id
-            )
-            ->count();
+        ->where(
+            'contrato_id',
+            $id
+        )
+        ->count();
 
     $logsAntes =
         LogAuditoriaContrato::query()
-            ->where(
-                'contrato_id',
-                $id
-            )
-            ->count();
+        ->where(
+            'contrato_id',
+            $id
+        )
+        ->count();
 
     $this->withHeaders(
         contratoHeaders()
@@ -1388,7 +1390,7 @@ test('patch não aceita data fim anterior à data início já existente', functi
             "/api/contratos/{$id}",
             [
                 'data_fim' =>
-                    '2026-10-09',
+                '2026-10-09',
             ]
         )
         ->assertUnprocessable()
@@ -1461,9 +1463,9 @@ test('patch não aceita data início posterior à data fim já existente', funct
             [
                 'tipo' => 'aluguer',
                 'data_inicio' =>
-                    '2026-10-01',
+                '2026-10-01',
                 'data_fim' =>
-                    '2026-10-10',
+                '2026-10-10',
             ]
         )
         ->assertCreated();
@@ -1474,11 +1476,11 @@ test('patch não aceita data início posterior à data fim já existente', funct
 
     $versoesAntes =
         VersaoContrato::query()
-            ->where(
-                'contrato_id',
-                $id
-            )
-            ->count();
+        ->where(
+            'contrato_id',
+            $id
+        )
+        ->count();
 
     $this->withHeaders(
         contratoHeaders()
@@ -1487,7 +1489,7 @@ test('patch não aceita data início posterior à data fim já existente', funct
             "/api/contratos/{$id}",
             [
                 'data_inicio' =>
-                    '2026-10-11',
+                '2026-10-11',
             ]
         )
         ->assertUnprocessable()
@@ -1590,7 +1592,7 @@ test('encerramento não aceita data fim anterior à data início', function () {
             "/api/contratos/{$id}/encerrar",
             [
                 'data_fim' =>
-                    '2026-10-09',
+                '2026-10-09',
             ]
         )
         ->assertUnprocessable()
@@ -1666,7 +1668,7 @@ test('motorista pode listar e consultar apenas os próprios contratos', function
     $proprio = new Contrato([
         'tipo' => 'aluguer',
         'motorista_id' =>
-            $motorista->id,
+        $motorista->id,
     ]);
 
     $proprio->tenant_id =
@@ -1677,7 +1679,7 @@ test('motorista pode listar e consultar apenas os próprios contratos', function
     $alheio = new Contrato([
         'tipo' => 'aluguer',
         'motorista_id' =>
-            $outroMotorista->id,
+        $outroMotorista->id,
     ]);
 
     $alheio->tenant_id =
@@ -1735,7 +1737,7 @@ test('motorista pode listar e consultar apenas os próprios contratos', function
             '/api/contratos',
             [
                 'tipo' =>
-                    'aluguer',
+                'aluguer',
             ]
         )
         ->assertForbidden();
@@ -1793,7 +1795,7 @@ test('proprietário pode listar e consultar apenas os próprios contratos', func
     $proprio = new Contrato([
         'tipo' => 'aluguer',
         'proprietario_id' =>
-            $proprietario->id,
+        $proprietario->id,
     ]);
 
     $proprio->tenant_id =
@@ -1804,7 +1806,7 @@ test('proprietário pode listar e consultar apenas os próprios contratos', func
     $alheio = new Contrato([
         'tipo' => 'aluguer',
         'proprietario_id' =>
-            $outroProprietario->id,
+        $outroProprietario->id,
     ]);
 
     $alheio->tenant_id =
@@ -1862,7 +1864,7 @@ test('proprietário pode listar e consultar apenas os próprios contratos', func
             '/api/contratos',
             [
                 'tipo' =>
-                    'aluguer',
+                'aluguer',
             ]
         )
         ->assertForbidden();
@@ -1874,7 +1876,7 @@ test('proprietário pode listar e consultar apenas os próprios contratos', func
             "/api/contratos/{$proprio->id}",
             [
                 'valor_total' =>
-                    100,
+                100,
             ]
         )
         ->assertForbidden();
@@ -1910,7 +1912,7 @@ test('motorista sem registo vinculado recebe lista vazia', function () {
     $contrato = new Contrato([
         'tipo' => 'aluguer',
         'motorista_id' =>
-            $motorista->id,
+        $motorista->id,
     ]);
 
     $contrato->tenant_id =
@@ -2034,27 +2036,27 @@ test('assinatura remota pendente pode ser reenviada com novo otp e token', funct
             '/api/contratos',
             [
                 'template_id' =>
-                    $template->id,
+                $template->id,
 
                 'tipo' =>
-                    'aluguer',
+                'aluguer',
 
                 'motorista_id' =>
-                    $motorista->id,
+                $motorista->id,
 
                 'veiculo_id' =>
-                    $veiculo->id,
+                $veiculo->id,
 
                 'data_inicio' =>
-                    '2026-10-01',
+                '2026-10-01',
 
                 'assinaturas' => [
                     [
                         'placeholder' =>
-                            'ASSINATURA_MOTORISTA',
+                        'ASSINATURA_MOTORISTA',
 
                         'modo' =>
-                            'remota',
+                        'remota',
                     ],
                 ],
             ]
@@ -2080,11 +2082,11 @@ test('assinatura remota pendente pode ser reenviada com novo otp e token', funct
 
     $tokenAnterior =
         $assinatura
-            ->token_verificacao;
+        ->token_verificacao;
 
     $otpAnterior =
         $assinatura
-            ->codigo_otp;
+        ->codigo_otp;
 
     $this
         ->withHeaders(
@@ -2144,8 +2146,8 @@ test('assinatura remota pendente pode ser reenviada com novo otp e token', funct
                     $motorista->email
                 ) &&
                 $mail->otp ===
-                    $assinatura
-                        ->codigo_otp &&
+                $assinatura
+                ->codigo_otp &&
                 str_contains(
                     $mail->signatureUrl,
                     (string)
@@ -2159,67 +2161,67 @@ test('assinatura remota pendente pode ser reenviada com novo otp e token', funct
         'logs_auditoria_contratos',
         [
             'contrato_id' =>
-                $contratoId,
+            $contratoId,
 
             'tenant_id' =>
-                $tenant->id,
+            $tenant->id,
 
             'user_id' =>
-                $user->id,
+            $user->id,
 
             'acao' =>
-                'reenvio_assinatura_remota',
+            'reenvio_assinatura_remota',
         ]
     );
 });
 
-test('pdf do contrato é gerado em storage privado com hash e auditoria',function(){
+test('pdf do contrato é gerado em storage privado com hash e auditoria', function () {
     Storage::fake('local');
 
-    $tenant=contratoTenant(
+    $tenant = contratoTenant(
         'Tenant PDF',
         'tenant-pdf'
     );
 
-    $user=contratoUsuario(
+    $user = contratoUsuario(
         $tenant,
         'pdf.contrato@frotapro.test'
     );
 
-    $template=contratoTemplate(
+    $template = contratoTemplate(
         $tenant,
         "CONTRATO DE ALUGUER\n\nMotorista: {{NOME_MOTORISTA}}\nVeículo: {{MATRICULA_VEICULO}}\nInício: {{DATA_INICIO}}"
     );
 
-    $motorista=contratoMotorista(
+    $motorista = contratoMotorista(
         $tenant,
         'PDF'
     );
 
-    $veiculo=contratoVeiculo(
+    $veiculo = contratoVeiculo(
         $tenant,
         'PDF-10-AA',
         300
     );
 
-    contratoLogin($this,$user);
+    contratoLogin($this, $user);
 
-    $response=$this
+    $response = $this
         ->withHeaders(contratoHeaders())
-        ->postJson('/api/contratos',[
-            'template_id'=>$template->id,
-            'tipo'=>'aluguer',
-            'motorista_id'=>$motorista->id,
-            'veiculo_id'=>$veiculo->id,
-            'data_inicio'=>'2026-09-20',
-            'campos_preenchidos'=>[
-                'NOME_MOTORISTA'=>
-                    $motorista->nome_completo,
+        ->postJson('/api/contratos', [
+            'template_id' => $template->id,
+            'tipo' => 'aluguer',
+            'motorista_id' => $motorista->id,
+            'veiculo_id' => $veiculo->id,
+            'data_inicio' => '2026-09-20',
+            'campos_preenchidos' => [
+                'NOME_MOTORISTA' =>
+                $motorista->nome_completo,
             ],
         ])
         ->assertCreated();
 
-    $id=$response->json('data.id');
+    $id = $response->json('data.id');
 
     $this
         ->withHeaders(contratoHeaders())
@@ -2230,7 +2232,7 @@ test('pdf do contrato é gerado em storage privado com hash e auditoria',functio
             true
         );
 
-    $contrato=Contrato::findOrFail($id);
+    $contrato = Contrato::findOrFail($id);
 
     expect($contrato->pdf_gerado_url)
         ->not->toBeNull();
@@ -2243,15 +2245,44 @@ test('pdf do contrato é gerado em storage privado com hash e auditoria',functio
             $contrato->pdf_gerado_url
         );
 
-    $binary=Storage::disk('local')
+    $binary = Storage::disk('local')
         ->get(
             $contrato->pdf_gerado_url
         );
 
+    $documento = Documento::query()
+        ->where(
+            'entidade_tipo',
+            'contrato'
+        )
+        ->where(
+            'entidade_id',
+            $contrato->id
+        )
+        ->firstOrFail();
+
+    expect(
+        $documento->codigo
+    )->toMatch(
+        '/^G[0-9]{6}$/'
+    );
+
+    $text = (new Parser())
+        ->parseContent(
+            $binary
+        )
+        ->getText();
+
+    expect(
+        $text
+    )->toContain(
+        $documento->codigo
+    );
+
     expect($binary)
         ->toStartWith('%PDF-');
 
-    expect(hash('sha256',$binary))
+    expect(hash('sha256', $binary))
         ->toBe(
             $contrato->hash_documento
         );
@@ -2259,60 +2290,60 @@ test('pdf do contrato é gerado em storage privado com hash e auditoria',functio
     $this->assertDatabaseHas(
         'logs_auditoria_contratos',
         [
-            'contrato_id'=>$id,
-            'tenant_id'=>$tenant->id,
-            'user_id'=>$user->id,
-            'acao'=>'geracao_pdf',
+            'contrato_id' => $id,
+            'tenant_id' => $tenant->id,
+            'user_id' => $user->id,
+            'acao' => 'geracao_pdf',
         ]
     );
 });
 
-test('pdf gerado pode ser visualizado e descarregado',function(){
+test('pdf gerado pode ser visualizado e descarregado', function () {
     Storage::fake('local');
 
-    $tenant=contratoTenant(
+    $tenant = contratoTenant(
         'Tenant PDF Download',
         'tenant-pdf-download'
     );
 
-    $user=contratoUsuario(
+    $user = contratoUsuario(
         $tenant,
         'pdf.download@frotapro.test'
     );
 
-    $template=contratoTemplate(
+    $template = contratoTemplate(
         $tenant,
         'Contrato {{NOME_MOTORISTA}}'
     );
 
-    $motorista=contratoMotorista(
+    $motorista = contratoMotorista(
         $tenant,
         'Download'
     );
 
-    $veiculo=contratoVeiculo(
+    $veiculo = contratoVeiculo(
         $tenant,
         'PDF-20-BB',
         320
     );
 
-    contratoLogin($this,$user);
+    contratoLogin($this, $user);
 
-    $response=$this
+    $response = $this
         ->withHeaders(contratoHeaders())
-        ->postJson('/api/contratos',[
-            'template_id'=>$template->id,
-            'tipo'=>'aluguer',
-            'motorista_id'=>$motorista->id,
-            'veiculo_id'=>$veiculo->id,
-            'campos_preenchidos'=>[
-                'NOME_MOTORISTA'=>
-                    $motorista->nome_completo,
+        ->postJson('/api/contratos', [
+            'template_id' => $template->id,
+            'tipo' => 'aluguer',
+            'motorista_id' => $motorista->id,
+            'veiculo_id' => $veiculo->id,
+            'campos_preenchidos' => [
+                'NOME_MOTORISTA' =>
+                $motorista->nome_completo,
             ],
         ])
         ->assertCreated();
 
-    $id=$response->json('data.id');
+    $id = $response->json('data.id');
 
     $this
         ->withHeaders(contratoHeaders())
@@ -2338,34 +2369,34 @@ test('pdf gerado pode ser visualizado e descarregado',function(){
         );
 });
 
-test('utilizador apenas visualizar não pode gerar pdf',function(){
+test('utilizador apenas visualizar não pode gerar pdf', function () {
     Storage::fake('local');
 
-    $tenant=contratoTenant(
+    $tenant = contratoTenant(
         'Tenant PDF Permissão',
         'tenant-pdf-permissao'
     );
 
-    $user=contratoUsuario(
+    $user = contratoUsuario(
         $tenant,
         'pdf.visualizar@frotapro.test',
         'visualizar'
     );
 
-    $template=contratoTemplate(
+    $template = contratoTemplate(
         $tenant,
         'Contrato de teste'
     );
 
-    $contrato=new Contrato([
-        'template_id'=>$template->id,
-        'tipo'=>'aluguer',
+    $contrato = new Contrato([
+        'template_id' => $template->id,
+        'tipo' => 'aluguer',
     ]);
 
-    $contrato->tenant_id=$tenant->id;
+    $contrato->tenant_id = $tenant->id;
     $contrato->save();
 
-    contratoLogin($this,$user);
+    contratoLogin($this, $user);
 
     $this
         ->withHeaders(contratoHeaders())
