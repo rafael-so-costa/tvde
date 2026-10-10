@@ -23,7 +23,8 @@ dataset(
 
         foreach (
             $manifest
-            as $file => $expectations
+            as $file =>
+            $expectations
         ) {
             yield $file => [
                 $file,
@@ -135,9 +136,23 @@ test(
 
         foreach (
             $expectations[
+                'forbidden_warnings'
+            ] ?? []
+            as $warning
+        ) {
+            expect(
+                $warningCodes
+            )->not->toContain(
+                $warning
+            );
+        }
+
+        foreach (
+            $expectations[
                 'minimum_values'
             ] ?? []
-            as $field => $minimum
+            as $field =>
+            $minimum
         ) {
             $values =
                 data_get(
@@ -152,6 +167,76 @@ test(
                 )
             )->toBeGreaterThanOrEqual(
                 $minimum
+            );
+        }
+
+        foreach (
+            $expectations[
+                'exact_values'
+            ] ?? []
+            as $field =>
+            $expectedValues
+        ) {
+            $values =
+                array_values(
+                    array_unique(
+                        data_get(
+                            $result,
+                            "campos_mapeados.{$field}.valores_detectados",
+                            []
+                        )
+                    )
+                );
+
+            $expectedValues =
+                array_values(
+                    array_unique(
+                        $expectedValues
+                    )
+                );
+
+            sort(
+                $values
+            );
+
+            sort(
+                $expectedValues
+            );
+
+            expect(
+                $values
+            )->toBe(
+                $expectedValues
+            );
+        }
+
+        foreach (
+            $expectations[
+                'contains'
+            ] ?? []
+            as $fragment
+        ) {
+            expect(
+                $result[
+                    'conteudo_parametrizado'
+                ]
+            )->toContain(
+                $fragment
+            );
+        }
+
+        foreach (
+            $expectations[
+                'forbidden_contains'
+            ] ?? []
+            as $fragment
+        ) {
+            expect(
+                $result[
+                    'conteudo_parametrizado'
+                ]
+            )->not->toContain(
+                $fragment
             );
         }
 

@@ -30,17 +30,21 @@ $base =
     $root .
     '/tests/Fixtures/templates/text-analyzer';
 
-$manifest = require $base .
-    '/_manifest.php';
+$manifest =
+    require $base .
+        '/_manifest.php';
 
 echo PHP_EOL;
 echo 'Template Text Analyzer - Corpus Report';
 echo PHP_EOL;
+
 echo str_repeat(
     '=',
     78
 );
-echo PHP_EOL . PHP_EOL;
+
+echo PHP_EOL .
+    PHP_EOL;
 
 $total = 0;
 $passed = 0;
@@ -48,68 +52,139 @@ $failed = 0;
 
 foreach (
     $manifest
-    as $file => $expectations
+    as $file =>
+    $expectations
 ) {
     $total++;
 
-    $content = file_get_contents(
-        $base .
-        '/' .
-        $file
-    );
+    $content =
+        file_get_contents(
+            $base .
+            '/' .
+            $file
+        );
 
-    $result = $analyzer->analyze(
-        $content
-    );
+    if (
+        $content === false
+    ) {
+        $failed++;
 
-    $fields = collect(
-        $result['campos_detectados']
-    )
-        ->pluck(
-            'name'
+        echo '[FAIL] ' .
+            $file .
+            PHP_EOL;
+
+        echo '       Não foi possível ler o ficheiro.' .
+            PHP_EOL .
+            PHP_EOL;
+
+        continue;
+    }
+
+    $result =
+        $analyzer->analyze(
+            $content
+        );
+
+    $fields =
+        collect(
+            $result[
+                'campos_detectados'
+            ] ?? []
         )
-        ->all();
+            ->pluck(
+                'name'
+            )
+            ->all();
 
-    $warningCodes = collect(
-        $result['warnings']
-    )
-        ->pluck(
-            'code'
+    $warningCodes =
+        collect(
+            $result[
+                'warnings'
+            ] ?? []
         )
-        ->all();
+            ->pluck(
+                'code'
+            )
+            ->all();
 
-    $missing = array_values(
-        array_diff(
-            $expectations['expected'] ?? [],
-            $fields
-        )
-    );
+    /*
+     * Campos obrigatórios que deveriam ter sido encontrados.
+     */
+    $missing =
+        array_values(
+            array_diff(
+                $expectations[
+                    'expected'
+                ] ?? [],
+                $fields
+            )
+        );
 
-    $forbiddenFound = array_values(
-        array_intersect(
-            $expectations['forbidden'] ?? [],
-            $fields
-        )
-    );
+    /*
+     * Campos que não deveriam ter sido encontrados.
+     */
+    $forbiddenFound =
+        array_values(
+            array_intersect(
+                $expectations[
+                    'forbidden'
+                ] ?? [],
+                $fields
+            )
+        );
 
-    $missingWarnings = array_values(
-        array_diff(
-            $expectations['warnings'] ?? [],
-            $warningCodes
-        )
-    );
+    /*
+     * Avisos que deveriam existir.
+     */
+    $missingWarnings =
+        array_values(
+            array_diff(
+                $expectations[
+                    'warnings'
+                ] ?? [],
+                $warningCodes
+            )
+        );
 
+    /*
+     * Avisos que não deveriam existir.
+     */
+    $forbiddenWarningsFound =
+        array_values(
+            array_intersect(
+                $expectations[
+                    'forbidden_warnings'
+                ] ?? [],
+                $warningCodes
+            )
+        );
+
+    /*
+     * Quantidade mínima de valores reconhecidos para determinado campo.
+     */
     $valueFailures = [];
 
     foreach (
-        $expectations['minimum_values'] ?? []
-        as $field => $minimum
+        $expectations[
+            'minimum_values'
+        ] ?? []
+        as $field =>
+        $minimum
     ) {
-        $values = data_get(
-            $result,
-            "campos_mapeados.{$field}.valores_detectados",
-            []
-        );
+        $values =
+            data_get(
+                $result,
+                "campos_mapeados.{$field}.valores_detectados",
+                []
+            );
+
+        if (
+            !is_array(
+                $values
+            )
+        ) {
+            $values = [];
+        }
 
         if (
             count(
@@ -127,11 +202,143 @@ foreach (
         }
     }
 
+    /*
+     * Valores exatos esperados.
+     *
+     * Útil para impedir situações em que o campo certo é encontrado,
+     * mas recebe também valores pertencentes a outro contexto.
+     *
+     * Exemplo:
+     * PROPRIETARIO_NIF deve conter apenas o NIF do proprietário,
+     * e não também o NIF do motorista.
+     */
+    $exactValueFailures = [];
+
+    foreach (
+        $expectations[
+            'exact_values'
+        ] ?? []
+        as $field =>
+        $expectedValues
+    ) {
+        $values =
+            data_get(
+                $result,
+                "campos_mapeados.{$field}.valores_detectados",
+                []
+            );
+
+        if (
+            !is_array(
+                $values
+            )
+        ) {
+            $values = [];
+        }
+
+        $values =
+            array_values(
+                array_unique(
+                    $values
+                )
+            );
+
+        $expectedValues =
+            array_values(
+                array_unique(
+                    $expectedValues
+                )
+            );
+
+        sort(
+            $values
+        );
+
+        sort(
+            $expectedValues
+        );
+
+        if (
+            $values !==
+            $expectedValues
+        ) {
+            $exactValueFailures[] =
+                $field .
+                ' [' .
+                implode(
+                    ', ',
+                    $values
+                ) .
+                '] esperado [' .
+                implode(
+                    ', ',
+                    $expectedValues
+                ) .
+                ']';
+        }
+    }
+
+    /*
+     * Fragmentos que obrigatoriamente devem existir no preview
+     * parametrizado.
+     */
+    $missingFragments = [];
+
+    foreach (
+        $expectations[
+            'contains'
+        ] ?? []
+        as $fragment
+    ) {
+        if (
+            !str_contains(
+                $result[
+                    'conteudo_parametrizado'
+                ] ?? '',
+                $fragment
+            )
+        ) {
+            $missingFragments[] =
+                $fragment;
+        }
+    }
+
+    /*
+     * Fragmentos que nunca devem existir no preview.
+     *
+     * Isto permite detectar corrupção textual mesmo quando
+     * o conjunto de campos aparentemente está correto.
+     */
+    $forbiddenFragmentsFound = [];
+
+    foreach (
+        $expectations[
+            'forbidden_contains'
+        ] ?? []
+        as $fragment
+    ) {
+        if (
+            str_contains(
+                $result[
+                    'conteudo_parametrizado'
+                ] ?? '',
+                $fragment
+            )
+        ) {
+            $forbiddenFragmentsFound[] =
+                $fragment;
+        }
+    }
+
     $ok =
         $missing === [] &&
         $forbiddenFound === [] &&
         $missingWarnings === [] &&
-        $valueFailures === [];
+        $forbiddenWarningsFound === [] &&
+        $valueFailures === [] &&
+        $exactValueFailures === [] &&
+        $missingFragments === [] &&
+        $forbiddenFragmentsFound === [];
 
     if ($ok) {
         $passed++;
@@ -153,8 +360,11 @@ foreach (
 
     echo ' | Valores: ' .
         (
-            $result['stats']['valores_detectados']
-            ?? 0
+            $result[
+                'stats'
+            ][
+                'valores_detectados'
+            ] ?? 0
         );
 
     echo ' | Avisos: ' .
@@ -198,12 +408,56 @@ foreach (
     }
 
     if (
+        $forbiddenWarningsFound !== []
+    ) {
+        echo '       Avisos indevidos: ' .
+            implode(
+                ', ',
+                $forbiddenWarningsFound
+            ) .
+            PHP_EOL;
+    }
+
+    if (
         $valueFailures !== []
     ) {
-        echo '       Valores múltiplos insuficientes: ' .
+        echo '       Valores insuficientes: ' .
             implode(
                 ', ',
                 $valueFailures
+            ) .
+            PHP_EOL;
+    }
+
+    if (
+        $exactValueFailures !== []
+    ) {
+        echo '       Valores incorretos: ' .
+            implode(
+                ' | ',
+                $exactValueFailures
+            ) .
+            PHP_EOL;
+    }
+
+    if (
+        $missingFragments !== []
+    ) {
+        echo '       Preview não contém: ' .
+            implode(
+                ' | ',
+                $missingFragments
+            ) .
+            PHP_EOL;
+    }
+
+    if (
+        $forbiddenFragmentsFound !== []
+    ) {
+        echo '       Preview contém fragmentos indevidos: ' .
+            implode(
+                ' | ',
+                $forbiddenFragmentsFound
             ) .
             PHP_EOL;
     }
@@ -228,12 +482,15 @@ echo str_repeat(
     '-',
     78
 );
+
 echo PHP_EOL;
 
 echo "Corpus: {$total}";
 echo " | PASS: {$passed}";
 echo " | FAIL: {$failed}";
-echo PHP_EOL . PHP_EOL;
+
+echo PHP_EOL .
+    PHP_EOL;
 
 exit(
     $failed > 0

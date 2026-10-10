@@ -76,8 +76,14 @@ return [
             'DURACAO_CONTRATO',
             'VALOR_CAUCAO',
             'VALOR_SEMANAL',
+            'PROPRIETARIO_TIPO_DOCUMENTO',
+            'PROPRIETARIO_NUMERO_DOCUMENTO',
         ],
-        'forbidden' => [],
+        'forbidden' => [
+            'MOTORISTA_TIPO_DOCUMENTO',
+            'MOTORISTA_NUMERO_DOCUMENTO',
+            'MOTORISTA_DOCUMENTO_VALID_UNTIL',
+        ],
         'warnings' => [],
     ],
 
@@ -113,9 +119,14 @@ return [
             'VEICULO_MATRICULA',
             'ASSINATURA_PROPRIETARIO',
             'ASSINATURA_EMPRESA',
+            'PROPRIETARIO_TIPO_DOCUMENTO',
+            'PROPRIETARIO_NUMERO_DOCUMENTO',
         ],
         'forbidden' => [
             'MOTORISTA_NOME_COMPLETO',
+            'MOTORISTA_TIPO_DOCUMENTO',
+            'MOTORISTA_NUMERO_DOCUMENTO',
+            'MOTORISTA_DOCUMENTO_VALID_UNTIL',
         ],
         'warnings' => [],
     ],
@@ -141,10 +152,6 @@ return [
         'warnings' => [],
     ],
 
-    /*
-     * Estes dois casos são deliberadamente escritos com linguagem
-     * diferente das regex atuais. Servirão para mostrar falsos negativos.
-     */
     '08-autorizacao-motorista-proprietario.txt' => [
         'expected' => [
             'MOTORISTA_NOME_COMPLETO',
@@ -208,10 +215,6 @@ return [
         ],
     ],
 
-    /*
-     * Declaração preenchida sem placeholders.
-     * Queremos que futuramente o analisador também reconheça esta redação.
-     */
     '12-declaracao-motorista.txt' => [
         'expected' => [
             'EMPRESA_NOME_EMPRESA',
@@ -256,10 +259,6 @@ return [
         ],
     ],
 
-    /*
-     * Este caso provavelmente falhará inicialmente.
-     * A intenção é medir tolerância a OCR.
-     */
     '15-ocr-imperfeito.txt' => [
         'expected' => [
             'EMPRESA_NOME_EMPRESA',
@@ -286,10 +285,6 @@ return [
         ],
     ],
 
-    /*
-     * Queremos futuramente alertar quando o mesmo campo contextual
-     * aparece com valores incompatíveis.
-     */
     '17-valores-contraditorios.txt' => [
         'expected' => [
             'VEICULO_MATRICULA',
@@ -306,10 +301,6 @@ return [
         ],
     ],
 
-    /*
-     * Nenhum destes números jurídicos deve ser confundido
-     * com dados variáveis do contrato.
-     */
     '18-falsos-positivos-juridicos.txt' => [
         'expected' => [],
         'forbidden' => [
@@ -354,6 +345,172 @@ return [
         'forbidden' => [],
         'warnings' => [
             'UNKNOWN_PLACEHOLDER',
+        ],
+    ],
+
+    '21-prestacao-servicos-real-lacunas.txt' => [
+        'expected' => [
+            'EMPRESA_NOME_EMPRESA',
+            'EMPRESA_ENDERECO_COMPLETO',
+            'EMPRESA_CAPITAL_SOCIAL',
+            'EMPRESA_NIF',
+            'EMPRESA_NOME_GERENTE',
+
+            'MOTORISTA_NOME_COMPLETO',
+            'MOTORISTA_ENDERECO_COMPLETO',
+            'MOTORISTA_TIPO_DOCUMENTO',
+            'MOTORISTA_NUMERO_DOCUMENTO',
+            'MOTORISTA_DOCUMENTO_VALID_UNTIL',
+            'MOTORISTA_NIF',
+
+            'DATA_INICIO',
+            'DATA_FIM',
+            'DURACAO_CONTRATO',
+            'PERCENTAGEM_CONTRATO',
+
+            'ASSINATURA_EMPRESA',
+            'ASSINATURA_MOTORISTA',
+        ],
+
+        'forbidden' => [],
+
+        'warnings' => [
+            'DATE_DURATION_MISMATCH',
+        ],
+
+        'forbidden_warnings' => [
+            'OCR_SPACING_NORMALIZED',
+        ],
+
+        'minimum_values' => [
+            'MOTORISTA_TIPO_DOCUMENTO' => 1,
+            'MOTORISTA_NUMERO_DOCUMENTO' => 1,
+            'MOTORISTA_DOCUMENTO_VALID_UNTIL' => 1,
+        ],
+
+        'contains' => [
+            'residente em {{MOTORISTA_ENDERECO_COMPLETO}}',
+            '{{MOTORISTA_TIPO_DOCUMENTO}}',
+            '{{MOTORISTA_NUMERO_DOCUMENTO}}',
+            '{{MOTORISTA_DOCUMENTO_VALID_UNTIL}}',
+            '{{ASSINATURA_EMPRESA}}',
+            '{{ASSINATURA_MOTORISTA}}',
+        ],
+    ],
+    '22-aluguer-veiculo-real-pessoa-singular.txt' => [
+        'expected' => [
+            'PROPRIETARIO_NOME_COMPLETO',
+            'PROPRIETARIO_TIPO_DOCUMENTO',
+            'PROPRIETARIO_NUMERO_DOCUMENTO',
+            'PROPRIETARIO_NIF',
+            'PROPRIETARIO_ENDERECO_COMPLETO',
+
+            'MOTORISTA_NOME_COMPLETO',
+            'MOTORISTA_TIPO_DOCUMENTO',
+            'MOTORISTA_NUMERO_DOCUMENTO',
+            'MOTORISTA_NIF',
+            'MOTORISTA_ENDERECO_COMPLETO',
+
+            'VEICULO_MATRICULA',
+            'VEICULO_DATA_MATRICULA',
+            'VEICULO_MARCA',
+            'VEICULO_MODELO',
+            'VEICULO_CHASSI',
+            'VEICULO_CILINDRADA',
+            'VEICULO_POTENCIA',
+            'VEICULO_COMBUSTIVEL',
+            'VEICULO_LUGARES',
+            'VEICULO_PORTAS',
+            'VEICULO_COR',
+
+            'DATA_INICIO',
+            'DATA_FIM',
+            'DURACAO_CONTRATO',
+            'DATA_PRIMEIRO_PAGAMENTO',
+            'DATA_ASSINATURA',
+            'VALOR_CAUCAO',
+            'VALOR_SEMANAL',
+
+            'ASSINATURA_PROPRIETARIO',
+            'ASSINATURA_MOTORISTA',
+        ],
+
+        'forbidden' => [
+            'PROPRIETARIO_DOCUMENTO_VALID_UNTIL',
+            'MOTORISTA_DOCUMENTO_VALID_UNTIL',
+            'PERCENTAGEM_CONTRATO',
+        ],
+
+        'warnings' => [
+            'DATE_DURATION_MISMATCH',
+        ],
+
+        'forbidden_warnings' => [
+            'OCR_SPACING_NORMALIZED',
+            'MULTIPLE_VALUES_CONFLICT',
+        ],
+
+        'exact_values' => [
+            'PROPRIETARIO_NIF' => [
+                '515698350',
+            ],
+
+            'MOTORISTA_NIF' => [
+                '123123414',
+            ],
+
+            'PROPRIETARIO_TIPO_DOCUMENTO' => [
+                'Cartão de Cidadão',
+            ],
+
+            'PROPRIETARIO_NUMERO_DOCUMENTO' => [
+                '1231414u8',
+            ],
+
+            'MOTORISTA_TIPO_DOCUMENTO' => [
+                'Cartão de Cidadão',
+            ],
+
+            'MOTORISTA_NUMERO_DOCUMENTO' => [
+                '1231445R3',
+            ],
+
+            'VEICULO_COMBUSTIVEL' => [
+                'Elétrico',
+            ],
+
+            'DATA_PRIMEIRO_PAGAMENTO' => [
+                '2026-08-24',
+            ],
+
+            'DATA_ASSINATURA' => [
+                '2026-08-20',
+            ],
+            'PROPRIETARIO_ENDERECO_COMPLETO' => [
+                'rua do joao, 123, bloco c, 1234-554, lisboa',
+            ],
+
+            'MOTORISTA_ENDERECO_COMPLETO' => [
+                'rua de jo, 2, ap, 1234-324, lisboa',
+            ],
+        ],
+
+        'contains' => [
+            '{{PROPRIETARIO_TIPO_DOCUMENTO}}',
+            '{{PROPRIETARIO_NUMERO_DOCUMENTO}}',
+            '{{MOTORISTA_TIPO_DOCUMENTO}}',
+            '{{MOTORISTA_NUMERO_DOCUMENTO}}',
+            '{{MOTORISTA_NIF}}',
+            '{{MOTORISTA_ENDERECO_COMPLETO}}',
+            'iniciando-se o primeiro pagamento em {{DATA_PRIMEIRO_PAGAMENTO}}',
+            'Feito e assinado {{DATA_ASSINATURA}}',
+            '{{ASSINATURA_PROPRIETARIO}}',
+            '{{ASSINATURA_MOTORISTA}}',
+            'utilizar exclusivamente o tipo de combustível ou sistema de carregamento adequado',
+        ],
+
+        'forbidden_contains' => [
+            '{{VEICULO_COMBUSTIVEL}}comendado',
         ],
     ],
 ];
