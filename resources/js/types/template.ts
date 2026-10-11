@@ -43,7 +43,7 @@ export interface ChecklistProcessTemplateItem {
     obrigatorio: boolean;
 
     configuracao:
-        ChecklistProcessItemConfiguration;
+    ChecklistProcessItemConfiguration;
 }
 
 export interface ChecklistProcessTemplate {
@@ -58,7 +58,7 @@ export interface ChecklistProcessTemplate {
     versao: number;
 
     items:
-        ChecklistProcessTemplateItem[];
+    ChecklistProcessTemplateItem[];
 
     created_at: string;
     updated_at: string;
@@ -75,7 +75,7 @@ export interface ChecklistProcessItemPayload {
     obrigatorio: boolean;
 
     configuracao:
-        ChecklistProcessItemConfiguration;
+    ChecklistProcessItemConfiguration;
 }
 
 export interface ChecklistProcessTemplatePayload {
@@ -86,7 +86,7 @@ export interface ChecklistProcessTemplatePayload {
     ativo: boolean;
 
     items:
-        ChecklistProcessItemPayload[];
+    ChecklistProcessItemPayload[];
 }
 
 export interface PerfilTemplate {
@@ -121,10 +121,19 @@ export interface TemplateContrato {
     id: string;
     tenant_id: string;
 
+    modelo_documento_saas_id:
+    string | null;
+
+    modelo_documento_saas_versao_id:
+    string | null;
+
+    modelo_documento_saas_versao:
+    string | null;
+
     perfil_id: string | null;
 
     checklist_process_template_id:
-        string | null;
+    string | null;
 
     nome: string;
 
@@ -132,23 +141,23 @@ export interface TemplateContrato {
     tipo_arquivo: string;
 
     conteudo_original:
-        string | null;
+    string | null;
 
     campos_detectados:
-        TemplateField[];
+    TemplateField[];
 
     campos_mapeados:
-        Record<string, unknown>;
+    Record<string, unknown>;
 
     ativo: boolean;
     arquivado_em: string | null;
     arquivado_por: string | null;
 
     perfil?:
-        PerfilTemplate | null;
+    PerfilTemplate | null;
 
     checklist_process_template?:
-        ChecklistProcessTemplate | null;
+    ChecklistProcessTemplate | null;
 
     created_at: string;
     updated_at: string;

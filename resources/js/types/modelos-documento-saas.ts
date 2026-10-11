@@ -100,3 +100,57 @@ export interface ModeloDocumentoSaasCategoriaPayload {
     ordem?: number;
     ativo?: boolean;
 }
+
+export interface ModeloDocumentoRecomendadoCategoria {
+    id: string;
+    nome: string;
+    slug: string;
+    descricao?: string | null;
+}
+
+export interface ModeloDocumentoRecomendado {
+    id: string;
+
+    categoria: ModeloDocumentoRecomendadoCategoria;
+
+    nome: string;
+    slug: string;
+
+    resumo: string | null;
+    descricao?: string | null;
+
+    tipo_documento: string | null;
+
+    pais: string;
+    idioma: string;
+
+    versao: string;
+
+    tecnicamente_validado: boolean;
+    juridicamente_revisto: boolean;
+
+    destaque: boolean;
+
+    entidades_requeridas: string[];
+    assinaturas_requeridas: string[];
+
+    publicado_em: string;
+
+    conteudo_parametrizado?: string;
+
+    campos_detectados?: Array<Record<string, unknown>>;
+    campos_mapeados?: Record<string, unknown>;
+
+    checksum?: string;
+}
+
+export interface ModelosDocumentoRecomendadosResponse {
+    data: ModeloDocumentoRecomendado[];
+
+    categories: ModeloDocumentoRecomendadoCategoria[];
+}
+
+export interface UsarModeloDocumentoRecomendadoPayload {
+    nome?: string;
+    perfil_id?: string | null;
+}

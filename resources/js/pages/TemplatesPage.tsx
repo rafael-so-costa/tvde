@@ -13,6 +13,7 @@ import {
     Pencil,
     Plus,
     RefreshCw,
+    Sparkles,
     Trash2,
     Upload,
     Workflow,
@@ -34,8 +35,10 @@ import type {
 } from "../types/template";
 
 import TemplateTextModal from "../components/contratos/templates/TemplateTextModal";
+import RecommendedTemplatesPanel from "../components/contratos/templates/RecommendedTemplatesPanel";
 
 type Tab = "documentos" | "workflows";
+type DocumentTab = "meus" | "recomendados";
 
 const itemTypeLabels: Record<ChecklistProcessItemType, string> = {
     tarefa: "Tarefa",
@@ -123,6 +126,8 @@ export default function TemplatesPage() {
     const queryClient = useQueryClient();
 
     const [tab, setTab] = useState<Tab>("documentos");
+
+    const [documentTab, setDocumentTab] = useState<DocumentTab>("meus");
 
     const [search, setSearch] = useState("");
 
@@ -361,7 +366,7 @@ export default function TemplatesPage() {
                     </p>
                 </div>
 
-                {tab === "documentos" ? (
+                {tab === "documentos" && documentTab === "meus" ? (
                     <div className="flex flex-wrap gap-2">
                         <button
                             type="button"
@@ -465,57 +470,121 @@ export default function TemplatesPage() {
                     </div>
                 </div>
 
-                <div className="flex flex-col gap-3 border-b border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
-                    <div className="relative w-full sm:max-w-md">
-                        <FileText className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                {tab === "documentos" && (
+                    <div className="border-b border-slate-200 bg-slate-50/60 px-5">
+                        <div className="flex gap-2 py-3">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setDocumentTab("meus");
+                                    setSearch("");
+                                }}
+                                className={[
+                                    "inline-flex h-9 items-center gap-2 rounded-lg px-3 text-sm font-semibold transition",
+                                    documentTab === "meus"
+                                        ? "bg-white text-indigo-700 shadow-sm ring-1 ring-slate-200"
+                                        : "text-slate-500 hover:text-slate-900",
+                                ].join(" ")}
+                            >
+                                <FileText className="h-4 w-4" />
+                                Meus modelos
+                            </button>
 
-                        <input
-                            value={search}
-                            onChange={(event) => setSearch(event.target.value)}
-                            placeholder={
-                                tab === "documentos"
-                                    ? "Pesquisar modelo..."
-                                    : "Pesquisar workflow..."
-                            }
-                            className="h-11 w-full rounded-xl border border-slate-200 pl-10 pr-4 text-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
-                        />
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setDocumentTab("recomendados");
+                                    setSearch("");
+                                }}
+                                className={[
+                                    "inline-flex h-9 items-center gap-2 rounded-lg px-3 text-sm font-semibold transition",
+                                    documentTab === "recomendados"
+                                        ? "bg-white text-indigo-700 shadow-sm ring-1 ring-slate-200"
+                                        : "text-slate-500 hover:text-slate-900",
+                                ].join(" ")}
+                            >
+                                <Sparkles className="h-4 w-4" />
+                                Modelos recomendados
+                            </button>
+                        </div>
                     </div>
+                )}
+                {!(tab === "documentos" && documentTab === "recomendados") && (
+                    <div className="flex flex-col gap-3 border-b border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+                        <div className="relative w-full sm:max-w-md">
+                            <FileText className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
 
-                    <button
-                        type="button"
-                        onClick={refresh}
-                        disabled={
-                            templatesQuery.isFetching ||
-                            workflowsQuery.isFetching
-                        }
-                        className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
-                    >
-                        <RefreshCw
-                            className={[
-                                "h-4 w-4",
+                            <input
+                                value={search}
+                                onChange={(event) =>
+                                    setSearch(event.target.value)
+                                }
+                                placeholder={
+                                    tab === "documentos"
+                                        ? "Pesquisar modelo..."
+                                        : "Pesquisar workflow..."
+                                }
+                                className="h-11 w-full rounded-xl border border-slate-200 pl-10 pr-4 text-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
+                            />
+                        </div>
 
+                        <button
+                            type="button"
+                            onClick={refresh}
+                            disabled={
                                 templatesQuery.isFetching ||
                                 workflowsQuery.isFetching
-                                    ? "animate-spin"
-                                    : "",
-                            ].join(" ")}
-                        />
-                        Atualizar
-                    </button>
-                </div>
+                            }
+                            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+                        >
+                            <RefreshCw
+                                className={[
+                                    "h-4 w-4",
 
+                                    templatesQuery.isFetching ||
+                                    workflowsQuery.isFetching
+                                        ? "animate-spin"
+                                        : "",
+                                ].join(" ")}
+                            />
+                            Atualizar
+                        </button>
+                    </div>
+                )}
                 {loading ? (
                     <Loading />
                 ) : hasError ? (
                     <ErrorState onRetry={refresh} />
                 ) : tab === "documentos" ? (
-                    <DocumentTemplates
-                        templates={templates}
-                        deleting={deleteTemplateMutation.isPending}
-                        onDelete={deleteTemplate}
-                        onImport={() => setImportOpen(true)}
-                        onPaste={() => setTextOpen(true)}
-                    />
+                    documentTab === "recomendados" ? (
+                        <RecommendedTemplatesPanel
+                            profiles={profilesQuery.data ?? []}
+                            onUsed={async () => {
+                                setDocumentTab("meus");
+
+                                await Promise.all([
+                                    queryClient.invalidateQueries({
+                                        queryKey: ["templates", tenant.id],
+                                    }),
+
+                                    queryClient.invalidateQueries({
+                                        queryKey: [
+                                            "template-profiles",
+                                            tenant.id,
+                                        ],
+                                    }),
+                                ]);
+                            }}
+                        />
+                    ) : (
+                        <DocumentTemplates
+                            templates={templates}
+                            deleting={deleteTemplateMutation.isPending}
+                            onDelete={deleteTemplate}
+                            onImport={() => setImportOpen(true)}
+                            onPaste={() => setTextOpen(true)}
+                        />
+                    )
                 ) : (
                     <WorkflowTemplates
                         workflows={workflows}
@@ -749,13 +818,29 @@ function DocumentTemplates({
                             </td>
 
                             <td className="px-5 py-4">
-                                {item.arquivo_url ? (
+                                {item.modelo_documento_saas_id ? (
+                                    <div>
+                                        <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700">
+                                            <Sparkles className="h-3.5 w-3.5" />
+                                            FrotaPro
+                                        </span>
+
+                                        {item.modelo_documento_saas_versao && (
+                                            <div className="mt-1 text-xs text-slate-400">
+                                                v
+                                                {
+                                                    item.modelo_documento_saas_versao
+                                                }
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : item.arquivo_url ? (
                                     <span className="inline-flex rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
-                                        Arquivo
+                                        Arquivo próprio
                                     </span>
                                 ) : (
                                     <span className="inline-flex rounded-full bg-violet-50 px-2.5 py-1 text-xs font-semibold text-violet-700">
-                                        Texto
+                                        Texto próprio
                                     </span>
                                 )}
                             </td>
