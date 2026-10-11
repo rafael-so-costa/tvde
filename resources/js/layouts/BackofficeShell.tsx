@@ -10,6 +10,7 @@ import {
     LayoutDashboard,
     Layers3,
     LifeBuoy,
+    FileText,
     LogOut,
     Megaphone,
     MessageSquareText,
@@ -95,6 +96,13 @@ export default function BackofficeShell() {
                         <NavLink to="/backoffice/ajuda" className={navClass}>
                             <BookOpenText className="h-5 w-5" />
                             Central de Ajuda
+                        </NavLink>
+                        <NavLink
+                            to="/backoffice/modelos-documento"
+                            className={navClass}
+                        >
+                            <FileText className="h-5 w-5" />
+                            Modelos recomendados
                         </NavLink>
 
                         <NavLink

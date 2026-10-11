@@ -79,6 +79,7 @@ import HelpdeskPage from "./pages/HelpdeskPage";
 import BackofficeHelpCenterPage from "./pages/BackofficeHelpCenterPage";
 import HelpCenterPage from "./pages/HelpCenterPage";
 import HelpContentPage from "./pages/HelpContentPage";
+import BackofficeModelosDocumentoPage from "./pages/BackofficeModelosDocumentoPage";
 
 export default function App() {
     return (
@@ -116,6 +117,10 @@ export default function App() {
                         <Route
                             path="ajuda"
                             element={<BackofficeHelpCenterPage />}
+                        />
+                        <Route
+                            path="modelos-documento"
+                            element={<BackofficeModelosDocumentoPage />}
                         />
 
                         <Route
