@@ -2,16 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-
-class DocumentoAcesso extends Model
-{
-    //
-}
-<?php
-
-namespace App\Models;
-
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -50,6 +40,9 @@ class DocumentoAcesso extends Model
 
     public function tenantContext(): BelongsTo
     {
-        return $this->belongsTo(Tenant::class,'tenant_context_id');
+        return $this->belongsTo(
+            Tenant::class,
+            'tenant_context_id'
+        );
     }
 }
