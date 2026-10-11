@@ -19,6 +19,17 @@ class StoreTemplateContratoRequest extends FormRequest
 
         return [
             'tenant_id' => ['prohibited'],
+            'modelo_documento_saas_id' => [
+                'prohibited',
+            ],
+
+            'modelo_documento_saas_versao_id' => [
+                'prohibited',
+            ],
+
+            'modelo_documento_saas_versao' => [
+                'prohibited',
+            ],
 
             'perfil_id' => [
                 'nullable',

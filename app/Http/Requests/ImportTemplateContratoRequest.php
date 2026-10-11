@@ -21,6 +21,17 @@ class ImportTemplateContratoRequest extends FormRequest
 
         return [
             'tenant_id' => ['prohibited'],
+            'modelo_documento_saas_id' => [
+                'prohibited',
+            ],
+
+            'modelo_documento_saas_versao_id' => [
+                'prohibited',
+            ],
+
+            'modelo_documento_saas_versao' => [
+                'prohibited',
+            ],
             'arquivo_url' => ['prohibited'],
             'tipo_arquivo' => ['prohibited'],
             'conteudo_original' => ['prohibited'],
@@ -38,7 +49,7 @@ class ImportTemplateContratoRequest extends FormRequest
                 'uuid',
                 Rule::exists('perfis_template', 'id')
                     ->where(
-                        fn ($query) => $query
+                        fn($query) => $query
                             ->where('tenant_id', $tenantId)
                     ),
             ],

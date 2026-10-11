@@ -15,26 +15,37 @@ class UpdateTemplateContratoRequest extends FormRequest
 
     public function rules(): array
     {
-        $tenantId=app(TenantContext::class)->requireId();
+        $tenantId = app(TenantContext::class)->requireId();
 
         return [
-            'tenant_id'=>['prohibited'],
-            'ativo'=>['prohibited'],
-            'arquivado_em'=>['prohibited'],
-            'arquivado_por'=>['prohibited'],
+            'tenant_id' => ['prohibited'],
+            'modelo_documento_saas_id' => [
+                'prohibited',
+            ],
 
-            'perfil_id'=>[
+            'modelo_documento_saas_versao_id' => [
+                'prohibited',
+            ],
+
+            'modelo_documento_saas_versao' => [
+                'prohibited',
+            ],
+            'ativo' => ['prohibited'],
+            'arquivado_em' => ['prohibited'],
+            'arquivado_por' => ['prohibited'],
+
+            'perfil_id' => [
                 'sometimes',
                 'nullable',
                 'uuid',
-                Rule::exists('perfis_template','id')
+                Rule::exists('perfis_template', 'id')
                     ->where(
-                        fn($query)=>$query
-                            ->where('tenant_id',$tenantId)
+                        fn($query) => $query
+                            ->where('tenant_id', $tenantId)
                     ),
             ],
 
-            'checklist_process_template_id'=>[
+            'checklist_process_template_id' => [
                 'sometimes',
                 'nullable',
                 'uuid',
@@ -42,58 +53,58 @@ class UpdateTemplateContratoRequest extends FormRequest
                     'checklist_process_templates',
                     'id'
                 )->where(
-                    fn($query)=>$query
-                        ->where('tenant_id',$tenantId)
-                        ->where('ativo',true)
+                    fn($query) => $query
+                        ->where('tenant_id', $tenantId)
+                        ->where('ativo', true)
                 ),
             ],
 
-            'nome'=>[
+            'nome' => [
                 'sometimes',
                 'required',
                 'string',
                 'max:255',
             ],
 
-            'arquivo_url'=>['prohibited'],
+            'arquivo_url' => ['prohibited'],
 
-            'tipo_arquivo'=>[
+            'tipo_arquivo' => [
                 'sometimes',
                 'required',
                 'string',
                 'max:50',
             ],
 
-            'conteudo_original'=>[
+            'conteudo_original' => [
                 'sometimes',
                 'nullable',
                 'string',
             ],
 
-            'campos_detectados'=>[
+            'campos_detectados' => [
                 'sometimes',
                 'array',
             ],
 
-            'campos_detectados.*.id'=>[
+            'campos_detectados.*.id' => [
                 'required',
                 'string',
                 'max:255',
             ],
 
-            'campos_detectados.*.name'=>[
+            'campos_detectados.*.name' => [
                 'required',
                 'string',
                 'max:255',
             ],
 
-            'campos_detectados.*.label'=>[
+            'campos_detectados.*.label' => [
                 'required',
                 'string',
                 'max:255',
             ],
 
-            'campos_detectados.*.type'=>[
+            'campos_detectados.*.type' => [
                 'required',
                 Rule::in([
                     'text',
@@ -106,29 +117,29 @@ class UpdateTemplateContratoRequest extends FormRequest
                 ]),
             ],
 
-            'campos_detectados.*.required'=>[
+            'campos_detectados.*.required' => [
                 'required',
                 'boolean',
             ],
 
-            'campos_detectados.*.value'=>[
+            'campos_detectados.*.value' => [
                 'nullable',
                 'string',
             ],
 
-            'campos_detectados.*.placeholder'=>[
-                'nullable',
-                'string',
-                'max:255',
-            ],
-
-            'campos_detectados.*.validation'=>[
+            'campos_detectados.*.placeholder' => [
                 'nullable',
                 'string',
                 'max:255',
             ],
 
-            'campos_mapeados'=>[
+            'campos_detectados.*.validation' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'campos_mapeados' => [
                 'sometimes',
                 'array',
             ],
@@ -137,9 +148,9 @@ class UpdateTemplateContratoRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        if($this->has('nome')){
+        if ($this->has('nome')) {
             $this->merge([
-                'nome'=>trim(
+                'nome' => trim(
                     (string)$this->input('nome')
                 ),
             ]);

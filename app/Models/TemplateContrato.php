@@ -11,7 +11,8 @@ class TemplateContrato extends Model
 {
     use HasUuids;
 
-    protected $table = 'templates_contrato';
+    protected $table =
+    'templates_contrato';
 
     protected $attributes = [
         'tipo_arquivo' => 'pdf',
@@ -22,12 +23,20 @@ class TemplateContrato extends Model
     protected $fillable = [
         'perfil_id',
         'checklist_process_template_id',
+
+        'modelo_documento_saas_id',
+        'modelo_documento_saas_versao_id',
+        'modelo_documento_saas_versao',
+
         'nome',
         'arquivo_url',
         'tipo_arquivo',
         'conteudo_original',
         'campos_detectados',
         'campos_mapeados',
+        'modelo_documento_saas_id',
+        'modelo_documento_saas_versao_id',
+        'modelo_documento_saas_versao',
     ];
 
     protected function casts(): array
@@ -40,7 +49,9 @@ class TemplateContrato extends Model
 
     public function tenant(): BelongsTo
     {
-        return $this->belongsTo(Tenant::class);
+        return $this->belongsTo(
+            Tenant::class
+        );
     }
 
     public function perfil(): BelongsTo
@@ -58,11 +69,34 @@ class TemplateContrato extends Model
             'template_id'
         );
     }
+
     public function checklistProcessTemplate(): BelongsTo
-{
-    return $this->belongsTo(
-        ChecklistProcessTemplate::class,
-        'checklist_process_template_id'
-    );
-}
+    {
+        return $this->belongsTo(
+            ChecklistProcessTemplate::class,
+            'checklist_process_template_id'
+        );
+    }
+
+    public function modeloDocumentoSaas(): BelongsTo
+    {
+        return $this->belongsTo(
+            ModeloDocumentoSaas::class,
+            'modelo_documento_saas_id'
+        );
+    }
+
+    public function modeloDocumentoSaasVersaoOrigem(): BelongsTo
+    {
+        return $this->belongsTo(
+            ModeloDocumentoSaasVersao::class,
+            'modelo_documento_saas_versao_id'
+        );
+    }
+    public function originadoDeModeloSaas(): bool
+    {
+        return
+            $this->modelo_documento_saas_id !==
+            null;
+    }
 }

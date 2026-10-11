@@ -24,6 +24,17 @@ class StoreTemplateTextRequest extends FormRequest
             'tenant_id' => [
                 'prohibited',
             ],
+            'modelo_documento_saas_id' => [
+                'prohibited',
+            ],
+
+            'modelo_documento_saas_versao_id' => [
+                'prohibited',
+            ],
+
+            'modelo_documento_saas_versao' => [
+                'prohibited',
+            ],
 
             'arquivo_url' => [
                 'prohibited',
@@ -48,10 +59,10 @@ class StoreTemplateTextRequest extends FormRequest
                     'id'
                 )->where(
                     fn($query) =>
-                        $query->where(
-                            'tenant_id',
-                            $tenantId
-                        )
+                    $query->where(
+                        'tenant_id',
+                        $tenantId
+                    )
                 ),
             ],
 
@@ -118,9 +129,7 @@ class StoreTemplateTextRequest extends FormRequest
             )
         ) {
             $data['nome'] = trim(
-                (string)$data[
-                    'nome'
-                ]
+                (string)$data['nome']
             );
         }
 
@@ -137,31 +146,23 @@ class StoreTemplateTextRequest extends FormRequest
                         "\r",
                     ],
                     "\n",
-                    (string)$data[
-                        'conteudo'
-                    ]
+                    (string)$data['conteudo']
                 )
             );
         }
 
         if (
             isset(
-                $data[
-                    'campos_mapeados'
-                ]
+                $data['campos_mapeados']
             ) &&
             is_array(
-                $data[
-                    'campos_mapeados'
-                ]
+                $data['campos_mapeados']
             )
         ) {
             $normalized = [];
 
             foreach (
-                $data[
-                    'campos_mapeados'
-                ] as
+                $data['campos_mapeados'] as
                 $field => $mapping
             ) {
                 $field =
@@ -176,27 +177,19 @@ class StoreTemplateTextRequest extends FormRequest
                         $mapping
                     )
                 ) {
-                    $normalized[
-                        $field
-                    ] = $mapping;
+                    $normalized[$field] = $mapping;
 
                     continue;
                 }
 
                 if (
                     isset(
-                        $mapping[
-                            'tipo'
-                        ]
+                        $mapping['tipo']
                     )
                 ) {
-                    $mapping[
-                        'tipo'
-                    ] = strtolower(
+                    $mapping['tipo'] = strtolower(
                         trim(
-                            (string)$mapping[
-                                'tipo'
-                            ]
+                            (string)$mapping['tipo']
                         )
                     );
                 }
@@ -206,28 +199,18 @@ class StoreTemplateTextRequest extends FormRequest
                         'origem',
                         $mapping
                     ) &&
-                    $mapping[
-                        'origem'
-                    ] !== null
+                    $mapping['origem'] !== null
                 ) {
-                    $mapping[
-                        'origem'
-                    ] = strtolower(
+                    $mapping['origem'] = strtolower(
                         trim(
-                            (string)$mapping[
-                                'origem'
-                            ]
+                            (string)$mapping['origem']
                         )
                     );
 
                     if (
-                        $mapping[
-                            'origem'
-                        ] === ''
+                        $mapping['origem'] === ''
                     ) {
-                        $mapping[
-                            'origem'
-                        ] = null;
+                        $mapping['origem'] = null;
                     }
                 }
 
@@ -236,39 +219,25 @@ class StoreTemplateTextRequest extends FormRequest
                         'campo',
                         $mapping
                     ) &&
-                    $mapping[
-                        'campo'
-                    ] !== null
+                    $mapping['campo'] !== null
                 ) {
-                    $mapping[
-                        'campo'
-                    ] = strtolower(
+                    $mapping['campo'] = strtolower(
                         trim(
-                            (string)$mapping[
-                                'campo'
-                            ]
+                            (string)$mapping['campo']
                         )
                     );
 
                     if (
-                        $mapping[
-                            'campo'
-                        ] === ''
+                        $mapping['campo'] === ''
                     ) {
-                        $mapping[
-                            'campo'
-                        ] = null;
+                        $mapping['campo'] = null;
                     }
                 }
 
-                $normalized[
-                    $field
-                ] = $mapping;
+                $normalized[$field] = $mapping;
             }
 
-            $data[
-                'campos_mapeados'
-            ] = $normalized;
+            $data['campos_mapeados'] = $normalized;
         }
 
         $this->replace(
@@ -304,19 +273,13 @@ class StoreTemplateTextRequest extends FormRequest
                     }
 
                     $type =
-                        $mapping[
-                            'tipo'
-                        ] ?? null;
+                        $mapping['tipo'] ?? null;
 
                     $origin =
-                        $mapping[
-                            'origem'
-                        ] ?? null;
+                        $mapping['origem'] ?? null;
 
                     $source =
-                        $mapping[
-                            'campo'
-                        ] ?? null;
+                        $mapping['campo'] ?? null;
 
                     if (
                         $type ===
@@ -324,9 +287,9 @@ class StoreTemplateTextRequest extends FormRequest
                     ) {
                         if (
                             $origin !==
-                                null ||
+                            null ||
                             $source !==
-                                null
+                            null
                         ) {
                             $validator
                                 ->errors()
@@ -386,9 +349,9 @@ class StoreTemplateTextRequest extends FormRequest
 
                     if (
                         $type ===
-                            'assinatura' &&
+                        'assinatura' &&
                         $origin !==
-                            'assinatura'
+                        'assinatura'
                     ) {
                         $validator
                             ->errors()
@@ -400,9 +363,9 @@ class StoreTemplateTextRequest extends FormRequest
 
                     if (
                         $origin ===
-                            'assinatura' &&
+                        'assinatura' &&
                         $type !==
-                            'assinatura'
+                        'assinatura'
                     ) {
                         $validator
                             ->errors()
