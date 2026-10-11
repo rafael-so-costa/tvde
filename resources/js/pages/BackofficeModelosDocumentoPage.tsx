@@ -33,8 +33,9 @@ import type {
     ModeloDocumentoSaasPayload,
 } from "../types/modelos-documento-saas";
 
-type Tab = "modelos" | "categorias";
+import ModeloDocumentoSaasMetricsPanel from "../components/backoffice/ModeloDocumentoSaasMetricsPanel";
 
+type Tab = "modelos" | "categorias" | "metricas";
 export default function BackofficeModelosDocumentoPage() {
     const client = useQueryClient();
 
@@ -210,25 +211,26 @@ export default function BackofficeModelosDocumentoPage() {
                         disponibilizados pelo FrotaPro às organizações.
                     </p>
                 </div>
+                {tab !== "metricas" && (
+                    <button
+                        type="button"
+                        onClick={() => {
+                            if (tab === "modelos") {
+                                openNewModel();
 
-                <button
-                    type="button"
-                    onClick={() => {
-                        if (tab === "modelos") {
-                            openNewModel();
+                                return;
+                            }
 
-                            return;
-                        }
+                            setEditingCategory(null);
+                            setCategoryOpen(true);
+                        }}
+                        className={primaryButton}
+                    >
+                        <Plus className="h-4 w-4" />
 
-                        setEditingCategory(null);
-                        setCategoryOpen(true);
-                    }}
-                    className={primaryButton}
-                >
-                    <Plus className="h-4 w-4" />
-
-                    {tab === "modelos" ? "Novo modelo" : "Nova categoria"}
-                </button>
+                        {tab === "modelos" ? "Novo modelo" : "Nova categoria"}
+                    </button>
+                )}
             </header>
 
             <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -252,9 +254,17 @@ export default function BackofficeModelosDocumentoPage() {
                 >
                     Categorias
                 </TabButton>
+                <TabButton
+                    active={tab === "metricas"}
+                    onClick={() => setTab("metricas")}
+                >
+                    Métricas
+                </TabButton>
             </div>
 
-            {tab === "modelos" ? (
+            {tab === "metricas" ? (
+                <ModeloDocumentoSaasMetricsPanel />
+            ) : tab === "modelos" ? (
                 <>
                     <section className="rounded-2xl border border-slate-200 bg-white p-5">
                         <div className="grid gap-4 md:grid-cols-3">

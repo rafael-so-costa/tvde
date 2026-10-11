@@ -154,3 +154,53 @@ export interface UsarModeloDocumentoRecomendadoPayload {
     nome?: string;
     perfil_id?: string | null;
 }
+
+
+export interface ModeloDocumentoSaasMetricasResumo {
+    modelos_publicados: number;
+    organizacoes_aderentes: number;
+    copias_totais: number;
+    templates_ativos_frotapro: number;
+    templates_ativos_proprios: number;
+    templates_ativos_total: number;
+    taxa_padronizacao: number;
+}
+
+export interface ModeloDocumentoSaasMetricasVersao {
+    versao: string;
+    copias: number;
+    organizacoes: number;
+}
+
+export interface ModeloDocumentoSaasMetricasModelo {
+    id: string;
+    nome: string;
+    slug: string;
+
+    categoria: {
+        id: string;
+        nome: string;
+        slug: string;
+    } | null;
+
+    status: ModeloDocumentoSaasStatus;
+    ativo: boolean;
+
+    versao_publicada: string | null;
+
+    copias_totais: number;
+    copias_ativas: number;
+    organizacoes_aderentes: number;
+
+    versao_mais_usada: string | null;
+    versao_mais_usada_copias: number;
+
+    organizacoes_desatualizadas: number;
+
+    versoes_em_uso: ModeloDocumentoSaasMetricasVersao[];
+}
+
+export interface ModeloDocumentoSaasMetricas {
+    resumo: ModeloDocumentoSaasMetricasResumo;
+    modelos: ModeloDocumentoSaasMetricasModelo[];
+}

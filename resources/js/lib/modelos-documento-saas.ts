@@ -10,6 +10,7 @@ import type {
     ModeloDocumentoRecomendado,
     ModelosDocumentoRecomendadosResponse,
     UsarModeloDocumentoRecomendadoPayload,
+    ModeloDocumentoSaasMetricas,
 
 } from "../types/modelos-documento-saas";
 
@@ -133,6 +134,17 @@ export async function usarModeloDocumentoRecomendado(
     const response = await api.post(
         `/api/modelos-recomendados/${id}/usar`,
         payload,
+    );
+
+    return response.data.data;
+}
+
+
+export async function fetchBackofficeModeloDocumentoMetricas(): Promise<
+    ModeloDocumentoSaasMetricas
+> {
+    const response = await api.get(
+        "/api/backoffice/modelos-documento/metricas",
     );
 
     return response.data.data;
