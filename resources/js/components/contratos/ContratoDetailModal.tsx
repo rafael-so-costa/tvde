@@ -35,6 +35,7 @@ import {
 import api from "../../lib/api";
 
 import ChecklistFormModal from "../checklists/ChecklistFormModal";
+import RelatedContractActionModal from "./RelatedContractActionModal";
 
 import {
     downloadAuthenticatedFile,
@@ -214,6 +215,14 @@ export default function ContratoDetailModal({
     const [
         actionItem,
         setActionItem,
+    ] =
+        useState<
+            ContratoProcessItem | null
+        >(null);
+
+    const [
+        relatedItem,
+        setRelatedItem,
     ] =
         useState<
             ContratoProcessItem | null
@@ -818,6 +827,13 @@ export default function ContratoDetailModal({
                                         onStartChecklist={
                                             startVehicleChecklist
                                         }
+                                        onRelatedContract={(
+                                            item,
+                                        ) =>
+                                            setRelatedItem(
+                                                item,
+                                            )
+                                        }
                                     />
                                 )}
 
@@ -880,6 +896,39 @@ export default function ContratoDetailModal({
 
                         navigate(
                             "/motoristas",
+                        );
+                    }}
+                />
+            )}
+
+            {relatedItem &&
+                contrato && (
+                <RelatedContractActionModal
+                    contrato={
+                        contrato
+                    }
+                    item={
+                        relatedItem
+                    }
+                    onClose={() =>
+                        setRelatedItem(
+                            null,
+                        )
+                    }
+                    onUpdated={
+                        refresh
+                    }
+                    onOpenContract={(
+                        relatedId,
+                    ) => {
+                        setRelatedItem(
+                            null,
+                        );
+
+                        onClose();
+
+                        navigate(
+                            `/contratos?contrato=${relatedId}`,
                         );
                     }}
                 />
@@ -1491,6 +1540,7 @@ function ProcessTab({
     onComplete,
     onSystemAction,
     onStartChecklist,
+    onRelatedContract,
 }: {
     contrato:
         Contrato;
@@ -1518,6 +1568,12 @@ function ProcessTab({
             item:
                 ContratoProcessItem,
         ) => Promise<void>;
+
+    onRelatedContract:
+        (
+            item:
+                ContratoProcessItem,
+        ) => void;
 }) {
     const run =
         contrato
@@ -1713,6 +1769,21 @@ function ProcessTab({
                                             "motorista_acesso"
                                                 ? "Gerir acesso"
                                                 : "Executar ação"}
+                                        </button>
+                                    ) : item.tipo ===
+                                      "contrato_relacionado" ? (
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                onRelatedContract(
+                                                    item,
+                                                )
+                                            }
+                                            className="inline-flex h-9 items-center gap-2 rounded-lg bg-violet-50 px-3 text-xs font-semibold text-violet-700 transition hover:bg-violet-100"
+                                        >
+                                            <FileSignature className="h-4 w-4" />
+
+                                            Gerir contrato
                                         </button>
                                     ) : item.tipo ===
                                       "checklist_veiculo" ? (

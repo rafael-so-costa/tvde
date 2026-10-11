@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\ChecklistProcessTemplate;
 use App\Models\ChecklistProcessTemplateItem;
+use App\Models\TipoContrato;
 use Illuminate\Support\Facades\DB;
 
 class ChecklistProcessPresetService
@@ -44,7 +45,7 @@ class ChecklistProcessPresetService
                     $copies
                 ): array {
                     $count =
-                        (int)(
+                        (int) (
                             $copies[
                                 $preset[
                                     'codigo'
@@ -56,11 +57,9 @@ class ChecklistProcessPresetService
                     return array_merge(
                         $preset,
                         [
-                            'copias' =>
-                                $count,
+                            'copias' => $count,
 
-                            'ja_utilizado' =>
-                                $count > 0,
+                            'ja_utilizado' => $count > 0,
                         ]
                     );
                 }
@@ -83,7 +82,7 @@ class ChecklistProcessPresetService
                     $code
                 );
 
-        if (!$preset) {
+        if (! $preset) {
             abort(
                 404,
                 'Workflow recomendado não encontrado.'
@@ -98,29 +97,24 @@ class ChecklistProcessPresetService
             ): ChecklistProcessTemplate {
                 $template =
                     new ChecklistProcessTemplate([
-                        'codigo' =>
-                            $this->uniqueTenantCode(
-                                $tenantId,
-                                'frotapro_' .
-                                $preset['codigo']
-                            ),
+                        'codigo' => $this->uniqueTenantCode(
+                            $tenantId,
+                            'frotapro_'.
+                            $preset['codigo']
+                        ),
 
-                        'nome' =>
-                            trim(
-                                $data['nome'] ??
-                                $preset['nome']
-                            ),
+                        'nome' => trim(
+                            $data['nome'] ??
+                            $preset['nome']
+                        ),
 
-                        'descricao' =>
-                            $preset[
+                        'descricao' => $preset[
                                 'descricao'
                             ],
 
-                        'ativo' =>
-                            true,
+                        'ativo' => true,
 
-                        'versao' =>
-                            1,
+                        'versao' => 1,
                     ]);
 
                 $template->tenant_id =
@@ -135,48 +129,103 @@ class ChecklistProcessPresetService
                 $template->save();
 
                 foreach (
-                    $preset['items']
-                    as $itemData
+                    $preset['items'] as $itemData
                 ) {
+                    $configuracao =
+                        (array) (
+                            $itemData[
+                                'configuracao'
+                            ] ??
+                            []
+                        );
+
+                    if (
+                        (
+                            $itemData[
+                                'tipo'
+                            ] ??
+                            null
+                        ) ===
+                        'contrato_relacionado'
+                    ) {
+                        $codigo =
+                            strtolower(
+                                trim(
+                                    (string) (
+                                        $configuracao[
+                                            'tipo_contrato_codigo'
+                                        ] ??
+                                        ''
+                                    )
+                                )
+                            );
+
+                        if (
+                            $codigo !== ''
+                        ) {
+                            $tipoContrato =
+                                TipoContrato::query()
+                                    ->where(
+                                        'tenant_id',
+                                        $tenantId
+                                    )
+                                    ->where(
+                                        'ativo',
+                                        true
+                                    )
+                                    ->where(
+                                        'codigo',
+                                        $codigo
+                                    )
+                                    ->first();
+
+                            if (
+                                $tipoContrato
+                            ) {
+                                $configuracao[
+                                    'tipo_contrato_id'
+                                ] =
+                                    $tipoContrato
+                                        ->id;
+
+                                $configuracao[
+                                    'tipo_contrato_codigo'
+                                ] =
+                                    $tipoContrato
+                                        ->codigo;
+                            }
+                        }
+                    }
+
                     $item =
                         new ChecklistProcessTemplateItem([
-                            'codigo' =>
-                                $itemData[
+                            'codigo' => $itemData[
                                     'codigo'
                                 ],
 
-                            'ordem' =>
-                                $itemData[
+                            'ordem' => $itemData[
                                     'ordem'
                                 ],
 
-                            'titulo' =>
-                                $itemData[
+                            'titulo' => $itemData[
                                     'titulo'
                                 ],
 
-                            'descricao' =>
-                                $itemData[
+                            'descricao' => $itemData[
                                     'descricao'
                                 ] ??
                                 null,
 
-                            'tipo' =>
-                                $itemData[
+                            'tipo' => $itemData[
                                     'tipo'
                                 ],
 
-                            'obrigatorio' =>
-                                $itemData[
+                            'obrigatorio' => $itemData[
                                     'obrigatorio'
                                 ] ??
                                 true,
 
-                            'configuracao' =>
-                                $itemData[
-                                    'configuracao'
-                                ] ??
-                                [],
+                            'configuracao' => $configuracao,
                         ]);
 
                     $item->template_id =
@@ -228,8 +277,8 @@ class ChecklistProcessPresetService
                     $base,
                     0,
                     86
-                ) .
-                '_' .
+                ).
+                '_'.
                 $suffix;
 
             $suffix++;
@@ -242,601 +291,435 @@ class ChecklistProcessPresetService
     {
         return [
             [
-                'codigo' =>
-                    'aluguer_completo_tvde',
+                'codigo' => 'aluguer_completo_tvde',
 
-                'nome' =>
-                    'Aluguer TVDE completo',
+                'nome' => 'Aluguer TVDE completo',
 
-                'categoria' =>
-                    'Aluguer',
+                'categoria' => 'Aluguer',
 
-                'descricao' =>
-                    'Fluxo completo recomendado para aluguer de veículo TVDE, incluindo documento, assinaturas, acesso do motorista, prestação de serviços, entrega, recolha e conferência final.',
+                'descricao' => 'Fluxo completo recomendado para aluguer de veículo TVDE, incluindo documento, assinaturas, acesso do motorista, prestação de serviços, entrega, recolha e conferência final.',
 
-                'versao' =>
-                    1,
+                'versao' => 1,
 
-                'destaque' =>
-                    true,
+                'destaque' => true,
 
                 'items' => [
                     [
-                        'codigo' =>
-                            'validar_dados',
+                        'codigo' => 'validar_dados',
 
-                        'ordem' =>
-                            1,
+                        'ordem' => 1,
 
-                        'titulo' =>
-                            'Validar dados do contrato',
+                        'titulo' => 'Validar dados do contrato',
 
-                        'descricao' =>
-                            'Confirmar dados da empresa, motorista, proprietário, veículo, valores e datas.',
+                        'descricao' => 'Confirmar dados da empresa, motorista, proprietário, veículo, valores e datas.',
 
-                        'tipo' =>
-                            'validacao',
+                        'tipo' => 'validacao',
 
-                        'obrigatorio' =>
-                            true,
+                        'obrigatorio' => true,
                     ],
 
                     [
-                        'codigo' =>
-                            'gerar_contrato_aluguer',
+                        'codigo' => 'gerar_contrato_aluguer',
 
-                        'ordem' =>
-                            2,
+                        'ordem' => 2,
 
-                        'titulo' =>
-                            'Gerar contrato de aluguer',
+                        'titulo' => 'Gerar contrato de aluguer',
 
-                        'descricao' =>
-                            'Gerar o documento definitivo do contrato de aluguer.',
+                        'descricao' => 'Gerar o documento definitivo do contrato de aluguer.',
 
-                        'tipo' =>
-                            'gerar_documento',
+                        'tipo' => 'gerar_documento',
 
-                        'obrigatorio' =>
-                            true,
+                        'obrigatorio' => true,
                     ],
 
                     [
-                        'codigo' =>
-                            'assinatura_empresa',
+                        'codigo' => 'assinatura_empresa',
 
-                        'ordem' =>
-                            3,
+                        'ordem' => 3,
 
-                        'titulo' =>
-                            'Assinatura da empresa',
+                        'titulo' => 'Assinatura da empresa',
 
-                        'tipo' =>
-                            'assinatura',
+                        'tipo' => 'assinatura',
 
-                        'obrigatorio' =>
-                            true,
+                        'obrigatorio' => true,
 
                         'configuracao' => [
-                            'placeholder' =>
-                                'ASSINATURA_EMPRESA',
+                            'placeholder' => 'ASSINATURA_EMPRESA',
                         ],
                     ],
 
                     [
-                        'codigo' =>
-                            'assinatura_motorista',
+                        'codigo' => 'assinatura_motorista',
 
-                        'ordem' =>
-                            4,
+                        'ordem' => 4,
 
-                        'titulo' =>
-                            'Assinatura do motorista',
+                        'titulo' => 'Assinatura do motorista',
 
-                        'tipo' =>
-                            'assinatura',
+                        'tipo' => 'assinatura',
 
-                        'obrigatorio' =>
-                            true,
+                        'obrigatorio' => true,
 
                         'configuracao' => [
-                            'placeholder' =>
-                                'ASSINATURA_MOTORISTA',
+                            'placeholder' => 'ASSINATURA_MOTORISTA',
                         ],
                     ],
 
                     [
-                        'codigo' =>
-                            'criar_acesso_motorista',
+                        'codigo' => 'criar_acesso_motorista',
 
-                        'ordem' =>
-                            5,
+                        'ordem' => 5,
 
-                        'titulo' =>
-                            'Criar ou validar acesso do motorista',
+                        'titulo' => 'Criar ou validar acesso do motorista',
 
-                        'descricao' =>
-                            'Garantir que o motorista possui acesso ativo à organização.',
+                        'descricao' => 'Garantir que o motorista possui acesso ativo à organização.',
 
-                        'tipo' =>
-                            'acao_sistema',
+                        'tipo' => 'acao_sistema',
 
-                        'obrigatorio' =>
-                            true,
+                        'obrigatorio' => true,
 
                         'configuracao' => [
-                            'action' =>
-                                'motorista_acesso',
+                            'action' => 'motorista_acesso',
                         ],
                     ],
 
                     [
-                        'codigo' =>
-                            'contrato_prestacao_servicos',
+                        'codigo' => 'contrato_prestacao_servicos',
 
-                        'ordem' =>
-                            6,
+                        'ordem' => 6,
 
-                        'titulo' =>
-                            'Contrato de prestação de serviços',
+                        'titulo' => 'Contrato de prestação de serviços',
 
-                        'descricao' =>
-                            'Criar e confirmar o contrato de prestação de serviços associado ao motorista antes da entrega do veículo.',
+                        'descricao' => 'Criar e confirmar o contrato de prestação de serviços associado ao motorista antes da entrega do veículo.',
 
-                        'tipo' =>
-                            'contrato_relacionado',
+                        'tipo' => 'contrato_relacionado',
 
-                        'obrigatorio' =>
-                            true,
+                        'obrigatorio' => true,
 
                         'configuracao' => [
-                            'tipo_contrato_codigo' =>
-                                'prestacao_servico',
+                            'tipo_contrato_codigo' => 'prestacao_servico',
+
+                            'status_conclusao' => 'assinado',
                         ],
                     ],
 
                     [
-                        'codigo' =>
-                            'entrega_veiculo',
+                        'codigo' => 'entrega_veiculo',
 
-                        'ordem' =>
-                            7,
+                        'ordem' => 7,
 
-                        'titulo' =>
-                            'Checklist de entrega do veículo',
+                        'titulo' => 'Checklist de entrega do veículo',
 
-                        'descricao' =>
-                            'Registar estado, quilometragem, combustível, equipamentos, fotografias e assinaturas da entrega.',
+                        'descricao' => 'Registar estado, quilometragem, combustível, equipamentos, fotografias e assinaturas da entrega.',
 
-                        'tipo' =>
-                            'checklist_veiculo',
+                        'tipo' => 'checklist_veiculo',
 
-                        'obrigatorio' =>
-                            true,
+                        'obrigatorio' => true,
 
                         'configuracao' => [
-                            'checklist_tipo' =>
-                                'entrega',
+                            'checklist_tipo' => 'entrega',
                         ],
                     ],
 
                     [
-                        'codigo' =>
-                            'recolha_veiculo',
+                        'codigo' => 'recolha_veiculo',
 
-                        'ordem' =>
-                            8,
+                        'ordem' => 8,
 
-                        'titulo' =>
-                            'Checklist de recolha do veículo',
+                        'titulo' => 'Checklist de recolha do veículo',
 
-                        'descricao' =>
-                            'Comparar o estado do veículo com a entrega, registando danos, faltas e eventuais penalizações.',
+                        'descricao' => 'Comparar o estado do veículo com a entrega, registando danos, faltas e eventuais penalizações.',
 
-                        'tipo' =>
-                            'checklist_veiculo',
+                        'tipo' => 'checklist_veiculo',
 
-                        'obrigatorio' =>
-                            true,
+                        'obrigatorio' => true,
 
                         'configuracao' => [
-                            'checklist_tipo' =>
-                                'recolha',
+                            'checklist_tipo' => 'recolha',
                         ],
                     ],
 
                     [
-                        'codigo' =>
-                            'conferencia_final',
+                        'codigo' => 'conferencia_final',
 
-                        'ordem' =>
-                            9,
+                        'ordem' => 9,
 
-                        'titulo' =>
-                            'Conferência e encerramento',
+                        'titulo' => 'Conferência e encerramento',
 
-                        'descricao' =>
-                            'Confirmar que todas as obrigações e documentos do processo foram concluídos.',
+                        'descricao' => 'Confirmar que todas as obrigações e documentos do processo foram concluídos.',
 
-                        'tipo' =>
-                            'aprovacao',
+                        'tipo' => 'aprovacao',
 
-                        'obrigatorio' =>
-                            true,
+                        'obrigatorio' => true,
                     ],
                 ],
             ],
 
             [
-                'codigo' =>
-                    'aluguer_essencial',
+                'codigo' => 'aluguer_essencial',
 
-                'nome' =>
-                    'Aluguer de veículo essencial',
+                'nome' => 'Aluguer de veículo essencial',
 
-                'categoria' =>
-                    'Aluguer',
+                'categoria' => 'Aluguer',
 
-                'descricao' =>
-                    'Fluxo simplificado para contratos de aluguer com documento, assinatura do motorista, entrega e recolha do veículo.',
+                'descricao' => 'Fluxo simplificado para contratos de aluguer com documento, assinatura do motorista, entrega e recolha do veículo.',
 
-                'versao' =>
-                    1,
+                'versao' => 1,
 
-                'destaque' =>
-                    false,
+                'destaque' => false,
 
                 'items' => [
                     [
-                        'codigo' =>
-                            'gerar_contrato',
+                        'codigo' => 'gerar_contrato',
 
-                        'ordem' =>
-                            1,
+                        'ordem' => 1,
 
-                        'titulo' =>
-                            'Gerar contrato',
+                        'titulo' => 'Gerar contrato',
 
-                        'tipo' =>
-                            'gerar_documento',
+                        'tipo' => 'gerar_documento',
 
-                        'obrigatorio' =>
-                            true,
+                        'obrigatorio' => true,
                     ],
 
                     [
-                        'codigo' =>
-                            'assinatura_motorista',
+                        'codigo' => 'assinatura_motorista',
 
-                        'ordem' =>
-                            2,
+                        'ordem' => 2,
 
-                        'titulo' =>
-                            'Assinatura do motorista',
+                        'titulo' => 'Assinatura do motorista',
 
-                        'tipo' =>
-                            'assinatura',
+                        'tipo' => 'assinatura',
 
-                        'obrigatorio' =>
-                            true,
+                        'obrigatorio' => true,
 
                         'configuracao' => [
-                            'placeholder' =>
-                                'ASSINATURA_MOTORISTA',
+                            'placeholder' => 'ASSINATURA_MOTORISTA',
                         ],
                     ],
 
                     [
-                        'codigo' =>
-                            'entrega_veiculo',
+                        'codigo' => 'entrega_veiculo',
 
-                        'ordem' =>
-                            3,
+                        'ordem' => 3,
 
-                        'titulo' =>
-                            'Entrega do veículo',
+                        'titulo' => 'Entrega do veículo',
 
-                        'tipo' =>
-                            'checklist_veiculo',
+                        'tipo' => 'checklist_veiculo',
 
-                        'obrigatorio' =>
-                            true,
+                        'obrigatorio' => true,
 
                         'configuracao' => [
-                            'checklist_tipo' =>
-                                'entrega',
+                            'checklist_tipo' => 'entrega',
                         ],
                     ],
 
                     [
-                        'codigo' =>
-                            'recolha_veiculo',
+                        'codigo' => 'recolha_veiculo',
 
-                        'ordem' =>
-                            4,
+                        'ordem' => 4,
 
-                        'titulo' =>
-                            'Recolha do veículo',
+                        'titulo' => 'Recolha do veículo',
 
-                        'tipo' =>
-                            'checklist_veiculo',
+                        'tipo' => 'checklist_veiculo',
 
-                        'obrigatorio' =>
-                            true,
+                        'obrigatorio' => true,
 
                         'configuracao' => [
-                            'checklist_tipo' =>
-                                'recolha',
+                            'checklist_tipo' => 'recolha',
                         ],
                     ],
                 ],
             ],
 
             [
-                'codigo' =>
-                    'prestacao_servicos_motorista',
+                'codigo' => 'prestacao_servicos_motorista',
 
-                'nome' =>
-                    'Prestação de serviços do motorista',
+                'nome' => 'Prestação de serviços do motorista',
 
-                'categoria' =>
-                    'Motorista',
+                'categoria' => 'Motorista',
 
-                'descricao' =>
-                    'Fluxo recomendado para formalização da prestação de serviços do motorista.',
+                'descricao' => 'Fluxo recomendado para formalização da prestação de serviços do motorista.',
 
-                'versao' =>
-                    1,
+                'versao' => 1,
 
-                'destaque' =>
-                    false,
+                'destaque' => false,
 
                 'items' => [
                     [
-                        'codigo' =>
-                            'validar_dados',
+                        'codigo' => 'validar_dados',
 
-                        'ordem' =>
-                            1,
+                        'ordem' => 1,
 
-                        'titulo' =>
-                            'Validar dados do motorista',
+                        'titulo' => 'Validar dados do motorista',
 
-                        'tipo' =>
-                            'validacao',
+                        'tipo' => 'validacao',
 
-                        'obrigatorio' =>
-                            true,
+                        'obrigatorio' => true,
                     ],
 
                     [
-                        'codigo' =>
-                            'gerar_documento',
+                        'codigo' => 'gerar_documento',
 
-                        'ordem' =>
-                            2,
+                        'ordem' => 2,
 
-                        'titulo' =>
-                            'Gerar contrato de prestação de serviços',
+                        'titulo' => 'Gerar contrato de prestação de serviços',
 
-                        'tipo' =>
-                            'gerar_documento',
+                        'tipo' => 'gerar_documento',
 
-                        'obrigatorio' =>
-                            true,
+                        'obrigatorio' => true,
                     ],
 
                     [
-                        'codigo' =>
-                            'assinatura_empresa',
+                        'codigo' => 'assinatura_empresa',
 
-                        'ordem' =>
-                            3,
+                        'ordem' => 3,
 
-                        'titulo' =>
-                            'Assinatura da empresa',
+                        'titulo' => 'Assinatura da empresa',
 
-                        'tipo' =>
-                            'assinatura',
+                        'tipo' => 'assinatura',
 
-                        'obrigatorio' =>
-                            true,
+                        'obrigatorio' => true,
 
                         'configuracao' => [
-                            'placeholder' =>
-                                'ASSINATURA_EMPRESA',
+                            'placeholder' => 'ASSINATURA_EMPRESA',
                         ],
                     ],
 
                     [
-                        'codigo' =>
-                            'assinatura_motorista',
+                        'codigo' => 'assinatura_motorista',
 
-                        'ordem' =>
-                            4,
+                        'ordem' => 4,
 
-                        'titulo' =>
-                            'Assinatura do motorista',
+                        'titulo' => 'Assinatura do motorista',
 
-                        'tipo' =>
-                            'assinatura',
+                        'tipo' => 'assinatura',
 
-                        'obrigatorio' =>
-                            true,
+                        'obrigatorio' => true,
 
                         'configuracao' => [
-                            'placeholder' =>
-                                'ASSINATURA_MOTORISTA',
+                            'placeholder' => 'ASSINATURA_MOTORISTA',
                         ],
                     ],
 
                     [
-                        'codigo' =>
-                            'acesso_motorista',
+                        'codigo' => 'acesso_motorista',
 
-                        'ordem' =>
-                            5,
+                        'ordem' => 5,
 
-                        'titulo' =>
-                            'Validar acesso do motorista',
+                        'titulo' => 'Validar acesso do motorista',
 
-                        'tipo' =>
-                            'acao_sistema',
+                        'tipo' => 'acao_sistema',
 
-                        'obrigatorio' =>
-                            true,
+                        'obrigatorio' => true,
 
                         'configuracao' => [
-                            'action' =>
-                                'motorista_acesso',
+                            'action' => 'motorista_acesso',
                         ],
                     ],
                 ],
             ],
 
             [
-                'codigo' =>
-                    'entrega_recolha_veiculo',
+                'codigo' => 'entrega_recolha_veiculo',
 
-                'nome' =>
-                    'Entrega e recolha de veículo',
+                'nome' => 'Entrega e recolha de veículo',
 
-                'categoria' =>
-                    'Veículo',
+                'categoria' => 'Veículo',
 
-                'descricao' =>
-                    'Fluxo operacional focado exclusivamente nas inspeções de entrega e recolha do veículo.',
+                'descricao' => 'Fluxo operacional focado exclusivamente nas inspeções de entrega e recolha do veículo.',
 
-                'versao' =>
-                    1,
+                'versao' => 1,
 
-                'destaque' =>
-                    false,
+                'destaque' => false,
 
                 'items' => [
                     [
-                        'codigo' =>
-                            'entrega_veiculo',
+                        'codigo' => 'entrega_veiculo',
 
-                        'ordem' =>
-                            1,
+                        'ordem' => 1,
 
-                        'titulo' =>
-                            'Checklist de entrega',
+                        'titulo' => 'Checklist de entrega',
 
-                        'tipo' =>
-                            'checklist_veiculo',
+                        'tipo' => 'checklist_veiculo',
 
-                        'obrigatorio' =>
-                            true,
+                        'obrigatorio' => true,
 
                         'configuracao' => [
-                            'checklist_tipo' =>
-                                'entrega',
+                            'checklist_tipo' => 'entrega',
                         ],
                     ],
 
                     [
-                        'codigo' =>
-                            'recolha_veiculo',
+                        'codigo' => 'recolha_veiculo',
 
-                        'ordem' =>
-                            2,
+                        'ordem' => 2,
 
-                        'titulo' =>
-                            'Checklist de recolha',
+                        'titulo' => 'Checklist de recolha',
 
-                        'tipo' =>
-                            'checklist_veiculo',
+                        'tipo' => 'checklist_veiculo',
 
-                        'obrigatorio' =>
-                            true,
+                        'obrigatorio' => true,
 
                         'configuracao' => [
-                            'checklist_tipo' =>
-                                'recolha',
+                            'checklist_tipo' => 'recolha',
                         ],
                     ],
                 ],
             ],
 
             [
-                'codigo' =>
-                    'onboarding_motorista',
+                'codigo' => 'onboarding_motorista',
 
-                'nome' =>
-                    'Onboarding de motorista',
+                'nome' => 'Onboarding de motorista',
 
-                'categoria' =>
-                    'Motorista',
+                'categoria' => 'Motorista',
 
-                'descricao' =>
-                    'Fluxo simples para validar documentação, criar acesso e aprovar a entrada do motorista.',
+                'descricao' => 'Fluxo simples para validar documentação, criar acesso e aprovar a entrada do motorista.',
 
-                'versao' =>
-                    1,
+                'versao' => 1,
 
-                'destaque' =>
-                    false,
+                'destaque' => false,
 
                 'items' => [
                     [
-                        'codigo' =>
-                            'validar_documentacao',
+                        'codigo' => 'validar_documentacao',
 
-                        'ordem' =>
-                            1,
+                        'ordem' => 1,
 
-                        'titulo' =>
-                            'Validar documentação',
+                        'titulo' => 'Validar documentação',
 
-                        'descricao' =>
-                            'Confirmar os documentos e dados necessários do motorista.',
+                        'descricao' => 'Confirmar os documentos e dados necessários do motorista.',
 
-                        'tipo' =>
-                            'validacao',
+                        'tipo' => 'validacao',
 
-                        'obrigatorio' =>
-                            true,
+                        'obrigatorio' => true,
                     ],
 
                     [
-                        'codigo' =>
-                            'acesso_motorista',
+                        'codigo' => 'acesso_motorista',
 
-                        'ordem' =>
-                            2,
+                        'ordem' => 2,
 
-                        'titulo' =>
-                            'Criar ou validar acesso',
+                        'titulo' => 'Criar ou validar acesso',
 
-                        'tipo' =>
-                            'acao_sistema',
+                        'tipo' => 'acao_sistema',
 
-                        'obrigatorio' =>
-                            true,
+                        'obrigatorio' => true,
 
                         'configuracao' => [
-                            'action' =>
-                                'motorista_acesso',
+                            'action' => 'motorista_acesso',
                         ],
                     ],
 
                     [
-                        'codigo' =>
-                            'aprovar_motorista',
+                        'codigo' => 'aprovar_motorista',
 
-                        'ordem' =>
-                            3,
+                        'ordem' => 3,
 
-                        'titulo' =>
-                            'Aprovar onboarding',
+                        'titulo' => 'Aprovar onboarding',
 
-                        'tipo' =>
-                            'aprovacao',
+                        'tipo' => 'aprovacao',
 
-                        'obrigatorio' =>
-                            true,
+                        'obrigatorio' => true,
                     ],
                 ],
             ],

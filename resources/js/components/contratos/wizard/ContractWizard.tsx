@@ -56,6 +56,12 @@ interface Props {
     onSuccess: (
         contract: Contrato,
     ) => Promise<void> | void;
+
+    initialTypeId?:
+        string | null;
+
+    initialValues?:
+        Partial<ContractWizardForm>;
 }
 
 const steps = [
@@ -91,11 +97,14 @@ export default function ContractWizard({
     veiculos,
     onClose,
     onSuccess,
+    initialTypeId = null,
+    initialValues = {},
 }: Props) {
     const typesQuery =
         useContractTypes({
             enabled: open,
-            menuOnly: true,
+            menuOnly:
+                !initialTypeId,
         });
 
     const [step, setStep] =
@@ -174,12 +183,38 @@ export default function ContractWizard({
         setSaving(false);
     }, [open]);
 
+    useEffect(() => {
+        if (
+            !open ||
+            !initialTypeId ||
+            form.tipo_contrato_id ||
+            types.length === 0
+        ) {
+            return;
+        }
+
+        chooseType(
+            initialTypeId,
+            initialValues,
+        );
+
+        setStep(1);
+    }, [
+        open,
+        initialTypeId,
+        types,
+        form.tipo_contrato_id,
+    ]);
+
     if (!open) {
         return null;
     }
 
     function chooseType(
         id: string,
+        preset:
+            Partial<ContractWizardForm> =
+            {},
     ) {
         const type =
             types.find(
@@ -230,21 +265,30 @@ export default function ContractWizard({
                     "ASSINATURA_EMPRESA",
             );
 
+        const defaultCompany =
+            requiresCompany
+                ? empresas.find(
+                      (item) =>
+                          item.ativo,
+                  )?.id ??
+                  empresas[0]?.id ??
+                  ""
+                : "";
+
         setForm({
             ...initialForm,
+            ...preset,
 
             tipo_contrato_id:
                 type.id,
 
             empresa_id:
-                requiresCompany
-                    ? empresas.find(
-                          (item) =>
-                              item.ativo,
-                      )?.id ??
-                      empresas[0]?.id ??
-                      ""
-                    : "",
+                preset.empresa_id ??
+                defaultCompany,
+
+            campos_preenchidos:
+                preset.campos_preenchidos ??
+                {},
         });
 
         setSignatures(
@@ -508,7 +552,7 @@ export default function ContractWizard({
     }
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-5">
             <button
                 type="button"
                 aria-label="Fechar"

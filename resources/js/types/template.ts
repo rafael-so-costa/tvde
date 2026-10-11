@@ -27,7 +27,18 @@ export interface ChecklistProcessItemConfiguration {
     placeholder?: SignaturePlaceholder;
     action?: ChecklistSystemAction;
     checklist_tipo?: ChecklistVehicleType;
-    tipo_contrato_codigo?: string;
+
+    tipo_contrato_id?:
+        string;
+
+    tipo_contrato_codigo?:
+        string;
+
+    status_conclusao?:
+        | "criado"
+        | "assinado"
+        | "encerrado";
+
     [key: string]: unknown;
 }
 

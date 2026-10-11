@@ -1,9 +1,11 @@
 import {
+    useEffect,
     useMemo,
     useState,
 } from "react";
 import {
     useNavigate,
+    useSearchParams,
 } from "react-router-dom";
 import {
     useQuery,
@@ -139,6 +141,12 @@ export default function ContratosPage() {
     const navigate =
         useNavigate();
 
+    const [
+        searchParams,
+        setSearchParams,
+    ] =
+        useSearchParams();
+
     const queryClient =
         useQueryClient();
 
@@ -191,6 +199,21 @@ export default function ContratosPage() {
         useState<
             Contrato | null
         >(null);
+
+    useEffect(() => {
+        const contractId =
+            searchParams.get(
+                "contrato",
+            );
+
+        if (contractId) {
+            setSelectedId(
+                contractId,
+            );
+        }
+    }, [
+        searchParams,
+    ]);
 
     const contractsQuery =
         useQuery({
@@ -1221,11 +1244,34 @@ export default function ContratosPage() {
                     id={
                         selectedId
                     }
-                    onClose={() =>
+                    onClose={() => {
                         setSelectedId(
                             null,
-                        )
-                    }
+                        );
+
+                        if (
+                            searchParams.has(
+                                "contrato",
+                            )
+                        ) {
+                            const next =
+                                new URLSearchParams(
+                                    searchParams,
+                                );
+
+                            next.delete(
+                                "contrato",
+                            );
+
+                            setSearchParams(
+                                next,
+                                {
+                                    replace:
+                                        true,
+                                },
+                            );
+                        }
+                    }}
                     onChanged={
                         refresh
                     }

@@ -23,6 +23,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import api from "../lib/api";
 import { useTenant } from "../contexts/TenantContext";
+import { useContractTypes } from "../hooks/useContractTypes";
 import type {
     ChecklistProcessItemPayload,
     ChecklistProcessItemType,
@@ -1205,6 +1206,15 @@ function WorkflowFormModal({
 
     onSaved: () => Promise<void>;
 }) {
+    const contractTypesQuery =
+        useContractTypes({
+            enabled: true,
+        });
+
+    const contractTypes =
+        contractTypesQuery.data ??
+        [];
+
     const [name, setName] = useState(record?.nome ?? "");
 
     const [code, setCode] = useState(record?.codigo ?? "");
@@ -1285,7 +1295,17 @@ function WorkflowFormModal({
         }
 
         if (type === "contrato_relacionado") {
-            configuracao.tipo_contrato_codigo = "prestacao_servico";
+            const defaultType =
+                contractTypes[0];
+
+            configuracao.tipo_contrato_id =
+                defaultType?.id;
+
+            configuracao.tipo_contrato_codigo =
+                defaultType?.codigo;
+
+            configuracao.status_conclusao =
+                "assinado";
         }
 
         patchItem(index, {
@@ -1333,10 +1353,12 @@ function WorkflowFormModal({
             }
 
             if (
-                item.tipo === "contrato_relacionado" &&
-                !item.configuracao.tipo_contrato_codigo?.trim()
+                item.tipo ===
+                    "contrato_relacionado" &&
+                !item.configuracao
+                    .tipo_contrato_id
             ) {
-                return `Informe o código do tipo de contrato relacionado da etapa ${index + 1}.`;
+                return `Selecione o tipo de contrato relacionado da etapa ${index + 1}.`;
             }
         }
 
@@ -1646,34 +1668,91 @@ function WorkflowFormModal({
 
                                         {item.tipo ===
                                             "contrato_relacionado" && (
-                                            <Field
-                                                label="Código do tipo de contrato"
-                                                value={
-                                                    item.configuracao
-                                                        .tipo_contrato_codigo ??
-                                                    ""
-                                                }
-                                                onChange={(value) =>
-                                                    patchItem(index, {
-                                                        configuracao: {
-                                                            ...item.configuracao,
+                                            <>
+                                                <SelectField
+                                                    label="Tipo de contrato"
+                                                    value={
+                                                        item.configuracao
+                                                            .tipo_contrato_id ??
+                                                        ""
+                                                    }
+                                                    onChange={(value) => {
+                                                        const selected =
+                                                            contractTypes.find(
+                                                                (type) =>
+                                                                    type.id ===
+                                                                    value,
+                                                            );
 
-                                                            tipo_contrato_codigo:
-                                                                value
-                                                                    .toLowerCase()
-                                                                    .replace(
-                                                                        /[^a-z0-9_]/g,
-                                                                        "_",
-                                                                    )
-                                                                    .replace(
-                                                                        /_+/g,
-                                                                        "_",
-                                                                    ),
-                                                        },
-                                                    })
-                                                }
-                                                placeholder="prestacao_servico"
-                                            />
+                                                        patchItem(index, {
+                                                            configuracao: {
+                                                                ...item.configuracao,
+
+                                                                tipo_contrato_id:
+                                                                    selected?.id,
+
+                                                                tipo_contrato_codigo:
+                                                                    selected?.codigo,
+                                                            },
+                                                        });
+                                                    }}
+                                                >
+                                                    <option value="">
+                                                        Selecionar tipo de contrato
+                                                    </option>
+
+                                                    {contractTypes.map(
+                                                        (type) => (
+                                                            <option
+                                                                key={
+                                                                    type.id
+                                                                }
+                                                                value={
+                                                                    type.id
+                                                                }
+                                                            >
+                                                                {
+                                                                    type.nome
+                                                                }{" "}
+                                                                ({type.codigo})
+                                                            </option>
+                                                        ),
+                                                    )}
+                                                </SelectField>
+
+                                                <SelectField
+                                                    label="Concluir quando"
+                                                    value={
+                                                        String(
+                                                            item.configuracao
+                                                                .status_conclusao ??
+                                                                "assinado",
+                                                        )
+                                                    }
+                                                    onChange={(value) =>
+                                                        patchItem(index, {
+                                                            configuracao: {
+                                                                ...item.configuracao,
+
+                                                                status_conclusao:
+                                                                    value as "criado" | "assinado" | "encerrado",
+                                                            },
+                                                        })
+                                                    }
+                                                >
+                                                    <option value="criado">
+                                                        Contrato criado
+                                                    </option>
+
+                                                    <option value="assinado">
+                                                        Contrato assinado
+                                                    </option>
+
+                                                    <option value="encerrado">
+                                                        Contrato encerrado
+                                                    </option>
+                                                </SelectField>
+                                            </>
                                         )}
 
                                         <label className="md:col-span-2">
@@ -1775,8 +1854,15 @@ function normalizeItemConfiguration(
 
     if (item.tipo === "contrato_relacionado") {
         return {
+            tipo_contrato_id:
+                item.configuracao.tipo_contrato_id,
+
             tipo_contrato_codigo:
                 item.configuracao.tipo_contrato_codigo,
+
+            status_conclusao:
+                item.configuracao.status_conclusao ??
+                "assinado",
         };
     }
 

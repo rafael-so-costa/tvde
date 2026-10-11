@@ -15,52 +15,52 @@ class UpdateChecklistProcessTemplateRequest extends FormRequest
 
     public function rules(): array
     {
-        $tenantId=app(TenantContext::class)->requireId();
-        $id=(string)$this->route('id');
+        $tenantId = app(TenantContext::class)->requireId();
+        $id = (string) $this->route('id');
 
         return [
-            'tenant_id'=>['prohibited'],
-            'versao'=>['prohibited'],
-            'preset_codigo'=>['prohibited'],
-            'preset_versao'=>['prohibited'],
+            'tenant_id' => ['prohibited'],
+            'versao' => ['prohibited'],
+            'preset_codigo' => ['prohibited'],
+            'preset_versao' => ['prohibited'],
 
-            'codigo'=>[
+            'codigo' => [
                 'sometimes',
                 'required',
                 'string',
                 'max:100',
                 'regex:/^[a-z0-9_]+$/',
-                Rule::unique('checklist_process_templates','codigo')
-                    ->where(fn($query)=>$query->where('tenant_id',$tenantId))
+                Rule::unique('checklist_process_templates', 'codigo')
+                    ->where(fn ($query) => $query->where('tenant_id', $tenantId))
                     ->ignore($id),
             ],
 
-            'nome'=>[
+            'nome' => [
                 'sometimes',
                 'required',
                 'string',
                 'max:255',
             ],
 
-            'descricao'=>[
+            'descricao' => [
                 'sometimes',
                 'nullable',
                 'string',
             ],
 
-            'ativo'=>[
+            'ativo' => [
                 'sometimes',
                 'boolean',
             ],
 
-            'items'=>[
+            'items' => [
                 'sometimes',
                 'array',
                 'min:1',
                 'max:100',
             ],
 
-            'items.*.codigo'=>[
+            'items.*.codigo' => [
                 'required',
                 'string',
                 'max:100',
@@ -68,24 +68,24 @@ class UpdateChecklistProcessTemplateRequest extends FormRequest
                 'distinct',
             ],
 
-            'items.*.ordem'=>[
+            'items.*.ordem' => [
                 'required',
                 'integer',
                 'min:0',
             ],
 
-            'items.*.titulo'=>[
+            'items.*.titulo' => [
                 'required',
                 'string',
                 'max:255',
             ],
 
-            'items.*.descricao'=>[
+            'items.*.descricao' => [
                 'nullable',
                 'string',
             ],
 
-            'items.*.tipo'=>[
+            'items.*.tipo' => [
                 'required',
                 Rule::in([
                     'tarefa',
@@ -101,17 +101,17 @@ class UpdateChecklistProcessTemplateRequest extends FormRequest
                 ]),
             ],
 
-            'items.*.obrigatorio'=>[
+            'items.*.obrigatorio' => [
                 'required',
                 'boolean',
             ],
 
-            'items.*.configuracao'=>[
+            'items.*.configuracao' => [
                 'sometimes',
                 'array',
             ],
 
-            'items.*.configuracao.placeholder'=>[
+            'items.*.configuracao.placeholder' => [
                 'nullable',
                 'string',
                 Rule::in([
@@ -122,7 +122,7 @@ class UpdateChecklistProcessTemplateRequest extends FormRequest
                 ]),
             ],
 
-            'items.*.configuracao.action'=>[
+            'items.*.configuracao.action' => [
                 'nullable',
                 'string',
                 Rule::in([
@@ -130,7 +130,7 @@ class UpdateChecklistProcessTemplateRequest extends FormRequest
                 ]),
             ],
 
-            'items.*.configuracao.checklist_tipo'=>[
+            'items.*.configuracao.checklist_tipo' => [
                 'nullable',
                 'string',
                 Rule::in([
@@ -139,66 +139,100 @@ class UpdateChecklistProcessTemplateRequest extends FormRequest
                 ]),
             ],
 
-            'items.*.configuracao.tipo_contrato_codigo'=>[
+            'items.*.configuracao.tipo_contrato_id' => [
+                'nullable',
+                'uuid',
+                Rule::exists(
+                    'tipos_contrato',
+                    'id'
+                )->where(
+                    fn ($query) => $query
+                        ->where(
+                            'tenant_id',
+                            $tenantId
+                        )
+                        ->where(
+                            'ativo',
+                            true
+                        )
+                ),
+            ],
+
+            'items.*.configuracao.tipo_contrato_codigo' => [
                 'nullable',
                 'string',
                 'max:100',
                 'regex:/^[a-z0-9_]+$/',
+            ],
+
+            'items.*.configuracao.status_conclusao' => [
+                'nullable',
+                Rule::in([
+                    'criado',
+                    'assinado',
+                    'encerrado',
+                ]),
             ],
         ];
     }
 
     protected function prepareForValidation(): void
     {
-        $data=$this->all();
+        $data = $this->all();
 
-        if(array_key_exists('codigo',$data)){
-            $data['codigo']=strtolower(
-                trim((string)$data['codigo'])
+        if (array_key_exists('codigo', $data)) {
+            $data['codigo'] = strtolower(
+                trim((string) $data['codigo'])
             );
         }
 
-        if(array_key_exists('nome',$data)){
-            $data['nome']=trim(
-                (string)$data['nome']
+        if (array_key_exists('nome', $data)) {
+            $data['nome'] = trim(
+                (string) $data['nome']
             );
         }
 
-        if(isset($data['items']) && is_array($data['items'])){
-            foreach($data['items'] as $index=>$item){
-                if(isset($item['codigo'])){
-                    $data['items'][$index]['codigo']=strtolower(
-                        trim((string)$item['codigo'])
+        if (isset($data['items']) && is_array($data['items'])) {
+            foreach ($data['items'] as $index => $item) {
+                if (isset($item['codigo'])) {
+                    $data['items'][$index]['codigo'] = strtolower(
+                        trim((string) $item['codigo'])
                     );
                 }
 
-                if(isset($item['titulo'])){
-                    $data['items'][$index]['titulo']=trim(
-                        (string)$item['titulo']
+                if (isset($item['titulo'])) {
+                    $data['items'][$index]['titulo'] = trim(
+                        (string) $item['titulo']
                     );
                 }
 
-                if(isset($item['configuracao']['placeholder'])){
-                    $data['items'][$index]['configuracao']['placeholder']=mb_strtoupper(
-                        trim((string)$item['configuracao']['placeholder'])
+                if (isset($item['configuracao']['placeholder'])) {
+                    $data['items'][$index]['configuracao']['placeholder'] = mb_strtoupper(
+                        trim((string) $item['configuracao']['placeholder'])
                     );
                 }
 
-                if(isset($item['configuracao']['action'])){
-                    $data['items'][$index]['configuracao']['action']=strtolower(
-                        trim((string)$item['configuracao']['action'])
+                if (isset($item['configuracao']['action'])) {
+                    $data['items'][$index]['configuracao']['action'] = strtolower(
+                        trim((string) $item['configuracao']['action'])
                     );
                 }
 
-                if(isset($item['configuracao']['checklist_tipo'])){
-                    $data['items'][$index]['configuracao']['checklist_tipo']=strtolower(
-                        trim((string)$item['configuracao']['checklist_tipo'])
+                if (isset($item['configuracao']['checklist_tipo'])) {
+                    $data['items'][$index]['configuracao']['checklist_tipo'] = strtolower(
+                        trim((string) $item['configuracao']['checklist_tipo'])
                     );
                 }
 
-                if(isset($item['configuracao']['tipo_contrato_codigo'])){
-                    $data['items'][$index]['configuracao']['tipo_contrato_codigo']=strtolower(
-                        trim((string)$item['configuracao']['tipo_contrato_codigo'])
+                if (isset($item['configuracao']['tipo_contrato_codigo'])) {
+                    $data['items'][$index]['configuracao']['tipo_contrato_codigo'] = strtolower(
+                        trim((string) $item['configuracao']['tipo_contrato_codigo'])
+                    );
+                }
+
+                if (isset($item['configuracao']['status_conclusao'])) {
+                    $data['items'][$index]['configuracao']['status_conclusao'] = strtolower(
+                        trim((string) $item['configuracao']['status_conclusao'])
                     );
                 }
             }
@@ -209,17 +243,17 @@ class UpdateChecklistProcessTemplateRequest extends FormRequest
 
     public function withValidator($validator): void
     {
-        $validator->after(function($validator): void{
-            foreach((array)$this->input('items',[]) as $index=>$item){
-                $tipo=$item['tipo']??null;
+        $validator->after(function ($validator): void {
+            foreach ((array) $this->input('items', []) as $index => $item) {
+                $tipo = $item['tipo'] ?? null;
 
-                if($tipo==='assinatura'){
-                    $placeholder=data_get(
+                if ($tipo === 'assinatura') {
+                    $placeholder = data_get(
                         $item,
                         'configuracao.placeholder'
                     );
 
-                    if(blank($placeholder)){
+                    if (blank($placeholder)) {
                         $validator->errors()->add(
                             "items.{$index}.configuracao.placeholder",
                             'Etapas de assinatura precisam indicar o placeholder da assinatura.'
@@ -227,13 +261,13 @@ class UpdateChecklistProcessTemplateRequest extends FormRequest
                     }
                 }
 
-                if($tipo==='acao_sistema'){
-                    $action=data_get(
+                if ($tipo === 'acao_sistema') {
+                    $action = data_get(
                         $item,
                         'configuracao.action'
                     );
 
-                    if(blank($action)){
+                    if (blank($action)) {
                         $validator->errors()->add(
                             "items.{$index}.configuracao.action",
                             'A etapa de ação do sistema precisa indicar a ação a executar.'
@@ -241,13 +275,13 @@ class UpdateChecklistProcessTemplateRequest extends FormRequest
                     }
                 }
 
-                if($tipo==='checklist_veiculo'){
-                    $checklistTipo=data_get(
+                if ($tipo === 'checklist_veiculo') {
+                    $checklistTipo = data_get(
                         $item,
                         'configuracao.checklist_tipo'
                     );
 
-                    if(blank($checklistTipo)){
+                    if (blank($checklistTipo)) {
                         $validator->errors()->add(
                             "items.{$index}.configuracao.checklist_tipo",
                             'A etapa de checklist do veículo precisa indicar entrega ou recolha.'
@@ -255,13 +289,13 @@ class UpdateChecklistProcessTemplateRequest extends FormRequest
                     }
                 }
 
-                if($tipo==='contrato_relacionado'){
-                    $codigo=data_get(
+                if ($tipo === 'contrato_relacionado') {
+                    $codigo = data_get(
                         $item,
                         'configuracao.tipo_contrato_codigo'
                     );
 
-                    if(blank($codigo)){
+                    if (blank($codigo)) {
                         $validator->errors()->add(
                             "items.{$index}.configuracao.tipo_contrato_codigo",
                             'A etapa de contrato relacionado precisa indicar o código do tipo de contrato.'

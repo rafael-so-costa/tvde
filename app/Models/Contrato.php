@@ -160,6 +160,23 @@ class Contrato extends Model
             'contrato'
         );
     }
+
+    public function relacoesOrigem(): HasMany
+    {
+        return $this->hasMany(
+            ContratoRelacao::class,
+            'contrato_origem_id'
+        );
+    }
+
+    public function relacoesComoRelacionado(): HasMany
+    {
+        return $this->hasMany(
+            ContratoRelacao::class,
+            'contrato_relacionado_id'
+        );
+    }
+
     public function documento(): HasOne
     {
         return $this->hasOne(

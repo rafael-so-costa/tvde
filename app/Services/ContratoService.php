@@ -5,32 +5,32 @@ namespace App\Services;
 use App\Models\AssinaturaDigital;
 use App\Models\Contrato;
 use App\Models\ContratoAtivoVeiculo;
+use App\Models\ContratoRelacao;
 use App\Models\Empresa;
 use App\Models\LogAuditoriaContrato;
 use App\Models\Motorista;
 use App\Models\Proprietario;
 use App\Models\TemplateContrato;
+use App\Models\TipoContrato;
 use App\Models\User;
 use App\Models\Veiculo;
 use App\Models\VersaoContrato;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 use Throwable;
-use App\Models\TipoContrato;
 
 class ContratoService
 {
-
     public function __construct(
         private ChecklistProcessService $checklistProcessService,
         private RemoteSignatureMailService $remoteSignatureMailService,
-        private ContratoTipoResolverService $tipoResolver
+        private ContratoTipoResolverService $tipoResolver,
+        private ContratoRelacionadoService $contratoRelacionadoService
     ) {}
-
 
     public const MAX_MOTORISTAS_ATIVOS_POR_VEICULO = 3;
 
@@ -109,31 +109,31 @@ class ContratoService
             if ($tipoContrato) {
                 $assinaturas =
                     $this
-                    ->prepararAssinaturasConfiguradas(
-                        $signatureConfiguration,
-                        $assinaturasInput,
-                        $motorista,
-                        $proprietario,
-                        $empresa,
-                        $actor
-                    );
+                        ->prepararAssinaturasConfiguradas(
+                            $signatureConfiguration,
+                            $assinaturasInput,
+                            $motorista,
+                            $proprietario,
+                            $empresa,
+                            $actor
+                        );
             } else {
                 $obrigatorias =
                     $this
-                    ->assinaturasObrigatorias(
-                        $template
-                    );
+                        ->assinaturasObrigatorias(
+                            $template
+                        );
 
                 $assinaturas =
                     $this
-                    ->prepararAssinaturas(
-                        $obrigatorias,
-                        $assinaturasInput,
-                        $motorista,
-                        $proprietario,
-                        $empresa,
-                        $actor
-                    );
+                        ->prepararAssinaturas(
+                            $obrigatorias,
+                            $assinaturasInput,
+                            $motorista,
+                            $proprietario,
+                            $empresa,
+                            $actor
+                        );
             }
 
             $campos =
@@ -141,8 +141,7 @@ class ContratoService
                 ?? [];
 
             foreach (
-                $assinaturas as
-                $assinatura
+                $assinaturas as $assinatura
             ) {
                 if (
                     $assinatura['modo']
@@ -188,8 +187,7 @@ class ContratoService
                     collect(
                         $assinaturas
                     )->every(
-                        fn(array $assinatura) =>
-                        $assinatura['modo']
+                        fn (array $assinatura) => $assinatura['modo']
                             === 'presencial'
                     );
 
@@ -206,8 +204,7 @@ class ContratoService
             }
 
             foreach (
-                $assinaturas as
-                $assinatura
+                $assinaturas as $assinatura
             ) {
                 if (
                     $assinatura['placeholder'] ===
@@ -238,7 +235,7 @@ class ContratoService
                 $tipoContrato
                 ? $workflowTemplate
                 : $template
-                ?->checklistProcessTemplate;
+                    ?->checklistProcessTemplate;
 
             if ($processTemplate) {
                 $this
@@ -249,24 +246,19 @@ class ContratoService
                         ChecklistProcessService::ENTITY_CONTRATO,
                         $contrato->id,
                         [
-                            'contrato_tipo' =>
-                            $contrato->tipo,
+                            'contrato_tipo' => $contrato->tipo,
 
-                            'tipo_contrato_id' =>
-                            $tipoContrato?->id,
+                            'tipo_contrato_id' => $tipoContrato?->id,
 
-                            'tipo_contrato_codigo' =>
-                            $tipoContrato?->codigo,
+                            'tipo_contrato_codigo' => $tipoContrato?->codigo,
 
-                            'template_contrato_id' =>
-                            $template?->id,
+                            'template_contrato_id' => $template?->id,
                         ]
                     );
             }
 
             foreach (
-                $assinaturas as
-                $dadosAssinatura
+                $assinaturas as $dadosAssinatura
             ) {
                 $this->guardarAssinatura(
                     $contrato,
@@ -286,8 +278,7 @@ class ContratoService
                             $contrato->id,
                             $dadosAssinatura['placeholder'],
                             [
-                                'modo' =>
-                                'presencial',
+                                'modo' => 'presencial',
                             ],
                             $actor->id
                         );
@@ -305,15 +296,12 @@ class ContratoService
                 $actor,
                 'criacao',
                 [
-                    'tipo' =>
-                    $contrato->tipo,
+                    'tipo' => $contrato->tipo,
 
-                    'tipo_contrato_id' =>
-                    $contrato
+                    'tipo_contrato_id' => $contrato
                         ->tipo_contrato_id,
 
-                    'status' =>
-                    $contrato->status,
+                    'status' => $contrato->status,
 
                     'versao' => 1,
                 ],
@@ -324,10 +312,10 @@ class ContratoService
                 $contrato->status ===
                 'assinado' &&
                 $this
-                ->deveAssociarMotoristaVeiculo(
-                    $contrato,
-                    $tipoContrato
-                )
+                    ->deveAssociarMotoristaVeiculo(
+                        $contrato,
+                        $tipoContrato
+                    )
             ) {
                 $this
                     ->associarMotoristaVeiculo(
@@ -346,23 +334,23 @@ class ContratoService
     ): array {
         $assinatura =
             AssinaturaDigital::query()
-            ->where(
-                'token_verificacao',
-                $token
-            )
-            ->with([
-                'contrato.template',
-                'contrato.motorista',
-                'contrato.proprietario',
-                'contrato.veiculo',
-            ])
-            ->firstOrFail();
+                ->where(
+                    'token_verificacao',
+                    $token
+                )
+                ->with([
+                    'contrato.template',
+                    'contrato.motorista',
+                    'contrato.proprietario',
+                    'contrato.veiculo',
+                ])
+                ->firstOrFail();
 
         $contrato =
             $assinatura->contrato;
 
         if (
-            !$contrato ||
+            ! $contrato ||
             $contrato->tenant_id !==
             $assinatura->tenant_id
         ) {
@@ -378,337 +366,248 @@ class ContratoService
 
         return [
             'assinatura' => [
-                'id' =>
-                $assinatura->id,
-                'signatario_tipo' =>
-                $assinatura
+                'id' => $assinatura->id,
+                'signatario_tipo' => $assinatura
                     ->signatario_tipo,
-                'signatario_nome' =>
-                $assinatura
+                'signatario_nome' => $assinatura
                     ->signatario_nome,
-                'signatario_email' =>
-                $this->mascararEmail(
+                'signatario_email' => $this->mascararEmail(
                     $assinatura
                         ->signatario_email
                 ),
-                'placeholder' =>
-                $assinatura
+                'placeholder' => $assinatura
                     ->placeholder,
-                'status' =>
-                $assinatura->status,
-                'verificado' =>
-                $assinatura
+                'status' => $assinatura->status,
+                'verificado' => $assinatura
                     ->verificado,
-                'solicitado_em' =>
-                $assinatura
+                'solicitado_em' => $assinatura
                     ->solicitado_em,
-                'otp_expira_em' =>
-                $assinatura
+                'otp_expira_em' => $assinatura
                     ->otp_expira_em,
-                'expirado' =>
-                !$assinatura
+                'expirado' => ! $assinatura
                     ->verificado &&
                     $assinatura
-                    ->otp_expira_em
-                    ?->isPast() === true,
+                        ->otp_expira_em
+                        ?->isPast() === true,
             ],
 
             'contrato' => [
-                'id' =>
-                $contrato->id,
-                'tipo' =>
-                $contrato->tipo,
-                'status' =>
-                $contrato->status,
-                'data_inicio' =>
-                $contrato
+                'id' => $contrato->id,
+                'tipo' => $contrato->tipo,
+                'status' => $contrato->status,
+                'data_inicio' => $contrato
                     ->data_inicio,
-                'data_fim' =>
-                $contrato
+                'data_fim' => $contrato
                     ->data_fim,
-                'valor_diaria' =>
-                $contrato
+                'valor_diaria' => $contrato
                     ->valor_diaria,
-                'valor_semanal' =>
-                $contrato
+                'valor_semanal' => $contrato
                     ->valor_semanal,
-                'valor_caucao' =>
-                $contrato
+                'valor_caucao' => $contrato
                     ->valor_caucao,
-                'valor_total' =>
-                $contrato
+                'valor_total' => $contrato
                     ->valor_total,
-                'campos_preenchidos' =>
-                $contrato
+                'campos_preenchidos' => $contrato
                     ->campos_preenchidos,
-                'versao_atual' =>
-                $contrato
+                'versao_atual' => $contrato
                     ->versao_atual,
             ],
 
-            'template' =>
-            $contrato->template
+            'template' => $contrato->template
                 ? [
-                    'nome' =>
-                    $contrato
+                    'nome' => $contrato
                         ->template
                         ->nome,
-                    'conteudo_original' =>
-                    $contrato
+                    'conteudo_original' => $contrato
                         ->template
                         ->conteudo_original,
-                    'campos_detectados' =>
-                    $contrato
+                    'campos_detectados' => $contrato
                         ->template
                         ->campos_detectados,
-                    'campos_mapeados' =>
-                    $contrato
+                    'campos_mapeados' => $contrato
                         ->template
                         ->campos_mapeados,
                 ]
                 : null,
 
-            'empresa' =>
-            $empresa
+            'empresa' => $empresa
                 ? [
-                    'nome_empresa' =>
-                    $empresa
+                    'nome_empresa' => $empresa
                         ->nome_empresa,
-                    'nif' =>
-                    $empresa->nif,
-                    'email' =>
-                    $empresa->email,
-                    'telemovel' =>
-                    $empresa
+                    'nif' => $empresa->nif,
+                    'email' => $empresa->email,
+                    'telemovel' => $empresa
                         ->telemovel,
-                    'nome_gerente' =>
-                    $empresa
+                    'nome_gerente' => $empresa
                         ->nome_gerente,
-                    'endereco_rua' =>
-                    $empresa
+                    'endereco_rua' => $empresa
                         ->endereco_rua,
-                    'endereco_numero' =>
-                    $empresa
+                    'endereco_numero' => $empresa
                         ->endereco_numero,
-                    'endereco_complemento' =>
-                    $empresa
+                    'endereco_complemento' => $empresa
                         ->endereco_complemento,
-                    'endereco_cep' =>
-                    $empresa
+                    'endereco_cep' => $empresa
                         ->endereco_cep,
-                    'endereco_cidade' =>
-                    $empresa
+                    'endereco_cidade' => $empresa
                         ->endereco_cidade,
-                    'capital_social' =>
-                    $empresa
+                    'capital_social' => $empresa
                         ->capital_social,
-                    'certificado_tvde' =>
-                    $empresa
+                    'certificado_tvde' => $empresa
                         ->certificado_tvde,
                 ]
                 : null,
 
-            'motorista' =>
-            $contrato->motorista
+            'motorista' => $contrato->motorista
                 ? [
-                    'nome_completo' =>
-                    $contrato
+                    'nome_completo' => $contrato
                         ->motorista
                         ->nome_completo,
-                    'nif' =>
-                    $contrato
+                    'nif' => $contrato
                         ->motorista
                         ->nif,
-                    'email' =>
-                    $contrato
+                    'email' => $contrato
                         ->motorista
                         ->email,
-                    'telemovel' =>
-                    $contrato
+                    'telemovel' => $contrato
                         ->motorista
                         ->telemovel,
-                    'iban' =>
-                    $contrato
+                    'iban' => $contrato
                         ->motorista
                         ->iban,
-                    'endereco_rua' =>
-                    $contrato
+                    'endereco_rua' => $contrato
                         ->motorista
                         ->endereco_rua,
-                    'endereco_numero' =>
-                    $contrato
+                    'endereco_numero' => $contrato
                         ->motorista
                         ->endereco_numero,
-                    'endereco_complemento' =>
-                    $contrato
+                    'endereco_complemento' => $contrato
                         ->motorista
                         ->endereco_complemento,
-                    'endereco_cep' =>
-                    $contrato
+                    'endereco_cep' => $contrato
                         ->motorista
                         ->endereco_cep,
-                    'endereco_cidade' =>
-                    $contrato
+                    'endereco_cidade' => $contrato
                         ->motorista
                         ->endereco_cidade,
-                    'tipo_documento' =>
-                    $contrato
+                    'tipo_documento' => $contrato
                         ->motorista
                         ->tipo_documento,
-                    'numero_documento' =>
-                    $contrato
+                    'numero_documento' => $contrato
                         ->motorista
                         ->numero_documento,
-                    'documento_valid_until' =>
-                    $contrato
+                    'documento_valid_until' => $contrato
                         ->motorista
                         ->documento_valid_until,
-                    'certificado_tvde' =>
-                    $contrato
+                    'certificado_tvde' => $contrato
                         ->motorista
                         ->certificado_tvde,
-                    'carta_numero' =>
-                    $contrato
+                    'carta_numero' => $contrato
                         ->motorista
                         ->carta_numero,
-                    'carta_valid_until' =>
-                    $contrato
+                    'carta_valid_until' => $contrato
                         ->motorista
                         ->carta_valid_until,
-                    'data_nascimento' =>
-                    $contrato
+                    'data_nascimento' => $contrato
                         ->motorista
                         ->data_nascimento,
                 ]
                 : null,
 
-            'proprietario' =>
-            $contrato->proprietario
+            'proprietario' => $contrato->proprietario
                 ? [
-                    'tipo' =>
-                    $contrato
+                    'tipo' => $contrato
                         ->proprietario
                         ->tipo,
-                    'nome_completo' =>
-                    $contrato
+                    'nome_completo' => $contrato
                         ->proprietario
                         ->nome_completo,
-                    'nome_empresa' =>
-                    $contrato
+                    'nome_empresa' => $contrato
                         ->proprietario
                         ->nome_empresa,
-                    'nome_gerente' =>
-                    $contrato
+                    'nome_gerente' => $contrato
                         ->proprietario
                         ->nome_gerente,
-                    'nif' =>
-                    $contrato
+                    'nif' => $contrato
                         ->proprietario
                         ->nif,
-                    'email' =>
-                    $contrato
+                    'email' => $contrato
                         ->proprietario
                         ->email,
-                    'telemovel' =>
-                    $contrato
+                    'telemovel' => $contrato
                         ->proprietario
                         ->telemovel,
-                    'iban' =>
-                    $contrato
+                    'iban' => $contrato
                         ->proprietario
                         ->iban,
-                    'endereco_rua' =>
-                    $contrato
+                    'endereco_rua' => $contrato
                         ->proprietario
                         ->endereco_rua,
-                    'endereco_numero' =>
-                    $contrato
+                    'endereco_numero' => $contrato
                         ->proprietario
                         ->endereco_numero,
-                    'endereco_complemento' =>
-                    $contrato
+                    'endereco_complemento' => $contrato
                         ->proprietario
                         ->endereco_complemento,
-                    'endereco_cep' =>
-                    $contrato
+                    'endereco_cep' => $contrato
                         ->proprietario
                         ->endereco_cep,
-                    'endereco_cidade' =>
-                    $contrato
+                    'endereco_cidade' => $contrato
                         ->proprietario
                         ->endereco_cidade,
-                    'tipo_documento' =>
-                    $contrato
+                    'tipo_documento' => $contrato
                         ->proprietario
                         ->tipo_documento,
-                    'numero_documento' =>
-                    $contrato
+                    'numero_documento' => $contrato
                         ->proprietario
                         ->numero_documento,
-                    'documento_valid_until' =>
-                    $contrato
+                    'documento_valid_until' => $contrato
                         ->proprietario
                         ->documento_valid_until,
-                    'capital_social' =>
-                    $contrato
+                    'capital_social' => $contrato
                         ->proprietario
                         ->capital_social,
                 ]
                 : null,
 
-            'veiculo' =>
-            $contrato->veiculo
+            'veiculo' => $contrato->veiculo
                 ? [
-                    'matricula' =>
-                    $contrato
+                    'matricula' => $contrato
                         ->veiculo
                         ->matricula,
-                    'marca' =>
-                    $contrato
+                    'marca' => $contrato
                         ->veiculo
                         ->marca,
-                    'modelo' =>
-                    $contrato
+                    'modelo' => $contrato
                         ->veiculo
                         ->modelo,
-                    'data_matricula' =>
-                    $contrato
+                    'data_matricula' => $contrato
                         ->veiculo
                         ->data_matricula,
-                    'chassi' =>
-                    $contrato
+                    'chassi' => $contrato
                         ->veiculo
                         ->chassi,
-                    'cilindrada' =>
-                    $contrato
+                    'cilindrada' => $contrato
                         ->veiculo
                         ->cilindrada,
-                    'potencia' =>
-                    $contrato
+                    'potencia' => $contrato
                         ->veiculo
                         ->potencia,
-                    'combustivel' =>
-                    $contrato
+                    'combustivel' => $contrato
                         ->veiculo
                         ->combustivel,
-                    'lugares' =>
-                    $contrato
+                    'lugares' => $contrato
                         ->veiculo
                         ->lugares,
-                    'portas' =>
-                    $contrato
+                    'portas' => $contrato
                         ->veiculo
                         ->portas,
-                    'cor' =>
-                    $contrato
+                    'cor' => $contrato
                         ->veiculo
                         ->cor,
-                    'valor_caucao' =>
-                    $contrato
+                    'valor_caucao' => $contrato
                         ->veiculo
                         ->valor_caucao,
-                    'valor_aluguel' =>
-                    $contrato
+                    'valor_aluguel' => $contrato
                         ->veiculo
                         ->valor_aluguel,
                 ]
@@ -742,12 +641,12 @@ class ContratoService
                 ): array {
                     $assinatura =
                         AssinaturaDigital::query()
-                        ->where(
-                            'token_verificacao',
-                            $token
-                        )
-                        ->lockForUpdate()
-                        ->firstOrFail();
+                            ->where(
+                                'token_verificacao',
+                                $token
+                            )
+                            ->lockForUpdate()
+                            ->firstOrFail();
 
                     if (
                         $assinatura->verificado ||
@@ -755,21 +654,19 @@ class ContratoService
                         'assinado'
                     ) {
                         throw ValidationException::withMessages([
-                            'assinatura' =>
-                            'Esta solicitação já foi assinada.',
+                            'assinatura' => 'Esta solicitação já foi assinada.',
                         ]);
                     }
 
                     if (
-                        !$assinatura
+                        ! $assinatura
                             ->otp_expira_em ||
                         $assinatura
-                        ->otp_expira_em
-                        ->isPast()
+                            ->otp_expira_em
+                            ->isPast()
                     ) {
                         throw ValidationException::withMessages([
-                            'codigo_otp' =>
-                            'O código OTP expirou.',
+                            'codigo_otp' => 'O código OTP expirou.',
                         ]);
                     }
 
@@ -777,59 +674,57 @@ class ContratoService
                         blank(
                             $assinatura->codigo_otp
                         ) ||
-                        !hash_equals(
+                        ! hash_equals(
                             (string)
                             $assinatura->codigo_otp,
                             $otp
                         )
                     ) {
                         throw ValidationException::withMessages([
-                            'codigo_otp' =>
-                            'Código OTP inválido.',
+                            'codigo_otp' => 'Código OTP inválido.',
                         ]);
                     }
 
                     $contrato =
                         Contrato::query()
-                        ->where(
-                            'tenant_id',
-                            $assinatura
-                                ->tenant_id
-                        )
-                        ->whereKey(
-                            $assinatura
-                                ->contrato_id
-                        )
-                        ->lockForUpdate()
-                        ->firstOrFail();
+                            ->where(
+                                'tenant_id',
+                                $assinatura
+                                    ->tenant_id
+                            )
+                            ->whereKey(
+                                $assinatura
+                                    ->contrato_id
+                            )
+                            ->lockForUpdate()
+                            ->firstOrFail();
 
                     if (
                         $contrato->status !==
                         'enviado'
                     ) {
                         throw ValidationException::withMessages([
-                            'contrato' =>
-                            'Este contrato não está disponível para assinatura remota.',
+                            'contrato' => 'Este contrato não está disponível para assinatura remota.',
                         ]);
                     }
 
                     $storedPath =
-                        'contract-signatures/' .
-                        $contrato->tenant_id .
-                        '/' .
-                        $contrato->id .
-                        '/' .
-                        $assinatura->id .
+                        'contract-signatures/'.
+                        $contrato->tenant_id.
+                        '/'.
+                        $contrato->id.
+                        '/'.
+                        $assinatura->id.
                         '.png';
 
                     $stored =
                         Storage::disk('local')
-                        ->put(
-                            $storedPath,
-                            $binary
-                        );
+                            ->put(
+                                $storedPath,
+                                $binary
+                            );
 
-                    if (!$stored) {
+                    if (! $stored) {
                         throw new RuntimeException(
                             'Não foi possível guardar a assinatura.'
                         );
@@ -877,7 +772,7 @@ class ContratoService
                     $assinatura->save();
                     $campos =
                         $contrato
-                        ->campos_preenchidos
+                            ->campos_preenchidos
                         ?? [];
 
                     if (
@@ -896,7 +791,7 @@ class ContratoService
 
                     if (
                         $assinatura
-                        ->placeholder ===
+                            ->placeholder ===
                         'ASSINATURA_MOTORISTA'
                     ) {
                         $contrato
@@ -906,7 +801,7 @@ class ContratoService
 
                     if (
                         $assinatura
-                        ->placeholder ===
+                            ->placeholder ===
                         'ASSINATURA_PROPRIETARIO'
                     ) {
                         $contrato
@@ -916,35 +811,35 @@ class ContratoService
 
                     $pendentes =
                         AssinaturaDigital::query()
-                        ->where(
-                            'tenant_id',
-                            $contrato
-                                ->tenant_id
-                        )
-                        ->where(
-                            'contrato_id',
-                            $contrato->id
-                        )
-                        ->where(
-                            function (
-                                $query
-                            ) {
-                                $query
-                                    ->where(
-                                        'status',
-                                        '!=',
-                                        'assinado'
-                                    )
-                                    ->orWhere(
-                                        'verificado',
-                                        false
-                                    );
-                            }
-                        )
-                        ->exists();
+                            ->where(
+                                'tenant_id',
+                                $contrato
+                                    ->tenant_id
+                            )
+                            ->where(
+                                'contrato_id',
+                                $contrato->id
+                            )
+                            ->where(
+                                function (
+                                    $query
+                                ) {
+                                    $query
+                                        ->where(
+                                            'status',
+                                            '!=',
+                                            'assinado'
+                                        )
+                                        ->orWhere(
+                                            'verificado',
+                                            false
+                                        );
+                                }
+                            )
+                            ->exists();
 
                     $contratoAssinado =
-                        !$pendentes;
+                        ! $pendentes;
 
                     if ($contratoAssinado) {
                         $contrato->status =
@@ -959,13 +854,25 @@ class ContratoService
 
                     $actor =
                         $assinatura
-                        ->signatario_user_id
-                        ? User::query()
-                        ->find(
-                            $assinatura
-                                ->signatario_user_id
-                        )
+                            ->signatario_user_id
+                            ? User::query()
+                                ->find(
+                                    $assinatura
+                                        ->signatario_user_id
+                                )
                         : null;
+
+                    if (
+                        $contratoAssinado
+                    ) {
+                        $this
+                            ->contratoRelacionadoService
+                            ->syncByRelatedContract(
+                                $contrato->tenant_id,
+                                $contrato->id,
+                                $actor?->id
+                            );
+                    }
 
                     $this
                         ->checklistProcessService
@@ -974,11 +881,9 @@ class ContratoService
                             $contrato->id,
                             $assinatura->placeholder,
                             [
-                                'modo' =>
-                                'remota',
+                                'modo' => 'remota',
 
-                                'assinatura_id' =>
-                                $assinatura->id,
+                                'assinatura_id' => $assinatura->id,
                             ],
                             $actor?->id
                         );
@@ -988,16 +893,12 @@ class ContratoService
                         $actor,
                         'assinatura_remota',
                         [
-                            'assinatura_id' =>
-                            $assinatura->id,
-                            'placeholder' =>
-                            $assinatura
+                            'assinatura_id' => $assinatura->id,
+                            'placeholder' => $assinatura
                                 ->placeholder,
-                            'signatario_tipo' =>
-                            $assinatura
+                            'signatario_tipo' => $assinatura
                                 ->signatario_tipo,
-                            'contrato_assinado' =>
-                            $contratoAssinado,
+                            'contrato_assinado' => $contratoAssinado,
                         ],
                         $ip
                     );
@@ -1005,9 +906,9 @@ class ContratoService
                     if (
                         $contratoAssinado &&
                         $this
-                        ->deveAssociarMotoristaVeiculo(
-                            $contrato
-                        )
+                            ->deveAssociarMotoristaVeiculo(
+                                $contrato
+                            )
                     ) {
                         $this
                             ->associarMotoristaVeiculo(
@@ -1016,20 +917,14 @@ class ContratoService
                     }
 
                     return [
-                        'assinatura_id' =>
-                        $assinatura->id,
-                        'status' =>
-                        $assinatura->status,
-                        'verificado' =>
-                        $assinatura
+                        'assinatura_id' => $assinatura->id,
+                        'status' => $assinatura->status,
+                        'verificado' => $assinatura
                             ->verificado,
-                        'assinado_em' =>
-                        $assinatura
+                        'assinado_em' => $assinatura
                             ->assinado_em,
-                        'contrato_id' =>
-                        $contrato->id,
-                        'contrato_status' =>
-                        $contrato->status,
+                        'contrato_id' => $contrato->id,
+                        'contrato_status' => $contrato->status,
                     ];
                 }
             );
@@ -1070,8 +965,7 @@ class ContratoService
                 $contrato->status !== 'rascunho'
             ) {
                 throw ValidationException::withMessages([
-                    'contrato' =>
-                    'Apenas contratos em rascunho e não bloqueados podem ser editados.',
+                    'contrato' => 'Apenas contratos em rascunho e não bloqueados podem ser editados.',
                 ]);
             }
 
@@ -1153,10 +1047,8 @@ class ContratoService
                 $actor,
                 'edicao',
                 [
-                    'campos_alterados' =>
-                    array_keys($data),
-                    'versao' =>
-                    $contrato->versao_atual,
+                    'campos_alterados' => array_keys($data),
+                    'versao' => $contrato->versao_atual,
                 ],
                 $ip
             );
@@ -1187,8 +1079,7 @@ class ContratoService
 
             if ($contrato->status !== 'assinado') {
                 throw ValidationException::withMessages([
-                    'contrato' =>
-                    'Apenas contratos ativos podem ser encerrados.',
+                    'contrato' => 'Apenas contratos ativos podem ser encerrados.',
                 ]);
             }
 
@@ -1210,6 +1101,14 @@ class ContratoService
 
             $contrato->save();
 
+            $this
+                ->contratoRelacionadoService
+                ->syncByRelatedContract(
+                    $tenantId,
+                    $contrato->id,
+                    $actor->id
+                );
+
             ContratoAtivoVeiculo::query()
                 ->where(
                     'tenant_id',
@@ -1230,8 +1129,7 @@ class ContratoService
                 $actor,
                 'encerramento',
                 [
-                    'data_fim' =>
-                    $contrato->data_fim
+                    'data_fim' => $contrato->data_fim
                         ?->toDateString(),
                 ],
                 $ip
@@ -1244,7 +1142,7 @@ class ContratoService
     private function validarWorkflowAntesDoEncerramento(
         Contrato $contrato
     ): void {
-        $run=
+        $run =
             $contrato
                 ->checklistProcessRun()
                 ->with(
@@ -1252,36 +1150,34 @@ class ContratoService
                 )
                 ->first();
 
-        if(!$run){
+        if (! $run) {
             return;
         }
 
-        $recolha=
+        $recolha =
             $run
                 ->items
                 ->first(
-                    fn($item)=>
-                        $item->tipo===
+                    fn ($item) => $item->tipo ===
                             'checklist_veiculo' &&
                         data_get(
                             $item->configuracao_snapshot,
                             'checklist_tipo'
-                        )==='recolha'
+                        ) === 'recolha'
                 );
 
-        if(!$recolha){
+        if (! $recolha) {
             return;
         }
 
-        $pendentes=
+        $pendentes =
             $run
                 ->items
                 ->filter(
-                    fn($item)=>
-                        $item->obrigatorio &&
-                        $item->ordem<
+                    fn ($item) => $item->obrigatorio &&
+                        $item->ordem <
                             $recolha->ordem &&
-                        !in_array(
+                        ! in_array(
                             $item->status,
                             [
                                 ChecklistProcessService::ITEM_DONE,
@@ -1291,11 +1187,11 @@ class ContratoService
                         )
                 );
 
-        if($pendentes->isEmpty()){
+        if ($pendentes->isEmpty()) {
             return;
         }
 
-        $primeira=
+        $primeira =
             $pendentes
                 ->sortBy(
                     'ordem'
@@ -1303,8 +1199,7 @@ class ContratoService
                 ->first();
 
         throw ValidationException::withMessages([
-            'contrato'=>
-                'Antes de encerrar o contrato, conclua a etapa obrigatória: '.
+            'contrato' => 'Antes de encerrar o contrato, conclua a etapa obrigatória: '.
                 ($primeira?->titulo_snapshot ?? 'etapa pendente').
                 '.',
         ]);
@@ -1327,46 +1222,45 @@ class ContratoService
                 ) {
                     $contrato =
                         Contrato::query()
-                        ->where(
-                            'tenant_id',
-                            $tenantId
-                        )
-                        ->whereKey(
-                            $contratoId
-                        )
-                        ->lockForUpdate()
-                        ->firstOrFail();
+                            ->where(
+                                'tenant_id',
+                                $tenantId
+                            )
+                            ->whereKey(
+                                $contratoId
+                            )
+                            ->lockForUpdate()
+                            ->firstOrFail();
 
                     $assinatura =
                         AssinaturaDigital::query()
-                        ->where(
-                            'tenant_id',
-                            $tenantId
-                        )
-                        ->where(
-                            'contrato_id',
-                            $contrato->id
-                        )
-                        ->whereKey(
-                            $assinaturaId
-                        )
-                        ->lockForUpdate()
-                        ->firstOrFail();
+                            ->where(
+                                'tenant_id',
+                                $tenantId
+                            )
+                            ->where(
+                                'contrato_id',
+                                $contrato->id
+                            )
+                            ->whereKey(
+                                $assinaturaId
+                            )
+                            ->lockForUpdate()
+                            ->firstOrFail();
 
                     if (
                         $assinatura
-                        ->status !==
-                        'pendente' ||
-                        $assinatura
-                        ->verificado ||
-                        filled(
+                            ->status !==
+                            'pendente' ||
                             $assinatura
-                                ->assinatura_url
-                        )
+                                ->verificado ||
+                                filled(
+                                    $assinatura
+                                        ->assinatura_url
+                                )
                     ) {
                         throw ValidationException::withMessages([
-                            'assinatura' =>
-                            'Apenas assinaturas remotas pendentes podem ser reenviadas.',
+                            'assinatura' => 'Apenas assinaturas remotas pendentes podem ser reenviadas.',
                         ]);
                     }
 
@@ -1379,21 +1273,20 @@ class ContratoService
                     );
 
                     if (
-                        !filter_var(
+                        ! filter_var(
                             $email,
                             FILTER_VALIDATE_EMAIL
                         )
                     ) {
                         throw ValidationException::withMessages([
-                            'assinatura' =>
-                            'O signatário não possui um e-mail válido.',
+                            'assinatura' => 'O signatário não possui um e-mail válido.',
                         ]);
                     }
 
                     $assinatura
                         ->token_verificacao =
                         Str::uuid()
-                        ->toString();
+                            ->toString();
 
                     $assinatura
                         ->codigo_otp =
@@ -1406,9 +1299,9 @@ class ContratoService
                     $assinatura
                         ->otp_expira_em =
                         now()
-                        ->addMinutes(
-                            30
-                        );
+                            ->addMinutes(
+                                30
+                            );
 
                     $assinatura
                         ->solicitado_por =
@@ -1436,51 +1329,43 @@ class ContratoService
             Log::warning(
                 'Falha ao reenviar assinatura remota.',
                 [
-                    'contrato_id' =>
-                    $contratoId,
+                    'contrato_id' => $contratoId,
 
-                    'assinatura_id' =>
-                    $assinaturaId,
+                    'assinatura_id' => $assinaturaId,
 
-                    'exception' =>
-                    $exception::class,
+                    'exception' => $exception::class,
 
-                    'message' =>
-                    $exception
+                    'message' => $exception
                         ->getMessage(),
                 ]
             );
 
             throw ValidationException::withMessages([
-                'assinatura' =>
-                'Não foi possível enviar o e-mail de assinatura. Tente novamente.',
+                'assinatura' => 'Não foi possível enviar o e-mail de assinatura. Tente novamente.',
             ]);
         }
 
         $contrato =
             Contrato::query()
-            ->where(
-                'tenant_id',
-                $tenantId
-            )
-            ->findOrFail(
-                $contratoId
-            );
+                ->where(
+                    'tenant_id',
+                    $tenantId
+                )
+                ->findOrFail(
+                    $contratoId
+                );
 
         $this->auditar(
             $contrato,
             $actor,
             'reenvio_assinatura_remota',
             [
-                'assinatura_id' =>
-                $assinatura->id,
+                'assinatura_id' => $assinatura->id,
 
-                'placeholder' =>
-                $assinatura
+                'placeholder' => $assinatura
                     ->placeholder,
 
-                'signatario_tipo' =>
-                $assinatura
+                'signatario_tipo' => $assinatura
                     ->signatario_tipo,
             ],
             $ip
@@ -1513,8 +1398,24 @@ class ContratoService
                 $contrato->bloqueado
             ) {
                 throw ValidationException::withMessages([
-                    'contrato' =>
-                    'Contratos encerrados ou bloqueados não podem ser eliminados.',
+                    'contrato' => 'Contratos encerrados ou bloqueados não podem ser eliminados.',
+                ]);
+            }
+
+            if (
+                ContratoRelacao::query()
+                    ->where(
+                        'tenant_id',
+                        $tenantId
+                    )
+                    ->where(
+                        'contrato_relacionado_id',
+                        $contrato->id
+                    )
+                    ->exists()
+            ) {
+                throw ValidationException::withMessages([
+                    'contrato' => 'Este contrato está relacionado com outro processo e não pode ser eliminado.',
                 ]);
             }
 
@@ -1523,12 +1424,9 @@ class ContratoService
                 $actor,
                 'exclusao',
                 [
-                    'contrato_id' =>
-                    $contrato->id,
-                    'tipo' =>
-                    $contrato->tipo,
-                    'status' =>
-                    $contrato->status,
+                    'contrato_id' => $contrato->id,
+                    'tipo' => $contrato->tipo,
+                    'status' => $contrato->status,
                 ],
                 $ip
             );
@@ -1541,21 +1439,20 @@ class ContratoService
         Contrato $contrato
     ): void {
         if (
-            !$contrato->data_inicio ||
-            !$contrato->data_fim
+            ! $contrato->data_inicio ||
+            ! $contrato->data_fim
         ) {
             return;
         }
 
         if (
             $contrato->data_fim
-            ->lt(
-                $contrato->data_inicio
-            )
+                ->lt(
+                    $contrato->data_inicio
+                )
         ) {
             throw ValidationException::withMessages([
-                'data_fim' =>
-                'A data de fim deve ser igual ou posterior à data de início.',
+                'data_fim' => 'A data de fim deve ser igual ou posterior à data de início.',
             ]);
         }
     }
@@ -1567,14 +1464,13 @@ class ContratoService
             'data:image/png;base64,';
 
         if (
-            !str_starts_with(
+            ! str_starts_with(
                 $dataUrl,
                 $prefix
             )
         ) {
             throw ValidationException::withMessages([
-                'assinatura' =>
-                'A assinatura deve ser uma imagem PNG válida.',
+                'assinatura' => 'A assinatura deve ser uma imagem PNG válida.',
             ]);
         }
 
@@ -1588,14 +1484,13 @@ class ContratoService
 
         if (
             $binary === false ||
-            !str_starts_with(
+            ! str_starts_with(
                 $binary,
                 "\x89PNG\r\n\x1a\n"
             )
         ) {
             throw ValidationException::withMessages([
-                'assinatura' =>
-                'A assinatura deve ser uma imagem PNG válida.',
+                'assinatura' => 'A assinatura deve ser uma imagem PNG válida.',
             ]);
         }
 
@@ -1604,8 +1499,7 @@ class ContratoService
             1024 * 1024
         ) {
             throw ValidationException::withMessages([
-                'assinatura' =>
-                'A assinatura não pode exceder 1 MB.',
+                'assinatura' => 'A assinatura não pode exceder 1 MB.',
             ]);
         }
 
@@ -1638,31 +1532,28 @@ class ContratoService
                 )
             );
 
-        return $visible .
+        return $visible.
             str_repeat(
                 '*',
                 max(
                     3,
                     mb_strlen($local) - 2
                 )
-            ) .
-            '@' .
+            ).
+            '@'.
             $domain;
     }
+
     private function guardarVersao(
         Contrato $contrato,
         User $actor,
         string $observacoes
     ): void {
         $versao = new VersaoContrato([
-            'versao_numero' =>
-            $contrato->versao_atual,
-            'dados_campos' =>
-            $contrato->campos_preenchidos ?? [],
-            'criado_por' =>
-            $actor->id,
-            'observacoes' =>
-            $observacoes,
+            'versao_numero' => $contrato->versao_atual,
+            'dados_campos' => $contrato->campos_preenchidos ?? [],
+            'criado_por' => $actor->id,
+            'observacoes' => $observacoes,
         ]);
 
         $versao->contrato_id = $contrato->id;
@@ -1701,7 +1592,7 @@ class ContratoService
     ): AssinaturaDigital {
         $remota = $dados['modo'] === 'remota';
 
-        $assinatura = new AssinaturaDigital();
+        $assinatura = new AssinaturaDigital;
 
         $assinatura->contrato_id = $contrato->id;
         $assinatura->tenant_id = $contrato->tenant_id;
@@ -1777,12 +1668,12 @@ class ContratoService
                 ): void {
                     $pendente =
                         AssinaturaDigital::query()
-                        ->find(
-                            $assinaturaId
-                        );
+                            ->find(
+                                $assinaturaId
+                            );
 
                     if (
-                        !$pendente ||
+                        ! $pendente ||
                         $pendente->status !==
                         'pendente' ||
                         $pendente->verificado
@@ -1802,14 +1693,11 @@ class ContratoService
                         Log::warning(
                             'Falha ao enviar solicitação de assinatura remota.',
                             [
-                                'assinatura_id' =>
-                                $assinaturaId,
+                                'assinatura_id' => $assinaturaId,
 
-                                'exception' =>
-                                $exception::class,
+                                'exception' => $exception::class,
 
-                                'message' =>
-                                $exception
+                                'message' => $exception
                                     ->getMessage(),
                             ]
                         );
@@ -1842,22 +1730,20 @@ class ContratoService
             );
 
             if (
-                !in_array(
+                ! in_array(
                     $placeholder,
                     self::ASSINATURAS,
                     true
                 )
             ) {
                 throw ValidationException::withMessages([
-                    "assinaturas.{$indice}.placeholder" =>
-                    'Placeholder de assinatura inválido.',
+                    "assinaturas.{$indice}.placeholder" => 'Placeholder de assinatura inválido.',
                 ]);
             }
 
             if (isset($porPlaceholder[$placeholder])) {
                 throw ValidationException::withMessages([
-                    'assinaturas' =>
-                    'Não é permitido repetir o mesmo placeholder de assinatura.',
+                    'assinaturas' => 'Não é permitido repetir o mesmo placeholder de assinatura.',
                 ]);
             }
 
@@ -1868,8 +1754,7 @@ class ContratoService
         if ($obrigatorias === []) {
             if ($porPlaceholder !== []) {
                 throw ValidationException::withMessages([
-                    'assinaturas' =>
-                    'O template selecionado não exige assinaturas.',
+                    'assinaturas' => 'O template selecionado não exige assinaturas.',
                 ]);
             }
 
@@ -1883,9 +1768,8 @@ class ContratoService
 
         if ($faltantes !== []) {
             throw ValidationException::withMessages([
-                'assinaturas' =>
-                'Faltam assinaturas obrigatórias: ' .
-                    implode(', ', $faltantes) . '.',
+                'assinaturas' => 'Faltam assinaturas obrigatórias: '.
+                    implode(', ', $faltantes).'.',
             ]);
         }
 
@@ -1896,8 +1780,7 @@ class ContratoService
 
         if ($extras !== []) {
             throw ValidationException::withMessages([
-                'assinaturas' =>
-                'Foram enviadas assinaturas que o template não exige.',
+                'assinaturas' => 'Foram enviadas assinaturas que o template não exige.',
             ]);
         }
 
@@ -1911,15 +1794,14 @@ class ContratoService
                 $assinatura['modo'] ?? null;
 
             if (
-                !in_array(
+                ! in_array(
                     $modo,
                     ['presencial', 'remota'],
                     true
                 )
             ) {
                 throw ValidationException::withMessages([
-                    'assinaturas' =>
-                    'Modo de assinatura inválido.',
+                    'assinaturas' => 'Modo de assinatura inválido.',
                 ]);
             }
 
@@ -1938,8 +1820,7 @@ class ContratoService
                     )
                 ) {
                     throw ValidationException::withMessages([
-                        'assinaturas' =>
-                        "A assinatura presencial {$placeholder} não possui imagem.",
+                        'assinaturas' => "A assinatura presencial {$placeholder} não possui imagem.",
                     ]);
                 }
             }
@@ -1947,14 +1828,13 @@ class ContratoService
             if ($modo === 'remota') {
                 if (
                     blank($target['signatario_email']) ||
-                    !filter_var(
+                    ! filter_var(
                         $target['signatario_email'],
                         FILTER_VALIDATE_EMAIL
                     )
                 ) {
                     throw ValidationException::withMessages([
-                        'assinaturas' =>
-                        "O signatário de {$placeholder} precisa de um e-mail válido para assinatura remota.",
+                        'assinaturas' => "O signatário de {$placeholder} precisa de um e-mail válido para assinatura remota.",
                     ]);
                 }
             }
@@ -1962,12 +1842,9 @@ class ContratoService
             $resultado[] = array_merge(
                 $target,
                 [
-                    'placeholder' =>
-                    $placeholder,
-                    'modo' =>
-                    $modo,
-                    'assinatura_url' =>
-                    $assinatura['assinatura_url'] ?? null,
+                    'placeholder' => $placeholder,
+                    'modo' => $modo,
+                    'assinatura_url' => $assinatura['assinatura_url'] ?? null,
                 ]
             );
         }
@@ -1986,28 +1863,26 @@ class ContratoService
         $porPlaceholder = [];
 
         foreach (
-            $input as
-            $indice => $assinatura
+            $input as $indice => $assinatura
         ) {
             $placeholder =
                 mb_strtoupper(
                     trim(
-                        (string)(
+                        (string) (
                             $assinatura['placeholder'] ?? ''
                         )
                     )
                 );
 
             if (
-                !in_array(
+                ! in_array(
                     $placeholder,
                     self::ASSINATURAS,
                     true
                 )
             ) {
                 throw ValidationException::withMessages([
-                    "assinaturas.{$indice}.placeholder" =>
-                    'Placeholder de assinatura inválido.',
+                    "assinaturas.{$indice}.placeholder" => 'Placeholder de assinatura inválido.',
                 ]);
             }
 
@@ -2017,8 +1892,7 @@ class ContratoService
                 )
             ) {
                 throw ValidationException::withMessages([
-                    'assinaturas' =>
-                    'Não é permitido repetir o mesmo placeholder de assinatura.',
+                    'assinaturas' => 'Não é permitido repetir o mesmo placeholder de assinatura.',
                 ]);
             }
 
@@ -2028,13 +1902,12 @@ class ContratoService
         $configByPlaceholder = [];
 
         foreach (
-            $configuracoes as
-            $configuracao
+            $configuracoes as $configuracao
         ) {
             $placeholder =
                 $configuracao['placeholder'] ?? null;
 
-            if (!$placeholder) {
+            if (! $placeholder) {
                 continue;
             }
 
@@ -2045,15 +1918,14 @@ class ContratoService
             collect(
                 $configByPlaceholder
             )
-            ->filter(
-                fn(array $config) =>
-                (bool)(
-                    $config['obrigatoria'] ?? true
+                ->filter(
+                    fn (array $config) => (bool) (
+                        $config['obrigatoria'] ?? true
+                    )
                 )
-            )
-            ->keys()
-            ->values()
-            ->all();
+                ->keys()
+                ->values()
+                ->all();
 
         $faltantes = array_diff(
             $obrigatorias,
@@ -2064,12 +1936,11 @@ class ContratoService
 
         if ($faltantes !== []) {
             throw ValidationException::withMessages([
-                'assinaturas' =>
-                'Faltam assinaturas obrigatórias: ' .
+                'assinaturas' => 'Faltam assinaturas obrigatórias: '.
                     implode(
                         ', ',
                         $faltantes
-                    ) .
+                    ).
                     '.',
             ]);
         }
@@ -2085,19 +1956,17 @@ class ContratoService
 
         if ($extras !== []) {
             throw ValidationException::withMessages([
-                'assinaturas' =>
-                'Foram enviadas assinaturas não permitidas para este tipo de contrato.',
+                'assinaturas' => 'Foram enviadas assinaturas não permitidas para este tipo de contrato.',
             ]);
         }
 
         $resultado = [];
 
         foreach (
-            $configByPlaceholder as
-            $placeholder => $configuracao
+            $configByPlaceholder as $placeholder => $configuracao
         ) {
             if (
-                !isset(
+                ! isset(
                     $porPlaceholder[$placeholder]
                 )
             ) {
@@ -2110,14 +1979,14 @@ class ContratoService
             $modo =
                 strtolower(
                     trim(
-                        (string)(
+                        (string) (
                             $assinatura['modo'] ?? ''
                         )
                     )
                 );
 
             $modosPermitidos =
-                (array)(
+                (array) (
                     $configuracao['modos'] ?? [
                         'presencial',
                         'remota',
@@ -2125,27 +1994,26 @@ class ContratoService
                 );
 
             if (
-                !in_array(
+                ! in_array(
                     $modo,
                     $modosPermitidos,
                     true
                 )
             ) {
                 throw ValidationException::withMessages([
-                    'assinaturas' =>
-                    "O modo {$modo} não é permitido para {$placeholder}.",
+                    'assinaturas' => "O modo {$modo} não é permitido para {$placeholder}.",
                 ]);
             }
 
             $target =
                 $this
-                ->resolverSignatario(
-                    $placeholder,
-                    $assinatura,
-                    $motorista,
-                    $proprietario,
-                    $empresa
-                );
+                    ->resolverSignatario(
+                        $placeholder,
+                        $assinatura,
+                        $motorista,
+                        $proprietario,
+                        $empresa
+                    );
 
             if (
                 $modo === 'presencial' &&
@@ -2154,8 +2022,7 @@ class ContratoService
                 )
             ) {
                 throw ValidationException::withMessages([
-                    'assinaturas' =>
-                    "A assinatura presencial {$placeholder} não possui imagem.",
+                    'assinaturas' => "A assinatura presencial {$placeholder} não possui imagem.",
                 ]);
             }
 
@@ -2165,15 +2032,14 @@ class ContratoService
                     blank(
                         $target['signatario_email']
                     ) ||
-                    !filter_var(
+                    ! filter_var(
                         $target['signatario_email'],
                         FILTER_VALIDATE_EMAIL
                     )
                 )
             ) {
                 throw ValidationException::withMessages([
-                    'assinaturas' =>
-                    "O signatário de {$placeholder} precisa de um e-mail válido para assinatura remota.",
+                    'assinaturas' => "O signatário de {$placeholder} precisa de um e-mail válido para assinatura remota.",
                 ]);
             }
 
@@ -2181,14 +2047,11 @@ class ContratoService
                 array_merge(
                     $target,
                     [
-                        'placeholder' =>
-                        $placeholder,
+                        'placeholder' => $placeholder,
 
-                        'modo' =>
-                        $modo,
+                        'modo' => $modo,
 
-                        'assinatura_url' =>
-                        $assinatura['assinatura_url'] ?? null,
+                        'assinatura_url' => $assinatura['assinatura_url'] ?? null,
                     ]
                 );
         }
@@ -2207,22 +2070,18 @@ class ContratoService
             $placeholder ===
             'ASSINATURA_MOTORISTA'
         ) {
-            if (!$motorista) {
+            if (! $motorista) {
                 throw ValidationException::withMessages([
-                    'motorista_id' =>
-                    'O template exige um motorista para assinatura.',
+                    'motorista_id' => 'O template exige um motorista para assinatura.',
                 ]);
             }
 
             return [
                 'signatario_tipo' => 'motorista',
                 'signatario_id' => $motorista->id,
-                'signatario_user_id' =>
-                $motorista->user_id,
-                'signatario_nome' =>
-                $motorista->nome_completo,
-                'signatario_email' =>
-                Str::lower(
+                'signatario_user_id' => $motorista->user_id,
+                'signatario_nome' => $motorista->nome_completo,
+                'signatario_email' => Str::lower(
                     trim(
                         (string) $motorista->email
                     )
@@ -2234,26 +2093,20 @@ class ContratoService
             $placeholder ===
             'ASSINATURA_PROPRIETARIO'
         ) {
-            if (!$proprietario) {
+            if (! $proprietario) {
                 throw ValidationException::withMessages([
-                    'proprietario_id' =>
-                    'O template exige um proprietário para assinatura.',
+                    'proprietario_id' => 'O template exige um proprietário para assinatura.',
                 ]);
             }
 
             return [
-                'signatario_tipo' =>
-                'proprietario',
-                'signatario_id' =>
-                $proprietario->id,
-                'signatario_user_id' =>
-                $proprietario->user_id,
-                'signatario_nome' =>
-                $proprietario->nome_empresa
+                'signatario_tipo' => 'proprietario',
+                'signatario_id' => $proprietario->id,
+                'signatario_user_id' => $proprietario->user_id,
+                'signatario_nome' => $proprietario->nome_empresa
                     ?: $proprietario->nome_completo
                     ?: 'Proprietário',
-                'signatario_email' =>
-                Str::lower(
+                'signatario_email' => Str::lower(
                     trim(
                         (string) $proprietario->email
                     )
@@ -2265,10 +2118,9 @@ class ContratoService
             $placeholder ===
             'ASSINATURA_EMPRESA'
         ) {
-            if (!$empresa) {
+            if (! $empresa) {
                 throw ValidationException::withMessages([
-                    'empresa_id' =>
-                    'O template exige uma empresa para assinatura.',
+                    'empresa_id' => 'O template exige uma empresa para assinatura.',
                 ]);
             }
 
@@ -2276,11 +2128,9 @@ class ContratoService
                 'signatario_tipo' => 'empresa',
                 'signatario_id' => $empresa->id,
                 'signatario_user_id' => null,
-                'signatario_nome' =>
-                $empresa->nome_empresa
+                'signatario_nome' => $empresa->nome_empresa
                     ?: 'Empresa',
-                'signatario_email' =>
-                Str::lower(
+                'signatario_email' => Str::lower(
                     trim(
                         (string) $empresa->email
                     )
@@ -2297,8 +2147,7 @@ class ContratoService
 
         if ($nome === '') {
             throw ValidationException::withMessages([
-                'assinaturas' =>
-                'O nome da testemunha é obrigatório.',
+                'assinaturas' => 'O nome da testemunha é obrigatório.',
             ]);
         }
 
@@ -2307,8 +2156,7 @@ class ContratoService
             'signatario_id' => null,
             'signatario_user_id' => null,
             'signatario_nome' => $nome,
-            'signatario_email' =>
-            Str::lower(
+            'signatario_email' => Str::lower(
                 trim(
                     (string) (
                         $input['signatario_email'] ?? ''
@@ -2321,7 +2169,7 @@ class ContratoService
     private function assinaturasObrigatorias(
         ?TemplateContrato $template
     ): array {
-        if (!$template) {
+        if (! $template) {
             return [];
         }
 
@@ -2330,8 +2178,7 @@ class ContratoService
         );
 
         foreach (
-            (array) $template->campos_detectados
-            as $campo
+            (array) $template->campos_detectados as $campo
         ) {
             if (is_string($campo)) {
                 $tokens[] =
@@ -2342,13 +2189,12 @@ class ContratoService
                 continue;
             }
 
-            if (!is_array($campo)) {
+            if (! is_array($campo)) {
                 continue;
             }
 
             foreach (
-                ['name', 'placeholder']
-                as $chave
+                ['name', 'placeholder'] as $chave
             ) {
                 if (
                     isset($campo[$chave]) &&
@@ -2371,8 +2217,7 @@ class ContratoService
         return array_values(
             array_filter(
                 self::ASSINATURAS,
-                fn(string $assinatura) =>
-                in_array(
+                fn (string $assinatura) => in_array(
                     $assinatura,
                     $tokens,
                     true
@@ -2452,16 +2297,16 @@ class ContratoService
         if ($contrato->tipo_contrato_id) {
             $tipoContrato ??=
                 TipoContrato::query()
-                ->where(
-                    'tenant_id',
-                    $contrato->tenant_id
-                )
-                ->find(
-                    $contrato
-                        ->tipo_contrato_id
-                );
+                    ->where(
+                        'tenant_id',
+                        $contrato->tenant_id
+                    )
+                    ->find(
+                        $contrato
+                            ->tipo_contrato_id
+                    );
 
-            return (bool)data_get(
+            return (bool) data_get(
                 $tipoContrato
                     ?->configuracao,
                 'associar_motorista_veiculo',
@@ -2477,8 +2322,8 @@ class ContratoService
         Contrato $contrato
     ): void {
         if (
-            !$contrato->motorista_id ||
-            !$contrato->veiculo_id
+            ! $contrato->motorista_id ||
+            ! $contrato->veiculo_id
         ) {
             return;
         }
@@ -2528,21 +2373,21 @@ class ContratoService
 
         $existente =
             ContratoAtivoVeiculo::query()
-            ->where(
-                'tenant_id',
-                $contrato->tenant_id
-            )
-            ->where(
-                'motorista_id',
-                $contrato->motorista_id
-            )
-            ->where(
-                'veiculo_id',
-                $contrato->veiculo_id
-            )
-            ->where('ativo', true)
-            ->lockForUpdate()
-            ->first();
+                ->where(
+                    'tenant_id',
+                    $contrato->tenant_id
+                )
+                ->where(
+                    'motorista_id',
+                    $contrato->motorista_id
+                )
+                ->where(
+                    'veiculo_id',
+                    $contrato->veiculo_id
+                )
+                ->where('ativo', true)
+                ->lockForUpdate()
+                ->first();
 
         if ($existente) {
             return;
@@ -2550,31 +2395,29 @@ class ContratoService
 
         $ativosNoVeiculo =
             ContratoAtivoVeiculo::query()
-            ->where(
-                'tenant_id',
-                $contrato->tenant_id
-            )
-            ->where(
-                'veiculo_id',
-                $contrato->veiculo_id
-            )
-            ->where('ativo', true)
-            ->lockForUpdate()
-            ->count();
+                ->where(
+                    'tenant_id',
+                    $contrato->tenant_id
+                )
+                ->where(
+                    'veiculo_id',
+                    $contrato->veiculo_id
+                )
+                ->where('ativo', true)
+                ->lockForUpdate()
+                ->count();
 
         if (
             $ativosNoVeiculo >=
             self::MAX_MOTORISTAS_ATIVOS_POR_VEICULO
         ) {
             throw ValidationException::withMessages([
-                'veiculo_id' =>
-                'Este veículo já possui 3 motoristas ativos.',
+                'veiculo_id' => 'Este veículo já possui 3 motoristas ativos.',
             ]);
         }
 
         $associacao = new ContratoAtivoVeiculo([
-            'data_inicio' =>
-            $contrato->data_inicio
+            'data_inicio' => $contrato->data_inicio
                 ?->copy()
                 ->startOfDay()
                 ?? now(),
@@ -2601,7 +2444,7 @@ class ContratoService
         string $tenantId,
         ?string $id
     ): ?TemplateContrato {
-        if (!$id) {
+        if (! $id) {
             return null;
         }
 
@@ -2615,10 +2458,9 @@ class ContratoService
             )
             ->find($id);
 
-        if (!$model) {
+        if (! $model) {
             throw ValidationException::withMessages([
-                'template_id' =>
-                'Template inválido para esta organização.',
+                'template_id' => 'Template inválido para esta organização.',
             ]);
         }
 
@@ -2629,7 +2471,7 @@ class ContratoService
         string $tenantId,
         ?string $id
     ): ?Motorista {
-        if (!$id) {
+        if (! $id) {
             return null;
         }
 
@@ -2637,10 +2479,9 @@ class ContratoService
             ->where('tenant_id', $tenantId)
             ->find($id);
 
-        if (!$model) {
+        if (! $model) {
             throw ValidationException::withMessages([
-                'motorista_id' =>
-                'Motorista inválido para esta organização.',
+                'motorista_id' => 'Motorista inválido para esta organização.',
             ]);
         }
 
@@ -2651,7 +2492,7 @@ class ContratoService
         string $tenantId,
         ?string $id
     ): ?Proprietario {
-        if (!$id) {
+        if (! $id) {
             return null;
         }
 
@@ -2659,10 +2500,9 @@ class ContratoService
             ->where('tenant_id', $tenantId)
             ->find($id);
 
-        if (!$model) {
+        if (! $model) {
             throw ValidationException::withMessages([
-                'proprietario_id' =>
-                'Proprietário inválido para esta organização.',
+                'proprietario_id' => 'Proprietário inválido para esta organização.',
             ]);
         }
 
@@ -2673,7 +2513,7 @@ class ContratoService
         string $tenantId,
         ?string $id
     ): ?Veiculo {
-        if (!$id) {
+        if (! $id) {
             return null;
         }
 
@@ -2681,10 +2521,9 @@ class ContratoService
             ->where('tenant_id', $tenantId)
             ->find($id);
 
-        if (!$model) {
+        if (! $model) {
             throw ValidationException::withMessages([
-                'veiculo_id' =>
-                'Veículo inválido para esta organização.',
+                'veiculo_id' => 'Veículo inválido para esta organização.',
             ]);
         }
 
@@ -2695,7 +2534,7 @@ class ContratoService
         string $tenantId,
         ?string $id
     ): ?Empresa {
-        if (!$id) {
+        if (! $id) {
             return null;
         }
 
@@ -2703,10 +2542,9 @@ class ContratoService
             ->where('tenant_id', $tenantId)
             ->find($id);
 
-        if (!$model) {
+        if (! $model) {
             throw ValidationException::withMessages([
-                'empresa_id' =>
-                'Empresa inválida para esta organização.',
+                'empresa_id' => 'Empresa inválida para esta organização.',
             ]);
         }
 
