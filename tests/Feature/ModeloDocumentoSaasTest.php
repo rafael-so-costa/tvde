@@ -998,3 +998,28 @@ test(
         )->toBe(0);
     }
 );
+
+
+test(
+    'origem saas de template não permite mass assignment',
+    function () {
+        $template =
+            new TemplateContrato();
+
+        expect(
+            $template->getFillable()
+        )
+            ->not
+            ->toContain(
+                'modelo_documento_saas_id'
+            )
+            ->not
+            ->toContain(
+                'modelo_documento_saas_versao_id'
+            )
+            ->not
+            ->toContain(
+                'modelo_documento_saas_versao'
+            );
+    }
+);
