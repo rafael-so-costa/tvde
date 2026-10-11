@@ -13,6 +13,7 @@ import {
     BellRing,
     BookOpenText,
     CircleUserRound,
+    ClipboardCheck,
     LayoutDashboard,
     LoaderCircle,
     LogOut,
@@ -64,6 +65,11 @@ const navigation:NavItem[]=[
         to:"/portal/proprietario/sinistros",
         label:"Sinistros",
         icon:AlertTriangle,
+    },
+    {
+        to:"/portal/proprietario/checklists",
+        label:"Checklists",
+        icon:ClipboardCheck,
     },
     {
         to:"/portal/proprietario/mensagens",

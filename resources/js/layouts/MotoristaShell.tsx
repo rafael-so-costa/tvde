@@ -14,6 +14,7 @@ import {
     BookOpenText,
     CircleUserRound,
     Clock3,
+    ClipboardCheck,
     FileCheck2,
     LayoutDashboard,
     LoaderCircle,
@@ -64,6 +65,11 @@ const navigation=[
         to:"/portal/motorista/sinistros",
         label:"Sinistros",
         icon:AlertTriangle,
+    },
+    {
+        to:"/portal/motorista/checklists",
+        label:"Checklists",
+        icon:ClipboardCheck,
     },
     {
         to:"/portal/motorista/registo-criminal",

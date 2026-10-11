@@ -36,6 +36,7 @@ import BackofficeTvdeImportsPage from "./pages/BackofficeTvdeImportsPage";
 import BackofficeTvdeOperatorPage from "./pages/BackofficeTvdeOperatorPage";
 import BackofficeTvdeOperatorsPage from "./pages/BackofficeTvdeOperatorsPage";
 import ChecklistsPage from "./pages/ChecklistsPage";
+import PortalChecklistsPage from "./pages/PortalChecklistsPage";
 import ContratoTipoPage from "./pages/ContratoTipoPage";
 import ContratosConfiguracaoPage from "./pages/ContratosConfiguracaoPage";
 import ContratosPage from "./pages/ContratosPage";
@@ -468,6 +469,11 @@ export default function App() {
                         />
 
                         <Route
+                            path="checklists"
+                            element={<PortalChecklistsPage mode="motorista" />}
+                        />
+
+                        <Route
                             path="registo-criminal"
                             element={<RegistosCriminaisPage />}
                         />
@@ -514,6 +520,11 @@ export default function App() {
                         <Route
                             path="sinistros"
                             element={<SinistrosPage mode="readonly" />}
+                        />
+
+                        <Route
+                            path="checklists"
+                            element={<PortalChecklistsPage mode="proprietario" />}
                         />
                     </Route>
                 </Route>
