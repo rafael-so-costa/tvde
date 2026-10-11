@@ -38,9 +38,11 @@ import type {
 import TemplateTextModal from "../components/contratos/templates/TemplateTextModal";
 import RecommendedTemplatesPanel from "../components/contratos/templates/RecommendedTemplatesPanel";
 import RecommendedTemplateUpdateModal from "../components/contratos/templates/RecommendedTemplateUpdateModal";
+import RecommendedWorkflowPresetsPanel from "../components/contratos/templates/RecommendedWorkflowPresetsPanel";
 
 type Tab = "documentos" | "workflows";
 type DocumentTab = "meus" | "recomendados";
+type WorkflowTab = "meus" | "recomendados";
 
 const itemTypeLabels: Record<ChecklistProcessItemType, string> = {
     tarefa: "Tarefa",
@@ -54,6 +56,8 @@ const itemTypeLabels: Record<ChecklistProcessItemType, string> = {
     aprovacao: "Aprovação",
 
     gerar_documento: "Gerar documento",
+
+    contrato_relacionado: "Contrato relacionado",
 
     checklist_veiculo: "Checklist do veículo",
 
@@ -130,6 +134,8 @@ export default function TemplatesPage() {
     const [tab, setTab] = useState<Tab>("documentos");
 
     const [documentTab, setDocumentTab] = useState<DocumentTab>("meus");
+
+    const [workflowTab, setWorkflowTab] = useState<WorkflowTab>("meus");
 
     const [search, setSearch] = useState("");
 
@@ -371,27 +377,29 @@ export default function TemplatesPage() {
                     </p>
                 </div>
 
-                {tab === "documentos" && documentTab === "meus" ? (
-                    <div className="flex flex-wrap gap-2">
-                        <button
-                            type="button"
-                            onClick={() => setImportOpen(true)}
-                            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
-                        >
-                            <Upload className="h-5 w-5" />
-                            Importar arquivo
-                        </button>
+                {tab === "documentos" ? (
+                    documentTab === "meus" ? (
+                        <div className="flex flex-wrap gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setImportOpen(true)}
+                                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+                            >
+                                <Upload className="h-5 w-5" />
+                                Importar arquivo
+                            </button>
 
-                        <button
-                            type="button"
-                            onClick={() => setTextOpen(true)}
-                            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 text-sm font-semibold text-white transition hover:bg-indigo-700"
-                        >
-                            <ClipboardPaste className="h-5 w-5" />
-                            Colar texto
-                        </button>
-                    </div>
-                ) : (
+                            <button
+                                type="button"
+                                onClick={() => setTextOpen(true)}
+                                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 text-sm font-semibold text-white transition hover:bg-indigo-700"
+                            >
+                                <ClipboardPaste className="h-5 w-5" />
+                                Colar texto
+                            </button>
+                        </div>
+                    ) : null
+                ) : workflowTab === "meus" ? (
                     <button
                         type="button"
                         onClick={() => setProcessForm(null)}
@@ -400,7 +408,7 @@ export default function TemplatesPage() {
                         <Plus className="h-5 w-5" />
                         Novo workflow
                     </button>
-                )}
+                ) : null}
             </div>
 
             <div className="mb-6 rounded-2xl border border-indigo-100 bg-indigo-50 p-5">
@@ -514,7 +522,53 @@ export default function TemplatesPage() {
                         </div>
                     </div>
                 )}
-                {!(tab === "documentos" && documentTab === "recomendados") && (
+
+                {tab === "workflows" && (
+                    <div className="border-b border-slate-200 bg-slate-50/60 px-5">
+                        <div className="flex gap-2 py-3">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setWorkflowTab("meus");
+                                    setSearch("");
+                                }}
+                                className={[
+                                    "inline-flex h-9 items-center gap-2 rounded-lg px-3 text-sm font-semibold transition",
+                                    workflowTab === "meus"
+                                        ? "bg-white text-indigo-700 shadow-sm ring-1 ring-slate-200"
+                                        : "text-slate-500 hover:text-slate-900",
+                                ].join(" ")}
+                            >
+                                <GitBranch className="h-4 w-4" />
+                                Meus workflows
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setWorkflowTab("recomendados");
+                                    setSearch("");
+                                }}
+                                className={[
+                                    "inline-flex h-9 items-center gap-2 rounded-lg px-3 text-sm font-semibold transition",
+                                    workflowTab === "recomendados"
+                                        ? "bg-white text-indigo-700 shadow-sm ring-1 ring-slate-200"
+                                        : "text-slate-500 hover:text-slate-900",
+                                ].join(" ")}
+                            >
+                                <Sparkles className="h-4 w-4" />
+                                Recomendados
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {!(
+                    (tab === "documentos" &&
+                        documentTab === "recomendados") ||
+                    (tab === "workflows" &&
+                        workflowTab === "recomendados")
+                ) && (
                     <div className="flex flex-col gap-3 border-b border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
                         <div className="relative w-full sm:max-w-md">
                             <FileText className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -593,6 +647,19 @@ export default function TemplatesPage() {
                             }
                         />
                     )
+                ) : workflowTab === "recomendados" ? (
+                    <RecommendedWorkflowPresetsPanel
+                        onUsed={async () => {
+                            setWorkflowTab("meus");
+
+                            await queryClient.invalidateQueries({
+                                queryKey: [
+                                    "process-templates",
+                                    tenant.id,
+                                ],
+                            });
+                        }}
+                    />
                 ) : (
                     <WorkflowTemplates
                         workflows={workflows}
@@ -1007,6 +1074,16 @@ function WorkflowTemplates({
                                 >
                                     {workflow.ativo ? "Ativo" : "Inativo"}
                                 </span>
+
+                                {workflow.preset_codigo && (
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-semibold text-indigo-700">
+                                        <Sparkles className="h-3 w-3" />
+                                        FrotaPro
+                                        {workflow.preset_versao
+                                            ? ` v${workflow.preset_versao}`
+                                            : ""}
+                                    </span>
+                                )}
                             </div>
 
                             <p className="mt-1 font-mono text-xs text-slate-400">
@@ -1099,6 +1176,17 @@ function WorkflowItemMeta({
         return (
             <span className="text-xs font-medium text-amber-700">
                 {vehicleChecklistLabels[item.configuracao.checklist_tipo]}
+            </span>
+        );
+    }
+
+    if (
+        item.tipo === "contrato_relacionado" &&
+        item.configuracao.tipo_contrato_codigo
+    ) {
+        return (
+            <span className="text-right text-xs font-medium text-violet-600">
+                {item.configuracao.tipo_contrato_codigo}
             </span>
         );
     }
@@ -1196,6 +1284,10 @@ function WorkflowFormModal({
             configuracao.checklist_tipo = "entrega";
         }
 
+        if (type === "contrato_relacionado") {
+            configuracao.tipo_contrato_codigo = "prestacao_servico";
+        }
+
         patchItem(index, {
             tipo: type,
 
@@ -1238,6 +1330,13 @@ function WorkflowFormModal({
                 !item.configuracao.checklist_tipo
             ) {
                 return `Selecione o tipo de checklist do veículo da etapa ${index + 1}.`;
+            }
+
+            if (
+                item.tipo === "contrato_relacionado" &&
+                !item.configuracao.tipo_contrato_codigo?.trim()
+            ) {
+                return `Informe o código do tipo de contrato relacionado da etapa ${index + 1}.`;
             }
         }
 
@@ -1545,6 +1644,38 @@ function WorkflowFormModal({
                                             </SelectField>
                                         )}
 
+                                        {item.tipo ===
+                                            "contrato_relacionado" && (
+                                            <Field
+                                                label="Código do tipo de contrato"
+                                                value={
+                                                    item.configuracao
+                                                        .tipo_contrato_codigo ??
+                                                    ""
+                                                }
+                                                onChange={(value) =>
+                                                    patchItem(index, {
+                                                        configuracao: {
+                                                            ...item.configuracao,
+
+                                                            tipo_contrato_codigo:
+                                                                value
+                                                                    .toLowerCase()
+                                                                    .replace(
+                                                                        /[^a-z0-9_]/g,
+                                                                        "_",
+                                                                    )
+                                                                    .replace(
+                                                                        /_+/g,
+                                                                        "_",
+                                                                    ),
+                                                        },
+                                                    })
+                                                }
+                                                placeholder="prestacao_servico"
+                                            />
+                                        )}
+
                                         <label className="md:col-span-2">
                                             <span className="mb-2 block text-sm font-medium text-slate-700">
                                                 Descrição
@@ -1639,6 +1770,13 @@ function normalizeItemConfiguration(
     if (item.tipo === "checklist_veiculo") {
         return {
             checklist_tipo: item.configuracao.checklist_tipo,
+        };
+    }
+
+    if (item.tipo === "contrato_relacionado") {
+        return {
+            tipo_contrato_codigo:
+                item.configuracao.tipo_contrato_codigo,
         };
     }
 

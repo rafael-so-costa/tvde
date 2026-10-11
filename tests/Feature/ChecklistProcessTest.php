@@ -1399,3 +1399,271 @@ test(
         );
     }
 );
+
+test(
+    'catálogo de workflows recomendados exige autenticação',
+    function () {
+        $this
+            ->withHeaders(
+                processHeaders()
+            )
+            ->getJson(
+                '/api/checklist-process-presets'
+            )
+            ->assertUnauthorized();
+    }
+);
+
+test(
+    'tenant copia workflow recomendado com proveniência e etapas operacionais',
+    function () {
+        $tenant =
+            processTenant(
+                'Tenant Preset',
+                'tenant-preset'
+            );
+
+        $user =
+            processUser(
+                $tenant,
+                'preset@frotapro.test'
+            );
+
+        processLogin(
+            $this,
+            $user
+        );
+
+        $catalog =
+            $this
+                ->withHeaders(
+                    processHeaders()
+                )
+                ->getJson(
+                    '/api/checklist-process-presets'
+                )
+                ->assertOk()
+                ->assertJsonCount(
+                    5,
+                    'data'
+                );
+
+        $recommended =
+            collect(
+                $catalog->json(
+                    'data'
+                )
+            )->firstWhere(
+                'codigo',
+                'aluguer_completo_tvde'
+            );
+
+        expect(
+            $recommended
+        )->not->toBeNull();
+
+        expect(
+            $recommended[
+                'items'
+            ]
+        )->toHaveCount(
+            9
+        );
+
+        $response =
+            $this
+                ->withHeaders(
+                    processHeaders()
+                )
+                ->postJson(
+                    '/api/checklist-process-presets/aluguer_completo_tvde/usar'
+                )
+                ->assertCreated()
+                ->assertJsonPath(
+                    'data.preset_codigo',
+                    'aluguer_completo_tvde'
+                )
+                ->assertJsonPath(
+                    'data.preset_versao',
+                    1
+                )
+                ->assertJsonCount(
+                    9,
+                    'data.items'
+                );
+
+        $id =
+            $response->json(
+                'data.id'
+            );
+
+        $template =
+            ChecklistProcessTemplate::query()
+                ->with(
+                    'items'
+                )
+                ->findOrFail(
+                    $id
+                );
+
+        expect(
+            $template
+                ->tenant_id
+        )->toBe(
+            $tenant->id
+        );
+
+        expect(
+            $template
+                ->originadoDePresetFrotaPro()
+        )->toBeTrue();
+
+        $related =
+            $template
+                ->items
+                ->firstWhere(
+                    'tipo',
+                    'contrato_relacionado'
+                );
+
+        expect(
+            $related
+        )->not->toBeNull();
+
+        expect(
+            data_get(
+                $related
+                    ->configuracao,
+                'tipo_contrato_codigo'
+            )
+        )->toBe(
+            'prestacao_servico'
+        );
+
+        $delivery =
+            $template
+                ->items
+                ->firstWhere(
+                    'codigo',
+                    'entrega_veiculo'
+                );
+
+        $return =
+            $template
+                ->items
+                ->firstWhere(
+                    'codigo',
+                    'recolha_veiculo'
+                );
+
+        expect(
+            data_get(
+                $delivery
+                    ->configuracao,
+                'checklist_tipo'
+            )
+        )->toBe(
+            'entrega'
+        );
+
+        expect(
+            data_get(
+                $return
+                    ->configuracao,
+                'checklist_tipo'
+            )
+        )->toBe(
+            'recolha'
+        );
+
+        $this->assertDatabaseHas(
+            'checklist_process_templates',
+            [
+                'id' =>
+                    $id,
+
+                'tenant_id' =>
+                    $tenant->id,
+
+                'preset_codigo' =>
+                    'aluguer_completo_tvde',
+
+                'preset_versao' =>
+                    1,
+            ]
+        );
+    }
+);
+
+test(
+    'workflow manual aceita etapa de contrato relacionado',
+    function () {
+        $tenant =
+            processTenant(
+                'Tenant Relacionado',
+                'tenant-relacionado'
+            );
+
+        $user =
+            processUser(
+                $tenant,
+                'relacionado@frotapro.test'
+            );
+
+        processLogin(
+            $this,
+            $user
+        );
+
+        $this
+            ->withHeaders(
+                processHeaders()
+            )
+            ->postJson(
+                '/api/checklist-process-templates',
+                [
+                    'codigo' =>
+                        'aluguer_customizado',
+
+                    'nome' =>
+                        'Aluguer customizado',
+
+                    'ativo' =>
+                        true,
+
+                    'items' => [
+                        [
+                            'codigo' =>
+                                'prestacao_servico',
+
+                            'ordem' =>
+                                1,
+
+                            'titulo' =>
+                                'Contrato de prestação de serviços',
+
+                            'tipo' =>
+                                'contrato_relacionado',
+
+                            'obrigatorio' =>
+                                true,
+
+                            'configuracao' => [
+                                'tipo_contrato_codigo' =>
+                                    'prestacao_servico',
+                            ],
+                        ],
+                    ],
+                ]
+            )
+            ->assertCreated()
+            ->assertJsonPath(
+                'data.items.0.tipo',
+                'contrato_relacionado'
+            )
+            ->assertJsonPath(
+                'data.items.0.configuracao.tipo_contrato_codigo',
+                'prestacao_servico'
+            );
+    }
+);

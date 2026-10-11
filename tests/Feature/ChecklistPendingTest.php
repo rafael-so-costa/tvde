@@ -906,3 +906,516 @@ test(
             );
     }
 );
+
+test(
+    'recolha de workflow só pode iniciar após encerramento e vincula entrega finalizada',
+    function(){
+        Storage::fake(
+            'local'
+        );
+
+        $tenant=
+            pendingTenant(
+                'Tenant Recolha Workflow',
+                'tenant-recolha-workflow'
+            );
+
+        $admin=
+            pendingAdmin(
+                $tenant,
+                'admin.recolha.workflow@frotapro.test'
+            );
+
+        $motorista=
+            pendingMotorista(
+                $tenant,
+                'RecolhaWorkflow'
+            );
+
+        $veiculo=
+            pendingVeiculo(
+                $tenant,
+                'RR-11-RR'
+            );
+
+        $contrato=
+            pendingContrato(
+                $tenant,
+                $motorista,
+                $veiculo
+            );
+
+        $template=
+            new ChecklistProcessTemplate([
+                'codigo'=>
+                    'workflow_entrega_recolha',
+
+                'nome'=>
+                    'Entrega e recolha',
+
+                'ativo'=>
+                    true,
+
+                'versao'=>
+                    1,
+            ]);
+
+        $template->tenant_id=
+            $tenant->id;
+
+        $template->save();
+
+        foreach(
+            [
+                [
+                    'codigo'=>
+                        'entrega',
+
+                    'ordem'=>
+                        1,
+
+                    'titulo'=>
+                        'Entrega',
+
+                    'tipo'=>
+                        'entrega',
+                ],
+
+                [
+                    'codigo'=>
+                        'recolha',
+
+                    'ordem'=>
+                        2,
+
+                    'titulo'=>
+                        'Recolha',
+
+                    'tipo'=>
+                        'recolha',
+                ],
+            ]
+            as $config
+        ){
+            $item=
+                new ChecklistProcessTemplateItem([
+                    'codigo'=>
+                        $config[
+                            'codigo'
+                        ],
+
+                    'ordem'=>
+                        $config[
+                            'ordem'
+                        ],
+
+                    'titulo'=>
+                        $config[
+                            'titulo'
+                        ],
+
+                    'tipo'=>
+                        'checklist_veiculo',
+
+                    'obrigatorio'=>
+                        true,
+
+                    'configuracao'=>[
+                        'checklist_tipo'=>
+                            $config[
+                                'tipo'
+                            ],
+                    ],
+                ]);
+
+            $item->template_id=
+                $template->id;
+
+            $item->save();
+        }
+
+        $run=
+            app(
+                ChecklistProcessService::class
+            )->start(
+                $tenant->id,
+                $template,
+                ChecklistProcessService::ENTITY_CONTRATO,
+                $contrato->id
+            );
+
+        $entregaItem=
+            $run
+                ->items
+                ->firstWhere(
+                    'codigo',
+                    'entrega'
+                );
+
+        $recolhaItem=
+            $run
+                ->items
+                ->firstWhere(
+                    'codigo',
+                    'recolha'
+                );
+
+        pendingLogin(
+            $this,
+            $admin
+        );
+
+        $entregaResponse=
+            $this
+                ->withHeaders(
+                    pendingHeaders()
+                )
+                ->postJson(
+                    "/api/checklists/pendentes/{$entregaItem->id}/iniciar"
+                )
+                ->assertCreated()
+                ->assertJsonPath(
+                    'data.tipo',
+                    'entrega'
+                );
+
+        $entregaId=
+            $entregaResponse
+                ->json(
+                    'data.id'
+                );
+
+        $this
+            ->withHeaders(
+                pendingHeaders()
+            )
+            ->postJson(
+                "/api/checklists/{$entregaId}/finalizar",
+                [
+                    'assinatura_empresa'=>
+                        pendingSignature(),
+
+                    'assinatura_motorista'=>
+                        pendingSignature(),
+                ]
+            )
+            ->assertOk()
+            ->assertJsonPath(
+                'data.estado',
+                'finalizado'
+            );
+
+        $this
+            ->withHeaders(
+                pendingHeaders()
+            )
+            ->postJson(
+                "/api/checklists/pendentes/{$recolhaItem->id}/iniciar"
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(
+                'contrato'
+            );
+
+        $contrato->status=
+            'encerrado';
+
+        $contrato->bloqueado=
+            true;
+
+        $contrato->save();
+
+        $recolhaResponse=
+            $this
+                ->withHeaders(
+                    pendingHeaders()
+                )
+                ->postJson(
+                    "/api/checklists/pendentes/{$recolhaItem->id}/iniciar"
+                )
+                ->assertCreated()
+                ->assertJsonPath(
+                    'data.tipo',
+                    'recolha'
+                )
+                ->assertJsonPath(
+                    'data.entrega_vinculada_id',
+                    $entregaId
+                );
+
+        $recolhaId=
+            $recolhaResponse
+                ->json(
+                    'data.id'
+                );
+
+        $this->assertDatabaseHas(
+            'checklist_records',
+            [
+                'id'=>
+                    $recolhaId,
+
+                'tenant_id'=>
+                    $tenant->id,
+
+                'contrato_id'=>
+                    $contrato->id,
+
+                'tipo'=>
+                    'recolha',
+
+                'entrega_vinculada_id'=>
+                    $entregaId,
+
+                'origem'=>
+                    'workflow',
+            ]
+        );
+    }
+);
+
+test(
+    'recolha existente da mesma entrega é reutilizada pelo workflow',
+    function(){
+        Storage::fake(
+            'local'
+        );
+
+        $tenant=
+            pendingTenant(
+                'Tenant Recolha Existente',
+                'tenant-recolha-existente'
+            );
+
+        $admin=
+            pendingAdmin(
+                $tenant,
+                'admin.recolha.existente@frotapro.test'
+            );
+
+        $motorista=
+            pendingMotorista(
+                $tenant,
+                'RecolhaExistente'
+            );
+
+        $veiculo=
+            pendingVeiculo(
+                $tenant,
+                'RE-11-RE'
+            );
+
+        $contrato=
+            pendingContrato(
+                $tenant,
+                $motorista,
+                $veiculo
+            );
+
+        $template=
+            new ChecklistProcessTemplate([
+                'codigo'=>
+                    'workflow_recolha_existente',
+
+                'nome'=>
+                    'Workflow recolha existente',
+
+                'ativo'=>
+                    true,
+
+                'versao'=>
+                    1,
+            ]);
+
+        $template->tenant_id=
+            $tenant->id;
+
+        $template->save();
+
+        foreach(
+            [
+                [
+                    'codigo'=>'entrega',
+                    'ordem'=>1,
+                    'titulo'=>'Entrega',
+                    'tipo'=>'entrega',
+                ],
+                [
+                    'codigo'=>'recolha',
+                    'ordem'=>2,
+                    'titulo'=>'Recolha',
+                    'tipo'=>'recolha',
+                ],
+            ]
+            as $config
+        ){
+            $definition=
+                new ChecklistProcessTemplateItem([
+                    'codigo'=>$config['codigo'],
+                    'ordem'=>$config['ordem'],
+                    'titulo'=>$config['titulo'],
+                    'tipo'=>'checklist_veiculo',
+                    'obrigatorio'=>true,
+                    'configuracao'=>[
+                        'checklist_tipo'=>$config['tipo'],
+                    ],
+                ]);
+
+            $definition->template_id=
+                $template->id;
+
+            $definition->save();
+        }
+
+        $run=
+            app(
+                ChecklistProcessService::class
+            )->start(
+                $tenant->id,
+                $template,
+                ChecklistProcessService::ENTITY_CONTRATO,
+                $contrato->id
+            );
+
+        $entregaItem=
+            $run->items
+                ->firstWhere(
+                    'codigo',
+                    'entrega'
+                );
+
+        $recolhaItem=
+            $run->items
+                ->firstWhere(
+                    'codigo',
+                    'recolha'
+                );
+
+        pendingLogin(
+            $this,
+            $admin
+        );
+
+        $entregaResponse=
+            $this
+                ->withHeaders(
+                    pendingHeaders()
+                )
+                ->postJson(
+                    "/api/checklists/pendentes/{$entregaItem->id}/iniciar"
+                )
+                ->assertCreated();
+
+        $entregaId=
+            $entregaResponse
+                ->json(
+                    'data.id'
+                );
+
+        $this
+            ->withHeaders(
+                pendingHeaders()
+            )
+            ->postJson(
+                "/api/checklists/{$entregaId}/finalizar",
+                [
+                    'assinatura_empresa'=>
+                        pendingSignature(),
+
+                    'assinatura_motorista'=>
+                        pendingSignature(),
+                ]
+            )
+            ->assertOk();
+
+        $contrato->status=
+            'encerrado';
+
+        $contrato->bloqueado=
+            true;
+
+        $contrato->save();
+
+        $existing=
+            new ChecklistRecord([
+                'contrato_id'=>
+                    $contrato->id,
+
+                'tipo'=>
+                    'recolha',
+
+                'origem'=>
+                    'manual',
+
+                'motorista_id'=>
+                    $motorista->id,
+
+                'veiculo_id'=>
+                    $veiculo->id,
+
+                'entrega_vinculada_id'=>
+                    $entregaId,
+
+                'data_operacao'=>
+                    now()->toDateString(),
+            ]);
+
+        $existing->tenant_id=
+            $tenant->id;
+
+        $existing->estado=
+            'rascunho';
+
+        $existing->realizado_por=
+            $admin->id;
+
+        $existing->save();
+
+        $response=
+            $this
+                ->withHeaders(
+                    pendingHeaders()
+                )
+                ->postJson(
+                    "/api/checklists/pendentes/{$recolhaItem->id}/iniciar"
+                )
+                ->assertCreated()
+                ->assertJsonPath(
+                    'data.id',
+                    $existing->id
+                )
+                ->assertJsonPath(
+                    'data.entrega_vinculada_id',
+                    $entregaId
+                )
+                ->assertJsonPath(
+                    'data.process_run_item_id',
+                    $recolhaItem->id
+                )
+                ->assertJsonPath(
+                    'data.origem',
+                    'workflow'
+                );
+
+        expect(
+            ChecklistRecord::query()
+                ->where(
+                    'tenant_id',
+                    $tenant->id
+                )
+                ->where(
+                    'entrega_vinculada_id',
+                    $entregaId
+                )
+                ->count()
+        )->toBe(1);
+
+        expect(
+            $response->json(
+                'data.id'
+            )
+        )->toBe(
+            $existing->id
+        );
+    }
+);

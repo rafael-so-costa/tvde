@@ -1192,6 +1192,10 @@ class ContratoService
                 ]);
             }
 
+            $this->validarWorkflowAntesDoEncerramento(
+                $contrato
+            );
+
             $contrato->status = 'encerrado';
             $contrato->bloqueado = true;
 
@@ -1235,6 +1239,75 @@ class ContratoService
 
             return $this->carregar($contrato);
         });
+    }
+
+    private function validarWorkflowAntesDoEncerramento(
+        Contrato $contrato
+    ): void {
+        $run=
+            $contrato
+                ->checklistProcessRun()
+                ->with(
+                    'items'
+                )
+                ->first();
+
+        if(!$run){
+            return;
+        }
+
+        $recolha=
+            $run
+                ->items
+                ->first(
+                    fn($item)=>
+                        $item->tipo===
+                            'checklist_veiculo' &&
+                        data_get(
+                            $item->configuracao_snapshot,
+                            'checklist_tipo'
+                        )==='recolha'
+                );
+
+        if(!$recolha){
+            return;
+        }
+
+        $pendentes=
+            $run
+                ->items
+                ->filter(
+                    fn($item)=>
+                        $item->obrigatorio &&
+                        $item->ordem<
+                            $recolha->ordem &&
+                        !in_array(
+                            $item->status,
+                            [
+                                ChecklistProcessService::ITEM_DONE,
+                                ChecklistProcessService::ITEM_WAIVED,
+                            ],
+                            true
+                        )
+                );
+
+        if($pendentes->isEmpty()){
+            return;
+        }
+
+        $primeira=
+            $pendentes
+                ->sortBy(
+                    'ordem'
+                )
+                ->first();
+
+        throw ValidationException::withMessages([
+            'contrato'=>
+                'Antes de encerrar o contrato, conclua a etapa obrigatória: '.
+                ($primeira?->titulo_snapshot ?? 'etapa pendente').
+                '.',
+        ]);
     }
 
     public function resendRemoteSignature(

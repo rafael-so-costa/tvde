@@ -20,6 +20,8 @@ class StoreChecklistProcessTemplateRequest extends FormRequest
         return [
             'tenant_id'=>['prohibited'],
             'versao'=>['prohibited'],
+            'preset_codigo'=>['prohibited'],
+            'preset_versao'=>['prohibited'],
 
             'codigo'=>[
                 'required',
@@ -87,6 +89,7 @@ class StoreChecklistProcessTemplateRequest extends FormRequest
                     'upload',
                     'aprovacao',
                     'gerar_documento',
+                    'contrato_relacionado',
                     'checklist_veiculo',
                     'validacao',
                     'acao_sistema',
@@ -129,6 +132,13 @@ class StoreChecklistProcessTemplateRequest extends FormRequest
                     'entrega',
                     'recolha',
                 ]),
+            ],
+
+            'items.*.configuracao.tipo_contrato_codigo'=>[
+                'nullable',
+                'string',
+                'max:100',
+                'regex:/^[a-z0-9_]+$/',
             ],
         ];
     }
@@ -180,6 +190,12 @@ class StoreChecklistProcessTemplateRequest extends FormRequest
                         trim((string)$item['configuracao']['checklist_tipo'])
                     );
                 }
+
+                if(isset($item['configuracao']['tipo_contrato_codigo'])){
+                    $data['items'][$index]['configuracao']['tipo_contrato_codigo']=strtolower(
+                        trim((string)$item['configuracao']['tipo_contrato_codigo'])
+                    );
+                }
             }
         }
 
@@ -226,17 +242,24 @@ class StoreChecklistProcessTemplateRequest extends FormRequest
                         'configuracao.checklist_tipo'
                     );
 
-                    if(
-                        filled($checklistTipo) &&
-                        !in_array(
-                            $checklistTipo,
-                            ['entrega','recolha'],
-                            true
-                        )
-                    ){
+                    if(blank($checklistTipo)){
                         $validator->errors()->add(
                             "items.{$index}.configuracao.checklist_tipo",
-                            'O tipo de checklist deve ser entrega ou recolha.'
+                            'A etapa de checklist do veículo precisa indicar entrega ou recolha.'
+                        );
+                    }
+                }
+
+                if($tipo==='contrato_relacionado'){
+                    $codigo=data_get(
+                        $item,
+                        'configuracao.tipo_contrato_codigo'
+                    );
+
+                    if(blank($codigo)){
+                        $validator->errors()->add(
+                            "items.{$index}.configuracao.tipo_contrato_codigo",
+                            'A etapa de contrato relacionado precisa indicar o código do tipo de contrato.'
                         );
                     }
                 }

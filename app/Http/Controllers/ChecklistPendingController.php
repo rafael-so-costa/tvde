@@ -98,6 +98,31 @@ class ChecklistPendingController extends Controller
                     ])
                     ->exists();
 
+                $checklistTipo=data_get(
+                    $item->configuracao_snapshot,
+                    'checklist_tipo',
+                    'entrega'
+                );
+
+                if(
+                    !$record &&
+                    !$blocked
+                ){
+                    if(
+                        $checklistTipo==='entrega' &&
+                        $contrato->status!=='assinado'
+                    ){
+                        $blocked=true;
+                    }
+
+                    if(
+                        $checklistTipo==='recolha' &&
+                        $contrato->status!=='encerrado'
+                    ){
+                        $blocked=true;
+                    }
+                }
+
                 return [
                     'item_id'=>$item->id,
                     'contrato_id'=>$contrato->id,
@@ -110,11 +135,7 @@ class ChecklistPendingController extends Controller
                         ??$contrato->tipo,
                     'motorista'=>$contrato->motorista,
                     'veiculo'=>$contrato->veiculo,
-                    'checklist_tipo'=>data_get(
-                        $item->configuracao_snapshot,
-                        'checklist_tipo',
-                        'entrega'
-                    ),
+                    'checklist_tipo'=>$checklistTipo,
                     'titulo'=>$item->titulo_snapshot,
                     'descricao'=>$item->descricao_snapshot,
                     'status'=>$record
@@ -201,9 +222,33 @@ class ChecklistPendingController extends Controller
                 ->lockForUpdate()
                 ->findOrFail($item->run->entidade_id);
 
-            if($contrato->status!=='assinado'){
+            $tipo=data_get(
+                $item->configuracao_snapshot,
+                'checklist_tipo',
+                'entrega'
+            );
+
+            if(!in_array($tipo,['entrega','recolha'],true)){
+                $tipo='entrega';
+            }
+
+            if(
+                $tipo==='entrega' &&
+                $contrato->status!=='assinado'
+            ){
                 throw ValidationException::withMessages([
-                    'contrato'=>'O contrato precisa estar assinado antes da inspeção do veículo.',
+                    'contrato'=>
+                        'O contrato precisa estar assinado para iniciar a entrega do veículo.',
+                ]);
+            }
+
+            if(
+                $tipo==='recolha' &&
+                $contrato->status!=='encerrado'
+            ){
+                throw ValidationException::withMessages([
+                    'contrato'=>
+                        'A recolha do veículo só pode ser iniciada após o encerramento do contrato.',
                 ]);
             }
 
@@ -216,20 +261,103 @@ class ChecklistPendingController extends Controller
                 ]);
             }
 
-            $tipo=data_get(
-                $item->configuracao_snapshot,
-                'checklist_tipo',
-                'entrega'
-            );
+            $entregaVinculada=null;
 
-            if(!in_array($tipo,['entrega','recolha'],true)){
-                $tipo='entrega';
+            if($tipo==='recolha'){
+                $entregaVinculada=
+                    ChecklistRecord::query()
+                        ->where(
+                            'tenant_id',
+                            $tenantId
+                        )
+                        ->where(
+                            'contrato_id',
+                            $contrato->id
+                        )
+                        ->where(
+                            'tipo',
+                            'entrega'
+                        )
+                        ->where(
+                            'estado',
+                            'finalizado'
+                        )
+                        ->latest(
+                            'finalizado_em'
+                        )
+                        ->first();
+
+                if(!$entregaVinculada){
+                    throw ValidationException::withMessages([
+                        'checklist'=>
+                            'Finalize o checklist de entrega antes de iniciar a recolha do veículo.',
+                    ]);
+                }
+            }
+
+            if(
+                $tipo==='recolha' &&
+                $entregaVinculada
+            ){
+                $existingReturn=
+                    ChecklistRecord::query()
+                        ->where(
+                            'tenant_id',
+                            $tenantId
+                        )
+                        ->where(
+                            'entrega_vinculada_id',
+                            $entregaVinculada->id
+                        )
+                        ->lockForUpdate()
+                        ->first();
+
+                if($existingReturn){
+                    if(
+                        $existingReturn->contrato_id &&
+                        $existingReturn->contrato_id!==$contrato->id
+                    ){
+                        throw ValidationException::withMessages([
+                            'checklist'=>
+                                'Já existe uma recolha associada a esta entrega noutro contrato.',
+                        ]);
+                    }
+
+                    if(
+                        $existingReturn->process_run_item_id &&
+                        $existingReturn->process_run_item_id!==$item->id
+                    ){
+                        throw ValidationException::withMessages([
+                            'checklist'=>
+                                'Já existe uma recolha desta entrega associada a outra etapa de workflow.',
+                        ]);
+                    }
+
+                    if(
+                        !$existingReturn->process_run_item_id
+                    ){
+                        $existingReturn->process_run_item_id=
+                            $item->id;
+
+                        $existingReturn->contrato_id=
+                            $contrato->id;
+
+                        $existingReturn->origem=
+                            'workflow';
+
+                        $existingReturn->save();
+                    }
+
+                    return $existingReturn;
+                }
             }
 
             $checklist=new ChecklistRecord([
                 'contrato_id'=>$contrato->id,
                 'process_run_item_id'=>$item->id,
                 'tipo'=>$tipo,
+                'entrega_vinculada_id'=>
+                    $entregaVinculada?->id,
                 'origem'=>'workflow',
                 'motorista_id'=>$contrato->motorista_id,
                 'veiculo_id'=>$contrato->veiculo_id,
@@ -259,6 +387,7 @@ class ChecklistPendingController extends Controller
                 'motorista:id,nome_completo',
                 'veiculo:id,matricula,marca,modelo',
                 'contrato:id,tipo,tipo_contrato_id',
+                'entregaVinculada',
                 'mediaFiles',
             ]),
         ],201);

@@ -1112,3 +1112,5 @@ require __DIR__ . '/checklists_workflow.php';
 require __DIR__ . '/backoffice_content.php';
 require __DIR__ . '/public_analytics.php';
 require __DIR__ . '/modelos_documento_saas.php';
+
+require __DIR__ . '/checklist_process_presets.php';

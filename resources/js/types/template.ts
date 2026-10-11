@@ -5,6 +5,7 @@ export type ChecklistProcessItemType =
     | 'upload'
     | 'aprovacao'
     | 'gerar_documento'
+    | 'contrato_relacionado'
     | 'checklist_veiculo'
     | 'validacao'
     | 'acao_sistema';
@@ -26,6 +27,7 @@ export interface ChecklistProcessItemConfiguration {
     placeholder?: SignaturePlaceholder;
     action?: ChecklistSystemAction;
     checklist_tipo?: ChecklistVehicleType;
+    tipo_contrato_codigo?: string;
     [key: string]: unknown;
 }
 
@@ -49,6 +51,9 @@ export interface ChecklistProcessTemplateItem {
 export interface ChecklistProcessTemplate {
     id: string;
     tenant_id: string;
+
+    preset_codigo?: string | null;
+    preset_versao?: number | null;
 
     codigo: string;
     nome: string;
@@ -170,4 +175,26 @@ export interface TemplateContrato {
 
     created_at: string;
     updated_at: string;
+}
+
+export interface ChecklistProcessPresetItem {
+    codigo: string;
+    ordem: number;
+    titulo: string;
+    descricao?: string | null;
+    tipo: ChecklistProcessItemType;
+    obrigatorio: boolean;
+    configuracao?: ChecklistProcessItemConfiguration;
+}
+
+export interface ChecklistProcessPreset {
+    codigo: string;
+    nome: string;
+    categoria: string;
+    descricao: string;
+    versao: number;
+    destaque: boolean;
+    items: ChecklistProcessPresetItem[];
+    copias: number;
+    ja_utilizado: boolean;
 }

@@ -29,6 +29,7 @@ class ChecklistProcessTemplate extends Model
         return [
             'ativo' => 'boolean',
             'versao' => 'integer',
+            'preset_versao' => 'integer',
         ];
     }
 
@@ -61,5 +62,10 @@ class ChecklistProcessTemplate extends Model
             ChecklistProcessRun::class,
             'template_id'
         );
+    }
+
+    public function originadoDePresetFrotaPro(): bool
+    {
+        return $this->preset_codigo !== null;
     }
 }

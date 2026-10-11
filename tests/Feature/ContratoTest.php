@@ -1,6 +1,8 @@
 <?php
 
 use App\Models\AssinaturaDigital;
+use App\Models\ChecklistProcessTemplate;
+use App\Models\ChecklistProcessTemplateItem;
 use App\Models\Contrato;
 use App\Models\ContratoAtivoVeiculo;
 use App\Models\LogAuditoriaContrato;
@@ -2410,3 +2412,178 @@ test('utilizador apenas visualizar não pode gerar pdf', function () {
             ->pdf_gerado_url
     )->toBeNull();
 });
+
+test(
+    'encerramento aguarda etapas obrigatórias anteriores à recolha',
+    function(){
+        $tenant=
+            contratoTenant(
+                'Tenant Encerramento Workflow',
+                'tenant-encerramento-workflow'
+            );
+
+        $user=
+            contratoUsuario(
+                $tenant,
+                'encerramento.workflow@frotapro.test'
+            );
+
+        $process=
+            new ChecklistProcessTemplate([
+                'codigo'=>
+                    'encerramento_workflow',
+
+                'nome'=>
+                    'Workflow de encerramento',
+
+                'ativo'=>
+                    true,
+
+                'versao'=>
+                    1,
+            ]);
+
+        $process->tenant_id=
+            $tenant->id;
+
+        $process->save();
+
+        $entrega=
+            new ChecklistProcessTemplateItem([
+                'codigo'=>
+                    'entrega',
+
+                'ordem'=>
+                    1,
+
+                'titulo'=>
+                    'Checklist de entrega',
+
+                'tipo'=>
+                    'checklist_veiculo',
+
+                'obrigatorio'=>
+                    true,
+
+                'configuracao'=>[
+                    'checklist_tipo'=>
+                        'entrega',
+                ],
+            ]);
+
+        $entrega->template_id=
+            $process->id;
+
+        $entrega->save();
+
+        $recolha=
+            new ChecklistProcessTemplateItem([
+                'codigo'=>
+                    'recolha',
+
+                'ordem'=>
+                    2,
+
+                'titulo'=>
+                    'Checklist de recolha',
+
+                'tipo'=>
+                    'checklist_veiculo',
+
+                'obrigatorio'=>
+                    true,
+
+                'configuracao'=>[
+                    'checklist_tipo'=>
+                        'recolha',
+                ],
+            ]);
+
+        $recolha->template_id=
+            $process->id;
+
+        $recolha->save();
+
+        $template=
+            contratoTemplate(
+                $tenant,
+                '{{ASSINATURA_MOTORISTA}}'
+            );
+
+        $template
+            ->checklist_process_template_id=
+            $process->id;
+
+        $template->save();
+
+        $motorista=
+            contratoMotorista(
+                $tenant,
+                'EncerramentoWorkflow'
+            );
+
+        $veiculo=
+            contratoVeiculo(
+                $tenant,
+                'RW-22-RW',
+                350
+            );
+
+        contratoLogin(
+            $this,
+            $user
+        );
+
+        $create=
+            $this
+                ->withHeaders(
+                    contratoHeaders()
+                )
+                ->postJson(
+                    '/api/contratos',
+                    contratoPayloadAssinado(
+                        $template,
+                        $motorista,
+                        $veiculo
+                    )
+                )
+                ->assertCreated();
+
+        $id=
+            $create
+                ->json(
+                    'data.id'
+                );
+
+        $this
+            ->withHeaders(
+                contratoHeaders()
+            )
+            ->patchJson(
+                "/api/contratos/{$id}/encerrar",
+                [
+                    'data_fim'=>
+                        '2026-10-31',
+                ]
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(
+                'contrato'
+            );
+
+        $contrato=
+            Contrato::findOrFail(
+                $id
+            );
+
+        expect(
+            $contrato->status
+        )->toBe(
+            'assinado'
+        );
+
+        expect(
+            $contrato->bloqueado
+        )->toBeFalse();
+    }
+);

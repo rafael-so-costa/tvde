@@ -10,27 +10,40 @@ import {
 } from "@tanstack/react-query";
 
 import {
+    useNavigate,
+} from "react-router-dom";
+
+import {
     AlertCircle,
     Check,
     CheckCircle2,
     Circle,
+    ClipboardCheck,
     Download,
     Eye,
     FileClock,
     FileOutput,
     FileSignature,
     History,
+    KeyRound,
     LoaderCircle,
+    ShieldCheck,
     Trash2,
     X,
 } from "lucide-react";
 
 import api from "../../lib/api";
 
+import ChecklistFormModal from "../checklists/ChecklistFormModal";
+
 import {
     downloadAuthenticatedFile,
     fetchAuthenticatedFile,
 } from "../../lib/authenticatedFile";
+
+import type {
+    ChecklistRecord,
+} from "../../types/checklist";
 
 import type {
     Contrato,
@@ -56,7 +69,6 @@ type Tab =
 const automaticTypes = [
     "assinatura",
     "gerar_documento",
-    "checklist_veiculo",
 ];
 
 function apiError(
@@ -120,6 +132,9 @@ export default function ContratoDetailModal({
     onClose,
     onChanged,
 }: Props) {
+    const navigate =
+        useNavigate();
+
     const [
         tab,
         setTab,
@@ -195,6 +210,30 @@ export default function ContratoDetailModal({
         setEndDate,
     ] =
         useState("");
+
+    const [
+        actionItem,
+        setActionItem,
+    ] =
+        useState<
+            ContratoProcessItem | null
+        >(null);
+
+    const [
+        activeChecklist,
+        setActiveChecklist,
+    ] =
+        useState<
+            ChecklistRecord | null
+        >(null);
+
+    const [
+        startingChecklist,
+        setStartingChecklist,
+    ] =
+        useState<
+            string | null
+        >(null);
 
     const detailQuery =
         useQuery({
@@ -295,6 +334,45 @@ export default function ContratoDetailModal({
             );
         } finally {
             setCompleting(
+                null,
+            );
+        }
+    }
+
+    async function startVehicleChecklist(
+        item:
+            ContratoProcessItem,
+    ) {
+        setStartingChecklist(
+            item.id,
+        );
+
+        setError(
+            null,
+        );
+
+        try {
+            const response =
+                await api.post(
+                    `/api/checklists/pendentes/${item.id}/iniciar`,
+                );
+
+            setActiveChecklist(
+                response.data
+                    .data as ChecklistRecord,
+            );
+
+            await refresh();
+        } catch (
+            requestError
+        ) {
+            setError(
+                apiError(
+                    requestError,
+                ),
+            );
+        } finally {
+            setStartingChecklist(
                 null,
             );
         }
@@ -473,6 +551,10 @@ export default function ContratoDetailModal({
             );
 
             await refresh();
+
+            setTab(
+                "processo",
+            );
         } catch (
             requestError
         ) {
@@ -720,8 +802,21 @@ export default function ContratoDetailModal({
                                         completing={
                                             completing
                                         }
+                                        startingChecklist={
+                                            startingChecklist
+                                        }
                                         onComplete={
                                             completeItem
+                                        }
+                                        onSystemAction={(
+                                            item,
+                                        ) =>
+                                            setActionItem(
+                                                item,
+                                            )
+                                        }
+                                        onStartChecklist={
+                                            startVehicleChecklist
                                         }
                                     />
                                 )}
@@ -754,6 +849,96 @@ export default function ContratoDetailModal({
                     )}
                 </div>
             </div>
+
+            {actionItem &&
+                contrato && (
+                <DriverAccessActionModal
+                    contratoId={
+                        contrato.id
+                    }
+                    item={
+                        actionItem
+                    }
+                    onClose={() =>
+                        setActionItem(
+                            null,
+                        )
+                    }
+                    onUpdated={async () => {
+                        setActionItem(
+                            null,
+                        );
+
+                        await refresh();
+                    }}
+                    onOpenMotoristas={() => {
+                        setActionItem(
+                            null,
+                        );
+
+                        onClose();
+
+                        navigate(
+                            "/motoristas",
+                        );
+                    }}
+                />
+            )}
+
+            {activeChecklist &&
+                contrato && (
+                <ChecklistFormModal
+                    open={
+                        true
+                    }
+                    tipo={
+                        activeChecklist.tipo
+                    }
+                    record={
+                        activeChecklist
+                    }
+                    records={[
+                        ...(
+                            activeChecklist
+                                .entrega_vinculada
+                                ? [
+                                      activeChecklist
+                                          .entrega_vinculada,
+                                  ]
+                                : []
+                        ),
+
+                        activeChecklist,
+                    ]}
+                    motoristas={
+                        contrato.motorista
+                            ? [
+                                  contrato.motorista,
+                              ]
+                            : []
+                    }
+                    veiculos={
+                        contrato.veiculo
+                            ? [
+                                  contrato.veiculo,
+                              ]
+                            : []
+                    }
+                    lockEntities
+                    onClose={() =>
+                        setActiveChecklist(
+                            null,
+                        )
+                    }
+                    onSuccess={async () => {
+                        setActiveChecklist(
+                            null,
+                        );
+
+                        await refresh();
+                    }}
+                />
+            )}
 
             {pdfPreviewUrl && (
                 <div className="fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-6">
@@ -1302,7 +1487,10 @@ function SummaryTab({
 function ProcessTab({
     contrato,
     completing,
+    startingChecklist,
     onComplete,
+    onSystemAction,
+    onStartChecklist,
 }: {
     contrato:
         Contrato;
@@ -1310,7 +1498,22 @@ function ProcessTab({
     completing:
         string | null;
 
+    startingChecklist:
+        string | null;
+
     onComplete:
+        (
+            item:
+                ContratoProcessItem,
+        ) => Promise<void>;
+
+    onSystemAction:
+        (
+            item:
+                ContratoProcessItem,
+        ) => void;
+
+    onStartChecklist:
         (
             item:
                 ContratoProcessItem,
@@ -1327,6 +1530,18 @@ function ProcessTab({
                 title="Sem checklist de processo"
                 text="O contrato não possui execução de checklist."
             />
+        );
+    }
+
+    function completed(
+        item:
+            ContratoProcessItem,
+    ): boolean {
+        return (
+            item.status ===
+                "concluido" ||
+            item.status ===
+                "dispensado"
         );
     }
 
@@ -1362,16 +1577,49 @@ function ProcessTab({
                     {run.items.map(
                         (
                             item,
+                            index,
                         ) => {
                             const done =
-                                item.status ===
-                                    "concluido" ||
-                                item.status ===
-                                    "dispensado";
+                                completed(
+                                    item,
+                                );
+
+                            const blocked =
+                                run.items
+                                    .slice(
+                                        0,
+                                        index,
+                                    )
+                                    .some(
+                                        (
+                                            previous,
+                                        ) =>
+                                            previous
+                                                .obrigatorio &&
+                                            !completed(
+                                                previous,
+                                            ),
+                                    );
 
                             const automatic =
                                 automaticTypes.includes(
                                     item.tipo,
+                                );
+
+                            const checklistType =
+                                String(
+                                    item
+                                        .configuracao_snapshot
+                                        ?.checklist_tipo ??
+                                        "entrega",
+                                );
+
+                            const action =
+                                String(
+                                    item
+                                        .configuracao_snapshot
+                                        ?.action ??
+                                        "",
                                 );
 
                             return (
@@ -1387,7 +1635,9 @@ function ProcessTab({
 
                                             done
                                                 ? "bg-emerald-100 text-emerald-700"
-                                                : "bg-slate-100 text-slate-400",
+                                                : blocked
+                                                  ? "bg-slate-100 text-slate-300"
+                                                  : "bg-slate-100 text-slate-400",
                                         ].join(
                                             " ",
                                         )}
@@ -1442,6 +1692,71 @@ function ProcessTab({
                                                 )}
                                             </div>
                                         </div>
+                                    ) : blocked ? (
+                                        <span className="max-w-40 text-right text-xs font-medium text-slate-400">
+                                            Aguardando etapas anteriores
+                                        </span>
+                                    ) : item.tipo ===
+                                      "acao_sistema" ? (
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                onSystemAction(
+                                                    item,
+                                                )
+                                            }
+                                            className="inline-flex h-9 items-center gap-2 rounded-lg bg-blue-50 px-3 text-xs font-semibold text-blue-700 transition hover:bg-blue-100"
+                                        >
+                                            <KeyRound className="h-4 w-4" />
+
+                                            {action ===
+                                            "motorista_acesso"
+                                                ? "Gerir acesso"
+                                                : "Executar ação"}
+                                        </button>
+                                    ) : item.tipo ===
+                                      "checklist_veiculo" ? (
+                                        checklistType ===
+                                            "recolha" &&
+                                        contrato.status !==
+                                            "encerrado" ? (
+                                            <span className="max-w-40 text-right text-xs font-medium text-amber-600">
+                                                Disponível no encerramento
+                                            </span>
+                                        ) : checklistType ===
+                                              "entrega" &&
+                                          contrato.status !==
+                                              "assinado" ? (
+                                            <span className="max-w-40 text-right text-xs font-medium text-slate-400">
+                                                Disponível após assinatura
+                                            </span>
+                                        ) : (
+                                            <button
+                                                type="button"
+                                                disabled={
+                                                    startingChecklist ===
+                                                    item.id
+                                                }
+                                                onClick={() =>
+                                                    onStartChecklist(
+                                                        item,
+                                                    )
+                                                }
+                                                className="inline-flex h-9 items-center gap-2 rounded-lg bg-amber-50 px-3 text-xs font-semibold text-amber-700 transition hover:bg-amber-100 disabled:opacity-50"
+                                            >
+                                                {startingChecklist ===
+                                                item.id ? (
+                                                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                                                ) : (
+                                                    <ClipboardCheck className="h-4 w-4" />
+                                                )}
+
+                                                {checklistType ===
+                                                "recolha"
+                                                    ? "Iniciar recolha"
+                                                    : "Iniciar entrega"}
+                                            </button>
+                                        )
                                     ) : automatic ? (
                                         <span className="text-xs font-medium text-slate-400">
                                             Automática
@@ -1471,6 +1786,494 @@ function ProcessTab({
                         },
                     )}
                 </div>
+            </div>
+        </div>
+    );
+}
+
+interface DriverAccessStatus {
+    action: string;
+    item_id: string;
+    item_status: string;
+
+    motorista_id:
+        string | null;
+
+    motorista_nome:
+        string | null;
+
+    email:
+        string | null;
+
+    user_id:
+        string | null;
+
+    conta_vinculada:
+        boolean;
+
+    conta_criada:
+        boolean;
+
+    utilizador_ativo:
+        boolean;
+
+    associacao_tenant_ativa:
+        boolean;
+
+    role_motorista:
+        boolean;
+
+    pode_criar:
+        boolean;
+
+    acesso_ativo:
+        boolean;
+
+    concluido:
+        boolean;
+}
+
+function DriverAccessActionModal({
+    contratoId,
+    item,
+    onClose,
+    onUpdated,
+    onOpenMotoristas,
+}: {
+    contratoId:
+        string;
+
+    item:
+        ContratoProcessItem;
+
+    onClose:
+        () => void;
+
+    onUpdated:
+        () => Promise<void>;
+
+    onOpenMotoristas:
+        () => void;
+}) {
+    const [
+        password,
+        setPassword,
+    ] =
+        useState("");
+
+    const [
+        confirmation,
+        setConfirmation,
+    ] =
+        useState("");
+
+    const [
+        submitting,
+        setSubmitting,
+    ] =
+        useState(false);
+
+    const [
+        localError,
+        setLocalError,
+    ] =
+        useState<
+            string | null
+        >(null);
+
+    const query =
+        useQuery({
+            queryKey: [
+                "workflow-action",
+                contratoId,
+                item.id,
+            ],
+
+            queryFn:
+                async () => {
+                    const response =
+                        await api.get(
+                            `/api/contratos/${contratoId}/workflow/items/${item.id}/acao`,
+                        );
+
+                    return response
+                        .data
+                        .data as DriverAccessStatus;
+                },
+        });
+
+    const status =
+        query.data;
+
+    async function execute() {
+        if (!status) {
+            return;
+        }
+
+        setLocalError(
+            null,
+        );
+
+        if (
+            status.pode_criar
+        ) {
+            if (
+                !status.email
+            ) {
+                setLocalError(
+                    "O motorista precisa ter um e-mail antes de criar o acesso.",
+                );
+
+                return;
+            }
+
+            if (
+                password.length <
+                8
+            ) {
+                setLocalError(
+                    "A senha inicial deve ter pelo menos 8 caracteres.",
+                );
+
+                return;
+            }
+
+            if (
+                password !==
+                confirmation
+            ) {
+                setLocalError(
+                    "A confirmação da senha não corresponde.",
+                );
+
+                return;
+            }
+        }
+
+        setSubmitting(
+            true,
+        );
+
+        try {
+            await api.post(
+                `/api/contratos/${contratoId}/workflow/items/${item.id}/acao`,
+                status.pode_criar
+                    ? {
+                          password,
+
+                          password_confirmation:
+                              confirmation,
+                      }
+                    : {},
+            );
+
+            await onUpdated();
+        } catch (
+            requestError
+        ) {
+            setLocalError(
+                apiError(
+                    requestError,
+                ),
+            );
+        } finally {
+            setSubmitting(
+                false,
+            );
+        }
+    }
+
+    return (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
+            <button
+                type="button"
+                aria-label="Fechar"
+                onClick={
+                    onClose
+                }
+                className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm"
+            />
+
+            <div className="relative z-10 w-full max-w-xl rounded-2xl bg-white shadow-2xl">
+                <header className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
+                    <div className="flex items-center gap-3">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                            <KeyRound className="h-5 w-5" />
+                        </div>
+
+                        <div>
+                            <h3 className="font-semibold text-slate-950">
+                                Acesso do motorista
+                            </h3>
+
+                            <p className="mt-0.5 text-sm text-slate-500">
+                                Criar ou validar acesso à organização.
+                            </p>
+                        </div>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={
+                            onClose
+                        }
+                        className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500"
+                    >
+                        <X className="h-4 w-4" />
+                    </button>
+                </header>
+
+                <div className="space-y-5 p-6">
+                    {query.isLoading ? (
+                        <div className="flex justify-center py-10">
+                            <LoaderCircle className="h-7 w-7 animate-spin text-blue-600" />
+                        </div>
+                    ) : query.isError ||
+                      !status ? (
+                        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                            {apiError(
+                                query.error,
+                            )}
+                        </div>
+                    ) : (
+                        <>
+                            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                <div className="font-semibold text-slate-900">
+                                    {status.motorista_nome ??
+                                        "Motorista"}
+                                </div>
+
+                                <div className="mt-1 text-sm text-slate-500">
+                                    {status.email ??
+                                        "Sem e-mail registado"}
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                                <AccessStatus
+                                    label="Conta"
+                                    ok={
+                                        status.conta_criada
+                                    }
+                                />
+
+                                <AccessStatus
+                                    label="Utilizador"
+                                    ok={
+                                        status.utilizador_ativo
+                                    }
+                                />
+
+                                <AccessStatus
+                                    label="Organização"
+                                    ok={
+                                        status.associacao_tenant_ativa
+                                    }
+                                />
+
+                                <AccessStatus
+                                    label="Motorista"
+                                    ok={
+                                        status.role_motorista
+                                    }
+                                />
+                            </div>
+
+                            {status.concluido ? (
+                                <div className="flex gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                                    <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
+
+                                    <div>
+                                        <div className="font-semibold text-emerald-900">
+                                            Acesso válido
+                                        </div>
+
+                                        <p className="mt-1 text-sm text-emerald-700">
+                                            A conta está ativa, pertence à organização e possui a função de motorista.
+                                        </p>
+                                    </div>
+                                </div>
+                            ) : status.pode_criar &&
+                              status.email ? (
+                                <div className="space-y-4">
+                                    <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
+                                        O motorista ainda não possui conta. Defina uma senha inicial para criar o acesso completo agora.
+                                    </div>
+
+                                    <div className="grid gap-4 sm:grid-cols-2">
+                                        <label>
+                                            <span className="mb-1.5 block text-sm font-medium text-slate-700">
+                                                Senha inicial
+                                            </span>
+
+                                            <input
+                                                type="password"
+                                                value={
+                                                    password
+                                                }
+                                                onChange={(
+                                                    event,
+                                                ) =>
+                                                    setPassword(
+                                                        event.target.value,
+                                                    )
+                                                }
+                                                autoComplete="new-password"
+                                                className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+                                            />
+                                        </label>
+
+                                        <label>
+                                            <span className="mb-1.5 block text-sm font-medium text-slate-700">
+                                                Confirmar senha
+                                            </span>
+
+                                            <input
+                                                type="password"
+                                                value={
+                                                    confirmation
+                                                }
+                                                onChange={(
+                                                    event,
+                                                ) =>
+                                                    setConfirmation(
+                                                        event.target.value,
+                                                    )
+                                                }
+                                                autoComplete="new-password"
+                                                className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+                                            />
+                                        </label>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                                    <div className="font-semibold text-amber-900">
+                                        Acesso precisa de regularização
+                                    </div>
+
+                                    <p className="mt-1 text-sm leading-6 text-amber-700">
+                                        A conta já está associada ao motorista, mas falta pelo menos uma condição para o acesso completo. Abra o cadastro do motorista para regularizar a conta, organização ou função.
+                                    </p>
+
+                                    <button
+                                        type="button"
+                                        onClick={
+                                            onOpenMotoristas
+                                        }
+                                        className="mt-3 rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm font-semibold text-amber-800"
+                                    >
+                                        Abrir Motoristas
+                                    </button>
+                                </div>
+                            )}
+
+                            {localError && (
+                                <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                                    {
+                                        localError
+                                    }
+                                </div>
+                            )}
+
+                            <div className="flex justify-end gap-3 border-t border-slate-100 pt-4">
+                                <button
+                                    type="button"
+                                    onClick={
+                                        onClose
+                                    }
+                                    className="h-10 rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-600"
+                                >
+                                    Fechar
+                                </button>
+
+                                {(status.concluido ||
+                                    (
+                                        status.pode_criar &&
+                                        status.email
+                                    )) && (
+                                    <button
+                                        type="button"
+                                        disabled={
+                                            submitting
+                                        }
+                                        onClick={
+                                            execute
+                                        }
+                                        className="inline-flex h-10 items-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white disabled:opacity-50"
+                                    >
+                                        {submitting ? (
+                                            <LoaderCircle className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                            <ShieldCheck className="h-4 w-4" />
+                                        )}
+
+                                        {status.concluido
+                                            ? "Validar e concluir"
+                                            : "Criar acesso e concluir"}
+                                    </button>
+                                )}
+                            </div>
+                        </>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function AccessStatus({
+    label,
+    ok,
+}: {
+    label:
+        string;
+
+    ok:
+        boolean;
+}) {
+    return (
+        <div
+            className={[
+                "rounded-xl border p-3 text-center",
+
+                ok
+                    ? "border-emerald-200 bg-emerald-50"
+                    : "border-slate-200 bg-slate-50",
+            ].join(
+                " ",
+            )}
+        >
+            <div
+                className={[
+                    "text-xs font-semibold",
+
+                    ok
+                        ? "text-emerald-700"
+                        : "text-slate-400",
+                ].join(
+                    " ",
+                )}
+            >
+                {
+                    label
+                }
+            </div>
+
+            <div
+                className={[
+                    "mt-1 text-xs",
+
+                    ok
+                        ? "text-emerald-600"
+                        : "text-slate-400",
+                ].join(
+                    " ",
+                )}
+            >
+                {ok
+                    ? "OK"
+                    : "Pendente"}
             </div>
         </div>
     );

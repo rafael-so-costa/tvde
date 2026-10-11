@@ -58,6 +58,10 @@ class ChecklistWorkflowActionService
                 $itemId
             );
 
+            $this->ensurePriorStepsCompleted(
+                $item
+            );
+
             $action=data_get(
                 $item->configuracao_snapshot,
                 'action'
@@ -240,6 +244,41 @@ class ChecklistWorkflowActionService
                     $actorId
                 );
             }
+        }
+    }
+
+    private function ensurePriorStepsCompleted(
+        ChecklistProcessRunItem $item
+    ): void {
+        $blocked=
+            ChecklistProcessRunItem::query()
+                ->where(
+                    'run_id',
+                    $item->run_id
+                )
+                ->where(
+                    'obrigatorio',
+                    true
+                )
+                ->where(
+                    'ordem',
+                    '<',
+                    $item->ordem
+                )
+                ->whereNotIn(
+                    'status',
+                    [
+                        ChecklistProcessService::ITEM_DONE,
+                        ChecklistProcessService::ITEM_WAIVED,
+                    ]
+                )
+                ->exists();
+
+        if($blocked){
+            throw ValidationException::withMessages([
+                'item'=>
+                    'Existem etapas obrigatórias anteriores ainda pendentes.',
+            ]);
         }
     }
 
