@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
     AlertCircle,
     ArrowLeft,
+    ArrowUpCircle,
     ClipboardPaste,
     FileStack,
     FileText,
@@ -36,6 +37,7 @@ import type {
 
 import TemplateTextModal from "../components/contratos/templates/TemplateTextModal";
 import RecommendedTemplatesPanel from "../components/contratos/templates/RecommendedTemplatesPanel";
+import RecommendedTemplateUpdateModal from "../components/contratos/templates/RecommendedTemplateUpdateModal";
 
 type Tab = "documentos" | "workflows";
 type DocumentTab = "meus" | "recomendados";
@@ -138,6 +140,9 @@ export default function TemplatesPage() {
     const [importOpen, setImportOpen] = useState(false);
 
     const [textOpen, setTextOpen] = useState(false);
+
+    const [updateTemplate, setUpdateTemplate] =
+        useState<TemplateContrato | null>(null);
 
     const [actionError, setActionError] = useState<string | null>(null);
 
@@ -583,6 +588,9 @@ export default function TemplatesPage() {
                             onDelete={deleteTemplate}
                             onImport={() => setImportOpen(true)}
                             onPaste={() => setTextOpen(true)}
+                            onCompare={(template) =>
+                                setUpdateTemplate(template)
+                            }
                         />
                     )
                 ) : (
@@ -595,6 +603,25 @@ export default function TemplatesPage() {
                     />
                 )}
             </div>
+
+            {updateTemplate && (
+                <RecommendedTemplateUpdateModal
+                    template={updateTemplate}
+                    onClose={() =>
+                        setUpdateTemplate(null)
+                    }
+                    onUpdated={async () => {
+                        setUpdateTemplate(null);
+
+                        await queryClient.invalidateQueries({
+                            queryKey: [
+                                "templates",
+                                tenant.id,
+                            ],
+                        });
+                    }}
+                />
+            )}
 
             {processForm !== undefined && (
                 <WorkflowFormModal
@@ -720,12 +747,30 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
     );
 }
 
+function recommendedTemplateHasUpdate(
+    item: TemplateContrato,
+): boolean {
+    const master =
+        item.modelo_documento_saas;
+
+    return Boolean(
+        item.ativo &&
+            master &&
+            master.ativo &&
+            master.status === "publicado" &&
+            master.versao_publicada &&
+            item.modelo_documento_saas_versao &&
+            master.versao_publicada !==
+                item.modelo_documento_saas_versao,
+    );
+}
 function DocumentTemplates({
     templates,
     deleting,
     onDelete,
     onImport,
     onPaste,
+    onCompare,
 }: {
     templates: TemplateContrato[];
 
@@ -736,6 +781,8 @@ function DocumentTemplates({
     onImport: () => void;
 
     onPaste: () => void;
+
+    onCompare: (item: TemplateContrato) => void;
 }) {
     if (templates.length === 0) {
         return (
@@ -832,6 +879,24 @@ function DocumentTemplates({
                                                     item.modelo_documento_saas_versao
                                                 }
                                             </div>
+                                        )}
+
+                                        {recommendedTemplateHasUpdate(item) && (
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    onCompare(item)
+                                                }
+                                                className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700 transition hover:bg-amber-100"
+                                            >
+                                                <ArrowUpCircle className="h-3.5 w-3.5" />
+
+                                                Nova versão v
+                                                {
+                                                    item.modelo_documento_saas
+                                                        ?.versao_publicada
+                                                }
+                                            </button>
                                         )}
                                     </div>
                                 ) : item.arquivo_url ? (

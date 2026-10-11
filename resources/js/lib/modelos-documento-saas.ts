@@ -8,6 +8,8 @@ import type {
     ModeloDocumentoSaasPayload,
     ModeloDocumentoSaasVersao,
     ModeloDocumentoRecomendado,
+    ModeloDocumentoRecomendadoAtualizacao,
+    ModeloDocumentoRecomendadoComparacao,
     ModelosDocumentoRecomendadosResponse,
     UsarModeloDocumentoRecomendadoPayload,
     ModeloDocumentoSaasMetricas,
@@ -145,6 +147,26 @@ export async function fetchBackofficeModeloDocumentoMetricas(): Promise<
 > {
     const response = await api.get(
         "/api/backoffice/modelos-documento/metricas",
+    );
+
+    return response.data.data;
+}
+
+export async function compararModeloDocumentoRecomendado(
+    templateId: string,
+): Promise<ModeloDocumentoRecomendadoComparacao> {
+    const response = await api.get(
+        `/api/modelos-recomendados/templates/${templateId}/comparar`,
+    );
+
+    return response.data.data;
+}
+
+export async function atualizarModeloDocumentoRecomendado(
+    templateId: string,
+): Promise<ModeloDocumentoRecomendadoAtualizacao> {
+    const response = await api.post(
+        `/api/modelos-recomendados/templates/${templateId}/atualizar`,
     );
 
     return response.data.data;

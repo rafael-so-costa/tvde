@@ -134,6 +134,14 @@ Route::middleware([
                     );
 
                     Route::get(
+                        '/templates/{templateId}/comparar',
+                        [
+                            ModeloDocumentoRecomendadoController::class,
+                            'compareTemplate',
+                        ]
+                    )->whereUuid('templateId');
+
+                    Route::get(
                         '/{id}',
                         [
                             ModeloDocumentoRecomendadoController::class,
@@ -142,6 +150,18 @@ Route::middleware([
                     )->whereUuid('id');
                 }
             );
+
+            Route::post(
+                '/templates/{templateId}/atualizar',
+                [
+                    ModeloDocumentoRecomendadoController::class,
+                    'updateTemplate',
+                ]
+            )
+                ->whereUuid('templateId')
+                ->middleware(
+                    'permission:templates,configurar'
+                );
 
             Route::post(
                 '/{id}/usar',

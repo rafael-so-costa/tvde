@@ -204,3 +204,58 @@ export interface ModeloDocumentoSaasMetricas {
     resumo: ModeloDocumentoSaasMetricasResumo;
     modelos: ModeloDocumentoSaasMetricasModelo[];
 }
+
+export interface ModeloDocumentoRecomendadoComparacao {
+    template: {
+        id: string;
+        nome: string;
+        ativo: boolean;
+        versao_origem: string | null;
+        personalizado: boolean | null;
+    };
+
+    modelo: {
+        id: string;
+        nome: string;
+        versao_publicada: string;
+    };
+
+    versao_atual: {
+        id: string | null;
+        versao: string | null;
+        conteudo: string;
+    };
+
+    nova_versao: {
+        id: string;
+        versao: string;
+        conteudo: string;
+        checksum: string;
+        publicado_em: string;
+    };
+
+    update_disponivel: boolean;
+
+    tipos_contrato_afetados: Array<{
+        id: string;
+        nome: string;
+        codigo: string;
+    }>;
+}
+
+export interface ModeloDocumentoRecomendadoAtualizacao {
+    template: {
+        id: string;
+        tenant_id: string;
+        nome: string;
+        modelo_documento_saas_id: string;
+        modelo_documento_saas_versao_id: string;
+        modelo_documento_saas_versao: string;
+        ativo: boolean;
+    };
+
+    template_anterior_id: string;
+    versao_anterior: string | null;
+    versao_nova: string;
+    tipos_contrato_atualizados: number;
+}

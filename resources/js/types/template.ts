@@ -130,6 +130,15 @@ export interface TemplateContrato {
     modelo_documento_saas_versao:
     string | null;
 
+    modelo_documento_saas?: {
+        id: string;
+        nome: string;
+        slug: string;
+        versao_publicada: string | null;
+        status: "rascunho" | "publicado" | "arquivado";
+        ativo: boolean;
+    } | null;
+
     perfil_id: string | null;
 
     checklist_process_template_id:

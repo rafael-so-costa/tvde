@@ -9,6 +9,7 @@ use App\Models\RolePermission;
 use App\Models\TemplateContrato;
 use App\Models\Tenant;
 use App\Models\TenantUser;
+use App\Models\TipoContrato;
 use App\Models\User;
 use App\Models\UserRole;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -1295,5 +1296,357 @@ test(
                 'data.modelos.0.versoes_em_uso.1.copias',
                 1
             );
+    }
+);
+
+test(
+    'tenant compara e adota nova versao de modelo recomendado preservando historico',
+    function () {
+        $admin =
+            modeloDocumentoSaasAdmin();
+
+        Sanctum::actingAs(
+            $admin
+        );
+
+        $categoriaId =
+            modeloDocumentoSaasCriarCategoria(
+                $this
+            );
+
+        $modeloId =
+            modeloDocumentoSaasCriarModelo(
+                $this,
+                $categoriaId
+            );
+
+        $versaoUmResponse =
+            $this
+                ->withHeaders(
+                    modeloDocumentoSaasHeaders()
+                )
+                ->postJson(
+                    "/api/backoffice/modelos-documento/{$modeloId}/publicar"
+                )
+                ->assertCreated();
+
+        $versaoUmId =
+            $versaoUmResponse
+                ->json(
+                    'data.id'
+                );
+
+        $tenant =
+            modeloDocumentoSaasTenant(
+                'Tenant Update',
+                'tenant-update-modelo'
+            );
+
+        $tenantUser =
+            modeloDocumentoSaasTenantUser(
+                $tenant
+            );
+
+        Sanctum::actingAs(
+            $tenantUser
+        );
+
+        $this->withSession([
+            'tenant_id' =>
+                $tenant->id,
+        ]);
+
+        $copyResponse =
+            $this
+                ->withHeaders(
+                    modeloDocumentoSaasHeaders()
+                )
+                ->postJson(
+                    "/api/modelos-recomendados/{$modeloId}/usar",
+                    [
+                        'nome' =>
+                            'Contrato Operacional',
+                    ]
+                )
+                ->assertCreated()
+                ->assertJsonPath(
+                    'data.modelo_documento_saas_versao',
+                    '1.0'
+                );
+
+        $templateId =
+            $copyResponse
+                ->json(
+                    'data.id'
+                );
+
+        $tipo =
+            new TipoContrato([
+                'nome' =>
+                    'Contrato Operacional',
+
+                'slug' =>
+                    'contrato-operacional',
+
+                'codigo' =>
+                    'contrato_operacional',
+
+                'template_id' =>
+                    $templateId,
+
+                'ativo' =>
+                    true,
+
+                'mostrar_menu' =>
+                    true,
+
+                'ordem' =>
+                    10,
+            ]);
+
+        $tipo->tenant_id =
+            $tenant->id;
+
+        $tipo->created_by =
+            $tenantUser->id;
+
+        $tipo->updated_by =
+            $tenantUser->id;
+
+        $tipo->save();
+
+        $template =
+            TemplateContrato::query()
+                ->findOrFail(
+                    $templateId
+                );
+
+        $template->conteudo_original =
+            $template
+                ->conteudo_original .
+            "\n\nCLÁUSULA PERSONALIZADA DA EMPRESA.";
+
+        $template->save();
+
+        Sanctum::actingAs(
+            $admin
+        );
+
+        $this
+            ->withHeaders(
+                modeloDocumentoSaasHeaders()
+            )
+            ->patchJson(
+                "/api/backoffice/modelos-documento/{$modeloId}",
+                [
+                    'versao' =>
+                        '1.1',
+                ]
+            )
+            ->assertOk();
+
+        $versaoDoisResponse =
+            $this
+                ->withHeaders(
+                    modeloDocumentoSaasHeaders()
+                )
+                ->postJson(
+                    "/api/backoffice/modelos-documento/{$modeloId}/publicar"
+                )
+                ->assertCreated()
+                ->assertJsonPath(
+                    'data.versao',
+                    '1.1'
+                );
+
+        $versaoDoisId =
+            $versaoDoisResponse
+                ->json(
+                    'data.id'
+                );
+
+        expect(
+            $versaoDoisId
+        )->not->toBe(
+            $versaoUmId
+        );
+
+        Sanctum::actingAs(
+            $tenantUser
+        );
+
+        $this->withSession([
+            'tenant_id' =>
+                $tenant->id,
+        ]);
+
+        $this
+            ->withHeaders(
+                modeloDocumentoSaasHeaders()
+            )
+            ->getJson(
+                "/api/modelos-recomendados/templates/{$templateId}/comparar"
+            )
+            ->assertOk()
+            ->assertJsonPath(
+                'data.template.versao_origem',
+                '1.0'
+            )
+            ->assertJsonPath(
+                'data.template.personalizado',
+                true
+            )
+            ->assertJsonPath(
+                'data.modelo.versao_publicada',
+                '1.1'
+            )
+            ->assertJsonPath(
+                'data.nova_versao.versao',
+                '1.1'
+            )
+            ->assertJsonPath(
+                'data.update_disponivel',
+                true
+            )
+            ->assertJsonCount(
+                1,
+                'data.tipos_contrato_afetados'
+            );
+
+        $updateResponse =
+            $this
+                ->withHeaders(
+                    modeloDocumentoSaasHeaders()
+                )
+                ->postJson(
+                    "/api/modelos-recomendados/templates/{$templateId}/atualizar"
+                )
+                ->assertCreated()
+                ->assertJsonPath(
+                    'data.template.nome',
+                    'Contrato Operacional'
+                )
+                ->assertJsonPath(
+                    'data.template.modelo_documento_saas_versao',
+                    '1.1'
+                )
+                ->assertJsonPath(
+                    'data.template_anterior_id',
+                    $templateId
+                )
+                ->assertJsonPath(
+                    'data.versao_anterior',
+                    '1.0'
+                )
+                ->assertJsonPath(
+                    'data.versao_nova',
+                    '1.1'
+                )
+                ->assertJsonPath(
+                    'data.tipos_contrato_atualizados',
+                    1
+                );
+
+        $newTemplateId =
+            $updateResponse
+                ->json(
+                    'data.template.id'
+                );
+
+        expect(
+            $newTemplateId
+        )->not->toBe(
+            $templateId
+        );
+
+        $template->refresh();
+
+        expect(
+            (bool)
+            $template->ativo
+        )->toBeFalse();
+
+        expect(
+            $template
+                ->arquivado_em
+        )->not->toBeNull();
+
+        expect(
+            $template
+                ->arquivado_por
+        )->toBe(
+            $tenantUser->id
+        );
+
+        $newTemplate =
+            TemplateContrato::query()
+                ->findOrFail(
+                    $newTemplateId
+                );
+
+        expect(
+            (bool)
+            $newTemplate->ativo
+        )->toBeTrue();
+
+        expect(
+            $newTemplate
+                ->modelo_documento_saas_versao
+        )->toBe(
+            '1.1'
+        );
+
+        expect(
+            $newTemplate
+                ->modelo_documento_saas_versao_id
+        )->toBe(
+            $versaoDoisId
+        );
+
+        $tipo->refresh();
+
+        expect(
+            $tipo->template_id
+        )->toBe(
+            $newTemplateId
+        );
+
+        expect(
+            TemplateContrato::query()
+                ->where(
+                    'tenant_id',
+                    $tenant->id
+                )
+                ->count()
+        )->toBe(2);
+
+        $this
+            ->withHeaders(
+                modeloDocumentoSaasHeaders()
+            )
+            ->getJson(
+                "/api/modelos-recomendados/templates/{$newTemplateId}/comparar"
+            )
+            ->assertOk()
+            ->assertJsonPath(
+                'data.update_disponivel',
+                false
+            )
+            ->assertJsonPath(
+                'data.template.personalizado',
+                false
+            );
+
+        $this
+            ->withHeaders(
+                modeloDocumentoSaasHeaders()
+            )
+            ->postJson(
+                "/api/modelos-recomendados/templates/{$newTemplateId}/atualizar"
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'versao',
+            ]);
     }
 );

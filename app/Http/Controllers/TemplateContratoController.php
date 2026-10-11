@@ -45,6 +45,7 @@ class TemplateContratoController extends Controller
             ->with([
                 'perfil:id,nome',
                 'checklistProcessTemplate.items',
+                    'modeloDocumentoSaas:id,nome,slug,versao_publicada,status,ativo',
             ])
             ->latest('created_at');
 
@@ -80,6 +81,7 @@ class TemplateContratoController extends Controller
         $template->load([
             'perfil:id,nome',
             'checklistProcessTemplate.items',
+                    'modeloDocumentoSaas:id,nome,slug,versao_publicada,status,ativo',
         ]);
 
         return response()->json([
@@ -98,6 +100,7 @@ class TemplateContratoController extends Controller
                 ->load([
                     'perfil:id,nome',
                     'checklistProcessTemplate.items',
+                    'modeloDocumentoSaas:id,nome,slug,versao_publicada,status,ativo',
                 ])
         ]);
     }
@@ -116,6 +119,7 @@ class TemplateContratoController extends Controller
         $template->load([
             'perfil:id,nome',
             'checklistProcessTemplate.items',
+                    'modeloDocumentoSaas:id,nome,slug,versao_publicada,status,ativo',
         ]);
 
         return response()->json([

@@ -6,6 +6,7 @@ use App\Models\ModeloDocumentoSaas;
 use App\Models\ModeloDocumentoSaasCategoria;
 use App\Models\ModeloDocumentoSaasVersao;
 use App\Models\TemplateContrato;
+use App\Models\TipoContrato;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
@@ -1272,6 +1273,357 @@ class ModeloDocumentoSaasService
         );
     }
 
+    public function compareTenantTemplate(
+        string $tenantId,
+        string $templateId
+    ): array {
+        $template =
+            TemplateContrato::query()
+                ->where(
+                    'tenant_id',
+                    $tenantId
+                )
+                ->with([
+                    'modeloDocumentoSaas',
+                    'modeloDocumentoSaasVersaoOrigem',
+                ])
+                ->findOrFail(
+                    $templateId
+                );
+
+        if (
+            !$template
+                ->originadoDeModeloSaas()
+        ) {
+            throw ValidationException::withMessages([
+                'template' =>
+                    'Este modelo não foi originado no catálogo FrotaPro.',
+            ]);
+        }
+
+        $model =
+            $this->publishedModel(
+                $template
+                    ->modelo_documento_saas_id
+            );
+
+        $latestVersion =
+            $this->publishedVersion(
+                $model
+            );
+
+        $originVersion =
+            $template
+                ->modeloDocumentoSaasVersaoOrigem;
+
+        if (
+            !$originVersion &&
+            $template
+                ->modelo_documento_saas_versao
+        ) {
+            $originVersion =
+                ModeloDocumentoSaasVersao::query()
+                    ->where(
+                        'modelo_documento_saas_id',
+                        $model->id
+                    )
+                    ->where(
+                        'versao',
+                        $template
+                            ->modelo_documento_saas_versao
+                    )
+                    ->first();
+        }
+
+        $currentContent =
+            (string)(
+                $template
+                    ->conteudo_original ??
+                ''
+            );
+
+        $personalized =
+            $originVersion
+                ? hash(
+                    'sha256',
+                    $currentContent
+                ) !==
+                    $originVersion
+                        ->checksum
+                : null;
+
+        $contractTypes =
+            TipoContrato::query()
+                ->where(
+                    'tenant_id',
+                    $tenantId
+                )
+                ->where(
+                    'template_id',
+                    $template->id
+                )
+                ->orderBy(
+                    'nome'
+                )
+                ->get([
+                    'id',
+                    'nome',
+                    'codigo',
+                ]);
+
+        return [
+            'template' => [
+                'id' =>
+                    $template->id,
+
+                'nome' =>
+                    $template->nome,
+
+                'ativo' =>
+                    (bool)
+                    $template->ativo,
+
+                'versao_origem' =>
+                    $template
+                        ->modelo_documento_saas_versao,
+
+                'personalizado' =>
+                    $personalized,
+            ],
+
+            'modelo' => [
+                'id' =>
+                    $model->id,
+
+                'nome' =>
+                    $model->nome,
+
+                'versao_publicada' =>
+                    $model
+                        ->versao_publicada,
+            ],
+
+            'versao_atual' => [
+                'id' =>
+                    $originVersion
+                        ?->id,
+
+                'versao' =>
+                    $template
+                        ->modelo_documento_saas_versao,
+
+                'conteudo' =>
+                    $currentContent,
+            ],
+
+            'nova_versao' => [
+                'id' =>
+                    $latestVersion->id,
+
+                'versao' =>
+                    $latestVersion
+                        ->versao,
+
+                'conteudo' =>
+                    $latestVersion
+                        ->conteudo_parametrizado,
+
+                'checksum' =>
+                    $latestVersion
+                        ->checksum,
+
+                'publicado_em' =>
+                    $latestVersion
+                        ->publicado_em,
+            ],
+
+            'update_disponivel' =>
+                $template
+                    ->modelo_documento_saas_versao !==
+                $latestVersion
+                    ->versao,
+
+            'tipos_contrato_afetados' =>
+                $contractTypes
+                    ->toArray(),
+        ];
+    }
+
+    public function adoptLatestVersion(
+        string $tenantId,
+        string $templateId,
+        User $actor
+    ): array {
+        return DB::transaction(
+            function () use (
+                $tenantId,
+                $templateId,
+                $actor
+            ): array {
+                $template =
+                    TemplateContrato::query()
+                        ->where(
+                            'tenant_id',
+                            $tenantId
+                        )
+                        ->whereKey(
+                            $templateId
+                        )
+                        ->lockForUpdate()
+                        ->firstOrFail();
+
+                if (
+                    !$template
+                        ->originadoDeModeloSaas()
+                ) {
+                    throw ValidationException::withMessages([
+                        'template' =>
+                            'Este modelo não foi originado no catálogo FrotaPro.',
+                    ]);
+                }
+
+                if (
+                    !$template->ativo
+                ) {
+                    throw ValidationException::withMessages([
+                        'template' =>
+                            'Apenas modelos ativos podem ser atualizados.',
+                    ]);
+                }
+
+                $model =
+                    $this->publishedModel(
+                        $template
+                            ->modelo_documento_saas_id
+                    );
+
+                $latestVersion =
+                    $this->publishedVersion(
+                        $model
+                    );
+
+                if (
+                    $template
+                        ->modelo_documento_saas_versao ===
+                    $latestVersion
+                        ->versao
+                ) {
+                    throw ValidationException::withMessages([
+                        'versao' =>
+                            'Este modelo já utiliza a versão mais recente.',
+                    ]);
+                }
+
+                $previousVersion =
+                    $template
+                        ->modelo_documento_saas_versao;
+
+                $newTemplate =
+                    new TemplateContrato([
+                        'perfil_id' =>
+                            $template
+                                ->perfil_id,
+
+                        'checklist_process_template_id' =>
+                            $template
+                                ->checklist_process_template_id,
+
+                        'nome' =>
+                            $template
+                                ->nome,
+
+                        'tipo_arquivo' =>
+                            'txt',
+
+                        'conteudo_original' =>
+                            $latestVersion
+                                ->conteudo_parametrizado,
+
+                        'campos_detectados' =>
+                            $latestVersion
+                                ->campos_detectados,
+
+                        'campos_mapeados' =>
+                            $latestVersion
+                                ->campos_mapeados,
+                    ]);
+
+                $newTemplate->tenant_id =
+                    $tenantId;
+
+                $newTemplate
+                    ->modelo_documento_saas_id =
+                    $model->id;
+
+                $newTemplate
+                    ->modelo_documento_saas_versao_id =
+                    $latestVersion->id;
+
+                $newTemplate
+                    ->modelo_documento_saas_versao =
+                    $latestVersion->versao;
+
+                $newTemplate->save();
+
+                $updatedContractTypes =
+                    TipoContrato::query()
+                        ->where(
+                            'tenant_id',
+                            $tenantId
+                        )
+                        ->where(
+                            'template_id',
+                            $template->id
+                        )
+                        ->update([
+                            'template_id' =>
+                                $newTemplate->id,
+
+                            'updated_by' =>
+                                $actor->id,
+
+                            'updated_at' =>
+                                now(),
+                        ]);
+
+                $template->ativo =
+                    false;
+
+                $template->arquivado_em =
+                    now();
+
+                $template->arquivado_por =
+                    $actor->id;
+
+                $template->save();
+
+                return [
+                    'template' =>
+                        $newTemplate
+                            ->load([
+                                'perfil:id,nome',
+
+                                'modeloDocumentoSaas:id,nome,slug,versao_publicada,status,ativo',
+
+                                'modeloDocumentoSaasVersaoOrigem:id,modelo_documento_saas_id,versao,checksum,publicado_em',
+                            ]),
+
+                    'template_anterior_id' =>
+                        $template->id,
+
+                    'versao_anterior' =>
+                        $previousVersion,
+
+                    'versao_nova' =>
+                        $latestVersion
+                            ->versao,
+
+                    'tipos_contrato_atualizados' =>
+                        $updatedContractTypes,
+                ];
+            }
+        );
+    }
     private function analyze(
         string $content
     ): array {

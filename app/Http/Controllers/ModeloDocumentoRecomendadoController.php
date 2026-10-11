@@ -52,6 +52,40 @@ class ModeloDocumentoRecomendadoController extends Controller
         ]);
     }
 
+    public function compareTemplate(
+        string $templateId
+    ): JsonResponse {
+        return response()->json([
+            'data' =>
+                $this->service
+                    ->compareTenantTemplate(
+                        $this
+                            ->tenantContext
+                            ->requireId(),
+                        $templateId
+                    ),
+        ]);
+    }
+
+    public function updateTemplate(
+        Request $request,
+        string $templateId
+    ): JsonResponse {
+        return response()->json([
+            'message' =>
+                'Nova versão adotada com sucesso.',
+
+            'data' =>
+                $this->service
+                    ->adoptLatestVersion(
+                        $this
+                            ->tenantContext
+                            ->requireId(),
+                        $templateId,
+                        $request->user()
+                    ),
+        ], 201);
+    }
     public function useModel(
         Request $request,
         string $id
