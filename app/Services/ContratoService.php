@@ -29,7 +29,8 @@ class ContratoService
         private ChecklistProcessService $checklistProcessService,
         private RemoteSignatureMailService $remoteSignatureMailService,
         private ContratoTipoResolverService $tipoResolver,
-        private ContratoRelacionadoService $contratoRelacionadoService
+        private ContratoRelacionadoService $contratoRelacionadoService,
+        private DocumentoRegistryService $documentoRegistryService
     ) {}
 
     public const MAX_MOTORISTAS_ATIVOS_POR_VEICULO = 3;
@@ -852,6 +853,12 @@ class ContratoService
 
                     $contrato->save();
 
+                    $this
+                        ->documentoRegistryService
+                        ->sync(
+                            $contrato
+                        );
+
                     $actor =
                         $assinatura
                             ->signatario_user_id
@@ -1036,6 +1043,18 @@ class ContratoService
 
             $contrato->save();
 
+            if (
+                $contrato
+                    ->documento()
+                    ->exists()
+            ) {
+                $this
+                    ->documentoRegistryService
+                    ->sync(
+                        $contrato
+                    );
+            }
+
             $this->guardarVersao(
                 $contrato,
                 $actor,
@@ -1100,6 +1119,12 @@ class ContratoService
             );
 
             $contrato->save();
+
+            $this
+                ->documentoRegistryService
+                ->sync(
+                    $contrato
+                );
 
             $this
                 ->contratoRelacionadoService

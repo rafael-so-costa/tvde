@@ -40,6 +40,7 @@ import ContratoTipoPage from "./pages/ContratoTipoPage";
 import ContratosConfiguracaoPage from "./pages/ContratosConfiguracaoPage";
 import ContratosPage from "./pages/ContratosPage";
 import DashboardPage from "./pages/DashboardPage";
+import DocumentosPage from "./pages/DocumentosPage";
 import EmpresasPage from "./pages/EmpresasPage";
 import ExpedientePage from "./pages/ExpedientePage";
 import ExpedientePublicPage from "./pages/ExpedientePublicPage";
@@ -397,6 +398,11 @@ export default function App() {
                             <Route
                                 path="contratos"
                                 element={<ContratosPage />}
+                            />
+
+                            <Route
+                                path="documentos"
+                                element={<DocumentosPage />}
                             />
 
                             <Route

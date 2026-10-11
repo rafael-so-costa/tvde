@@ -7,6 +7,7 @@ use App\Models\Empresa;
 use App\Models\LogAuditoriaContrato;
 use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 use DateTimeInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -21,6 +22,7 @@ class ContratoPdfService
         private ChecklistProcessService $checklistProcessService,
         private DocumentoRegistryService $documentoRegistryService
     ) {}
+
     public function generate(
         string $contratoId,
         string $tenantId,
@@ -42,7 +44,7 @@ class ContratoPdfService
             ])
             ->findOrFail($contratoId);
 
-        if (!$contrato->template) {
+        if (! $contrato->template) {
             throw ValidationException::withMessages([
                 'contrato' => 'O contrato não possui template associado.',
             ]);
@@ -71,7 +73,7 @@ class ContratoPdfService
 
         $values = $this->values($contrato, $empresa);
         $documentHtml = $this->renderContent(
-            (string)$contrato->template->conteudo_original,
+            (string) $contrato->template->conteudo_original,
             $values
         );
 
@@ -92,7 +94,7 @@ class ContratoPdfService
 
         if (
             $binary === '' ||
-            !str_starts_with($binary, '%PDF-')
+            ! str_starts_with($binary, '%PDF-')
         ) {
             throw new RuntimeException(
                 'Não foi possível gerar um PDF válido.'
@@ -100,14 +102,14 @@ class ContratoPdfService
         }
 
         $path =
-            'contract-pdfs/' .
-            $tenantId . '/' .
-            $contrato->id . '/' .
-            'v' . $contrato->versao_atual . '-' .
-            Str::uuid()->toString() .
+            'contract-pdfs/'.
+            $tenantId.'/'.
+            $contrato->id.'/'.
+            'v'.$contrato->versao_atual.'-'.
+            Str::uuid()->toString().
             '.pdf';
 
-        if (!Storage::disk('local')->put($path, $binary)) {
+        if (! Storage::disk('local')->put($path, $binary)) {
             throw new RuntimeException(
                 'Não foi possível guardar o PDF do contrato.'
             );
@@ -132,8 +134,8 @@ class ContratoPdfService
                     ->firstOrFail();
 
                 if (
-                    (int)$locked->versao_atual !==
-                    (int)$contrato->versao_atual
+                    (int) $locked->versao_atual !==
+                    (int) $contrato->versao_atual
                 ) {
                     throw ValidationException::withMessages([
                         'contrato' => 'O contrato foi alterado durante a geração. Gere o PDF novamente.',
@@ -143,6 +145,12 @@ class ContratoPdfService
                 $locked->pdf_gerado_url = $path;
                 $locked->hash_documento = $hash;
                 $locked->save();
+
+                $this
+                    ->documentoRegistryService
+                    ->sync(
+                        $locked
+                    );
 
                 $this->checklistProcessService
                     ->completeDocumentGeneration(
@@ -205,8 +213,7 @@ class ContratoPdfService
         $values = [];
 
         foreach (
-            $contrato->campos_preenchidos ?? []
-            as $key => $value
+            $contrato->campos_preenchidos ?? [] as $key => $value
         ) {
             if (
                 is_scalar($value) ||
@@ -214,9 +221,9 @@ class ContratoPdfService
             ) {
                 $this->put(
                     $values,
-                    (string)$key,
+                    (string) $key,
                     $this->formatValue(
-                        (string)$key,
+                        (string) $key,
                         $value
                     )
                 );
@@ -412,7 +419,7 @@ class ContratoPdfService
                 $values,
                 'MODELO_VEICULO',
                 trim(
-                    $contrato->veiculo->marca . ' ' .
+                    $contrato->veiculo->marca.' '.
                         $contrato->veiculo->modelo
                 )
             );
@@ -460,17 +467,17 @@ class ContratoPdfService
             }
 
             $image = $this->signatureImage(
-                (string)$assinatura->assinatura_url
+                (string) $assinatura->assinatura_url
             );
 
-            if (!$image) {
+            if (! $image) {
                 continue;
             }
 
             $this->put(
                 $values,
-                (string)$assinatura->placeholder,
-                '<img src="' . e($image) . '" class="signature" alt="Assinatura">',
+                (string) $assinatura->placeholder,
+                '<img src="'.e($image).'" class="signature" alt="Assinatura">',
                 true
             );
         }
@@ -501,13 +508,13 @@ class ContratoPdfService
 
             $this->put(
                 $values,
-                $prefix . '_' . $field,
+                $prefix.'_'.$field,
                 $formatted
             );
 
             $this->put(
                 $values,
-                $field . '_' . $prefix,
+                $field.'_'.$prefix,
                 $formatted
             );
         }
@@ -524,7 +531,7 @@ class ContratoPdfService
         }
 
         $values[$this->normalize($key)] = [
-            'value' => (string)$value,
+            'value' => (string) $value,
             'html' => $html,
         ];
     }
@@ -534,20 +541,18 @@ class ContratoPdfService
         Contrato $contrato
     ): array {
         $mappings =
-            (array)(
+            (array) (
                 $contrato
-                ->template
-                ?->campos_mapeados
+                    ->template
+                    ?->campos_mapeados
                 ?? []
             );
 
         foreach (
-            $mappings
-            as
-            $placeholder => $mapping
+            $mappings as $placeholder => $mapping
         ) {
             if (
-                !is_array(
+                ! is_array(
                     $mapping
                 )
             ) {
@@ -568,7 +573,7 @@ class ContratoPdfService
                 ?? null;
 
             if (
-                !is_string(
+                ! is_string(
                     $source
                 ) ||
                 trim(
@@ -589,13 +594,13 @@ class ContratoPdfService
 
             $targetKey =
                 $this->normalize(
-                    (string)$placeholder
+                    (string) $placeholder
                 );
 
             if (
                 $sourceKey === '' ||
                 $targetKey === '' ||
-                !array_key_exists(
+                ! array_key_exists(
                     $sourceKey,
                     $values
                 )
@@ -622,17 +627,15 @@ class ContratoPdfService
                 'endereco_complemento',
                 'endereco_cep',
                 'endereco_cidade',
-            ]
-            as
-            $field
+            ] as $field
         ) {
             $value =
                 trim(
-                    (string)(
+                    (string) (
                         $model
-                        ->getAttribute(
-                            $field
-                        )
+                            ->getAttribute(
+                                $field
+                            )
                         ?? ''
                     )
                 );
@@ -654,11 +657,11 @@ class ContratoPdfService
         }
 
         return trim(
-            (string)(
+            (string) (
                 $model
-                ->getAttribute(
-                    'endereco'
-                )
+                    ->getAttribute(
+                        'endereco'
+                    )
                 ?? ''
             )
         );
@@ -668,23 +671,23 @@ class ContratoPdfService
         Contrato $contrato
     ): string {
         if (
-            !$contrato->data_inicio ||
-            !$contrato->data_fim
+            ! $contrato->data_inicio ||
+            ! $contrato->data_fim
         ) {
             return '';
         }
 
         $inicio =
             $contrato
-            ->data_inicio
-            ->copy()
-            ->startOfDay();
+                ->data_inicio
+                ->copy()
+                ->startOfDay();
 
         $fim =
             $contrato
-            ->data_fim
-            ->copy()
-            ->startOfDay();
+                ->data_fim
+                ->copy()
+                ->startOfDay();
 
         if (
             $fim->lessThan(
@@ -715,7 +718,7 @@ class ContratoPdfService
             $months > 0
         ) {
             $parts[] =
-                $months .
+                $months.
                 (
                     $months === 1
                     ? ' mês'
@@ -727,7 +730,7 @@ class ContratoPdfService
             $days > 0
         ) {
             $parts[] =
-                $days .
+                $days.
                 (
                     $days === 1
                     ? ' dia'
@@ -772,12 +775,12 @@ class ContratoPdfService
 
                 if (
                     $key === '' ||
-                    !array_key_exists($key, $values)
+                    ! array_key_exists($key, $values)
                 ) {
                     return $match[0];
                 }
 
-                $marker = '%%FROTAPRO_PDF_' . $index++ . '%%';
+                $marker = '%%FROTAPRO_PDF_'.$index++.'%%';
                 $item = $values[$key];
 
                 $markers[$marker] = $item['html']
@@ -823,7 +826,7 @@ class ContratoPdfService
                 : null;
         }
 
-        if (!Storage::disk('local')->exists($value)) {
+        if (! Storage::disk('local')->exists($value)) {
             return null;
         }
 
@@ -833,7 +836,7 @@ class ContratoPdfService
             return null;
         }
 
-        return 'data:image/png;base64,' .
+        return 'data:image/png;base64,'.
             base64_encode($binary);
     }
 
@@ -874,10 +877,10 @@ class ContratoPdfService
             str_ends_with($normalized, '_VALID_UNTIL')
         ) {
             try {
-                return \Carbon\Carbon::parse($value)
+                return Carbon::parse($value)
                     ->format('d/m/Y');
             } catch (Throwable) {
-                return (string)$value;
+                return (string) $value;
             }
         }
 
@@ -885,7 +888,7 @@ class ContratoPdfService
             return $value ? 'Sim' : 'Não';
         }
 
-        return (string)$value;
+        return (string) $value;
     }
 
     private function money(mixed $value): string
@@ -895,10 +898,10 @@ class ContratoPdfService
         }
 
         return number_format(
-            (float)$value,
+            (float) $value,
             2,
             ',',
             '.'
-        ) . ' €';
+        ).' €';
     }
 }

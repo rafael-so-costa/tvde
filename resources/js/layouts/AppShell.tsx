@@ -147,6 +147,12 @@ const navigation = [
         permission: "contratos",
     },
     {
+        to: "/documentos",
+        label: "Documentos",
+        icon: FileText,
+        permission: "documentos",
+    },
+    {
         to: "/checklists",
         label: "Checklists",
         icon: ClipboardCheck,

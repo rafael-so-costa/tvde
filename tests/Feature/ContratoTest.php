@@ -1,10 +1,12 @@
 <?php
 
+use App\Mail\RemoteSignatureRequestMail;
 use App\Models\AssinaturaDigital;
 use App\Models\ChecklistProcessTemplate;
 use App\Models\ChecklistProcessTemplateItem;
 use App\Models\Contrato;
 use App\Models\ContratoAtivoVeiculo;
+use App\Models\Documento;
 use App\Models\LogAuditoriaContrato;
 use App\Models\Motorista;
 use App\Models\Permission;
@@ -18,13 +20,12 @@ use App\Models\User;
 use App\Models\UserRole;
 use App\Models\Veiculo;
 use App\Models\VersaoContrato;
-use App\Mail\RemoteSignatureRequestMail;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Mail;
+use App\Services\DocumentoRegistryService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use App\Models\Documento;
 use Smalot\PdfParser\Parser;
 
 uses(RefreshDatabase::class);
@@ -94,8 +95,7 @@ function contratoUsuario(
     RolePermission::updateOrCreate(
         [
             'role_id' => $role->id,
-            'permission_id' =>
-            $permission->id,
+            'permission_id' => $permission->id,
         ],
         [
             'nivel' => $nivel,
@@ -127,20 +127,16 @@ function contratoUsuarioComRole(
 
     $nomes = [
         'motorista' => 'Motorista',
-        'proprietario' =>
-        'Proprietário',
-        'funcionario' =>
-        'Funcionário',
+        'proprietario' => 'Proprietário',
+        'funcionario' => 'Funcionário',
     ];
 
     $role = Role::firstOrCreate(
         [
-            'codigo' =>
-            $roleCodigo,
+            'codigo' => $roleCodigo,
         ],
         [
-            'nome' =>
-            $nomes[$roleCodigo]
+            'nome' => $nomes[$roleCodigo]
                 ?? ucfirst(
                     $roleCodigo
                 ),
@@ -149,12 +145,9 @@ function contratoUsuarioComRole(
     );
 
     UserRole::create([
-        'user_id' =>
-        $user->id,
-        'role_id' =>
-        $role->id,
-        'tenant_id' =>
-        $tenant->id,
+        'user_id' => $user->id,
+        'role_id' => $role->id,
+        'tenant_id' => $tenant->id,
     ]);
 
     return $user;
@@ -194,10 +187,8 @@ function contratoMotorista(
     string $sufixo
 ): Motorista {
     $motorista = new Motorista([
-        'nome_completo' =>
-        "Motorista {$sufixo}",
-        'email' =>
-        strtolower($sufixo) .
+        'nome_completo' => "Motorista {$sufixo}",
+        'email' => strtolower($sufixo).
             '@motorista.test',
     ]);
 
@@ -213,10 +204,8 @@ function contratoProprietario(
 ): Proprietario {
     $proprietario = new Proprietario([
         'tipo' => 'pessoa_fisica',
-        'nome_completo' =>
-        "Proprietário {$sufixo}",
-        'email' =>
-        strtolower($sufixo) .
+        'nome_completo' => "Proprietário {$sufixo}",
+        'email' => strtolower($sufixo).
             '@proprietario.test',
     ]);
 
@@ -239,8 +228,7 @@ function contratoVeiculo(
         'marca' => 'Tesla',
         'modelo' => 'Model 3',
         'valor_aluguel' => $valorAluguel,
-        'proprietario_id' =>
-        $proprietario?->id,
+        'proprietario_id' => $proprietario?->id,
     ]);
 
     $veiculo->tenant_id = $tenant->id;
@@ -262,17 +250,14 @@ function contratoPayloadAssinado(
         'data_inicio' => '2026-09-20',
 
         'campos_preenchidos' => [
-            'NOME_MOTORISTA' =>
-            $motorista->nome_completo,
+            'NOME_MOTORISTA' => $motorista->nome_completo,
         ],
 
         'assinaturas' => [
             [
-                'placeholder' =>
-                'ASSINATURA_MOTORISTA',
+                'placeholder' => 'ASSINATURA_MOTORISTA',
                 'modo' => 'presencial',
-                'assinatura_url' =>
-                'data:image/png;base64,TESTE',
+                'assinatura_url' => 'data:image/png;base64,TESTE',
             ],
         ],
     ];
@@ -309,8 +294,7 @@ test('cliente não pode controlar campos protegidos do contrato', function () {
             'status' => 'assinado',
             'versao_atual' => 99,
             'valor_semanal' => 1,
-            'data_assinatura' =>
-            now()->toISOString(),
+            'data_assinatura' => now()->toISOString(),
             'bloqueado' => true,
             'renovacao_count' => 10,
             'hash_documento' => 'fraude',
@@ -365,12 +349,10 @@ test('template com campos de motorista sem assinatura cria rascunho', function (
         ->postJson('/api/contratos', [
             'template_id' => $template->id,
             'tipo' => 'aluguer',
-            'motorista_id' =>
-            $motorista->id,
+            'motorista_id' => $motorista->id,
             'veiculo_id' => $veiculo->id,
             'campos_preenchidos' => [
-                'NOME_MOTORISTA' =>
-                $motorista
+                'NOME_MOTORISTA' => $motorista
                     ->nome_completo,
             ],
         ])
@@ -445,8 +427,7 @@ test('assinatura obrigatória omitida bloqueia criação integralmente', functio
         ->postJson('/api/contratos', [
             'template_id' => $template->id,
             'tipo' => 'aluguer',
-            'motorista_id' =>
-            $motorista->id,
+            'motorista_id' => $motorista->id,
         ])
         ->assertUnprocessable()
         ->assertJsonValidationErrors(
@@ -495,15 +476,12 @@ test('assinatura remota cria contrato enviado e solicitação pendente', functio
         ->postJson('/api/contratos', [
             'template_id' => $template->id,
             'tipo' => 'aluguer',
-            'motorista_id' =>
-            $motorista->id,
-            'veiculo_id' =>
-            $veiculo->id,
+            'motorista_id' => $motorista->id,
+            'veiculo_id' => $veiculo->id,
 
             'assinaturas' => [
                 [
-                    'placeholder' =>
-                    'ASSINATURA_MOTORISTA',
+                    'placeholder' => 'ASSINATURA_MOTORISTA',
                     'modo' => 'remota',
                 ],
             ],
@@ -518,11 +496,11 @@ test('assinatura remota cria contrato enviado e solicitação pendente', functio
 
     $assinatura =
         AssinaturaDigital::query()
-        ->where(
-            'contrato_id',
-            $id
-        )
-        ->firstOrFail();
+            ->where(
+                'contrato_id',
+                $id
+            )
+            ->firstOrFail();
 
     expect($assinatura->status)
         ->toBe('pendente');
@@ -604,8 +582,7 @@ test('assinatura presencial cria contrato assinado e associação ativa', functi
         [
             'contrato_id' => $id,
             'tenant_id' => $tenant->id,
-            'motorista_id' =>
-            $motorista->id,
+            'motorista_id' => $motorista->id,
             'veiculo_id' => $veiculo->id,
             'ativo' => 1,
         ]
@@ -617,8 +594,7 @@ test('assinatura presencial cria contrato assinado e associação ativa', functi
             'contrato_id' => $id,
             'status' => 'assinado',
             'verificado' => 1,
-            'placeholder' =>
-            'ASSINATURA_MOTORISTA',
+            'placeholder' => 'ASSINATURA_MOTORISTA',
         ]
     );
 });
@@ -724,11 +700,9 @@ test('edição de rascunho cria nova versão e resincroniza valor semanal', func
         ->patchJson(
             "/api/contratos/{$id}",
             [
-                'veiculo_id' =>
-                $veiculoB->id,
+                'veiculo_id' => $veiculoB->id,
                 'campos_preenchidos' => [
-                    'CAMPO' =>
-                    'Versão 2',
+                    'CAMPO' => 'Versão 2',
                 ],
             ]
         )
@@ -857,8 +831,7 @@ test('veículo aceita no máximo três motoristas ativos e quarta criação faz 
     contratoLogin($this, $user);
 
     foreach (
-        ['Um', 'Dois', 'Tres']
-        as $indice => $nome
+        ['Um', 'Dois', 'Tres'] as $indice => $nome
     ) {
         $motorista = contratoMotorista(
             $tenant,
@@ -1004,10 +977,8 @@ test('motorista é removido da associação ativa anterior ao assinar novo veíc
     $this->assertDatabaseHas(
         'contratos_ativos_veiculos',
         [
-            'motorista_id' =>
-            $motorista->id,
-            'veiculo_id' =>
-            $veiculoA->id,
+            'motorista_id' => $motorista->id,
+            'veiculo_id' => $veiculoA->id,
             'ativo' => 0,
         ]
     );
@@ -1015,10 +986,8 @@ test('motorista é removido da associação ativa anterior ao assinar novo veíc
     $this->assertDatabaseHas(
         'contratos_ativos_veiculos',
         [
-            'motorista_id' =>
-            $motorista->id,
-            'veiculo_id' =>
-            $veiculoB->id,
+            'motorista_id' => $motorista->id,
+            'veiculo_id' => $veiculoB->id,
             'ativo' => 1,
         ]
     );
@@ -1068,14 +1037,32 @@ test('encerrar contrato assinado bloqueia contrato e termina associação', func
 
     $id = $create->json('data.id');
 
+    $contratoAntes =
+        Contrato::findOrFail(
+            $id
+        );
+
+    $documentoAntes =
+        app(
+            DocumentoRegistryService::class
+        )->sync(
+            $contratoAntes
+        );
+
+    expect(
+        $documentoAntes
+            ?->status
+    )->toBe(
+        'assinado'
+    );
+
     $this->withHeaders(
         contratoHeaders()
     )
         ->patchJson(
             "/api/contratos/{$id}/encerrar",
             [
-                'data_fim' =>
-                '2026-10-31',
+                'data_fim' => '2026-10-31',
             ]
         )
         ->assertOk()
@@ -1116,6 +1103,17 @@ test('encerrar contrato assinado bloqueia contrato e termina associação', func
         [
             'contrato_id' => $id,
             'acao' => 'encerramento',
+        ]
+    );
+
+    $this->assertDatabaseHas(
+        'documentos',
+        [
+            'entidade_tipo' => 'contrato',
+
+            'entidade_id' => $id,
+
+            'status' => 'encerrado',
         ]
     );
 });
@@ -1359,8 +1357,7 @@ test('patch não aceita data fim anterior à data início já existente', functi
             '/api/contratos',
             [
                 'tipo' => 'aluguer',
-                'data_inicio' =>
-                '2026-10-10',
+                'data_inicio' => '2026-10-10',
             ]
         )
         ->assertCreated();
@@ -1371,19 +1368,19 @@ test('patch não aceita data fim anterior à data início já existente', functi
 
     $versoesAntes =
         VersaoContrato::query()
-        ->where(
-            'contrato_id',
-            $id
-        )
-        ->count();
+            ->where(
+                'contrato_id',
+                $id
+            )
+            ->count();
 
     $logsAntes =
         LogAuditoriaContrato::query()
-        ->where(
-            'contrato_id',
-            $id
-        )
-        ->count();
+            ->where(
+                'contrato_id',
+                $id
+            )
+            ->count();
 
     $this->withHeaders(
         contratoHeaders()
@@ -1391,8 +1388,7 @@ test('patch não aceita data fim anterior à data início já existente', functi
         ->patchJson(
             "/api/contratos/{$id}",
             [
-                'data_fim' =>
-                '2026-10-09',
+                'data_fim' => '2026-10-09',
             ]
         )
         ->assertUnprocessable()
@@ -1464,10 +1460,8 @@ test('patch não aceita data início posterior à data fim já existente', funct
             '/api/contratos',
             [
                 'tipo' => 'aluguer',
-                'data_inicio' =>
-                '2026-10-01',
-                'data_fim' =>
-                '2026-10-10',
+                'data_inicio' => '2026-10-01',
+                'data_fim' => '2026-10-10',
             ]
         )
         ->assertCreated();
@@ -1478,11 +1472,11 @@ test('patch não aceita data início posterior à data fim já existente', funct
 
     $versoesAntes =
         VersaoContrato::query()
-        ->where(
-            'contrato_id',
-            $id
-        )
-        ->count();
+            ->where(
+                'contrato_id',
+                $id
+            )
+            ->count();
 
     $this->withHeaders(
         contratoHeaders()
@@ -1490,8 +1484,7 @@ test('patch não aceita data início posterior à data fim já existente', funct
         ->patchJson(
             "/api/contratos/{$id}",
             [
-                'data_inicio' =>
-                '2026-10-11',
+                'data_inicio' => '2026-10-11',
             ]
         )
         ->assertUnprocessable()
@@ -1593,8 +1586,7 @@ test('encerramento não aceita data fim anterior à data início', function () {
         ->patchJson(
             "/api/contratos/{$id}/encerrar",
             [
-                'data_fim' =>
-                '2026-10-09',
+                'data_fim' => '2026-10-09',
             ]
         )
         ->assertUnprocessable()
@@ -1636,7 +1628,6 @@ test('encerramento não aceita data fim anterior à data início', function () {
     );
 });
 
-
 test('motorista pode listar e consultar apenas os próprios contratos', function () {
     $tenant = contratoTenant(
         'Tenant Contratos Motorista',
@@ -1669,8 +1660,7 @@ test('motorista pode listar e consultar apenas os próprios contratos', function
 
     $proprio = new Contrato([
         'tipo' => 'aluguer',
-        'motorista_id' =>
-        $motorista->id,
+        'motorista_id' => $motorista->id,
     ]);
 
     $proprio->tenant_id =
@@ -1680,8 +1670,7 @@ test('motorista pode listar e consultar apenas os próprios contratos', function
 
     $alheio = new Contrato([
         'tipo' => 'aluguer',
-        'motorista_id' =>
-        $outroMotorista->id,
+        'motorista_id' => $outroMotorista->id,
     ]);
 
     $alheio->tenant_id =
@@ -1738,8 +1727,7 @@ test('motorista pode listar e consultar apenas os próprios contratos', function
         ->postJson(
             '/api/contratos',
             [
-                'tipo' =>
-                'aluguer',
+                'tipo' => 'aluguer',
             ]
         )
         ->assertForbidden();
@@ -1796,8 +1784,7 @@ test('proprietário pode listar e consultar apenas os próprios contratos', func
 
     $proprio = new Contrato([
         'tipo' => 'aluguer',
-        'proprietario_id' =>
-        $proprietario->id,
+        'proprietario_id' => $proprietario->id,
     ]);
 
     $proprio->tenant_id =
@@ -1807,8 +1794,7 @@ test('proprietário pode listar e consultar apenas os próprios contratos', func
 
     $alheio = new Contrato([
         'tipo' => 'aluguer',
-        'proprietario_id' =>
-        $outroProprietario->id,
+        'proprietario_id' => $outroProprietario->id,
     ]);
 
     $alheio->tenant_id =
@@ -1865,8 +1851,7 @@ test('proprietário pode listar e consultar apenas os próprios contratos', func
         ->postJson(
             '/api/contratos',
             [
-                'tipo' =>
-                'aluguer',
+                'tipo' => 'aluguer',
             ]
         )
         ->assertForbidden();
@@ -1877,8 +1862,7 @@ test('proprietário pode listar e consultar apenas os próprios contratos', func
         ->patchJson(
             "/api/contratos/{$proprio->id}",
             [
-                'valor_total' =>
-                100,
+                'valor_total' => 100,
             ]
         )
         ->assertForbidden();
@@ -1913,8 +1897,7 @@ test('motorista sem registo vinculado recebe lista vazia', function () {
 
     $contrato = new Contrato([
         'tipo' => 'aluguer',
-        'motorista_id' =>
-        $motorista->id,
+        'motorista_id' => $motorista->id,
     ]);
 
     $contrato->tenant_id =
@@ -1988,7 +1971,6 @@ test('funcionário sem permissão de contratos continua sem acesso de leitura', 
         ->assertForbidden();
 });
 
-
 test('assinatura remota pendente pode ser reenviada com novo otp e token', function () {
     Mail::fake();
 
@@ -2031,43 +2013,36 @@ test('assinatura remota pendente pode ser reenviada com novo otp e token', funct
 
     $response =
         $this
-        ->withHeaders(
-            contratoHeaders()
-        )
-        ->postJson(
-            '/api/contratos',
-            [
-                'template_id' =>
-                $template->id,
+            ->withHeaders(
+                contratoHeaders()
+            )
+            ->postJson(
+                '/api/contratos',
+                [
+                    'template_id' => $template->id,
 
-                'tipo' =>
-                'aluguer',
+                    'tipo' => 'aluguer',
 
-                'motorista_id' =>
-                $motorista->id,
+                    'motorista_id' => $motorista->id,
 
-                'veiculo_id' =>
-                $veiculo->id,
+                    'veiculo_id' => $veiculo->id,
 
-                'data_inicio' =>
-                '2026-10-01',
+                    'data_inicio' => '2026-10-01',
 
-                'assinaturas' => [
-                    [
-                        'placeholder' =>
-                        'ASSINATURA_MOTORISTA',
+                    'assinaturas' => [
+                        [
+                            'placeholder' => 'ASSINATURA_MOTORISTA',
 
-                        'modo' =>
-                        'remota',
+                            'modo' => 'remota',
+                        ],
                     ],
-                ],
-            ]
-        )
-        ->assertCreated()
-        ->assertJsonPath(
-            'data.status',
-            'enviado'
-        );
+                ]
+            )
+            ->assertCreated()
+            ->assertJsonPath(
+                'data.status',
+                'enviado'
+            );
 
     $contratoId =
         $response->json(
@@ -2076,19 +2051,19 @@ test('assinatura remota pendente pode ser reenviada com novo otp e token', funct
 
     $assinatura =
         AssinaturaDigital::query()
-        ->where(
-            'contrato_id',
-            $contratoId
-        )
-        ->firstOrFail();
+            ->where(
+                'contrato_id',
+                $contratoId
+            )
+            ->firstOrFail();
 
     $tokenAnterior =
         $assinatura
-        ->token_verificacao;
+            ->token_verificacao;
 
     $otpAnterior =
         $assinatura
-        ->codigo_otp;
+            ->codigo_otp;
 
     $this
         ->withHeaders(
@@ -2149,30 +2124,26 @@ test('assinatura remota pendente pode ser reenviada com novo otp e token', funct
                 ) &&
                 $mail->otp ===
                 $assinatura
-                ->codigo_otp &&
-                str_contains(
-                    $mail->signatureUrl,
-                    (string)
-                    $assinatura
-                        ->token_verificacao
-                );
+                    ->codigo_otp &&
+                    str_contains(
+                        $mail->signatureUrl,
+                        (string)
+                        $assinatura
+                            ->token_verificacao
+                    );
         }
     );
 
     $this->assertDatabaseHas(
         'logs_auditoria_contratos',
         [
-            'contrato_id' =>
-            $contratoId,
+            'contrato_id' => $contratoId,
 
-            'tenant_id' =>
-            $tenant->id,
+            'tenant_id' => $tenant->id,
 
-            'user_id' =>
-            $user->id,
+            'user_id' => $user->id,
 
-            'acao' =>
-            'reenvio_assinatura_remota',
+            'acao' => 'reenvio_assinatura_remota',
         ]
     );
 });
@@ -2217,8 +2188,7 @@ test('pdf do contrato é gerado em storage privado com hash e auditoria', functi
             'veiculo_id' => $veiculo->id,
             'data_inicio' => '2026-09-20',
             'campos_preenchidos' => [
-                'NOME_MOTORISTA' =>
-                $motorista->nome_completo,
+                'NOME_MOTORISTA' => $motorista->nome_completo,
             ],
         ])
         ->assertCreated();
@@ -2269,7 +2239,7 @@ test('pdf do contrato é gerado em storage privado com hash e auditoria', functi
         '/^G[0-9]{6}$/'
     );
 
-    $text = (new Parser())
+    $text = (new Parser)
         ->parseContent(
             $binary
         )
@@ -2339,8 +2309,7 @@ test('pdf gerado pode ser visualizado e descarregado', function () {
             'motorista_id' => $motorista->id,
             'veiculo_id' => $veiculo->id,
             'campos_preenchidos' => [
-                'NOME_MOTORISTA' =>
-                $motorista->nome_completo,
+                'NOME_MOTORISTA' => $motorista->nome_completo,
             ],
         ])
         ->assertCreated();
@@ -2415,114 +2384,98 @@ test('utilizador apenas visualizar não pode gerar pdf', function () {
 
 test(
     'encerramento aguarda etapas obrigatórias anteriores à recolha',
-    function(){
-        $tenant=
+    function () {
+        $tenant =
             contratoTenant(
                 'Tenant Encerramento Workflow',
                 'tenant-encerramento-workflow'
             );
 
-        $user=
+        $user =
             contratoUsuario(
                 $tenant,
                 'encerramento.workflow@frotapro.test'
             );
 
-        $process=
+        $process =
             new ChecklistProcessTemplate([
-                'codigo'=>
-                    'encerramento_workflow',
+                'codigo' => 'encerramento_workflow',
 
-                'nome'=>
-                    'Workflow de encerramento',
+                'nome' => 'Workflow de encerramento',
 
-                'ativo'=>
-                    true,
+                'ativo' => true,
 
-                'versao'=>
-                    1,
+                'versao' => 1,
             ]);
 
-        $process->tenant_id=
+        $process->tenant_id =
             $tenant->id;
 
         $process->save();
 
-        $entrega=
+        $entrega =
             new ChecklistProcessTemplateItem([
-                'codigo'=>
-                    'entrega',
+                'codigo' => 'entrega',
 
-                'ordem'=>
-                    1,
+                'ordem' => 1,
 
-                'titulo'=>
-                    'Checklist de entrega',
+                'titulo' => 'Checklist de entrega',
 
-                'tipo'=>
-                    'checklist_veiculo',
+                'tipo' => 'checklist_veiculo',
 
-                'obrigatorio'=>
-                    true,
+                'obrigatorio' => true,
 
-                'configuracao'=>[
-                    'checklist_tipo'=>
-                        'entrega',
+                'configuracao' => [
+                    'checklist_tipo' => 'entrega',
                 ],
             ]);
 
-        $entrega->template_id=
+        $entrega->template_id =
             $process->id;
 
         $entrega->save();
 
-        $recolha=
+        $recolha =
             new ChecklistProcessTemplateItem([
-                'codigo'=>
-                    'recolha',
+                'codigo' => 'recolha',
 
-                'ordem'=>
-                    2,
+                'ordem' => 2,
 
-                'titulo'=>
-                    'Checklist de recolha',
+                'titulo' => 'Checklist de recolha',
 
-                'tipo'=>
-                    'checklist_veiculo',
+                'tipo' => 'checklist_veiculo',
 
-                'obrigatorio'=>
-                    true,
+                'obrigatorio' => true,
 
-                'configuracao'=>[
-                    'checklist_tipo'=>
-                        'recolha',
+                'configuracao' => [
+                    'checklist_tipo' => 'recolha',
                 ],
             ]);
 
-        $recolha->template_id=
+        $recolha->template_id =
             $process->id;
 
         $recolha->save();
 
-        $template=
+        $template =
             contratoTemplate(
                 $tenant,
                 '{{ASSINATURA_MOTORISTA}}'
             );
 
         $template
-            ->checklist_process_template_id=
+            ->checklist_process_template_id =
             $process->id;
 
         $template->save();
 
-        $motorista=
+        $motorista =
             contratoMotorista(
                 $tenant,
                 'EncerramentoWorkflow'
             );
 
-        $veiculo=
+        $veiculo =
             contratoVeiculo(
                 $tenant,
                 'RW-22-RW',
@@ -2534,7 +2487,7 @@ test(
             $user
         );
 
-        $create=
+        $create =
             $this
                 ->withHeaders(
                     contratoHeaders()
@@ -2549,7 +2502,7 @@ test(
                 )
                 ->assertCreated();
 
-        $id=
+        $id =
             $create
                 ->json(
                     'data.id'
@@ -2562,8 +2515,7 @@ test(
             ->patchJson(
                 "/api/contratos/{$id}/encerrar",
                 [
-                    'data_fim'=>
-                        '2026-10-31',
+                    'data_fim' => '2026-10-31',
                 ]
             )
             ->assertUnprocessable()
@@ -2571,7 +2523,7 @@ test(
                 'contrato'
             );
 
-        $contrato=
+        $contrato =
             Contrato::findOrFail(
                 $id
             );
