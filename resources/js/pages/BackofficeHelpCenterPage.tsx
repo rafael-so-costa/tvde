@@ -818,7 +818,7 @@ function FilterSelect({
     );
 }
 
-function Th({children}:{children:React.ReactNode}){
+function Th({children}:{children?:React.ReactNode}){
     return <th className="bg-slate-50 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">{children}</th>;
 }
 

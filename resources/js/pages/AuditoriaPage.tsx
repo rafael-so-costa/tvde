@@ -1116,7 +1116,7 @@ function Filter({
 function Th({
     children,
 }:{
-    children:React.ReactNode;
+    children?:React.ReactNode;
 }){
     return (
         <th className="whitespace-nowrap bg-slate-50 px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500">

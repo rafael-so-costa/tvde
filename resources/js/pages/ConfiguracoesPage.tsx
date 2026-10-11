@@ -850,7 +850,14 @@ function VehiclesTab({
                         max={200000}
                         disabled={disabled}
                         suffix="km"
-                        onChange={value=>onChange("revision_interval_km",value)}
+                        onChange={value=>{
+                            if(value!==null){
+                                onChange(
+                                    "revision_interval_km",
+                                    value
+                                );
+                            }
+                        }}
                     />
                 </Field>
 
@@ -864,7 +871,14 @@ function VehiclesTab({
                         max={50000}
                         disabled={disabled}
                         suffix="km"
-                        onChange={value=>onChange("revision_alert_km",value)}
+                        onChange={value=>{
+                            if(value!==null){
+                                onChange(
+                                    "revision_alert_km",
+                                    value
+                                );
+                            }
+                        }}
                     />
                 </Field>
             </div>
