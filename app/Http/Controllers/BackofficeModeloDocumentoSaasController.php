@@ -52,6 +52,15 @@ class BackofficeModeloDocumentoSaasController extends Controller
         );
     }
 
+    public function metrics(): JsonResponse
+    {
+        return response()->json([
+            'data' =>
+            $this->service
+                ->adoptionMetrics(),
+        ]);
+    }
+
     public function store(
         Request $request
     ): JsonResponse {
@@ -64,14 +73,14 @@ class BackofficeModeloDocumentoSaasController extends Controller
 
         return response()->json([
             'message' =>
-                'Modelo recomendado criado com sucesso.',
+            'Modelo recomendado criado com sucesso.',
 
             'data' =>
-                $this->service
-                    ->storeModel(
-                        $request->user(),
-                        $validated
-                    ),
+            $this->service
+                ->storeModel(
+                    $request->user(),
+                    $validated
+                ),
         ], 201);
     }
 
@@ -80,10 +89,10 @@ class BackofficeModeloDocumentoSaasController extends Controller
     ): JsonResponse {
         return response()->json([
             'data' =>
-                $this->service
-                    ->backofficeShow(
-                        $id
-                    ),
+            $this->service
+                ->backofficeShow(
+                    $id
+                ),
         ]);
     }
 
@@ -100,15 +109,15 @@ class BackofficeModeloDocumentoSaasController extends Controller
 
         return response()->json([
             'message' =>
-                'Modelo recomendado atualizado com sucesso.',
+            'Modelo recomendado atualizado com sucesso.',
 
             'data' =>
-                $this->service
-                    ->updateModel(
-                        $request->user(),
-                        $id,
-                        $validated
-                    ),
+            $this->service
+                ->updateModel(
+                    $request->user(),
+                    $id,
+                    $validated
+                ),
         ]);
     }
 
@@ -118,14 +127,14 @@ class BackofficeModeloDocumentoSaasController extends Controller
     ): JsonResponse {
         return response()->json([
             'message' =>
-                'Versão publicada com sucesso.',
+            'Versão publicada com sucesso.',
 
             'data' =>
-                $this->service
-                    ->publish(
-                        $request->user(),
-                        $id
-                    ),
+            $this->service
+                ->publish(
+                    $request->user(),
+                    $id
+                ),
         ], 201);
     }
 
@@ -135,14 +144,14 @@ class BackofficeModeloDocumentoSaasController extends Controller
     ): JsonResponse {
         return response()->json([
             'message' =>
-                'Modelo arquivado com sucesso.',
+            'Modelo arquivado com sucesso.',
 
             'data' =>
-                $this->service
-                    ->archive(
-                        $request->user(),
-                        $id
-                    ),
+            $this->service
+                ->archive(
+                    $request->user(),
+                    $id
+                ),
         ]);
     }
 
@@ -151,10 +160,10 @@ class BackofficeModeloDocumentoSaasController extends Controller
     ): JsonResponse {
         return response()->json([
             'data' =>
-                $this->service
-                    ->versions(
-                        $id
-                    ),
+            $this->service
+                ->versions(
+                    $id
+                ),
         ]);
     }
 
@@ -163,8 +172,8 @@ class BackofficeModeloDocumentoSaasController extends Controller
     ): array {
         $required =
             $update
-                ? 'sometimes'
-                : 'required';
+            ? 'sometimes'
+            : 'required';
 
         return [
             'categoria_id' => [

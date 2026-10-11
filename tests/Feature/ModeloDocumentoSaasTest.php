@@ -1023,3 +1023,277 @@ test(
             );
     }
 );
+
+
+test(
+    'backoffice calcula metricas reais de adocao dos modelos recomendados',
+    function () {
+        $admin =
+            modeloDocumentoSaasAdmin();
+
+        Sanctum::actingAs(
+            $admin
+        );
+
+        $categoriaId =
+            modeloDocumentoSaasCriarCategoria(
+                $this
+            );
+
+        $modeloId =
+            modeloDocumentoSaasCriarModelo(
+                $this,
+                $categoriaId
+            );
+
+        $versaoUmResponse =
+            $this
+                ->withHeaders(
+                    modeloDocumentoSaasHeaders()
+                )
+                ->postJson(
+                    "/api/backoffice/modelos-documento/{$modeloId}/publicar"
+                )
+                ->assertCreated();
+
+        $versaoUmId =
+            $versaoUmResponse
+                ->json(
+                    'data.id'
+                );
+
+        $this
+            ->withHeaders(
+                modeloDocumentoSaasHeaders()
+            )
+            ->patchJson(
+                "/api/backoffice/modelos-documento/{$modeloId}",
+                [
+                    'versao' =>
+                        '1.1',
+                ]
+            )
+            ->assertOk();
+
+        $versaoDoisResponse =
+            $this
+                ->withHeaders(
+                    modeloDocumentoSaasHeaders()
+                )
+                ->postJson(
+                    "/api/backoffice/modelos-documento/{$modeloId}/publicar"
+                )
+                ->assertCreated();
+
+        $versaoDoisId =
+            $versaoDoisResponse
+                ->json(
+                    'data.id'
+                );
+
+        $tenantA =
+            modeloDocumentoSaasTenant(
+                'Tenant Métricas A',
+                'tenant-metricas-a'
+            );
+
+        $tenantB =
+            modeloDocumentoSaasTenant(
+                'Tenant Métricas B',
+                'tenant-metricas-b'
+            );
+
+        $tenantC =
+            modeloDocumentoSaasTenant(
+                'Tenant Métricas C',
+                'tenant-metricas-c'
+            );
+
+        $criarTemplate =
+            function (
+                Tenant $tenant,
+                string $nome,
+                bool $ativo,
+                ?string $modeloId = null,
+                ?string $versaoId = null,
+                ?string $versao = null
+            ): TemplateContrato {
+                $template =
+                    new TemplateContrato([
+                        'nome' =>
+                            $nome,
+
+                        'tipo_arquivo' =>
+                            'txt',
+
+                        'conteudo_original' =>
+                            'Documento de teste.',
+
+                        'campos_detectados' =>
+                            [],
+
+                        'campos_mapeados' =>
+                            [],
+                    ]);
+
+                $template->tenant_id =
+                    $tenant->id;
+
+                $template->ativo =
+                    $ativo;
+
+                $template->modelo_documento_saas_id =
+                    $modeloId;
+
+                $template->modelo_documento_saas_versao_id =
+                    $versaoId;
+
+                $template->modelo_documento_saas_versao =
+                    $versao;
+
+                $template->save();
+
+                return $template;
+            };
+
+        $criarTemplate(
+            $tenantA,
+            'FrotaPro A v1.0',
+            true,
+            $modeloId,
+            $versaoUmId,
+            '1.0'
+        );
+
+        $criarTemplate(
+            $tenantB,
+            'FrotaPro B v1.1',
+            true,
+            $modeloId,
+            $versaoDoisId,
+            '1.1'
+        );
+
+        $criarTemplate(
+            $tenantB,
+            'FrotaPro B cópia 2 v1.1',
+            true,
+            $modeloId,
+            $versaoDoisId,
+            '1.1'
+        );
+
+        /*
+         * Continua no histórico de cópias,
+         * mas não conta como adoção ativa.
+         */
+        $criarTemplate(
+            $tenantC,
+            'FrotaPro C arquivado',
+            false,
+            $modeloId,
+            $versaoUmId,
+            '1.0'
+        );
+
+        $criarTemplate(
+            $tenantA,
+            'Modelo próprio A',
+            true
+        );
+
+        $criarTemplate(
+            $tenantC,
+            'Modelo próprio C',
+            true
+        );
+
+        $response =
+            $this
+                ->withHeaders(
+                    modeloDocumentoSaasHeaders()
+                )
+                ->getJson(
+                    '/api/backoffice/modelos-documento/metricas'
+                )
+                ->assertOk();
+
+        $response
+            ->assertJsonPath(
+                'data.resumo.modelos_publicados',
+                1
+            )
+            ->assertJsonPath(
+                'data.resumo.organizacoes_aderentes',
+                2
+            )
+            ->assertJsonPath(
+                'data.resumo.copias_totais',
+                4
+            )
+            ->assertJsonPath(
+                'data.resumo.templates_ativos_frotapro',
+                3
+            )
+            ->assertJsonPath(
+                'data.resumo.templates_ativos_proprios',
+                2
+            )
+            ->assertJsonPath(
+                'data.resumo.templates_ativos_total',
+                5
+            )
+            ->assertJsonPath(
+                'data.resumo.taxa_padronizacao',
+                60
+            )
+            ->assertJsonPath(
+                'data.modelos.0.id',
+                $modeloId
+            )
+            ->assertJsonPath(
+                'data.modelos.0.versao_publicada',
+                '1.1'
+            )
+            ->assertJsonPath(
+                'data.modelos.0.copias_totais',
+                4
+            )
+            ->assertJsonPath(
+                'data.modelos.0.copias_ativas',
+                3
+            )
+            ->assertJsonPath(
+                'data.modelos.0.organizacoes_aderentes',
+                2
+            )
+            ->assertJsonPath(
+                'data.modelos.0.versao_mais_usada',
+                '1.1'
+            )
+            ->assertJsonPath(
+                'data.modelos.0.versao_mais_usada_copias',
+                2
+            )
+            ->assertJsonPath(
+                'data.modelos.0.organizacoes_desatualizadas',
+                1
+            )
+            ->assertJsonPath(
+                'data.modelos.0.versoes_em_uso.0.versao',
+                '1.1'
+            )
+            ->assertJsonPath(
+                'data.modelos.0.versoes_em_uso.0.copias',
+                2
+            )
+            ->assertJsonPath(
+                'data.modelos.0.versoes_em_uso.1.versao',
+                '1.0'
+            )
+            ->assertJsonPath(
+                'data.modelos.0.versoes_em_uso.1.copias',
+                1
+            );
+    }
+);

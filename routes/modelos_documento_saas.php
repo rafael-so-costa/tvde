@@ -63,6 +63,14 @@ Route::middleware([
             );
 
             Route::get(
+                '/metricas',
+                [
+                    BackofficeModeloDocumentoSaasController::class,
+                    'metrics',
+                ]
+            );
+
+            Route::get(
                 '/{id}',
                 [
                     BackofficeModeloDocumentoSaasController::class,

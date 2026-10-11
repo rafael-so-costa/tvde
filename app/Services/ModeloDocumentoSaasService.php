@@ -250,6 +250,346 @@ class ModeloDocumentoSaasService
         ];
     }
 
+    public function adoptionMetrics(): array
+    {
+        $modelosPublicados =
+            ModeloDocumentoSaas::query()
+            ->where(
+                'status',
+                'publicado'
+            )
+            ->where(
+                'ativo',
+                true
+            )
+            ->whereNotNull(
+                'versao_publicada'
+            )
+            ->count();
+
+        $copiasTotaisPorModelo =
+            TemplateContrato::query()
+            ->whereNotNull(
+                'modelo_documento_saas_id'
+            )
+            ->select(
+                'modelo_documento_saas_id'
+            )
+            ->selectRaw(
+                'COUNT(*) as total'
+            )
+            ->groupBy(
+                'modelo_documento_saas_id'
+            )
+            ->pluck(
+                'total',
+                'modelo_documento_saas_id'
+            );
+
+        $copiasTotais =
+            $copiasTotaisPorModelo
+            ->sum();
+
+        $templatesAtivosFrotaPro =
+            TemplateContrato::query()
+            ->where(
+                'ativo',
+                true
+            )
+            ->whereNotNull(
+                'modelo_documento_saas_id'
+            )
+            ->get([
+                'id',
+                'tenant_id',
+                'modelo_documento_saas_id',
+                'modelo_documento_saas_versao',
+            ]);
+
+        $templatesAtivosProprios =
+            TemplateContrato::query()
+            ->where(
+                'ativo',
+                true
+            )
+            ->whereNull(
+                'modelo_documento_saas_id'
+            )
+            ->count();
+
+        $templatesAtivosFrotaProTotal =
+            $templatesAtivosFrotaPro
+            ->count();
+
+        $templatesAtivosTotal =
+            $templatesAtivosFrotaProTotal +
+            $templatesAtivosProprios;
+
+        $organizacoesAderentes =
+            $templatesAtivosFrotaPro
+            ->pluck(
+                'tenant_id'
+            )
+            ->filter()
+            ->unique()
+            ->count();
+
+        $taxaPadronizacao =
+            $templatesAtivosTotal >
+            0
+            ? round(
+                (
+                    $templatesAtivosFrotaProTotal /
+                    $templatesAtivosTotal
+                ) *
+                    100,
+                2
+            )
+            : 0.0;
+
+        $ativosPorModelo =
+            $templatesAtivosFrotaPro
+            ->groupBy(
+                'modelo_documento_saas_id'
+            );
+
+        $modelos =
+            ModeloDocumentoSaas::query()
+            ->with([
+                'categoria:id,nome,slug',
+            ])
+            ->where(
+                function (
+                    Builder $query
+                ): void {
+                    $query
+                        ->where(
+                            'status',
+                            'publicado'
+                        )
+                        ->orWhereHas(
+                            'templatesTenant'
+                        );
+                }
+            )
+            ->orderByDesc(
+                'destaque'
+            )
+            ->orderBy(
+                'ordem'
+            )
+            ->orderBy(
+                'nome'
+            )
+            ->get()
+            ->map(
+                function (
+                    ModeloDocumentoSaas $model
+                ) use (
+                    $ativosPorModelo,
+                    $copiasTotaisPorModelo
+                ): array {
+                    $ativos =
+                        $ativosPorModelo
+                        ->get(
+                            $model->id,
+                            collect()
+                        );
+
+                    $versoesEmUso =
+                        $ativos
+                        ->groupBy(
+                            fn(
+                                TemplateContrato $template
+                            ): string =>
+                            $template
+                                ->modelo_documento_saas_versao
+                                ?: 'desconhecida'
+                        )
+                        ->map(
+                            function (
+                                $templates,
+                                string $versao
+                            ): array {
+                                return [
+                                    'versao' =>
+                                    $versao,
+
+                                    'copias' =>
+                                    $templates
+                                        ->count(),
+
+                                    'organizacoes' =>
+                                    $templates
+                                        ->pluck(
+                                            'tenant_id'
+                                        )
+                                        ->filter()
+                                        ->unique()
+                                        ->count(),
+                                ];
+                            }
+                        )
+                        ->sort(
+                            function (
+                                array $a,
+                                array $b
+                            ): int {
+                                $copiesComparison =
+                                    $b['copias'] <=>
+                                    $a['copias'];
+
+                                if (
+                                    $copiesComparison !==
+                                    0
+                                ) {
+                                    return
+                                        $copiesComparison;
+                                }
+
+                                return strcmp(
+                                    $b['versao'],
+                                    $a['versao']
+                                );
+                            }
+                        )
+                        ->values();
+
+                    $versaoMaisUsada =
+                        $versoesEmUso
+                        ->first();
+
+                    $organizacoesDesatualizadas =
+                        $model
+                        ->versao_publicada !==
+                        null
+                        ? $ativos
+                        ->filter(
+                            fn(
+                                TemplateContrato $template
+                            ): bool =>
+                            $template
+                                ->modelo_documento_saas_versao !==
+                                $model
+                                ->versao_publicada
+                        )
+                        ->pluck(
+                            'tenant_id'
+                        )
+                        ->filter()
+                        ->unique()
+                        ->count()
+                        : 0;
+
+                    return [
+                        'id' =>
+                        $model->id,
+
+                        'nome' =>
+                        $model->nome,
+
+                        'slug' =>
+                        $model->slug,
+
+                        'categoria' =>
+                        $model
+                            ->categoria
+                            ? [
+                                'id' =>
+                                $model
+                                    ->categoria
+                                    ->id,
+
+                                'nome' =>
+                                $model
+                                    ->categoria
+                                    ->nome,
+
+                                'slug' =>
+                                $model
+                                    ->categoria
+                                    ->slug,
+                            ]
+                            : null,
+
+                        'status' =>
+                        $model->status,
+
+                        'ativo' =>
+                        $model->ativo,
+
+                        'versao_publicada' =>
+                        $model
+                            ->versao_publicada,
+
+                        'copias_totais' =>
+                        (int)(
+                            $copiasTotaisPorModelo[$model->id] ??
+                            0
+                        ),
+
+                        'copias_ativas' =>
+                        $ativos
+                            ->count(),
+
+                        'organizacoes_aderentes' =>
+                        $ativos
+                            ->pluck(
+                                'tenant_id'
+                            )
+                            ->filter()
+                            ->unique()
+                            ->count(),
+
+                        'versao_mais_usada' =>
+                        $versaoMaisUsada['versao'] ??
+                            null,
+
+                        'versao_mais_usada_copias' =>
+                        $versaoMaisUsada['copias'] ??
+                            0,
+
+                        'organizacoes_desatualizadas' =>
+                        $organizacoesDesatualizadas,
+
+                        'versoes_em_uso' =>
+                        $versoesEmUso
+                            ->all(),
+                    ];
+                }
+            )
+            ->values()
+            ->all();
+
+        return [
+            'resumo' => [
+                'modelos_publicados' =>
+                $modelosPublicados,
+
+                'organizacoes_aderentes' =>
+                $organizacoesAderentes,
+
+                'copias_totais' =>
+                (int)$copiasTotais,
+
+                'templates_ativos_frotapro' =>
+                $templatesAtivosFrotaProTotal,
+
+                'templates_ativos_proprios' =>
+                $templatesAtivosProprios,
+
+                'templates_ativos_total' =>
+                $templatesAtivosTotal,
+
+                'taxa_padronizacao' =>
+                $taxaPadronizacao,
+            ],
+
+            'modelos' =>
+            $modelos,
+        ];
+    }
+
     public function backofficeShow(
         string $id
     ): ModeloDocumentoSaas {
