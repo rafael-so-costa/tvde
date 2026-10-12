@@ -147,7 +147,13 @@ export default function DashboardPage() {
 
                     <QuickActions can={permissions.can} />
 
-                    <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                    <OperationPriorities
+                        metrics={data.metrics}
+                        summary={alertSummaryQuery.data}
+                        loading={alertSummaryQuery.isLoading}
+                    />
+
+                    <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                         <MetricCard
                             title="Veículos ativos"
                             value={data.metrics.veiculos_ativos}
@@ -180,21 +186,7 @@ export default function DashboardPage() {
                             description="Operações em curso"
                         />
 
-                        <MetricCard
-                            title="Contratos pendentes"
-                            value={data.metrics.contratos_pendentes}
-                            href="/contratos"
-                            icon={FileText}
-                            description="Rascunhos ou enviados"
-                        />
 
-                        <MetricCard
-                            title="Checklists pendentes"
-                            value={data.metrics.checklists_pendentes}
-                            href="/checklists"
-                            icon={ClipboardCheck}
-                            description="Ainda não finalizados"
-                        />
                     </section>
 
                     <section className="grid gap-6 xl:grid-cols-[1.45fr_1fr]">
@@ -479,6 +471,143 @@ function QuickActions({
     );
 }
 
+function OperationPriorities({
+    metrics,
+    summary,
+    loading,
+}: {
+    metrics: DashboardData["metrics"];
+    summary: AlertSummary | undefined;
+    loading: boolean;
+}) {
+    const priorities = [
+        {
+            label: "Alertas críticos",
+            description: "Situações que exigem intervenção imediata",
+            value: summary?.critical ?? 0,
+            visible: Boolean(summary),
+            href: "/alertas",
+            icon: AlertTriangle,
+            classes: "border-red-200 bg-red-50/60 text-red-600",
+        },
+        {
+            label: "Alertas de prioridade alta",
+            description: "Situações importantes ainda em aberto",
+            value: summary?.high ?? 0,
+            visible: Boolean(summary),
+            href: "/alertas",
+            icon: BellRing,
+            classes: "border-orange-200 bg-orange-50/60 text-orange-600",
+        },
+        {
+            label: "Contratos pendentes",
+            description: "Rascunhos ou contratos enviados",
+            value: metrics.contratos_pendentes ?? 0,
+            visible: metrics.contratos_pendentes !== null,
+            href: "/contratos",
+            icon: FileText,
+            classes: "border-amber-200 bg-amber-50/60 text-amber-600",
+        },
+        {
+            label: "Checklists pendentes",
+            description: "Registos ainda não finalizados",
+            value: metrics.checklists_pendentes ?? 0,
+            visible: metrics.checklists_pendentes !== null,
+            href: "/checklists",
+            icon: ClipboardCheck,
+            classes: "border-indigo-200 bg-indigo-50/60 text-indigo-600",
+        },
+    ];
+
+    const activePriorities = priorities.filter(
+        (item) =>
+            item.visible &&
+            item.value > 0,
+    );
+
+    return (
+        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+            <div className="flex flex-col gap-3 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-indigo-600">
+                        Prioridades da operação
+                    </p>
+
+                    <h2 className="mt-1 font-semibold text-slate-900">
+                        O que precisa da sua atenção agora.
+                    </h2>
+                </div>
+
+                {loading && (
+                    <div className="flex items-center gap-2 text-xs text-slate-400">
+                        <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                        A atualizar
+                    </div>
+                )}
+            </div>
+
+            {activePriorities.length === 0 && !loading ? (
+                <div className="flex items-center gap-4 p-6">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                        <CheckCircle2 className="h-5 w-5" />
+                    </div>
+
+                    <div>
+                        <p className="font-semibold text-slate-900">
+                            Nenhuma prioridade pendente
+                        </p>
+
+                        <p className="mt-1 text-sm text-slate-500">
+                            Não existem situações prioritárias identificadas neste momento.
+                        </p>
+                    </div>
+                </div>
+            ) : (
+                <div className="grid gap-4 p-5 sm:grid-cols-2 xl:grid-cols-4">
+                    {activePriorities.map(
+                        ({
+                            label,
+                            description,
+                            value,
+                            href,
+                            icon: Icon,
+                            classes,
+                        }) => (
+                            <Link
+                                key={label}
+                                to={href}
+                                className={[
+                                    "group rounded-2xl border p-5 transition hover:-translate-y-0.5 hover:shadow-md",
+                                    classes,
+                                ].join(" ")}
+                            >
+                                <div className="flex items-start justify-between gap-4">
+                                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/80">
+                                        <Icon className="h-5 w-5" />
+                                    </div>
+
+                                    <ArrowRight className="h-4 w-4 opacity-40 transition group-hover:translate-x-1 group-hover:opacity-100" />
+                                </div>
+
+                                <div className="mt-5 text-3xl font-bold text-slate-950">
+                                    {value}
+                                </div>
+
+                                <p className="mt-1 font-semibold text-slate-900">
+                                    {label}
+                                </p>
+
+                                <p className="mt-1 text-xs leading-5 text-slate-500">
+                                    {description}
+                                </p>
+                            </Link>
+                        ),
+                    )}
+                </div>
+            )}
+        </section>
+    );
+}
 function MetricCard({
     title,
     value,
