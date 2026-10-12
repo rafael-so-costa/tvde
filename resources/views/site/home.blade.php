@@ -114,8 +114,8 @@
                             </a>
 
                             <a href="{{ (config('app.web_base_path') ?: '') . '/registo-expediente-publico' }}" class="block rounded-xl px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
-    Registo de expediente
-</a>
+                                Registo de expediente
+                            </a>
 
                             <a href="#faq" class="block rounded-xl px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
                                 FAQ
@@ -1079,7 +1079,150 @@
         </section>
 
 
-        <section id="como-funciona" class="bg-white py-24 sm:py-28">
+        <section id="menos-manual" class="relative overflow-hidden bg-white py-24 sm:py-28">
+
+            <div class="pointer-events-none absolute -left-40 top-20 h-96 w-96 rounded-full bg-violet-200/25 blur-3xl"></div>
+
+            <div class="relative mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
+
+                <div class="grid gap-14 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
+
+                    <div>
+
+                        <p class="text-sm font-semibold uppercase tracking-[0.16em] text-indigo-600">
+                            Menos trabalho manual
+                        </p>
+
+                        <h2 class="mt-4 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
+                            Menos tempo à procura.
+                            <span class="block text-indigo-600">
+                                Mais tempo a gerir.
+                            </span>
+                        </h2>
+
+                        <p class="mt-5 text-lg leading-8 text-slate-600">
+                            Uma operação TVDE gera informação todos os dias.
+                            O FrotaPRO ajuda a substituir tarefas dispersas por
+                            processos organizados e informação ligada.
+                        </p>
+
+                        <div class="mt-8 rounded-2xl border border-indigo-100 bg-indigo-50 p-5">
+
+                            <p class="text-sm font-semibold text-indigo-900">
+                                Um dado. Vários processos.
+                            </p>
+
+                            <p class="mt-2 text-sm leading-6 text-indigo-700">
+                                Informação já existente pode acompanhar diferentes
+                                etapas da operação, reduzindo repetição e consultas
+                                desnecessárias.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="grid gap-4 sm:grid-cols-2">
+
+                        <article class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+
+                            <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+                                <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M4 4h16v16H4z" />
+                                    <path d="M8 9h8" />
+                                    <path d="M8 13h5" />
+                                </svg>
+                            </div>
+
+                            <h3 class="mt-5 text-lg font-bold text-slate-950">
+                                Documentos espalhados
+                            </h3>
+
+                            <p class="mt-2 text-sm leading-6 text-slate-600">
+                                Evite procurar informação entre mensagens,
+                                ficheiros e diferentes pastas.
+                            </p>
+
+                        </article>
+
+
+                        <article class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+
+                            <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
+                                <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M4 19V5" />
+                                    <path d="M4 19h16" />
+                                    <path d="m7 15 4-4 3 2 5-6" />
+                                </svg>
+                            </div>
+
+                            <h3 class="mt-5 text-lg font-bold text-slate-950">
+                                Folhas de cálculo paralelas
+                            </h3>
+
+                            <p class="mt-2 text-sm leading-6 text-slate-600">
+                                Centralize cadastros, estados, ocorrências e
+                                acompanhamento operacional.
+                            </p>
+
+                        </article>
+
+
+                        <article class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+
+                            <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                                <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="9" />
+                                    <path d="M12 7v5l3 2" />
+                                </svg>
+                            </div>
+
+                            <h3 class="mt-5 text-lg font-bold text-slate-950">
+                                Prazos controlados à mão
+                            </h3>
+
+                            <p class="mt-2 text-sm leading-6 text-slate-600">
+                                Utilize alertas para acompanhar documentos,
+                                contratos, alugueres e manutenção.
+                            </p>
+
+                        </article>
+
+
+                        <article class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+
+                            <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+                                <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M8 6h13" />
+                                    <path d="M8 12h13" />
+                                    <path d="M8 18h13" />
+                                    <path d="M3 6h.01" />
+                                    <path d="M3 12h.01" />
+                                    <path d="M3 18h.01" />
+                                </svg>
+                            </div>
+
+                            <h3 class="mt-5 text-lg font-bold text-slate-950">
+                                Informação repetida
+                            </h3>
+
+                            <p class="mt-2 text-sm leading-6 text-slate-600">
+                                Ligue motorista, veículo, contrato, aluguer e
+                                restantes processos da mesma operação.
+                            </p>
+
+                        </article>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+        <section id="como-funciona" class="bg-slate-50 py-24 sm:py-28">
 
             <div class="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
 
@@ -1207,8 +1350,7 @@
                                 href="{{ (config('app.web_base_path') ?: '') . '/registo-expediente-publico' }}"
                                 target="_blank"
                                 rel="noreferrer"
-                                class="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-6 font-semibold text-white shadow-lg shadow-indigo-600/20 transition hover:bg-indigo-700"
-                            >
+                                class="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-6 font-semibold text-white shadow-lg shadow-indigo-600/20 transition hover:bg-indigo-700">
                                 Abrir registo de expediente
 
                                 <svg viewBox="0 0 24 24" class="h-4 w-4 fill-none stroke-current" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1219,8 +1361,7 @@
 
                             <a
                                 href="{{ route('site.register') }}"
-                                class="inline-flex h-12 items-center justify-center rounded-xl border border-indigo-200 bg-white px-6 font-semibold text-indigo-700 transition hover:bg-indigo-50"
-                            >
+                                class="inline-flex h-12 items-center justify-center rounded-xl border border-indigo-200 bg-white px-6 font-semibold text-indigo-700 transition hover:bg-indigo-50">
                                 Conhecer a plataforma
                             </a>
 
@@ -1341,7 +1482,7 @@
                         <div class="mt-7 space-y-3 text-sm text-slate-300">
                             <p>✓ Gestão operacional</p>
                             <p>✓ Permissões por utilizador</p>
-                            <p>✓ Dashboard centralizado</p>
+                            <p>✓ Relatórios e alertas</p>
                         </div>
 
                     </article>
@@ -1365,14 +1506,14 @@
                         </h3>
 
                         <p class="mt-4 leading-7 text-slate-300">
-                            Uma área simples para o motorista consultar a sua operação e
-                            tratar dos processos que lhe dizem respeito.
+                            Uma área própria para o motorista acompanhar a sua operação,
+                            documentação e processos sem depender da gestão para cada consulta.
                         </p>
 
                         <div class="mt-7 space-y-3 text-sm text-slate-300">
                             <p>✓ Expediente</p>
-                            <p>✓ Multas e sinistros</p>
-                            <p>✓ Registo criminal e recibos verdes</p>
+                            <p>✓ Checklists e alertas</p>
+                            <p>✓ Multas, sinistros e documentação</p>
                         </div>
 
                     </article>
@@ -1396,19 +1537,144 @@
                         </h3>
 
                         <p class="mt-4 leading-7 text-slate-300">
-                            O proprietário acompanha os veículos ligados à sua conta e as
-                            ocorrências relevantes sem acesso à gestão interna da empresa.
+                            O proprietário acompanha veículos, alertas e ocorrências relevantes
+                            sem precisar de acesso à gestão interna da empresa.
                         </p>
 
                         <div class="mt-7 space-y-3 text-sm text-slate-300">
                             <p>✓ Frota vinculada</p>
-                            <p>✓ Multas</p>
-                            <p>✓ Sinistros</p>
+                            <p>✓ Checklists e alertas</p>
+                            <p>✓ Multas e sinistros</p>
                         </div>
 
                     </article>
 
                 </div>
+
+            </div>
+
+        </section>
+
+        <section id="controlo-operacional" class="relative overflow-hidden bg-slate-50 py-24 sm:py-28">
+
+            <div class="pointer-events-none absolute right-0 top-0 h-96 w-96 rounded-full bg-indigo-200/30 blur-3xl"></div>
+
+            <div class="relative mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
+
+                <div class="mx-auto max-w-3xl text-center">
+
+                    <p class="text-sm font-semibold uppercase tracking-[0.16em] text-indigo-600">
+                        Informação para decidir
+                    </p>
+
+                    <h2 class="mt-4 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl lg:text-5xl">
+                        Veja o que está a acontecer.
+                        <span class="block text-indigo-600">
+                            E o que precisa da sua atenção.
+                        </span>
+                    </h2>
+
+                    <p class="mx-auto mt-5 max-w-2xl text-lg leading-8 text-slate-600">
+                        O FrotaPRO transforma os dados da operação em informação
+                        utilizável para acompanhar a frota, identificar pendências
+                        e manter controlo sobre as ações realizadas.
+                    </p>
+
+                </div>
+
+
+                <div class="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+
+                    <article class="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
+
+                        <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
+                            <svg viewBox="0 0 24 24" class="h-6 w-6 fill-none stroke-current" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M4 19V9" />
+                                <path d="M10 19V5" />
+                                <path d="M16 19v-7" />
+                                <path d="M22 19H2" />
+                            </svg>
+                        </div>
+
+                        <h3 class="mt-6 text-xl font-bold text-slate-950">
+                            Relatórios
+                        </h3>
+
+                        <p class="mt-3 text-sm leading-6 text-slate-600">
+                            Consulte visão geral, documentação, veículos,
+                            motoristas, ocorrências e alugueres com filtros
+                            próprios.
+                        </p>
+
+                    </article>
+
+
+                    <article class="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
+
+                        <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-50 text-violet-600">
+                            <svg viewBox="0 0 24 24" class="h-6 w-6 fill-none stroke-current" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
+                                <path d="M10 21h4" />
+                            </svg>
+                        </div>
+
+                        <h3 class="mt-6 text-xl font-bold text-slate-950">
+                            Alertas operacionais
+                        </h3>
+
+                        <p class="mt-3 text-sm leading-6 text-slate-600">
+                            Centralize situações relacionadas com documentos,
+                            contratos, alugueres, sinistros e manutenção.
+                        </p>
+
+                    </article>
+
+
+                    <article class="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
+
+                        <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
+                            <svg viewBox="0 0 24 24" class="h-6 w-6 fill-none stroke-current" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M20 13c0 5-3.5 7.5-8 9-4.5-1.5-8-4-8-9V5l8-3 8 3z" />
+                                <path d="m9 12 2 2 4-4" />
+                            </svg>
+                        </div>
+
+                        <h3 class="mt-6 text-xl font-bold text-slate-950">
+                            Permissões
+                        </h3>
+
+                        <p class="mt-3 text-sm leading-6 text-slate-600">
+                            Cada utilizador acede aos módulos e ações adequados
+                            às suas responsabilidades dentro da organização.
+                        </p>
+
+                    </article>
+
+
+                    <article class="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
+
+                        <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
+                            <svg viewBox="0 0 24 24" class="h-6 w-6 fill-none stroke-current" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M3 12a9 9 0 1 0 3-6.7" />
+                                <path d="M3 4v6h6" />
+                                <path d="M12 7v5l3 2" />
+                            </svg>
+                        </div>
+
+                        <h3 class="mt-6 text-xl font-bold text-slate-950">
+                            Auditoria
+                        </h3>
+
+                        <p class="mt-3 text-sm leading-6 text-slate-600">
+                            Consulte o histórico das ações e alterações
+                            realizadas na operação por utilizadores autorizados.
+                        </p>
+
+                    </article>
+
+                </div>
+
+
 
             </div>
 
@@ -1464,8 +1730,20 @@
                     'answer' => 'As integrações com plataformas TVDE, portagens, combustíveis e mobilidade elétrica fazem parte da evolução prevista do FrotaPRO.'
                     ],
                     [
-                    'question' => 'Os dados de uma empresa ficam separados dos dados das restantes empresas?',
-                    'answer' => 'Sim. O FrotaPRO foi construído com arquitetura multiempresa e isolamento dos dados por organização.'
+                    'question' => 'O FrotaPRO possui relatórios?',
+                    'answer' => 'Sim. A plataforma possui relatórios de visão geral, documentação, veículos, motoristas, ocorrências e alugueres, com filtros para apoiar a gestão da operação.'
+                    ],
+                    [
+                    'question' => 'É possível controlar o que cada utilizador pode consultar ou alterar?',
+                    'answer' => 'Sim. O FrotaPRO utiliza perfis e permissões para limitar módulos e ações de acordo com as responsabilidades de cada utilizador.'
+                    ],
+                    [
+                    'question' => 'Existe histórico das alterações realizadas no sistema?',
+                    'answer' => 'Sim. A área de auditoria permite aos utilizadores autorizados consultar ações e alterações realizadas na operação.'
+                    ],
+                    [
+                    'question' => 'O motorista consegue registar o expediente sem entrar no painel?',
+                    'answer' => 'Sim. O FrotaPRO possui uma página pública de registo de expediente que permite ao motorista marcar entrada ou saída através do NIF.'
                     ],
                     ];
                     @endphp
