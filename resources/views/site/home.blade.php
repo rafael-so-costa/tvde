@@ -166,16 +166,16 @@
                     </div>
 
                     <h1 class="text-5xl font-bold leading-[1.02] tracking-[-0.04em] text-slate-950 sm:text-6xl lg:text-7xl">
-                        Toda a sua operação TVDE.
+                        Antecipe problemas na sua operação TVDE.
                         <span class="block bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
-                            Num único lugar.
+                            Controle tudo num único lugar.
                         </span>
                     </h1>
 
                     <p class="mx-auto mt-7 max-w-2xl text-lg leading-8 text-slate-600 sm:text-xl">
-                        Motoristas, veículos, contratos, alugueres, documentos,
-                        manutenção e operação da sua frota centralizados numa
-                        plataforma criada para o setor TVDE.
+                        Motoristas, veículos, contratos, expediente, documentos,
+                        manutenção, alertas e ocorrências ligados numa
+                        plataforma criada para acompanhar a operação TVDE de ponta a ponta.
                     </p>
 
                     <div class="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
@@ -606,6 +606,252 @@
         </section>
 
 
+        <section id="produtividade" class="relative overflow-hidden bg-white py-24 sm:py-28">
+
+            <div class="pointer-events-none absolute -right-40 top-20 h-96 w-96 rounded-full bg-indigo-200/30 blur-3xl"></div>
+
+            <div class="relative mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
+
+                <div class="grid gap-14 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+
+                    <div>
+
+                        <p class="text-sm font-semibold uppercase tracking-[0.16em] text-indigo-600">
+                            Produtividade diária
+                        </p>
+
+                        <h2 class="mt-4 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
+                            Encontre o que precisa.
+                            <span class="block text-indigo-600">
+                                Sem navegar módulo a módulo.
+                            </span>
+                        </h2>
+
+                        <p class="mt-5 text-lg leading-8 text-slate-600">
+                            A pesquisa global do FrotaPRO permite localizar rapidamente
+                            motoristas, veículos, empresas, proprietários, contratos e
+                            documentos a partir de qualquer área da plataforma.
+                        </p>
+
+                        <div class="mt-8 space-y-4">
+
+                            <div class="flex gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+
+                                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+                                    <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current" stroke-width="2" stroke-linecap="round">
+                                        <circle cx="11" cy="11" r="7" />
+                                        <path d="m20 20-3.5-3.5" />
+                                    </svg>
+                                </span>
+
+                                <div>
+                                    <h3 class="font-semibold text-slate-950">
+                                        Pesquisa global
+                                    </h3>
+
+                                    <p class="mt-1 text-sm leading-6 text-slate-600">
+                                        Pesquise toda a operação em segundos com Ctrl + K.
+                                    </p>
+                                </div>
+
+                            </div>
+
+                            <div class="flex gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+
+                                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
+                                    <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8-6.2-3.2L5.8 21 7 14.2 2 9.3l6.9-1z" />
+                                    </svg>
+                                </span>
+
+                                <div>
+                                    <h3 class="font-semibold text-slate-950">
+                                        Favoritos pessoais
+                                    </h3>
+
+                                    <p class="mt-1 text-sm leading-6 text-slate-600">
+                                        Mantenha à mão os registos que consulta com maior frequência.
+                                    </p>
+                                </div>
+
+                            </div>
+
+                            <div class="flex gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+
+                                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                                    <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M20 13c0 5-3.5 7.5-8 9-4.5-1.5-8-4-8-9V5l8-3 8 3z" />
+                                        <path d="m9 12 2 2 4-4" />
+                                    </svg>
+                                </span>
+
+                                <div>
+                                    <h3 class="font-semibold text-slate-950">
+                                        Informação certa para cada utilizador
+                                    </h3>
+
+                                    <p class="mt-1 text-sm leading-6 text-slate-600">
+                                        Os resultados respeitam a organização e as permissões de acesso de cada utilizador.
+                                    </p>
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="relative">
+
+                        <div class="absolute -inset-5 rounded-[2rem] bg-gradient-to-br from-indigo-500/10 to-violet-500/10 blur-xl"></div>
+
+                        <div class="relative overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/10">
+
+                            <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4 sm:px-6">
+
+                                <div>
+                                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                                        FrotaPRO
+                                    </p>
+
+                                    <p class="mt-1 font-semibold text-slate-950">
+                                        Pesquisa global
+                                    </p>
+                                </div>
+
+                                <kbd class="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-semibold text-slate-500">
+                                    Ctrl K
+                                </kbd>
+
+                            </div>
+
+
+                            <div class="p-5 sm:p-6">
+
+                                <div class="flex h-12 items-center gap-3 rounded-xl border border-indigo-200 bg-indigo-50/50 px-4">
+
+                                    <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-indigo-500" stroke-width="2" stroke-linecap="round">
+                                        <circle cx="11" cy="11" r="7" />
+                                        <path d="m20 20-3.5-3.5" />
+                                    </svg>
+
+                                    <span class="text-sm text-slate-500">
+                                        Pesquisar motorista, matrícula, contrato...
+                                    </span>
+
+                                </div>
+
+
+                                <div class="mt-6">
+
+                                    <p class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                                        Favoritos
+                                    </p>
+
+                                    <div class="mt-3 rounded-2xl border border-indigo-100 bg-indigo-50/60 p-4">
+
+                                        <div class="flex items-center justify-between gap-4">
+
+                                            <div>
+                                                <p class="font-semibold text-slate-900">
+                                                    João Ferreira
+                                                </p>
+
+                                                <p class="mt-1 text-xs text-slate-500">
+                                                    Motorista · favorito
+                                                </p>
+                                            </div>
+
+                                            <span class="text-indigo-500">
+                                                ★
+                                            </span>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+
+                                <div class="mt-6">
+
+                                    <p class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                                        Resultados
+                                    </p>
+
+                                    <div class="mt-3 divide-y divide-slate-100 rounded-2xl border border-slate-200">
+
+                                        <div class="flex items-center justify-between gap-4 p-4">
+
+                                            <div>
+                                                <p class="text-sm font-semibold text-slate-900">
+                                                    12-AB-34
+                                                </p>
+
+                                                <p class="mt-1 text-xs text-slate-500">
+                                                    Veículo · Tesla Model 3
+                                                </p>
+                                            </div>
+
+                                            <span class="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                                                Ativo
+                                            </span>
+
+                                        </div>
+
+                                        <div class="flex items-center justify-between gap-4 p-4">
+
+                                            <div>
+                                                <p class="text-sm font-semibold text-slate-900">
+                                                    Contrato TVDE
+                                                </p>
+
+                                                <p class="mt-1 text-xs text-slate-500">
+                                                    Contrato · João Ferreira
+                                                </p>
+                                            </div>
+
+                                            <span class="text-xs font-medium text-indigo-600">
+                                                Abrir
+                                            </span>
+
+                                        </div>
+
+                                        <div class="flex items-center justify-between gap-4 p-4">
+
+                                            <div>
+                                                <p class="text-sm font-semibold text-slate-900">
+                                                    Documento do motorista
+                                                </p>
+
+                                                <p class="mt-1 text-xs text-slate-500">
+                                                    Documento
+                                                </p>
+                                            </div>
+
+                                            <span class="text-xs font-medium text-indigo-600">
+                                                Abrir
+                                            </span>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
         <section id="integracoes" class="border-y border-slate-200 bg-slate-50 py-14">
 
             <div class="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
@@ -842,11 +1088,11 @@
                     <div>
 
                         <p class="text-sm font-semibold uppercase tracking-[0.16em] text-indigo-600">
-                            Uma operação conectada
+                            Fluxos operacionais
                         </p>
 
                         <h2 class="mt-4 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
-                            Da entrada do motorista à operação diária.
+                            O FrotaPRO não guarda apenas dados. Conduz o processo.
                         </h2>
 
                         <p class="mt-5 text-lg leading-8 text-slate-600">
@@ -858,11 +1104,11 @@
                         <div class="mt-8 rounded-2xl border border-indigo-100 bg-indigo-50 p-5">
 
                             <p class="text-sm font-semibold text-indigo-900">
-                                Menos informação repetida
+                                Processos ligados, não tarefas isoladas
                             </p>
 
                             <p class="mt-2 text-sm leading-6 text-indigo-700">
-                                Os dados introduzidos durante o cadastro podem acompanhar
+                                Os dados introduzidos no início acompanham
                                 contratos, alugueres, checklists e outros processos da
                                 operação.
                             </p>
@@ -879,11 +1125,11 @@
                         @php
                         $flow = [
                         ['01', 'Cadastro', 'Registe motorista, proprietário, empresa e veículo.'],
-                        ['02', 'Documentação', 'Organize documentos e acompanhe o estado de cada cadastro.'],
-                        ['03', 'Contrato', 'Gere o contrato e conduza o processo de assinatura.'],
-                        ['04', 'Entrega', 'Associe o veículo e execute o checklist de entrega.'],
-                        ['05', 'Operação', 'Acompanhe aluguer, expediente, multas, sinistros e documentação.'],
-                        ['06', 'Manutenção e alertas', 'Antecipe necessidades da frota e situações que exigem intervenção.'],
+                        ['02', 'Validação documental', 'Organize os documentos e acompanhe o que ainda exige atenção.'],
+                        ['03', 'Contrato e assinatura', 'Gere o contrato e acompanhe o processo até à assinatura.'],
+                        ['04', 'Associação e checklist', 'Associe o veículo ao motorista e execute as verificações previstas.'],
+                        ['05', 'Operação diária', 'Acompanhe aluguer, expediente, multas, sinistros e documentação.'],
+                        ['06', 'Acompanhamento contínuo', 'Antecipe manutenções, prazos e situações que exigem intervenção.'],
                         ];
                         @endphp
 
@@ -923,6 +1169,126 @@
 
         </section>
 
+
+        <section id="expediente-publico" class="relative overflow-hidden border-y border-indigo-100 bg-indigo-50/60 py-20 sm:py-24">
+
+            <div class="pointer-events-none absolute -left-32 -top-32 h-80 w-80 rounded-full bg-indigo-300/20 blur-3xl"></div>
+            <div class="pointer-events-none absolute -bottom-40 right-0 h-80 w-80 rounded-full bg-violet-300/20 blur-3xl"></div>
+
+            <div class="relative mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
+
+                <div class="grid gap-12 lg:grid-cols-[1fr_0.8fr] lg:items-center">
+
+                    <div>
+
+                        <div class="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-white px-4 py-2 text-sm font-semibold text-indigo-700 shadow-sm">
+                            <span class="h-2 w-2 rounded-full bg-indigo-500"></span>
+                            Ferramenta pública FrotaPRO
+                        </div>
+
+                        <h2 class="mt-6 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
+                            Experimente o Registo de Expediente.
+                        </h2>
+
+                        <p class="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
+                            Uma forma simples de o motorista marcar o início ou o fim
+                            do expediente através do NIF, sem precisar de entrar no
+                            painel de gestão.
+                        </p>
+
+                        <p class="mt-4 max-w-2xl leading-7 text-slate-600">
+                            Os registos ficam associados à empresa e ao motorista,
+                            integrando o expediente com o restante controlo operacional.
+                        </p>
+
+                        <div class="mt-8 flex flex-col gap-3 sm:flex-row">
+
+                            <a
+                                href="{{ (config('app.web_base_path') ?: '') . '/registo-expediente-publico' }}"
+                                target="_blank"
+                                rel="noreferrer"
+                                class="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-6 font-semibold text-white shadow-lg shadow-indigo-600/20 transition hover:bg-indigo-700"
+                            >
+                                Abrir registo de expediente
+
+                                <svg viewBox="0 0 24 24" class="h-4 w-4 fill-none stroke-current" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M7 17 17 7" />
+                                    <path d="M7 7h10v10" />
+                                </svg>
+                            </a>
+
+                            <a
+                                href="{{ route('site.register') }}"
+                                class="inline-flex h-12 items-center justify-center rounded-xl border border-indigo-200 bg-white px-6 font-semibold text-indigo-700 transition hover:bg-indigo-50"
+                            >
+                                Conhecer a plataforma
+                            </a>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="mx-auto w-full max-w-sm">
+
+                        <div class="rounded-3xl bg-slate-950 p-5 shadow-2xl shadow-indigo-950/15">
+
+                            <div class="text-center">
+
+                                <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-500">
+                                    <svg viewBox="0 0 24 24" class="h-6 w-6 fill-none stroke-white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="12" cy="12" r="9" />
+                                        <path d="M12 7v5l3 2" />
+                                    </svg>
+                                </div>
+
+                                <p class="mt-4 font-bold text-white">
+                                    FrotaPRO
+                                </p>
+
+                                <p class="mt-1 text-xs text-slate-400">
+                                    Registo de Expediente
+                                </p>
+
+                            </div>
+
+                            <div class="mt-5 rounded-2xl bg-white p-5">
+
+                                <p class="text-center text-lg font-bold text-slate-950">
+                                    Entrada / Saída
+                                </p>
+
+                                <p class="mt-2 text-center text-xs leading-5 text-slate-500">
+                                    Introduza o NIF para marcar automaticamente o início ou o fim do expediente.
+                                </p>
+
+                                <div class="mt-5">
+
+                                    <p class="mb-1 text-xs font-medium text-slate-600">
+                                        NIF
+                                    </p>
+
+                                    <div class="flex h-11 items-center rounded-xl border border-slate-200 px-4 text-sm tracking-widest text-slate-400">
+                                        000000000
+                                    </div>
+
+                                </div>
+
+                                <div class="mt-4 flex h-11 items-center justify-center rounded-xl bg-indigo-600 text-sm font-semibold text-white">
+                                    Registar
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
 
         <section class="overflow-hidden bg-slate-950 py-24 text-white sm:py-28">
 
