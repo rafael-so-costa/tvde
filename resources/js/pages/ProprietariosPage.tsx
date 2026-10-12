@@ -1,5 +1,6 @@
 import axios from 'axios';
 import {
+    useEffect,
     useMemo,
     useState,
 } from 'react';
@@ -8,6 +9,10 @@ import {
     useQuery,
     useQueryClient,
 } from '@tanstack/react-query';
+
+import {
+    useSearchParams,
+} from 'react-router-dom';
 import {
     AlertCircle,
     Building2,
@@ -122,6 +127,53 @@ export default function ProprietariosPage() {
     ] = useState<Proprietario | null>(
         null
     );
+
+    const [
+        searchParams,
+        setSearchParams,
+    ]=useSearchParams();
+
+    useEffect(()=>{
+        const query=
+            searchParams.get(
+                'q'
+            );
+
+        if(query){
+            setSearch(
+                query
+            );
+        }
+
+        if(
+            searchParams.get(
+                'novo'
+            ) ===
+            '1'
+        ){
+            setEditing(null);
+            setFormOpen(true);
+
+            const next=
+                new URLSearchParams(
+                    searchParams
+                );
+
+            next.delete(
+                'novo'
+            );
+
+            setSearchParams(
+                next,
+                {
+                    replace:true,
+                }
+            );
+        }
+    },[
+        searchParams,
+        setSearchParams,
+    ]);
 
     const proprietariosQuery =
         useQuery({

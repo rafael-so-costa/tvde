@@ -1,5 +1,6 @@
 import axios from 'axios';
 import {
+    useEffect,
     useMemo,
     useState,
 } from 'react';
@@ -8,6 +9,10 @@ import {
     useQuery,
     useQueryClient,
 } from '@tanstack/react-query';
+
+import {
+    useSearchParams,
+} from 'react-router-dom';
 import {
     AlertCircle,
     Car,
@@ -155,6 +160,44 @@ export default function ChecklistsPage() {
         useState<ChecklistRecord | null>(
             null
         );
+
+    const [
+        searchParams,
+        setSearchParams,
+    ]=useSearchParams();
+
+    useEffect(()=>{
+        if(
+            searchParams.get(
+                'novo'
+            ) ===
+            'entrega'
+        ){
+            setEditing(null);
+            setDeliveryForReturn(null);
+            setFormTipo('entrega');
+            setFormOpen(true);
+
+            const next=
+                new URLSearchParams(
+                    searchParams
+                );
+
+            next.delete(
+                'novo'
+            );
+
+            setSearchParams(
+                next,
+                {
+                    replace:true,
+                }
+            );
+        }
+    },[
+        searchParams,
+        setSearchParams,
+    ]);
 
     const recordsQuery =
         useQuery({

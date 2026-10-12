@@ -211,8 +211,35 @@ export default function ContratosPage() {
                 contractId,
             );
         }
+
+        if (
+            searchParams.get(
+                "novo",
+            ) === "1"
+        ) {
+            setWizardOpen(
+                true
+            );
+
+            const next =
+                new URLSearchParams(
+                    searchParams
+                );
+
+            next.delete(
+                "novo"
+            );
+
+            setSearchParams(
+                next,
+                {
+                    replace: true,
+                }
+            );
+        }
     }, [
         searchParams,
+        setSearchParams,
     ]);
 
     const contractsQuery =

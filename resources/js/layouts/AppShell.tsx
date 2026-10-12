@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 
@@ -22,6 +22,7 @@ import {
     Menu,
     MessageSquareText,
     ReceiptText,
+    Search,
     Settings2,
     ShieldCheck,
     Truck,
@@ -45,6 +46,8 @@ import { resolvePortalDestination } from "../lib/portal";
 import ChatUnreadBadge from "../components/chat/ChatUnreadBadge";
 
 import HelpdeskUnreadBadge from "../components/helpdesk/HelpdeskUnreadBadge";
+
+import ProductivityCommandPalette from "../components/productivity/ProductivityCommandPalette";
 
 const navigation = [
     {
@@ -214,6 +217,48 @@ export default function AppShell() {
     const [mobileOpen, setMobileOpen] = useState(false);
 
     const [switchingTenant, setSwitchingTenant] = useState(false);
+
+    const [
+        productivityOpen,
+        setProductivityOpen,
+    ]=useState(false);
+
+    useEffect(()=>{
+        function handleShortcut(
+            event:KeyboardEvent
+        ){
+            if(
+                tenant &&
+                (
+                    event.ctrlKey ||
+                    event.metaKey
+                ) &&
+                event.key
+                    .toLowerCase() ===
+                    "k"
+            ){
+                event.preventDefault();
+
+                setProductivityOpen(
+                    true
+                );
+            }
+        }
+
+        window.addEventListener(
+            "keydown",
+            handleShortcut
+        );
+
+        return ()=>{
+            window.removeEventListener(
+                "keydown",
+                handleShortcut
+            );
+        };
+    },[
+        tenant,
+    ]);
 
     async function handleLogout() {
         await logout();
@@ -436,6 +481,27 @@ export default function AppShell() {
                     </div>
 
                     <div className="flex items-center gap-3 shrink-0">
+                        <button
+                            type="button"
+                            disabled={!tenant}
+                            onClick={()=>
+                                setProductivityOpen(
+                                    true
+                                )
+                            }
+                            className="flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-500 transition hover:border-indigo-200 hover:bg-indigo-50/40 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                            <Search className="h-4 w-4"/>
+
+                            <span className="hidden xl:inline">
+                                Pesquisar
+                            </span>
+
+                            <kbd className="hidden rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-medium text-slate-400 lg:inline">
+                                Ctrl K
+                            </kbd>
+                        </button>
+
                         <AlertBell />
 
                         <div className="hidden sm:flex items-center gap-3">
@@ -464,6 +530,17 @@ export default function AppShell() {
                     <Outlet />
                 </main>
             </div>
+
+            <ProductivityCommandPalette
+                open={
+                    productivityOpen
+                }
+                onClose={()=>
+                    setProductivityOpen(
+                        false
+                    )
+                }
+            />
         </div>
     );
 }

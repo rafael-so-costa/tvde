@@ -28,6 +28,10 @@ import {
     useQuery,
 } from "@tanstack/react-query";
 
+import {
+    useSearchParams,
+} from "react-router-dom";
+
 import api from "../lib/api";
 
 import {
@@ -299,6 +303,10 @@ export default function DocumentosPage() {
     }=useTenant();
 
     const [
+        searchParams,
+    ]=useSearchParams();
+
+    const [
         search,
         setSearch,
     ]=useState("");
@@ -343,6 +351,24 @@ export default function DocumentosPage() {
             string |
             null
         >(null);
+
+    useEffect(
+        ()=>{
+            const documentId=
+                searchParams.get(
+                    "documento"
+                );
+
+            if(documentId){
+                setSelectedId(
+                    documentId
+                );
+            }
+        },
+        [
+            searchParams,
+        ]
+    );
 
     useEffect(
         ()=>{
