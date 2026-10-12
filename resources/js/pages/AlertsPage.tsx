@@ -25,6 +25,7 @@ import {
 import {
     Link,
     useLocation,
+    useSearchParams,
 } from "react-router-dom";
 
 import {
@@ -79,18 +80,39 @@ export default function AlertsPage(){
     const queryClient=
         useQueryClient();
 
+    const [searchParams]=
+        useSearchParams();
+
     const [filters,setFilters]=
-        useState<AlertFilters>({
-            status:"open",
-            severity:"",
-            category:"",
-            unread:"",
-            acknowledged:"",
-            include_snoozed:false,
-            search:"",
-            page:1,
-            per_page:20,
-        });
+        useState<AlertFilters>(
+            ()=>{
+                const severity=
+                    searchParams.get(
+                        "severity"
+                    );
+
+                const initialSeverity:
+                    AlertFilters["severity"]=
+                        severity==="critical"||
+                        severity==="high"||
+                        severity==="medium"||
+                        severity==="low"
+                            ?severity
+                            :"";
+
+                return {
+                    status:"open",
+                    severity:initialSeverity,
+                    category:"",
+                    unread:"",
+                    acknowledged:"",
+                    include_snoozed:false,
+                    search:"",
+                    page:1,
+                    per_page:20,
+                };
+            }
+        );
 
     const summaryQuery=useQuery({
         queryKey:

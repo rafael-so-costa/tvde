@@ -19,13 +19,20 @@ import {
     Sparkles,
 } from "lucide-react";
 
-import { Link } from "react-router-dom";
+import {
+    Link,
+    useLocation,
+} from "react-router-dom";
 
 import type { ReactNode } from "react";
 
 import api from "../lib/api";
 
 import { alertKeys, fetchAlertSummary } from "../lib/alerts";
+
+import {
+    resolveNotificationUrl,
+} from "../lib/notification-links";
 
 import { useAuth } from "../contexts/AuthContext";
 
@@ -369,7 +376,7 @@ function QuickActions({
         {
             label: "Contratos",
             description: "Contratos e assinaturas",
-            href: "/contratos",
+            href: "/contratos?status=pendentes",
             icon: FileText,
             permission: "contratos",
         },
@@ -383,7 +390,7 @@ function QuickActions({
         {
             label: "Checklists",
             description: "Entrega e devolução",
-            href: "/checklists",
+            href: "/checklists?estado=rascunho",
             icon: ClipboardCheck,
             permission: "checklist",
         },
@@ -397,7 +404,7 @@ function QuickActions({
         {
             label: "Alertas",
             description: "Situações que exigem atenção",
-            href: "/alertas",
+            href: "/alertas?severity=high",
             icon: BellRing,
             permission: null,
         },
@@ -504,7 +511,7 @@ function OperationPriorities({
             description: "Rascunhos ou contratos enviados",
             value: metrics.contratos_pendentes ?? 0,
             visible: metrics.contratos_pendentes !== null,
-            href: "/contratos",
+            href: "/contratos?status=pendentes",
             icon: FileText,
             classes: "border-amber-200 bg-amber-50/60 text-amber-600",
         },
@@ -513,7 +520,7 @@ function OperationPriorities({
             description: "Registos ainda não finalizados",
             value: metrics.checklists_pendentes ?? 0,
             visible: metrics.checklists_pendentes !== null,
-            href: "/checklists",
+            href: "/checklists?estado=rascunho",
             icon: ClipboardCheck,
             classes: "border-indigo-200 bg-indigo-50/60 text-indigo-600",
         },
@@ -789,9 +796,34 @@ function AlertMetric({ label, value }: { label: string; value: number }) {
 }
 
 function DashboardAlert({ item }: { item: AlertItem }) {
+    const location = useLocation();
+
+    const managementUrl =
+        typeof item.metadata?.management_url === "string"
+            ? item.metadata.management_url
+            : null;
+
+    const rawDestination =
+        managementUrl ??
+        (
+            item.action_url &&
+            item.action_url !== "/alertas"
+                ? item.action_url
+                : null
+        );
+
+    const destination =
+        rawDestination
+            ? resolveNotificationUrl(
+                  rawDestination,
+                  location.pathname,
+                  "/alertas",
+              )
+            : "/alertas";
+
     return (
         <Link
-            to="/alertas"
+            to={destination}
             className="block px-5 py-4 transition hover:bg-slate-50"
         >
             <div className="flex items-start gap-3">

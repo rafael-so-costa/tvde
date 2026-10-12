@@ -33,6 +33,7 @@ import {
 } from '../contexts/TenantContext';
 import ChecklistFormModal from '../components/checklists/ChecklistFormModal';
 import type {
+    ChecklistEstado,
     ChecklistRecord,
     ChecklistTipo,
 } from '../types/checklist';
@@ -165,6 +166,28 @@ export default function ChecklistsPage() {
         searchParams,
         setSearchParams,
     ]=useSearchParams();
+
+    const [
+        estado,
+        setEstado,
+    ]=useState<
+        'todos'|
+        ChecklistEstado
+    >(
+        ()=>{
+            const value=
+                searchParams.get(
+                    'estado'
+                );
+
+            return value===
+                'rascunho'||
+                value===
+                'finalizado'
+                    ?value
+                    :'todos';
+        }
+    );
 
     useEffect(()=>{
         if(
@@ -324,6 +347,15 @@ export default function ChecklistsPage() {
                         return false;
                     }
 
+                    if (
+                        estado !==
+                            'todos' &&
+                        record.estado !==
+                            estado
+                    ) {
+                        return false;
+                    }
+
                     if (!term) {
                         return true;
                     }
@@ -358,6 +390,7 @@ export default function ChecklistsPage() {
             recordsQuery.data,
             search,
             filter,
+            estado,
         ]);
 
     const allRecords =
@@ -525,7 +558,34 @@ export default function ChecklistsPage() {
                         />
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
+                        <select
+                            value={
+                                estado
+                            }
+                            onChange={event=>
+                                setEstado(
+                                    event.target
+                                        .value as
+                                        'todos'|
+                                        ChecklistEstado
+                                )
+                            }
+                            className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600"
+                        >
+                            <option value="todos">
+                                Todos os estados
+                            </option>
+
+                            <option value="rascunho">
+                                Pendentes
+                            </option>
+
+                            <option value="finalizado">
+                                Finalizados
+                            </option>
+                        </select>
+
                         {(
                             [
                                 [

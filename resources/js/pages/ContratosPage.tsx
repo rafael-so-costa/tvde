@@ -57,6 +57,7 @@ import type {
 
 type StatusFilter =
     | "todos"
+    | "pendentes"
     | ContratoStatus;
 
 type TypeFilter =
@@ -161,7 +162,30 @@ export default function ContratosPage() {
         setStatus,
     ] =
         useState<StatusFilter>(
-            "todos",
+            () => {
+                const value =
+                    searchParams.get(
+                        "status",
+                    );
+
+                if (
+                    value ===
+                    "pendentes"
+                ) {
+                    return "pendentes";
+                }
+
+                if (
+                    value &&
+                    value in
+                        statusLabels
+                ) {
+                    return value as
+                        ContratoStatus;
+                }
+
+                return "todos";
+            },
         );
 
     const [
@@ -633,6 +657,18 @@ export default function ContratosPage() {
                         contract,
                     ) => {
                         if (
+                            status ===
+                            "pendentes"
+                        ) {
+                            if (
+                                contract.status !==
+                                    "rascunho" &&
+                                contract.status !==
+                                    "enviado"
+                            ) {
+                                return false;
+                            }
+                        } else if (
                             status !==
                                 "todos" &&
                             contract
@@ -945,6 +981,10 @@ export default function ContratosPage() {
                     >
                         <option value="todos">
                             Todos os estados
+                        </option>
+
+                        <option value="pendentes">
+                            Pendentes
                         </option>
 
                         {Object.entries(
