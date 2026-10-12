@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import ManagementRoute from "./components/ManagementRoute";
@@ -11,82 +12,223 @@ import BackofficeShell from "./layouts/BackofficeShell";
 import MotoristaShell from "./layouts/MotoristaShell";
 import ProprietarioShell from "./layouts/ProprietarioShell";
 
-import AlertsPage from "./pages/AlertsPage";
-import AlugueresPage from "./pages/AlugueresPage";
-import AprovacaoManutencaoPublicaPage from "./pages/AprovacaoManutencaoPublicaPage";
-import BackofficeClientPage from "./pages/BackofficeClientPage";
-import BackofficeClientsPage from "./pages/BackofficeClientsPage";
-import BackofficeCrmActivitiesPage from "./pages/BackofficeCrmActivitiesPage";
-import BackofficeCrmDashboardPage from "./pages/BackofficeCrmDashboardPage";
-import BackofficeCrmLeadPage from "./pages/BackofficeCrmLeadPage";
-import BackofficeCrmLeadsPage from "./pages/BackofficeCrmLeadsPage";
-import BackofficeCrmPipelinePage from "./pages/BackofficeCrmPipelinePage";
-import BackofficeCrmTagsPage from "./pages/BackofficeCrmTagsPage";
-import BackofficeBillingPage from "./pages/BackofficeBillingPage";
-import BackofficeDashboardPage from "./pages/BackofficeDashboardPage";
-import BackofficeNifEnrichmentBatchPage from "./pages/BackofficeNifEnrichmentBatchPage";
-import BackofficeNifEnrichmentBatchesPage from "./pages/BackofficeNifEnrichmentBatchesPage";
-import BackofficeNotificationsPage from "./pages/BackofficeNotificationsPage";
-import BackofficePlanPage from "./pages/BackofficePlanPage";
-import BackofficePlansPage from "./pages/BackofficePlansPage";
-import BackofficeSubscriptionPage from "./pages/BackofficeSubscriptionPage";
-import BackofficeSubscriptionsPage from "./pages/BackofficeSubscriptionsPage";
-import BackofficeTvdeImportCreatePage from "./pages/BackofficeTvdeImportCreatePage";
-import BackofficeTvdeImportPage from "./pages/BackofficeTvdeImportPage";
-import BackofficeTvdeImportsPage from "./pages/BackofficeTvdeImportsPage";
-import BackofficeTvdeOperatorPage from "./pages/BackofficeTvdeOperatorPage";
-import BackofficeTvdeOperatorsPage from "./pages/BackofficeTvdeOperatorsPage";
-import ChecklistsPage from "./pages/ChecklistsPage";
-import PortalChecklistsPage from "./pages/PortalChecklistsPage";
-import ContratoTipoPage from "./pages/ContratoTipoPage";
-import ContratosConfiguracaoPage from "./pages/ContratosConfiguracaoPage";
-import ContratosPage from "./pages/ContratosPage";
-import DashboardPage from "./pages/DashboardPage";
-import DocumentosPage from "./pages/DocumentosPage";
-import EmpresasPage from "./pages/EmpresasPage";
-import ExpedientePage from "./pages/ExpedientePage";
-import ExpedientePublicPage from "./pages/ExpedientePublicPage";
-import FuncionarioInvitePage from "./pages/FuncionarioInvitePage";
-import FuncionariosPage from "./pages/FuncionariosPage";
-import LoginPage from "./pages/LoginPage";
-import ManutencaoPage from "./pages/ManutencaoPage";
-import MotoristaDashboardPage from "./pages/MotoristaDashboardPage";
-import MotoristasPage from "./pages/MotoristasPage";
-import MultasPage from "./pages/MultasPage";
-import MyAccountPage from "./pages/MyAccountPage";
-import OnboardingPage from "./pages/OnboardingPage";
-import ProprietarioDashboardPage from "./pages/ProprietarioDashboardPage";
-import ProprietariosPage from "./pages/ProprietariosPage";
-import RecibosVerdesPage from "./pages/RecibosVerdesPage";
-import RegistosCriminaisPage from "./pages/RegistosCriminaisPage";
-import RemoteSignaturePage from "./pages/RemoteSignaturePage";
-import SinistrosPage from "./pages/SinistrosPage";
-import TemplatesPage from "./pages/TemplatesPage";
-import VeiculosPage from "./pages/VeiculosPage";
 
-import BackofficeAdAdvertisersPage from "./pages/ads/BackofficeAdAdvertisersPage";
-import BackofficeAdApprovalsPage from "./pages/ads/BackofficeAdApprovalsPage";
-import BackofficeAdCampaignPage from "./pages/ads/BackofficeAdCampaignPage";
-import BackofficeAdCampaignsPage from "./pages/ads/BackofficeAdCampaignsPage";
-import BackofficeAdInventoryPage from "./pages/ads/BackofficeAdInventoryPage";
-import BackofficeAdOrdersPage from "./pages/ads/BackofficeAdOrdersPage";
-import BackofficeAdsDashboardPage from "./pages/ads/BackofficeAdsDashboardPage";
-import BackofficeAdsRouterPage from "./pages/ads/BackofficeAdsRouterPage";
-import BackofficeAdSettingsPage from "./pages/ads/BackofficeAdSettingsPage";
 
-import ChatPage from "./pages/ChatPage";
-import ConfiguracoesPage from "./pages/ConfiguracoesPage";
-import RelatoriosPage from "./pages/RelatoriosPage";
-import AuditoriaPage from "./pages/AuditoriaPage";
-import HelpdeskPage from "./pages/HelpdeskPage";
-import BackofficeHelpCenterPage from "./pages/BackofficeHelpCenterPage";
-import HelpCenterPage from "./pages/HelpCenterPage";
-import HelpContentPage from "./pages/HelpContentPage";
-import BackofficeModelosDocumentoPage from "./pages/BackofficeModelosDocumentoPage";
 
+const AlertsPage = lazy(
+    () => import("./pages/AlertsPage"),
+);
+const AlugueresPage = lazy(
+    () => import("./pages/AlugueresPage"),
+);
+const AprovacaoManutencaoPublicaPage = lazy(
+    () => import("./pages/AprovacaoManutencaoPublicaPage"),
+);
+const BackofficeClientPage = lazy(
+    () => import("./pages/BackofficeClientPage"),
+);
+const BackofficeClientsPage = lazy(
+    () => import("./pages/BackofficeClientsPage"),
+);
+const BackofficeCrmActivitiesPage = lazy(
+    () => import("./pages/BackofficeCrmActivitiesPage"),
+);
+const BackofficeCrmDashboardPage = lazy(
+    () => import("./pages/BackofficeCrmDashboardPage"),
+);
+const BackofficeCrmLeadPage = lazy(
+    () => import("./pages/BackofficeCrmLeadPage"),
+);
+const BackofficeCrmLeadsPage = lazy(
+    () => import("./pages/BackofficeCrmLeadsPage"),
+);
+const BackofficeCrmPipelinePage = lazy(
+    () => import("./pages/BackofficeCrmPipelinePage"),
+);
+const BackofficeCrmTagsPage = lazy(
+    () => import("./pages/BackofficeCrmTagsPage"),
+);
+const BackofficeBillingPage = lazy(
+    () => import("./pages/BackofficeBillingPage"),
+);
+const BackofficeDashboardPage = lazy(
+    () => import("./pages/BackofficeDashboardPage"),
+);
+const BackofficeNifEnrichmentBatchPage = lazy(
+    () => import("./pages/BackofficeNifEnrichmentBatchPage"),
+);
+const BackofficeNifEnrichmentBatchesPage = lazy(
+    () => import("./pages/BackofficeNifEnrichmentBatchesPage"),
+);
+const BackofficeNotificationsPage = lazy(
+    () => import("./pages/BackofficeNotificationsPage"),
+);
+const BackofficePlanPage = lazy(
+    () => import("./pages/BackofficePlanPage"),
+);
+const BackofficePlansPage = lazy(
+    () => import("./pages/BackofficePlansPage"),
+);
+const BackofficeSubscriptionPage = lazy(
+    () => import("./pages/BackofficeSubscriptionPage"),
+);
+const BackofficeSubscriptionsPage = lazy(
+    () => import("./pages/BackofficeSubscriptionsPage"),
+);
+const BackofficeTvdeImportCreatePage = lazy(
+    () => import("./pages/BackofficeTvdeImportCreatePage"),
+);
+const BackofficeTvdeImportPage = lazy(
+    () => import("./pages/BackofficeTvdeImportPage"),
+);
+const BackofficeTvdeImportsPage = lazy(
+    () => import("./pages/BackofficeTvdeImportsPage"),
+);
+const BackofficeTvdeOperatorPage = lazy(
+    () => import("./pages/BackofficeTvdeOperatorPage"),
+);
+const BackofficeTvdeOperatorsPage = lazy(
+    () => import("./pages/BackofficeTvdeOperatorsPage"),
+);
+const ChecklistsPage = lazy(
+    () => import("./pages/ChecklistsPage"),
+);
+const PortalChecklistsPage = lazy(
+    () => import("./pages/PortalChecklistsPage"),
+);
+const ContratoTipoPage = lazy(
+    () => import("./pages/ContratoTipoPage"),
+);
+const ContratosConfiguracaoPage = lazy(
+    () => import("./pages/ContratosConfiguracaoPage"),
+);
+const ContratosPage = lazy(
+    () => import("./pages/ContratosPage"),
+);
+const DashboardPage = lazy(
+    () => import("./pages/DashboardPage"),
+);
+const DocumentosPage = lazy(
+    () => import("./pages/DocumentosPage"),
+);
+const EmpresasPage = lazy(
+    () => import("./pages/EmpresasPage"),
+);
+const ExpedientePage = lazy(
+    () => import("./pages/ExpedientePage"),
+);
+const ExpedientePublicPage = lazy(
+    () => import("./pages/ExpedientePublicPage"),
+);
+const FuncionarioInvitePage = lazy(
+    () => import("./pages/FuncionarioInvitePage"),
+);
+const FuncionariosPage = lazy(
+    () => import("./pages/FuncionariosPage"),
+);
+const LoginPage = lazy(
+    () => import("./pages/LoginPage"),
+);
+const ManutencaoPage = lazy(
+    () => import("./pages/ManutencaoPage"),
+);
+const MotoristaDashboardPage = lazy(
+    () => import("./pages/MotoristaDashboardPage"),
+);
+const MotoristasPage = lazy(
+    () => import("./pages/MotoristasPage"),
+);
+const MultasPage = lazy(
+    () => import("./pages/MultasPage"),
+);
+const MyAccountPage = lazy(
+    () => import("./pages/MyAccountPage"),
+);
+const OnboardingPage = lazy(
+    () => import("./pages/OnboardingPage"),
+);
+const ProprietarioDashboardPage = lazy(
+    () => import("./pages/ProprietarioDashboardPage"),
+);
+const ProprietariosPage = lazy(
+    () => import("./pages/ProprietariosPage"),
+);
+const RecibosVerdesPage = lazy(
+    () => import("./pages/RecibosVerdesPage"),
+);
+const RegistosCriminaisPage = lazy(
+    () => import("./pages/RegistosCriminaisPage"),
+);
+const RemoteSignaturePage = lazy(
+    () => import("./pages/RemoteSignaturePage"),
+);
+const SinistrosPage = lazy(
+    () => import("./pages/SinistrosPage"),
+);
+const TemplatesPage = lazy(
+    () => import("./pages/TemplatesPage"),
+);
+const VeiculosPage = lazy(
+    () => import("./pages/VeiculosPage"),
+);
+const BackofficeAdAdvertisersPage = lazy(
+    () => import("./pages/ads/BackofficeAdAdvertisersPage"),
+);
+const BackofficeAdApprovalsPage = lazy(
+    () => import("./pages/ads/BackofficeAdApprovalsPage"),
+);
+const BackofficeAdCampaignPage = lazy(
+    () => import("./pages/ads/BackofficeAdCampaignPage"),
+);
+const BackofficeAdCampaignsPage = lazy(
+    () => import("./pages/ads/BackofficeAdCampaignsPage"),
+);
+const BackofficeAdInventoryPage = lazy(
+    () => import("./pages/ads/BackofficeAdInventoryPage"),
+);
+const BackofficeAdOrdersPage = lazy(
+    () => import("./pages/ads/BackofficeAdOrdersPage"),
+);
+const BackofficeAdsDashboardPage = lazy(
+    () => import("./pages/ads/BackofficeAdsDashboardPage"),
+);
+const BackofficeAdsRouterPage = lazy(
+    () => import("./pages/ads/BackofficeAdsRouterPage"),
+);
+const BackofficeAdSettingsPage = lazy(
+    () => import("./pages/ads/BackofficeAdSettingsPage"),
+);
+const ChatPage = lazy(
+    () => import("./pages/ChatPage"),
+);
+const ConfiguracoesPage = lazy(
+    () => import("./pages/ConfiguracoesPage"),
+);
+const RelatoriosPage = lazy(
+    () => import("./pages/RelatoriosPage"),
+);
+const AuditoriaPage = lazy(
+    () => import("./pages/AuditoriaPage"),
+);
+const HelpdeskPage = lazy(
+    () => import("./pages/HelpdeskPage"),
+);
+const BackofficeHelpCenterPage = lazy(
+    () => import("./pages/BackofficeHelpCenterPage"),
+);
+const HelpCenterPage = lazy(
+    () => import("./pages/HelpCenterPage"),
+);
+const HelpContentPage = lazy(
+    () => import("./pages/HelpContentPage"),
+);
+const BackofficeModelosDocumentoPage = lazy(
+    () => import("./pages/BackofficeModelosDocumentoPage"),
+);
 export default function App() {
     return (
-        <Routes>
+        <Suspense fallback={<RouteLoading />}>
+            <Routes>
             <Route path="/login" element={<LoginPage />} />
 
             <Route
@@ -535,7 +677,22 @@ export default function App() {
                 </Route>
             </Route>
 
-            <Route path="*" element={<Navigate to="/painel" replace />} />
-        </Routes>
+                <Route path="*" element={<Navigate to="/painel" replace />} />
+            </Routes>
+        </Suspense>
+    );
+}
+
+function RouteLoading() {
+    return (
+        <div className="flex min-h-screen items-center justify-center bg-slate-50">
+            <div className="flex flex-col items-center gap-3">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-indigo-600" />
+
+                <p className="text-sm font-medium text-slate-500">
+                    A carregar...
+                </p>
+            </div>
+        </div>
     );
 }
