@@ -22,6 +22,7 @@ import BackofficeCrmLeadPage from "./pages/BackofficeCrmLeadPage";
 import BackofficeCrmLeadsPage from "./pages/BackofficeCrmLeadsPage";
 import BackofficeCrmPipelinePage from "./pages/BackofficeCrmPipelinePage";
 import BackofficeCrmTagsPage from "./pages/BackofficeCrmTagsPage";
+import BackofficeBillingPage from "./pages/BackofficeBillingPage";
 import BackofficeDashboardPage from "./pages/BackofficeDashboardPage";
 import BackofficeNifEnrichmentBatchPage from "./pages/BackofficeNifEnrichmentBatchPage";
 import BackofficeNifEnrichmentBatchesPage from "./pages/BackofficeNifEnrichmentBatchesPage";
@@ -170,6 +171,10 @@ export default function App() {
                         <Route
                             path="assinaturas/:id"
                             element={<BackofficeSubscriptionPage />}
+                        />
+                        <Route
+                            path="faturacao"
+                            element={<BackofficeBillingPage />}
                         />
 
                         <Route path="ads" element={<BackofficeAdsRouterPage />}>

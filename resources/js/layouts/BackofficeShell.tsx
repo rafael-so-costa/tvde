@@ -22,6 +22,7 @@ import {
     Tag,
     Truck,
     UsersRound,
+    WalletCards,
     X,
 } from "lucide-react";
 
@@ -175,6 +176,10 @@ export default function BackofficeShell() {
                     <NavLink to="/backoffice/assinaturas" className={navClass}>
                         <CreditCard className="h-5 w-5 shrink-0" />
                         Assinaturas
+                    </NavLink>
+                    <NavLink to="/backoffice/faturacao" className={navClass}>
+                        <WalletCards className="h-5 w-5 shrink-0" />
+                        Faturação
                     </NavLink>
                 </div>
 

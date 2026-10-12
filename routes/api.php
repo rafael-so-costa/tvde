@@ -14,6 +14,7 @@ use App\Http\Controllers\BackofficeCrmLeadStageController;
 use App\Http\Controllers\BackofficeCrmPipelineController;
 use App\Http\Controllers\BackofficeCrmProspectController;
 use App\Http\Controllers\BackofficeCrmTagController;
+use App\Http\Controllers\BackofficeBillingController;
 use App\Http\Controllers\BackofficeDashboardController;
 use App\Http\Controllers\BackofficeHelpCategoryController;
 use App\Http\Controllers\BackofficeHelpCenterController;
@@ -461,6 +462,10 @@ Route::middleware('auth:sanctum')->group(function () {
                     'id'
                 );
 
+            Route::get(
+                '/faturacao/resumo',
+                [BackofficeBillingController::class, 'show']
+            );
             Route::get(
                 '/assinaturas',
                 [BackofficeSubscriptionController::class, 'index']
