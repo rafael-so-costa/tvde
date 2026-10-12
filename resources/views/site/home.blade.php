@@ -1922,17 +1922,17 @@
 
                         <div class="mt-5 space-y-3 text-sm">
 
-                            <span class="block text-slate-600">
+                            <a href="{{ route('site.legal.terms') }}" class="block hover:text-white">
                                 Termos de utilização
-                            </span>
+                            </a>
 
-                            <span class="block text-slate-600">
+                            <a href="{{ route('site.legal.privacy') }}" class="block hover:text-white">
                                 Política de privacidade
-                            </span>
+                            </a>
 
-                            <span class="block text-slate-600">
+                            <a href="{{ route('site.legal.cookies') }}" class="block hover:text-white">
                                 Cookies
-                            </span>
+                            </a>
 
                         </div>
 

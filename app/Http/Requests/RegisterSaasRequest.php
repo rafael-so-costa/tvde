@@ -85,6 +85,10 @@ class RegisterSaasRequest extends FormRequest
                 'string',
                 'max:30',
             ],
+
+            'terms' => [
+                'accepted',
+            ],
         ];
     }
 
@@ -100,6 +104,7 @@ class RegisterSaasRequest extends FormRequest
             'company_nif' => 'NIF da empresa',
             'company_email' => 'e-mail da empresa',
             'company_phone' => 'telefone da empresa',
+            'terms' => 'termos de utilização',
         ];
     }
 

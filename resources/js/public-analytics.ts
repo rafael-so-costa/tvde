@@ -1,3 +1,9 @@
+const analyticsConsent =
+    window.localStorage.getItem(
+        "frotapro_cookie_consent_v1",
+    );
+
+if (analyticsConsent === "all") {
 type AnalyticsPayload = {
     evento: string;
     page_url?: string;
@@ -197,4 +203,6 @@ if (contentId) {
         content_post_id:
             contentId,
     });
+}
+
 }

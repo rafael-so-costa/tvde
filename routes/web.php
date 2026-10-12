@@ -7,6 +7,14 @@ use App\Http\Controllers\SaasRegistrationController;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'site.home')->name('site.home');
+Route::view('/termos', 'site.legal.terms')
+    ->name('site.legal.terms');
+
+Route::view('/privacidade', 'site.legal.privacy')
+    ->name('site.legal.privacy');
+
+Route::view('/cookies', 'site.legal.cookies')
+    ->name('site.legal.cookies');
 
 Route::get('/anuncios', [PublicAdsController::class, 'index'])
     ->name('site.ads.index');

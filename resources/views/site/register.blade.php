@@ -13,7 +13,11 @@ $companyErrors = $errors->hasAny([
 'company_phone',
 ]);
 
-$initialStep = $companyErrors ? 2 : 1;
+$legalErrors = $errors->has('terms');
+
+$initialStep = $legalErrors
+    ? 3
+    : ($companyErrors ? 2 : 1);
 @endphp
 
 <div class="min-h-screen bg-gradient-to-b from-indigo-50 via-white to-white">
@@ -532,6 +536,22 @@ $initialStep = $companyErrors ? 2 : 1;
                         </div>
 
 
+                        <label class="mt-6 flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4">
+                            <input
+                                type="checkbox"
+                                name="terms"
+                                value="1"
+                                required
+                                @checked(old('terms'))
+                                class="mt-1 h-4 w-4 rounded border-slate-300 text-indigo-600">
+
+                            <span class="text-sm leading-6 text-slate-600">
+                                Li e aceito os
+                                <a href="{{ route('site.legal.terms') }}" target="_blank" class="font-semibold text-indigo-600 hover:text-indigo-700">Termos de Utilização</a>
+                                e declaro ter tomado conhecimento da
+                                <a href="{{ route('site.legal.privacy') }}" target="_blank" class="font-semibold text-indigo-600 hover:text-indigo-700">Política de Privacidade</a>.
+                            </span>
+                        </label>
                         <div class="mt-6 grid gap-3 sm:grid-cols-2">
 
                             <button

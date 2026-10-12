@@ -96,6 +96,12 @@ class SaasRegistrationService
                             'required' => true,
                             'completed_at' => null,
                         ],
+
+                        'legal' => [
+                            'terms_accepted_at' => now()->toIso8601String(),
+                            'privacy_notice_acknowledged_at' => now()->toIso8601String(),
+                            'terms_version' => config('legal.last_updated'),
+                        ],
                     ],
                 ]);
 
