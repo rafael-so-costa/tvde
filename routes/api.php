@@ -15,6 +15,7 @@ use App\Http\Controllers\BackofficeCrmPipelineController;
 use App\Http\Controllers\BackofficeCrmProspectController;
 use App\Http\Controllers\BackofficeCrmTagController;
 use App\Http\Controllers\BackofficeBillingController;
+use App\Http\Controllers\BackofficeBillingPaymentController;
 use App\Http\Controllers\BackofficeDashboardController;
 use App\Http\Controllers\BackofficeHelpCategoryController;
 use App\Http\Controllers\BackofficeHelpCenterController;
@@ -466,6 +467,23 @@ Route::middleware('auth:sanctum')->group(function () {
                 '/faturacao/resumo',
                 [BackofficeBillingController::class, 'show']
             );
+            Route::post(
+                '/faturacao/assinaturas/{id}/multibanco',
+                [BackofficeBillingPaymentController::class, 'subscription']
+            )
+                ->whereUuid('id');
+
+            Route::post(
+                '/faturacao/ads/{id}/multibanco',
+                [BackofficeBillingPaymentController::class, 'adOrder']
+            )
+                ->whereUuid('id');
+
+            Route::post(
+                '/faturacao/pagamentos/{id}/simular',
+                [BackofficeBillingPaymentController::class, 'simulate']
+            )
+                ->whereUuid('id');
             Route::get(
                 '/assinaturas',
                 [BackofficeSubscriptionController::class, 'index']

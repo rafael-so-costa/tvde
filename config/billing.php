@@ -1,6 +1,11 @@
 <?php
 
 return [
+    'payment_due_days' => (int) env(
+        'BILLING_PAYMENT_DUE_DAYS',
+        7
+    ),
+
     'default_provider' => env(
         'BILLING_DEFAULT_PROVIDER',
         'ifthenpay'

@@ -527,7 +527,20 @@ class AdAdminSerializer
             'tenant:id,nome',
 
             'payments',
+            'billingCharges.payments',
         ]);
+
+        $billingCharge =
+            $order
+                ->billingCharges
+                ->sortByDesc('created_at')
+                ->first();
+
+        $billingPayment =
+            $billingCharge
+                ?->payments
+                ->sortByDesc('created_at')
+                ->first();
 
         return [
             'id' => $order->id,
@@ -553,6 +566,46 @@ class AdAdminSerializer
             'advertiser' => $order->advertiser,
 
             'tenant' => $order->tenant,
+
+            'billing_payment' =>
+                $billingPayment
+                    ? [
+                        'id' => $billingPayment->id,
+                        'provider' => $billingPayment->provider,
+                        'method' => $billingPayment->method,
+                        'status' => $billingPayment->status,
+                        'amount' => (float) $billingPayment->amount,
+                        'currency' => $billingPayment->currency,
+                        'entity' => $billingPayment->entity,
+                        'reference' => $billingPayment->reference,
+                        'provider_reference' => $billingPayment->provider_reference,
+                        'expires_at' => $billingPayment->expires_at,
+                        'paid_at' => $billingPayment->paid_at,
+
+                        'mock' => (bool) data_get(
+                            $billingPayment->metadata,
+                            'mock',
+                            false
+                        ),
+
+                        'warning' => data_get(
+                            $billingPayment->metadata,
+                            'warning'
+                        ),
+
+                        'charge' => $billingCharge
+                            ? [
+                                'id' => $billingCharge->id,
+                                'number' => $billingCharge->number,
+                                'source_type' => $billingCharge->source_type,
+                                'source_id' => $billingCharge->source_id,
+                                'status' => $billingCharge->status,
+                                'description' => $billingCharge->description,
+                                'due_at' => $billingCharge->due_at,
+                            ]
+                            : null,
+                    ]
+                    : null,
 
             'payments' => $order
                 ->payments

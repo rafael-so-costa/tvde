@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\BackofficeSubscriptionActionRequest;
 use App\Http\Requests\ListBackofficeSubscriptionsRequest;
 use App\Http\Requests\UpdateBackofficeSubscriptionRequest;
+use App\Models\BillingPayment;
 use App\Models\SaasSubscription;
 use App\Services\SaasSubscriptionService;
 use Illuminate\Database\Eloquent\Builder;
@@ -43,6 +44,7 @@ class BackofficeSubscriptionController extends Controller
                 ->with([
                     'tenant:id,nome,slug,nif,email,telefone,ativo',
                     'plan:id,codigo,nome,descricao,ativo',
+                    'billingCharges.payments',
                 ]);
 
         if ($search) {
@@ -139,6 +141,7 @@ class BackofficeSubscriptionController extends Controller
                 ->with([
                     'tenant:id,nome,slug,nif,email,telefone,ativo',
                     'plan:id,codigo,nome,descricao,ativo',
+                    'billingCharges.payments',
                 ])
                 ->findOrFail(
                     $id
@@ -212,6 +215,55 @@ class BackofficeSubscriptionController extends Controller
         ]);
     }
 
+    private function serializeBillingPayment(
+        ?BillingPayment $payment
+    ): ?array {
+        if (! $payment) {
+            return null;
+        }
+
+        $payment->loadMissing(
+            'charge'
+        );
+
+        return [
+            'id' => $payment->id,
+            'provider' => $payment->provider,
+            'method' => $payment->method,
+            'status' => $payment->status,
+            'amount' => (float) $payment->amount,
+            'currency' => $payment->currency,
+            'entity' => $payment->entity,
+            'reference' => $payment->reference,
+            'provider_reference' => $payment->provider_reference,
+            'expires_at' => $payment->expires_at,
+            'paid_at' => $payment->paid_at,
+
+            'mock' => (bool) data_get(
+                $payment->metadata,
+                'mock',
+                false
+            ),
+
+            'warning' => data_get(
+                $payment->metadata,
+                'warning'
+            ),
+
+            'charge' => $payment->charge
+                ? [
+                    'id' => $payment->charge->id,
+                    'number' => $payment->charge->number,
+                    'source_type' => $payment->charge->source_type,
+                    'source_id' => $payment->charge->source_id,
+                    'status' => $payment->charge->status,
+                    'description' => $payment->charge->description,
+                    'due_at' => $payment->charge->due_at,
+                ]
+                : null,
+        ];
+    }
+
     private function actionMessage(
         string $action
     ): string {
@@ -240,7 +292,20 @@ class BackofficeSubscriptionController extends Controller
         $subscription->loadMissing([
             'tenant',
             'plan',
+            'billingCharges.payments',
         ]);
+
+        $charge =
+            $subscription
+                ->billingCharges
+                ->sortByDesc('created_at')
+                ->first();
+
+        $payment =
+            $charge
+                ?->payments
+                ->sortByDesc('created_at')
+                ->first();
 
         return [
             'id' => $subscription->id,
@@ -285,6 +350,11 @@ class BackofficeSubscriptionController extends Controller
 
             'external_subscription_id' => $subscription
                 ->external_subscription_id,
+
+            'billing_payment' =>
+                $this->serializeBillingPayment(
+                    $payment
+                ),
 
             'tenant' => $subscription->tenant
                     ? [

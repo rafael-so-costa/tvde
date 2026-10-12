@@ -37,6 +37,7 @@ class BackofficeAdOrderController extends Controller
                 'advertiser:id,name,type',
                 'tenant:id,nome',
                 'payments',
+                'billingCharges.payments',
             ])
             ->latest();
 

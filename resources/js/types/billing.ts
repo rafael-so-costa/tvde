@@ -84,3 +84,33 @@ export interface BillingDashboardData {
 export interface BillingDashboardResponse {
     data: BillingDashboardData;
 }
+export interface BillingPaymentView {
+    id: string;
+    provider: string;
+    method: string;
+    status: string;
+    amount: number;
+    currency: string;
+    entity: string | null;
+    reference: string | null;
+    provider_reference: string | null;
+    expires_at: string | null;
+    paid_at: string | null;
+    mock: boolean;
+    warning: string | null;
+
+    charge: {
+        id: string;
+        number: string;
+        source_type: string;
+        source_id: string;
+        status: string;
+        description: string | null;
+        due_at: string | null;
+    } | null;
+}
+
+export interface BillingPaymentMutationResponse {
+    message: string;
+    data: BillingPaymentView;
+}

@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class SaasSubscription extends Model
 {
@@ -69,5 +70,18 @@ class SaasSubscription extends Model
             SaasPlan::class,
             'saas_plan_id'
         );
+    }
+
+    public function billingCharges(): HasMany
+    {
+        return $this
+            ->hasMany(
+                BillingCharge::class,
+                'source_id'
+            )
+            ->where(
+                'source_type',
+                BillingCharge::SOURCE_SAAS_SUBSCRIPTION
+            );
     }
 }

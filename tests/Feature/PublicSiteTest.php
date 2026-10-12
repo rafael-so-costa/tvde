@@ -4,14 +4,13 @@ test('home comercial é pública', function () {
     $this
         ->get('/')
         ->assertOk()
-        ->assertSee('Toda a sua operação TVDE.')
-        ->assertSee('Num único lugar.')
+        ->assertSee('Antecipe problemas na sua operação TVDE.')
+        ->assertSee('Controle tudo num único lugar.')
         ->assertSee('Tudo o que precisa para gerir uma operação TVDE.')
-        ->assertSee('Da entrada do motorista à operação diária.')
         ->assertSee('Portal do Motorista')
         ->assertSee('Portal do Proprietário')
         ->assertSee('Perguntas frequentes')
-        ->assertSee('Começar agora')
+        ->assertSee('Quero conhecer o FrotaPRO')
         ->assertSee('FrotaPRO');
 });
 

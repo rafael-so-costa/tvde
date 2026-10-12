@@ -1,3 +1,4 @@
+import type { BillingPaymentView } from "./billing";
 export type AdCampaignStatus =
     | "draft"
     | "submitted"
@@ -177,6 +178,9 @@ export interface AdOrder {
     currency: string;
     due_at: string | null;
     paid_at: string | null;
+
+    billing_payment: BillingPaymentView | null;
+
     campaign: {
         id: string;
         name: string;

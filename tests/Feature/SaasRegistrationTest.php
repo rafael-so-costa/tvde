@@ -32,6 +32,7 @@ function saasRegistrationTestPayload(
         'company_nif' => '500123456',
         'company_email' => 'geral@frotateste.pt',
         'company_phone' => '+351 210 000 000',
+        'terms' => true,
     ], $overrides);
 }
 
@@ -327,5 +328,35 @@ test(
             'frota-teste-lda',
             'frota-teste-lda-2',
         ]);
+    }
+);
+
+test(
+    'cadastro saas exige aceite dos termos',
+    function () {
+        $this->post(
+            '/registar',
+            saasRegistrationTestPayload([
+                'terms' => false,
+            ])
+        )
+            ->assertSessionHasErrors(
+                'terms'
+            );
+
+        expect(
+            User::query()
+                ->count()
+        )->toBe(0);
+
+        expect(
+            Tenant::query()
+                ->count()
+        )->toBe(0);
+
+        expect(
+            Empresa::query()
+                ->count()
+        )->toBe(0);
     }
 );

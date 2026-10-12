@@ -54,6 +54,7 @@ function createSaasRegistrationForOnboardingTest($test): void
             'company_nif' => '500123456',
             'company_email' => 'geral@frotalisboa.pt',
             'company_phone' => '+351 210 000 000',
+            'terms' => true,
         ])
         ->assertRedirect('/onboarding');
 }

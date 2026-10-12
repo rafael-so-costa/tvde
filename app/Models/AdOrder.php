@@ -67,4 +67,17 @@ class AdOrder extends Model
     {
         return $this->hasMany(AdPayment::class, 'order_id');
     }
+
+    public function billingCharges(): HasMany
+    {
+        return $this
+            ->hasMany(
+                BillingCharge::class,
+                'source_id'
+            )
+            ->where(
+                'source_type',
+                BillingCharge::SOURCE_AD_ORDER
+            );
+    }
 }

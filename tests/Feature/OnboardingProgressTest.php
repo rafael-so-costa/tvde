@@ -43,6 +43,7 @@ function onboardingProgressCreate($test): array
             'company_nif'=>'500987654',
             'company_email'=>'geral@onboarding.pt',
             'company_phone'=>'+351 210 100 100',
+            'terms'=>true,
         ])
         ->assertRedirect('/onboarding');
 

@@ -1,3 +1,4 @@
+import type { BillingPaymentView } from "./billing";
 export interface BackofficeMetrics {
     tenants_total: number;
     tenants_active: number;
@@ -245,6 +246,8 @@ export interface BackofficeSubscription {
 
     external_provider: string | null;
     external_subscription_id: string | null;
+
+    billing_payment: BillingPaymentView | null;
 
     tenant: BackofficeSubscriptionTenant | null;
     plan: BackofficeSaasPlan | null;

@@ -10,6 +10,7 @@ import {
     Play,
     RefreshCw,
     Save,
+    TestTube2,
     X,
 } from "lucide-react";
 import {
@@ -27,6 +28,11 @@ import {
 } from "react-router-dom";
 
 import api from "../lib/api";
+
+import type {
+    BillingPaymentMutationResponse,
+    BillingPaymentView,
+} from "../types/billing";
 
 import type {
     BackofficeBillingCycle,
@@ -73,6 +79,13 @@ export default function BackofficeSubscriptionPage() {
         setSuccessMessage,
     ] = useState<
         string | null
+    >(null);
+
+    const [
+        billingPayment,
+        setBillingPayment,
+    ] = useState<
+        BillingPaymentView | null
     >(null);
 
     const subscriptionQuery =
@@ -129,6 +142,12 @@ export default function BackofficeSubscriptionPage() {
             subscriptionQuery
                 .data
                 .currency,
+        );
+
+        setBillingPayment(
+            subscriptionQuery
+                .data
+                .billing_payment,
         );
     }, [
         subscriptionQuery.data,
@@ -213,6 +232,66 @@ export default function BackofficeSubscriptionPage() {
                 },
         });
 
+    const generatePaymentMutation =
+        useMutation({
+            mutationFn:
+                async () => {
+                    const response =
+                        await api.post(
+                            `/api/backoffice/faturacao/assinaturas/${id}/multibanco`,
+                        );
+
+                    return response
+                        .data as BillingPaymentMutationResponse;
+                },
+
+            onSuccess:
+                async (
+                    response,
+                ) => {
+                    setBillingPayment(
+                        response.data,
+                    );
+
+                    setSuccessMessage(
+                        response.message,
+                    );
+
+                    await refreshQueries();
+                },
+        });
+
+    const simulatePaymentMutation =
+        useMutation({
+            mutationFn:
+                async (
+                    paymentId: string,
+                ) => {
+                    const response =
+                        await api.post(
+                            `/api/backoffice/faturacao/pagamentos/${paymentId}/simular`,
+                        );
+
+                    return response
+                        .data as BillingPaymentMutationResponse;
+                },
+
+            onSuccess:
+                async (
+                    response,
+                ) => {
+                    setBillingPayment(
+                        response.data,
+                    );
+
+                    setSuccessMessage(
+                        response.message,
+                    );
+
+                    await refreshQueries();
+                },
+        });
+
     async function refreshQueries(): Promise<void> {
         await Promise.all([
             queryClient.invalidateQueries({
@@ -234,6 +313,13 @@ export default function BackofficeSubscriptionPage() {
                 queryKey: [
                     "backoffice",
                     "clientes",
+                ],
+            }),
+
+            queryClient.invalidateQueries({
+                queryKey: [
+                    "backoffice",
+                    "faturacao",
                 ],
             }),
         ]);
@@ -594,6 +680,81 @@ export default function BackofficeSubscriptionPage() {
 
             <section className="rounded-2xl border border-slate-200 bg-white">
                 <SectionHeader
+                    title="Cobrança Multibanco"
+                    description="Referência associada ao período atual da assinatura."
+                />
+
+                <div className="p-5">
+                    {billingPayment ? (
+                        <SubscriptionPayment
+                            payment={
+                                billingPayment
+                            }
+                            simulating={
+                                simulatePaymentMutation.isPending
+                            }
+                            onSimulate={() => {
+                                setSuccessMessage(
+                                    null,
+                                );
+
+                                simulatePaymentMutation.mutate(
+                                    billingPayment.id,
+                                );
+                            }}
+                        />
+                    ) : (
+                        <div className="flex flex-col justify-between gap-4 rounded-xl bg-slate-50 p-5 sm:flex-row sm:items-center">
+                            <div>
+                                <p className="font-semibold text-slate-900">
+                                    Nenhuma referência emitida
+                                </p>
+
+                                <p className="mt-1 text-sm text-slate-500">
+                                    Gere uma referência Multibanco para cobrar o período atual.
+                                </p>
+                            </div>
+
+                            <button
+                                type="button"
+                                disabled={
+                                    generatePaymentMutation.isPending ||
+                                    subscription.price_amount === null ||
+                                    subscription.price_amount <= 0 ||
+                                    subscription.status ===
+                                        "canceled"
+                                }
+                                onClick={() => {
+                                    setSuccessMessage(
+                                        null,
+                                    );
+
+                                    generatePaymentMutation.mutate();
+                                }}
+                                className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+                            >
+                                {generatePaymentMutation.isPending ? (
+                                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                                ) : (
+                                    <CreditCard className="h-4 w-4" />
+                                )}
+
+                                Gerar referência Multibanco
+                            </button>
+                        </div>
+                    )}
+
+                    {subscription.price_amount ===
+                        null && (
+                        <p className="mt-3 text-xs text-amber-600">
+                            Defina primeiro um preço nas condições comerciais.
+                        </p>
+                    )}
+                </div>
+            </section>
+
+            <section className="rounded-2xl border border-slate-200 bg-white">
+                <SectionHeader
                     title="Administração da assinatura"
                     description="Ações administrativas sobre o ciclo de vida."
                 />
@@ -815,11 +976,15 @@ export default function BackofficeSubscriptionPage() {
             </section>
 
             {(termsMutation.isError ||
-                actionMutation.isError) && (
+                actionMutation.isError ||
+                generatePaymentMutation.isError ||
+                simulatePaymentMutation.isError) && (
                 <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                     {errorMessage(
                         termsMutation.error ??
-                            actionMutation.error,
+                            actionMutation.error ??
+                            generatePaymentMutation.error ??
+                            simulatePaymentMutation.error,
                     )}
                 </div>
             )}
@@ -953,6 +1118,138 @@ function ActionButton({
             {label}
         </button>
     );
+}
+
+function SubscriptionPayment({
+    payment,
+    simulating,
+    onSimulate,
+}: {
+    payment: BillingPaymentView;
+    simulating: boolean;
+    onSimulate: () => void;
+}) {
+    return (
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
+            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+                <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                        {payment.charge?.number ??
+                            "Cobrança"}
+                    </p>
+
+                    <div className="mt-4 grid gap-4 sm:grid-cols-3">
+                        <div>
+                            <p className={labelClass}>
+                                Entidade
+                            </p>
+
+                            <p className="mt-1 font-semibold text-slate-900">
+                                {payment.entity ??
+                                    "—"}
+                            </p>
+                        </div>
+
+                        <div>
+                            <p className={labelClass}>
+                                Referência
+                            </p>
+
+                            <p className="mt-1 font-semibold text-slate-900">
+                                {formatReference(
+                                    payment.reference,
+                                )}
+                            </p>
+                        </div>
+
+                        <div>
+                            <p className={labelClass}>
+                                Valor
+                            </p>
+
+                            <p className="mt-1 font-semibold text-slate-900">
+                                {formatMoney(
+                                    payment.amount,
+                                    payment.currency,
+                                )}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <span
+                    className={[
+                        "inline-flex shrink-0 rounded-full px-3 py-1 text-xs font-semibold",
+                        payment.status ===
+                        "paid"
+                            ? "bg-emerald-100 text-emerald-700"
+                            : "bg-amber-100 text-amber-700",
+                    ].join(" ")}
+                >
+                    {payment.status ===
+                    "paid"
+                        ? "Pago"
+                        : "Pendente"}
+                </span>
+            </div>
+
+            {payment.expires_at && (
+                <p className="mt-4 text-xs text-slate-500">
+                    Válida até{" "}
+                    {formatDateTime(
+                        payment.expires_at,
+                    )}
+                </p>
+            )}
+
+            {payment.mock && (
+                <div className="mt-4 flex flex-col gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex gap-2 text-xs leading-5 text-amber-800">
+                        <TestTube2 className="mt-0.5 h-4 w-4 shrink-0" />
+
+                        <span>
+                            Referência MOCK de testes. Não efetuar pagamento bancário.
+                        </span>
+                    </div>
+
+                    {payment.status ===
+                        "pending" && (
+                        <button
+                            type="button"
+                            disabled={
+                                simulating
+                            }
+                            onClick={
+                                onSimulate
+                            }
+                            className="h-9 shrink-0 rounded-lg bg-amber-600 px-3 text-xs font-semibold text-white hover:bg-amber-700 disabled:opacity-60"
+                        >
+                            {simulating
+                                ? "A confirmar..."
+                                : "Simular pagamento"}
+                        </button>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
+function formatReference(
+    value: string | null,
+): string {
+    if (!value) {
+        return "—";
+    }
+
+    const clean =
+        value.replace(
+            /\s+/g,
+            "",
+        );
+
+    return clean.match(/.{1,3}/g)
+        ?.join(" ") ?? clean;
 }
 
 function StatusBadge({
