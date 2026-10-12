@@ -56,6 +56,10 @@
                         Anúncios
                     </a>
 
+                    <a href="{{ (config('app.web_base_path') ?: '') . '/registo-expediente-publico' }}" class="text-sm font-medium text-slate-600 transition hover:text-indigo-600">
+                        Registo de expediente
+                    </a>
+
                     <a href="#faq" class="text-sm font-medium text-slate-600 transition hover:text-indigo-600">
                         FAQ
                     </a>
@@ -108,6 +112,10 @@
                             <a href="{{ route('site.ads.index') }}" class="block rounded-xl px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
                                 Anúncios
                             </a>
+
+                            <a href="{{ (config('app.web_base_path') ?: '') . '/registo-expediente-publico' }}" class="block rounded-xl px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
+    Registo de expediente
+</a>
 
                             <a href="#faq" class="block rounded-xl px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
                                 FAQ
