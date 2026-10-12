@@ -9,6 +9,9 @@ import {
     KeyRound,
     LoaderCircle,
     UserRound,
+    BarChart3,
+    BellRing,
+    Clock3,
     UsersRound,
     Building2,
     CheckCircle2,
@@ -38,11 +41,13 @@ import type {
 import type { AlertItem, AlertSeverity, AlertSummary } from "../types/alerts";
 
 import AdDisplay from "../components/ads/AdDisplay";
+import { useCurrentPermissions } from "../hooks/useCurrentPermissions";
 
 export default function DashboardPage() {
     const { user } = useAuth();
 
     const { tenant, loading } = useTenant();
+    const permissions = useCurrentPermissions();
 
     const dashboardQuery = useQuery({
         queryKey: ["dashboard", tenant?.id],
@@ -91,7 +96,7 @@ export default function DashboardPage() {
                         </p>
                     </div>
                 </section>
-                <AdDisplay surface="manager_panel"/>
+                <AdDisplay surface="manager_panel" />
             </div>
         );
     }
@@ -139,6 +144,9 @@ export default function DashboardPage() {
                     {data.setup && !data.setup.complete && (
                         <SetupProgress setup={data.setup} />
                     )}
+
+                    <QuickActions can={permissions.can} />
+
                     <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                         <MetricCard
                             title="Veículos ativos"
@@ -207,15 +215,8 @@ export default function DashboardPage() {
     );
 }
 
-function SetupProgress({
-    setup,
-}: {
-    setup: DashboardSetup;
-}) {
-    const icons: Record<
-        string,
-        typeof Building2
-    > = {
+function SetupProgress({ setup }: { setup: DashboardSetup }) {
+    const icons: Record<string, typeof Building2> = {
         empresa: Building2,
         proprietario: UsersRound,
         veiculo: Car,
@@ -240,8 +241,8 @@ function SetupProgress({
                         </h2>
 
                         <p className="mt-2 text-sm leading-6 text-slate-500">
-                            Complete estes passos para deixar a sua empresa preparada
-                            para gerir a frota no dia a dia.
+                            Complete estes passos para deixar a sua empresa
+                            preparada para gerir a frota no dia a dia.
                         </p>
                     </div>
 
@@ -266,113 +267,212 @@ function SetupProgress({
                 </div>
 
                 <div className="mt-7 grid gap-3 md:grid-cols-2">
-                    {setup.steps.map(
-                        (step) => {
-                            const Icon =
-                                icons[
-                                    step.key
-                                ] ??
-                                CheckCircle2;
+                    {setup.steps.map((step) => {
+                        const Icon = icons[step.key] ?? CheckCircle2;
 
-                            const isNext =
-                                setup
-                                    .next_step
-                                    ?.key ===
-                                step.key;
+                        const isNext = setup.next_step?.key === step.key;
 
-                            return (
-                                <Link
-                                    key={
-                                        step.key
-                                    }
-                                    to={
-                                        step.href
-                                    }
+                        return (
+                            <Link
+                                key={step.key}
+                                to={step.href}
+                                className={[
+                                    "group flex items-start gap-4 rounded-xl border p-4 transition",
+                                    step.completed
+                                        ? "border-emerald-200 bg-emerald-50/60"
+                                        : isNext
+                                          ? "border-indigo-300 bg-white shadow-sm"
+                                          : "border-slate-200 bg-white/70 hover:border-indigo-200",
+                                ].join(" ")}
+                            >
+                                <div
                                     className={[
-                                        "group flex items-start gap-4 rounded-xl border p-4 transition",
+                                        "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
                                         step.completed
-                                            ? "border-emerald-200 bg-emerald-50/60"
+                                            ? "bg-emerald-100 text-emerald-600"
                                             : isNext
-                                              ? "border-indigo-300 bg-white shadow-sm"
-                                              : "border-slate-200 bg-white/70 hover:border-indigo-200",
-                                    ].join(
-                                        " "
-                                    )}
+                                              ? "bg-indigo-100 text-indigo-600"
+                                              : "bg-slate-100 text-slate-500",
+                                    ].join(" ")}
                                 >
-                                    <div
-                                        className={[
-                                            "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
-                                            step.completed
-                                                ? "bg-emerald-100 text-emerald-600"
-                                                : isNext
-                                                  ? "bg-indigo-100 text-indigo-600"
-                                                  : "bg-slate-100 text-slate-500",
-                                        ].join(
-                                            " "
-                                        )}
-                                    >
-                                        {step.completed ? (
-                                            <CheckCircle2 className="h-5 w-5" />
-                                        ) : (
-                                            <Icon className="h-5 w-5" />
-                                        )}
-                                    </div>
-
-                                    <div className="min-w-0 flex-1">
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            <p
-                                                className={[
-                                                    "text-sm font-semibold",
-                                                    step.completed
-                                                        ? "text-emerald-800"
-                                                        : "text-slate-900",
-                                                ].join(
-                                                    " "
-                                                )}
-                                            >
-                                                {
-                                                    step.label
-                                                }
-                                            </p>
-
-                                            {isNext &&
-                                                !step.completed && (
-                                                    <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-700">
-                                                        Próximo
-                                                    </span>
-                                                )}
-                                        </div>
-
-                                        <p className="mt-1 text-xs leading-5 text-slate-500">
-                                            {
-                                                step.description
-                                            }
-                                        </p>
-                                    </div>
-
-                                    {!step.completed && (
-                                        <ArrowRight className="mt-3 h-4 w-4 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-indigo-500" />
+                                    {step.completed ? (
+                                        <CheckCircle2 className="h-5 w-5" />
+                                    ) : (
+                                        <Icon className="h-5 w-5" />
                                     )}
-                                </Link>
-                            );
-                        }
-                    )}
+                                </div>
+
+                                <div className="min-w-0 flex-1">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <p
+                                            className={[
+                                                "text-sm font-semibold",
+                                                step.completed
+                                                    ? "text-emerald-800"
+                                                    : "text-slate-900",
+                                            ].join(" ")}
+                                        >
+                                            {step.label}
+                                        </p>
+
+                                        {isNext && !step.completed && (
+                                            <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-700">
+                                                Próximo
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    <p className="mt-1 text-xs leading-5 text-slate-500">
+                                        {step.description}
+                                    </p>
+                                </div>
+
+                                {!step.completed && (
+                                    <ArrowRight className="mt-3 h-4 w-4 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-indigo-500" />
+                                )}
+                            </Link>
+                        );
+                    })}
                 </div>
 
                 {setup.next_step && (
                     <div className="mt-6 flex justify-end">
                         <Link
-                            to={
-                                setup
-                                    .next_step
-                                    .href
-                            }
+                            to={setup.next_step.href}
                             className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 text-sm font-semibold text-white shadow-lg shadow-indigo-600/20 transition hover:bg-indigo-700"
                         >
                             Continuar configuração
                             <ArrowRight className="h-4 w-4" />
                         </Link>
                     </div>
+                )}
+            </div>
+        </section>
+    );
+}
+
+function QuickActions({
+    can,
+}: {
+    can: (
+        code: string,
+        required?: "nenhum" | "visualizar" | "configurar",
+    ) => boolean;
+}) {
+    const actions = [
+        {
+            label: "Motoristas",
+            description: "Consultar e gerir motoristas",
+            href: "/motoristas",
+            icon: UserRound,
+            permission: "motoristas",
+        },
+        {
+            label: "Veículos",
+            description: "Consultar a frota",
+            href: "/veiculos",
+            icon: Car,
+            permission: "veiculos",
+        },
+        {
+            label: "Contratos",
+            description: "Contratos e assinaturas",
+            href: "/contratos",
+            icon: FileText,
+            permission: "contratos",
+        },
+        {
+            label: "Alugueres",
+            description: "Operações em curso",
+            href: "/alugueres",
+            icon: KeyRound,
+            permission: "alugueres",
+        },
+        {
+            label: "Checklists",
+            description: "Entrega e devolução",
+            href: "/checklists",
+            icon: ClipboardCheck,
+            permission: "checklist",
+        },
+        {
+            label: "Expediente",
+            description: "Entradas, saídas e histórico",
+            href: "/expediente",
+            icon: Clock3,
+            permission: "expediente",
+        },
+        {
+            label: "Alertas",
+            description: "Situações que exigem atenção",
+            href: "/alertas",
+            icon: BellRing,
+            permission: null,
+        },
+        {
+            label: "Relatórios",
+            description: "Indicadores da operação",
+            href: "/relatorios",
+            icon: BarChart3,
+            permission: "relatorios",
+        },
+    ];
+
+    const visibleActions = actions.filter(
+        (action) =>
+            !action.permission ||
+            can(
+                action.permission,
+                "visualizar",
+            ),
+    );
+
+    if (visibleActions.length === 0) {
+        return null;
+    }
+
+    return (
+        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+            <div className="border-b border-slate-100 px-5 py-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-indigo-600">
+                    Acessos rápidos
+                </p>
+
+                <h2 className="mt-1 font-semibold text-slate-900">
+                    Vá diretamente ao que precisa.
+                </h2>
+            </div>
+
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4">
+                {visibleActions.map(
+                    ({
+                        label,
+                        description,
+                        href,
+                        icon: Icon,
+                    }) => (
+                        <Link
+                            key={href}
+                            to={href}
+                            className="group flex items-center gap-4 border-b border-slate-100 p-5 transition hover:bg-indigo-50/40 sm:border-r lg:[&:nth-child(4n)]:border-r-0"
+                        >
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 transition group-hover:bg-indigo-100">
+                                <Icon className="h-5 w-5" />
+                            </div>
+
+                            <div className="min-w-0 flex-1">
+                                <p className="font-semibold text-slate-900">
+                                    {label}
+                                </p>
+
+                                <p className="mt-1 truncate text-xs text-slate-400">
+                                    {description}
+                                </p>
+                            </div>
+
+                            <ArrowRight className="h-4 w-4 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-indigo-500" />
+                        </Link>
+                    ),
                 )}
             </div>
         </section>
