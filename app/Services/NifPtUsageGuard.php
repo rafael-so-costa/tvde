@@ -13,9 +13,6 @@ class NifPtUsageGuard
     private const MIN_INTERVAL_MINUTES = 43;
 
     private const MAX_INTERVAL_MINUTES = 48;
-
-    private const MAX_EXTERNAL_PER_HOUR = 2;
-
     private const MAX_EXTERNAL_PER_DAY = 32;
 
     private const MAX_EXTERNAL_PER_30_DAYS = 950;
@@ -98,22 +95,6 @@ class NifPtUsageGuard
                 )->format('H:i'),
                 $schedule['minutes_remaining'],
                 $schedule['interval_minutes']
-            );
-        }
-
-        $hour =
-            $this->externalAttemptsSince(
-                now()->subHour()
-            );
-
-        if (
-            $hour >=
-            self::MAX_EXTERNAL_PER_HOUR
-        ) {
-            return sprintf(
-                'Limite operacional horário NIF.PT atingido (%d/%d).',
-                $hour,
-                self::MAX_EXTERNAL_PER_HOUR
             );
         }
 
