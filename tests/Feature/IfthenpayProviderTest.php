@@ -232,3 +232,147 @@ test(
         );
     }
 );
+test(
+    'billing substitui referência mock pendente por referência real',
+    function () {
+        Http::fake([
+            'api.ifthenpay.com/*' =>
+                Http::response(
+                    [
+                        'Amount' =>
+                            '19.90',
+
+                        'Entity' =>
+                            '12345',
+
+                        'ExpiryDate' =>
+                            now()
+                                ->addDays(7)
+                                ->format('d-m-Y'),
+
+                        'Message' =>
+                            'Success',
+
+                        'OrderId' =>
+                            'SAAS-202610-TEST0001',
+
+                        'Reference' =>
+                            '987654321',
+
+                        'RequestId' =>
+                            'REALREQUEST123',
+
+                        'Status' =>
+                            '0',
+                    ],
+                    200
+                ),
+        ]);
+
+        $charge =
+            ifthenpayCharge();
+
+        $mock =
+            BillingPayment::create([
+                'billing_charge_id' =>
+                    $charge->id,
+
+                'provider' =>
+                    'ifthenpay',
+
+                'method' =>
+                    BillingPayment::METHOD_MULTIBANCO,
+
+                'status' =>
+                    BillingPayment::STATUS_PENDING,
+
+                'amount' =>
+                    19.90,
+
+                'currency' =>
+                    'EUR',
+
+                'external_id' =>
+                    'mock_old',
+
+                'provider_reference' =>
+                    'mock:' .
+                    $charge->number,
+
+                'entity' =>
+                    '99999',
+
+                'reference' =>
+                    '123456789',
+
+                'metadata' => [
+                    'mock' =>
+                        true,
+
+                    'sandbox' =>
+                        true,
+                ],
+            ]);
+
+        $payment =
+            app(
+                \App\Services\Billing\BillingService::class
+            )->createPayment(
+                $charge,
+                'ifthenpay',
+                BillingPayment::METHOD_MULTIBANCO
+            );
+
+        expect(
+            $payment->id
+        )->not->toBe(
+            $mock->id
+        );
+
+        expect(
+            $payment->external_id
+        )->toBe(
+            'REALREQUEST123'
+        );
+
+        expect(
+            $payment->entity
+        )->toBe(
+            '12345'
+        );
+
+        expect(
+            $payment->reference
+        )->toBe(
+            '987654321'
+        );
+
+        expect(
+            $payment->metadata['mock']
+        )->toBeFalse();
+
+        expect(
+            $mock
+                ->refresh()
+                ->status
+        )->toBe(
+            BillingPayment::STATUS_CANCELED
+        );
+
+        expect(
+            $mock
+                ->metadata[
+                    'replaced_by_real_payment'
+                ]
+        )->toBeTrue();
+
+        expect(
+            BillingPayment::query()
+                ->where(
+                    'billing_charge_id',
+                    $charge->id
+                )
+                ->count()
+        )->toBe(2);
+    }
+);

@@ -64,3 +64,31 @@ Artisan::command(
 )->purpose(
     'Sincroniza comunicações agendadas e conteúdos publicados.'
 );
+
+Artisan::command(
+    'billing:ifthenpay-reconcile',
+    function () {
+        $result =
+            app(
+                \App\Services\Billing\IfthenpayReconciliationService::class
+            )->reconcilePending();
+
+        $this->info(
+            sprintf(
+                'Ifthenpay: verificadas=%d, confirmadas=%d, pendentes=%d, erros=%d',
+                $result['checked'],
+                $result['confirmed'],
+                $result['pending'],
+                $result['errors']
+            )
+        );
+    }
+)->purpose(
+    'Reconcilia pagamentos Multibanco pendentes com a Ifthenpay.'
+);
+
+Schedule::command(
+    'billing:ifthenpay-reconcile'
+)
+    ->everyTenMinutes()
+    ->withoutOverlapping(10);

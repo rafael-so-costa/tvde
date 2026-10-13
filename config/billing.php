@@ -42,6 +42,20 @@ return [
                 15
             ),
 
+            'reconciliation_url' => env(
+                'IFTHENPAY_RECONCILIATION_URL',
+                'https://api.ifthenpay.com/v2/payments/read'
+            ),
+
+            'reconciliation_timeout' => (int) env(
+                'IFTHENPAY_RECONCILIATION_TIMEOUT',
+                15
+            ),
+
+            'reconciliation_limit' => (int) env(
+                'IFTHENPAY_RECONCILIATION_LIMIT',
+                20
+            ),
             'backoffice_key' => env(
                 'IFTHENPAY_BACKOFFICE_KEY'
             ),
