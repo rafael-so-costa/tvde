@@ -1202,6 +1202,47 @@ function SubscriptionPayment({
                 </p>
             )}
 
+            <div className="mt-5 border-t border-slate-200 pt-4">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                    Dados técnicos
+                </p>
+
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <PaymentTechnicalInfo
+                        label="Provider"
+                        value={
+                            payment.provider ===
+                            "ifthenpay"
+                                ? "Ifthenpay"
+                                : payment.provider
+                        }
+                    />
+
+                    <PaymentTechnicalInfo
+                        label="Ambiente"
+                        value={
+                            payment.sandbox
+                                ? "Testes"
+                                : "Produção"
+                        }
+                    />
+
+                    <PaymentTechnicalInfo
+                        label="Order ID"
+                        value={
+                            payment.provider_reference
+                        }
+                    />
+
+                    <PaymentTechnicalInfo
+                        label="Request ID"
+                        value={
+                            payment.external_id
+                        }
+                    />
+                </div>
+            </div>
+
             {payment.mock && (
                 <div className="mt-4 flex flex-col gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex gap-2 text-xs leading-5 text-amber-800">
@@ -1235,6 +1276,28 @@ function SubscriptionPayment({
     );
 }
 
+function PaymentTechnicalInfo({
+    label,
+    value,
+}: {
+    label: string;
+    value: string | null;
+}) {
+    return (
+        <div className="min-w-0">
+            <p className={labelClass}>
+                {label}
+            </p>
+
+            <p
+                className="mt-1 break-all text-xs font-medium text-slate-700"
+                title={value ?? undefined}
+            >
+                {value || "—"}
+            </p>
+        </div>
+    );
+}
 function formatReference(
     value: string | null,
 ): string {

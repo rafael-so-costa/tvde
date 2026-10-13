@@ -147,6 +147,19 @@ class BackofficeBillingPaymentController extends Controller
             'provider_reference' =>
                 $payment->provider_reference,
 
+            'external_id' =>
+                $payment->external_id,
+
+            'sandbox' =>
+                (bool) data_get(
+                    $payment->metadata,
+                    'sandbox',
+                    config(
+                        'billing.providers.ifthenpay.sandbox',
+                        true
+                    )
+                ),
+
             'expires_at' =>
                 $payment->expires_at,
 

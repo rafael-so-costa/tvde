@@ -236,6 +236,17 @@ class BackofficeSubscriptionController extends Controller
             'entity' => $payment->entity,
             'reference' => $payment->reference,
             'provider_reference' => $payment->provider_reference,
+            'external_id' => $payment->external_id,
+
+            'sandbox' => (bool) data_get(
+                $payment->metadata,
+                'sandbox',
+                config(
+                    'billing.providers.ifthenpay.sandbox',
+                    true
+                )
+            ),
+
             'expires_at' => $payment->expires_at,
             'paid_at' => $payment->paid_at,
 

@@ -94,6 +94,8 @@ export interface BillingPaymentView {
     entity: string | null;
     reference: string | null;
     provider_reference: string | null;
+    external_id: string | null;
+    sandbox: boolean;
     expires_at: string | null;
     paid_at: string | null;
     mock: boolean;

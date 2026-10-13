@@ -27,6 +27,21 @@ return [
                 'IFTHENPAY_MB_KEY'
             ),
 
+            'multibanco_url' => env(
+                'IFTHENPAY_MB_URL',
+                'https://api.ifthenpay.com/multibanco/reference/init'
+            ),
+
+            'multibanco_expiry_days' => env(
+                'IFTHENPAY_MB_EXPIRY_DAYS',
+                7
+            ),
+
+            'timeout' => (int) env(
+                'IFTHENPAY_TIMEOUT',
+                15
+            ),
+
             'backoffice_key' => env(
                 'IFTHENPAY_BACKOFFICE_KEY'
             ),
