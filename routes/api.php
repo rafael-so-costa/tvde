@@ -47,6 +47,7 @@ use App\Http\Controllers\FuncionarioInvitationController;
 use App\Http\Controllers\HelpCenterController;
 use App\Http\Controllers\HelpdeskAttachmentController;
 use App\Http\Controllers\HelpdeskController;
+use App\Http\Controllers\IfthenpayCallbackController;
 use App\Http\Controllers\ManutencaoController;
 use App\Http\Controllers\ManutencaoPlanoController;
 use App\Http\Controllers\MotoristaAccountController;
@@ -93,6 +94,12 @@ Route::post('/funcionario-convites/{token}/aceitar', [FuncionarioInvitationContr
     ->where('token', '[A-Za-z0-9]{64}')
     ->middleware('throttle:5,1');
 
+Route::get(
+    '/payments/ifthenpay/callback',
+    IfthenpayCallbackController::class
+)
+    ->middleware('throttle:60,1')
+    ->name('ifthenpay.callback');
 Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/chat/anexos/{id}/arquivo', [ChatAttachmentController::class, 'show'])->whereUuid('id');

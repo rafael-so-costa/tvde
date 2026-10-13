@@ -303,7 +303,24 @@ class BillingService
                 ->latest()
                 ->first();
 
-        if ($existing) {
+        $replaceMock =
+            $existing &&
+            (bool) data_get(
+                $existing->metadata,
+                'mock',
+                false
+            ) &&
+            $provider === 'ifthenpay' &&
+            filled(
+                config(
+                    'billing.providers.ifthenpay.mb_key'
+                )
+            );
+
+        if (
+            $existing &&
+            ! $replaceMock
+        ) {
             return $existing
                 ->load('charge');
         }
@@ -320,6 +337,29 @@ class BillingService
                     $charge,
                     $method
                 );
+
+        if (
+            $existing &&
+            $replaceMock
+        ) {
+            $metadata =
+                $existing->metadata
+                ?? [];
+
+            $metadata['replaced_by_real_payment'] =
+                true;
+
+            $metadata['replaced_at'] =
+                now()->toIso8601String();
+
+            $existing->status =
+                BillingPayment::STATUS_CANCELED;
+
+            $existing->metadata =
+                $metadata;
+
+            $existing->save();
+        }
 
         $payment =
             BillingPayment::create([
@@ -363,6 +403,120 @@ class BillingService
 
         return $payment
             ->load('charge');
+    }
+
+    public function confirmPaid(
+        BillingPayment $payment,
+        array $metadata = []
+    ): BillingPayment {
+        return DB::transaction(
+            function () use (
+                $payment,
+                $metadata
+            ): BillingPayment {
+                $lockedPayment =
+                    BillingPayment::query()
+                        ->lockForUpdate()
+                        ->findOrFail(
+                            $payment->id
+                        );
+
+                $charge =
+                    BillingCharge::query()
+                        ->lockForUpdate()
+                        ->findOrFail(
+                            $lockedPayment
+                                ->billing_charge_id
+                        );
+
+                $lockedPayment
+                    ->setRelation(
+                        'charge',
+                        $charge
+                    );
+
+                if (
+                    $lockedPayment->status ===
+                    BillingPayment::STATUS_PAID
+                ) {
+                    return $lockedPayment;
+                }
+
+                if (
+                    $lockedPayment->status !==
+                    BillingPayment::STATUS_PENDING
+                ) {
+                    throw ValidationException::withMessages([
+                        'payment' =>
+                            'O pagamento não está pendente.',
+                    ]);
+                }
+
+                if (
+                    ! in_array(
+                        $charge->status,
+                        [
+                            BillingCharge::STATUS_PENDING,
+                            BillingCharge::STATUS_PAID,
+                        ],
+                        true
+                    )
+                ) {
+                    throw ValidationException::withMessages([
+                        'charge' =>
+                            'A cobrança não pode ser confirmada.',
+                    ]);
+                }
+
+                $now =
+                    now();
+
+                $paymentMetadata =
+                    $lockedPayment->metadata
+                    ?? [];
+
+                $paymentMetadata[
+                    'ifthenpay_callback'
+                ] =
+                    $metadata;
+
+                $lockedPayment->status =
+                    BillingPayment::STATUS_PAID;
+
+                $lockedPayment->paid_at =
+                    $now;
+
+                $lockedPayment->metadata =
+                    $paymentMetadata;
+
+                $lockedPayment->save();
+
+                if (
+                    $charge->status !==
+                    BillingCharge::STATUS_PAID
+                ) {
+                    $charge->status =
+                        BillingCharge::STATUS_PAID;
+
+                    $charge->paid_at =
+                        $now;
+
+                    $charge->save();
+
+                    $this->applyPaidCharge(
+                        $charge,
+                        $lockedPayment,
+                        $now
+                    );
+                }
+
+                return $lockedPayment
+                    ->refresh()
+                    ->load(
+                        'charge'
+                    );
+            }
+        );
     }
 
     public function simulatePaid(
