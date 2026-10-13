@@ -310,6 +310,10 @@ class BackofficeNifEnrichmentBatchController extends Controller
 
             'metadata' => $batch->metadata,
 
+            'nif_pt_schedule' => $this
+                ->nifPtGuard
+                ->scheduleStatus(),
+
             'error_message' => $batch
                 ->error_message,
 

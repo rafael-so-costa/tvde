@@ -10,13 +10,15 @@ use Illuminate\Support\Facades\Cache;
 
 class NifPtUsageGuard
 {
-    private const MAX_EXTERNAL_PER_MINUTE = 1;
+    private const MIN_INTERVAL_MINUTES = 43;
 
-    private const MAX_EXTERNAL_PER_HOUR = 8;
+    private const MAX_INTERVAL_MINUTES = 48;
 
-    private const MAX_EXTERNAL_PER_DAY = 90;
+    private const MAX_EXTERNAL_PER_HOUR = 2;
 
-    private const MAX_EXTERNAL_PER_30_DAYS = 900;
+    private const MAX_EXTERNAL_PER_DAY = 32;
+
+    private const MAX_EXTERNAL_PER_30_DAYS = 950;
 
     public function lock(): Lock
     {
@@ -26,22 +28,83 @@ class NifPtUsageGuard
         );
     }
 
-    public function blockReason(): ?string
+    public function scheduleStatus(): array
     {
-        $minute = $this->externalAttemptsSince(
-            now()->subMinute()
-        );
+        $lastAttempt =
+            $this->latestExternalAttempt();
 
-        if (
-            $minute >=
-            self::MAX_EXTERNAL_PER_MINUTE
-        ) {
-            return 'Já ocorreu uma consulta externa ao NIF.PT no último minuto.';
+        if (! $lastAttempt) {
+            return [
+                'available_now' => true,
+                'interval_minutes' => null,
+                'minutes_remaining' => 0,
+                'last_attempt_at' => null,
+                'next_allowed_at' => null,
+            ];
         }
 
-        $hour = $this->externalAttemptsSince(
-            now()->subHour()
-        );
+        $interval =
+            $this->intervalForAttempt(
+                $lastAttempt->id
+            );
+
+        $nextAllowedAt =
+            $lastAttempt
+                ->requested_at
+                ->copy()
+                ->addMinutes(
+                    $interval
+                );
+
+        $secondsRemaining =
+            max(
+                0,
+                (int) now()->diffInSeconds(
+                    $nextAllowedAt,
+                    false
+                )
+            );
+
+        $minutesRemaining =
+            $secondsRemaining > 0
+                ? (int) ceil(
+                    $secondsRemaining / 60
+                )
+                : 0;
+
+        return [
+            'available_now' => $secondsRemaining === 0,
+            'interval_minutes' => $interval,
+            'minutes_remaining' => $minutesRemaining,
+            'last_attempt_at' => $lastAttempt
+                ->requested_at
+                ->toIso8601String(),
+            'next_allowed_at' => $nextAllowedAt
+                ->toIso8601String(),
+        ];
+    }
+    public function blockReason(): ?string
+    {
+        $schedule =
+            $this->scheduleStatus();
+
+        if (
+            ! $schedule['available_now']
+        ) {
+            return sprintf(
+                'Próxima consulta NIF.PT disponível às %s (%d min restantes; intervalo de %d min).',
+                \Carbon\Carbon::parse(
+                    $schedule['next_allowed_at']
+                )->format('H:i'),
+                $schedule['minutes_remaining'],
+                $schedule['interval_minutes']
+            );
+        }
+
+        $hour =
+            $this->externalAttemptsSince(
+                now()->subHour()
+            );
 
         if (
             $hour >=
@@ -54,9 +117,10 @@ class NifPtUsageGuard
             );
         }
 
-        $day = $this->externalAttemptsSince(
-            now()->subDay()
-        );
+        $day =
+            $this->externalAttemptsSince(
+                now()->subDay()
+            );
 
         if (
             $day >=
@@ -69,9 +133,10 @@ class NifPtUsageGuard
             );
         }
 
-        $month = $this->externalAttemptsSince(
-            now()->subDays(30)
-        );
+        $month =
+            $this->externalAttemptsSince(
+                now()->subDays(30)
+            );
 
         if (
             $month >=
@@ -85,6 +150,53 @@ class NifPtUsageGuard
         }
 
         return null;
+    }
+
+    private function latestExternalAttempt(): ?NifLookupAttempt
+    {
+        return NifLookupAttempt::query()
+            ->where(
+                function (
+                    Builder $query
+                ): void {
+                    $query
+                        ->whereNotNull(
+                            'http_status'
+                        )
+                        ->orWhere(
+                            'status',
+                            NifLookupAttempt::STATUS_ERROR
+                        );
+                }
+            )
+            ->whereNotNull(
+                'requested_at'
+            )
+            ->latest(
+                'requested_at'
+            )
+            ->first();
+    }
+
+    private function intervalForAttempt(
+        string $attemptId
+    ): int {
+        $range =
+            self::MAX_INTERVAL_MINUTES -
+            self::MIN_INTERVAL_MINUTES +
+            1;
+
+        $hash =
+            sprintf(
+                '%u',
+                crc32(
+                    $attemptId
+                )
+            );
+
+        return
+            self::MIN_INTERVAL_MINUTES +
+            ((int) $hash % $range);
     }
 
     private function externalAttemptsSince(

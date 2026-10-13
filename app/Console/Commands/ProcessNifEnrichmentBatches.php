@@ -6,6 +6,7 @@ use App\Models\NifEnrichmentBatch;
 use App\Services\NifEnrichmentBatchService;
 use App\Services\NifPtUsageGuard;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Log;
 
 class ProcessNifEnrichmentBatches extends Command
 {
@@ -73,18 +74,35 @@ class ProcessNifEnrichmentBatches extends Command
                 return self::SUCCESS;
             }
 
+            $message = sprintf(
+                'Lote %s: %s | %d/%d concluídos | %d cache | %d externos | %d erros | %d ignorados.',
+                $batch->id,
+                $batch->status,
+                $batch->success_items,
+                $batch->total_items,
+                $batch->cache_hits,
+                $batch->external_lookups,
+                $batch->error_items,
+                $batch->skipped_items
+            );
+
             $this->info(
-                sprintf(
-                    'Lote %s: %s | %d/%d concluídos | %d cache | %d externos | %d erros | %d ignorados.',
-                    $batch->id,
-                    $batch->status,
-                    $batch->success_items,
-                    $batch->total_items,
-                    $batch->cache_hits,
-                    $batch->external_lookups,
-                    $batch->error_items,
-                    $batch->skipped_items
-                )
+                $message
+            );
+
+            Log::info(
+                'Ciclo automático de enriquecimento NIF.PT executado.',
+                [
+                    'batch_id' => $batch->id,
+                    'status' => $batch->status,
+                    'total_items' => $batch->total_items,
+                    'success_items' => $batch->success_items,
+                    'pending_items' => $batch->pending_items,
+                    'cache_hits' => $batch->cache_hits,
+                    'external_lookups' => $batch->external_lookups,
+                    'error_items' => $batch->error_items,
+                    'skipped_items' => $batch->skipped_items,
+                ]
             );
 
             return self::SUCCESS;

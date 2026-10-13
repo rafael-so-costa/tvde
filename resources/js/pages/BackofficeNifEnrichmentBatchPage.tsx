@@ -286,6 +286,47 @@ export default function BackofficeNifEnrichmentBatchPage() {
                 </div>
             </section>
 
+            {processable && (
+                <section className="rounded-2xl border border-indigo-100 bg-indigo-50 px-5 py-4">
+                    {batch.nif_pt_schedule.available_now ? (
+                        <div>
+                            <div className="font-semibold text-indigo-900">
+                                Próxima consulta disponível agora
+                            </div>
+
+                            <div className="mt-1 text-sm text-indigo-700">
+                                O próximo ciclo automático poderá consultar o NIF.PT.
+                            </div>
+                        </div>
+                    ) : (
+                        <div>
+                            <div className="font-semibold text-indigo-900">
+                                Próxima consulta em{" "}
+                                {
+                                    batch.nif_pt_schedule
+                                        .minutes_remaining
+                                }{" "}
+                                min
+                            </div>
+
+                            <div className="mt-1 text-sm text-indigo-700">
+                                Prevista para{" "}
+                                {formatTime(
+                                    batch.nif_pt_schedule
+                                        .next_allowed_at,
+                                )}
+                                {" · "}
+                                intervalo atual de{" "}
+                                {
+                                    batch.nif_pt_schedule
+                                        .interval_minutes
+                                }{" "}
+                                minutos
+                            </div>
+                        </div>
+                    )}
+                </section>
+            )}
             {batch.error_message && (
                 <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
                     {
@@ -524,3 +565,21 @@ function formatDateTime(
 
 const thClass =
     "px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500";
+
+function formatTime(
+    value: string | null,
+): string {
+    if (!value) {
+        return "—";
+    }
+
+    return new Intl.DateTimeFormat(
+        "pt-PT",
+        {
+            hour: "2-digit",
+            minute: "2-digit",
+        },
+    ).format(
+        new Date(value),
+    );
+}

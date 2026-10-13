@@ -409,6 +409,13 @@ export interface BackofficeNifBatchItem {
         | null;
 }
 
+export interface BackofficeNifPtSchedule {
+    available_now: boolean;
+    interval_minutes: number | null;
+    minutes_remaining: number;
+    last_attempt_at: string | null;
+    next_allowed_at: string | null;
+}
 export interface BackofficeNifBatchDetail
     extends BackofficeNifBatchSummary {
     metadata:
@@ -416,6 +423,8 @@ export interface BackofficeNifBatchDetail
         | null;
 
     error_message: string | null;
+
+    nif_pt_schedule: BackofficeNifPtSchedule;
 
     items: BackofficeNifBatchItem[];
 }

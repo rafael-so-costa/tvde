@@ -30,7 +30,7 @@ Schedule::command(
 Schedule::command(
     'nif:batches:process'
 )
-    ->everyTenMinutes()
+    ->everyMinute()
     ->withoutOverlapping(15);
 
 Schedule::command(
