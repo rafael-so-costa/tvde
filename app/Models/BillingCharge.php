@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class BillingCharge extends Model
 {
@@ -72,6 +73,14 @@ class BillingCharge extends Model
         );
     }
 
+    public function latestPayment(): HasOne
+    {
+        return $this
+            ->hasOne(
+                BillingPayment::class
+            )
+            ->latestOfMany('created_at');
+    }
     public function payments(): HasMany
     {
         return $this->hasMany(

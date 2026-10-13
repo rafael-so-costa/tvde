@@ -80,7 +80,14 @@ export default function BackofficeBillingPage() {
                         </p>
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
+                        <Link
+                            to="/backoffice/faturacao/pedidos"
+                            className="inline-flex h-10 items-center justify-center rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white hover:bg-indigo-700"
+                        >
+                            Todos os pedidos
+                        </Link>
+
                         <Link
                             to="/backoffice/assinaturas"
                             className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"

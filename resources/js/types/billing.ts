@@ -116,3 +116,73 @@ export interface BillingPaymentMutationResponse {
     message: string;
     data: BillingPaymentView;
 }
+export interface BillingOrderListItem {
+    id: string;
+    number: string;
+    source_type:
+        | "saas_subscription"
+        | "ad_order";
+    source_id: string;
+    status: string;
+    description: string;
+    total: number;
+    currency: string;
+    due_at: string | null;
+    paid_at: string | null;
+    created_at: string;
+    is_overdue: boolean;
+
+    tenant: {
+        id: string;
+        nome: string;
+        nif: string | null;
+        email: string | null;
+    } | null;
+
+    payment: {
+        id: string;
+        provider: string;
+        method: string;
+        status: string;
+        entity: string | null;
+        reference: string | null;
+        provider_reference: string | null;
+        external_id: string | null;
+        expires_at: string | null;
+        paid_at: string | null;
+        mock: boolean;
+    } | null;
+
+    source: {
+        type: string;
+        id: string;
+        status: string;
+        number?: string;
+        plan?: {
+            id: string;
+            codigo: string;
+            nome: string;
+        } | null;
+        campaign?: {
+            id: string;
+            name: string;
+        } | null;
+        advertiser?: {
+            id: string;
+            name: string;
+        } | null;
+    } | null;
+}
+
+export interface BillingOrderListResponse {
+    data: BillingOrderListItem[];
+
+    meta: {
+        current_page: number;
+        last_page: number;
+        per_page: number;
+        total: number;
+        from: number | null;
+        to: number | null;
+    };
+}

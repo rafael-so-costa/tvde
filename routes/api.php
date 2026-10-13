@@ -471,6 +471,10 @@ Route::middleware('auth:sanctum')->group(function () {
                 );
 
             Route::get(
+                '/faturacao/pedidos',
+                [BackofficeBillingController::class, 'orders']
+            );
+            Route::get(
                 '/faturacao/resumo',
                 [BackofficeBillingController::class, 'show']
             );
