@@ -46,6 +46,7 @@ class ActivateAluguerRequest extends FormRequest
                     ->where(
                         fn($query) => $query
                             ->where('tenant_id', $tenantId)
+                            ->where('ativo', true)
                     ),
             ],
 
@@ -56,6 +57,7 @@ class ActivateAluguerRequest extends FormRequest
                     ->where(
                         fn($query) => $query
                             ->where('tenant_id', $tenantId)
+                            ->where('ativo', true)
                     ),
             ],
 
@@ -66,6 +68,7 @@ class ActivateAluguerRequest extends FormRequest
                     ->where(
                         fn($query) => $query
                             ->where('tenant_id', $tenantId)
+                            ->where('ativo', true)
                     ),
             ],
 

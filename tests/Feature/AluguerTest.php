@@ -2688,3 +2688,207 @@ test(
         );
     }
 );
+
+test(
+    'ativação rejeita entidades operacionais inativas',
+    function () {
+        $tenant =
+            aluguerTenant(
+                'Tenant Entidades Inativas Ativação',
+                'tenant-entidades-inativas-ativacao'
+            );
+
+        $user =
+            aluguerUsuario(
+                $tenant,
+                'entidades.inativas.ativacao@frotapro.test'
+            );
+
+        $entidades =
+            aluguerEntidades(
+                $tenant,
+                'EI'
+            );
+
+        $contratoAluguer =
+            aluguerContrato(
+                $tenant,
+                $entidades,
+                'aluguer'
+            );
+
+        $contratoPrestacao =
+            aluguerContrato(
+                $tenant,
+                $entidades,
+                'prestacao_servico'
+            );
+
+        aluguerProcessoContrato(
+            $tenant,
+            $contratoAluguer
+        );
+
+        aluguerProcessoContrato(
+            $tenant,
+            $contratoPrestacao
+        );
+
+        $checklist =
+            aluguerChecklist(
+                $tenant,
+                $user,
+                $entidades['motorista'],
+                $entidades['veiculo'],
+                'entrega'
+            );
+
+        $aluguer =
+            aluguerCriarDireto(
+                $tenant,
+                $user
+            );
+
+        $entidades['motorista']->ativo =
+            false;
+
+        $entidades['motorista']->save();
+
+        $entidades['veiculo']->ativo =
+            false;
+
+        $entidades['veiculo']->save();
+
+        $entidades['proprietario']->ativo =
+            false;
+
+        $entidades['proprietario']->save();
+
+        aluguerLogin(
+            $this,
+            $user
+        );
+
+        $this
+            ->withHeaders(
+                aluguerHeaders()
+            )
+            ->postJson(
+                "/api/alugueres/{$aluguer->id}/ativar",
+                [
+                    'motorista_id' =>
+                        $entidades['motorista']->id,
+
+                    'veiculo_id' =>
+                        $entidades['veiculo']->id,
+
+                    'proprietario_id' =>
+                        $entidades['proprietario']->id,
+
+                    'contrato_aluguer_id' =>
+                        $contratoAluguer->id,
+
+                    'contrato_prestacao_id' =>
+                        $contratoPrestacao->id,
+
+                    'checklist_entrega_id' =>
+                        $checklist->id,
+                ]
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'motorista_id',
+                'veiculo_id',
+                'proprietario_id',
+            ]);
+
+        $aluguer->refresh();
+
+        expect(
+            $aluguer->status
+        )->toBe(
+            'rascunho'
+        );
+    }
+);
+
+test(
+    'rascunho continua permitindo referência a entidades inativas',
+    function () {
+        $tenant =
+            aluguerTenant(
+                'Tenant Rascunho Entidades Inativas',
+                'tenant-rascunho-entidades-inativas'
+            );
+
+        $user =
+            aluguerUsuario(
+                $tenant,
+                'rascunho.inativas@frotapro.test'
+            );
+
+        $entidades =
+            aluguerEntidades(
+                $tenant,
+                'RI'
+            );
+
+        $entidades['motorista']->ativo =
+            false;
+
+        $entidades['motorista']->save();
+
+        $entidades['veiculo']->ativo =
+            false;
+
+        $entidades['veiculo']->save();
+
+        $entidades['proprietario']->ativo =
+            false;
+
+        $entidades['proprietario']->save();
+
+        aluguerLogin(
+            $this,
+            $user
+        );
+
+        $this
+            ->withHeaders(
+                aluguerHeaders()
+            )
+            ->postJson(
+                '/api/alugueres',
+                [
+                    'motorista_id' =>
+                        $entidades['motorista']->id,
+
+                    'veiculo_id' =>
+                        $entidades['veiculo']->id,
+
+                    'proprietario_id' =>
+                        $entidades['proprietario']->id,
+
+                    'observacoes' =>
+                        'Rascunho ainda em preparação',
+                ]
+            )
+            ->assertCreated()
+            ->assertJsonPath(
+                'data.status',
+                'rascunho'
+            )
+            ->assertJsonPath(
+                'data.motorista_id',
+                $entidades['motorista']->id
+            )
+            ->assertJsonPath(
+                'data.veiculo_id',
+                $entidades['veiculo']->id
+            )
+            ->assertJsonPath(
+                'data.proprietario_id',
+                $entidades['proprietario']->id
+            );
+    }
+);
