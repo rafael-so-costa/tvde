@@ -4,6 +4,8 @@ use App\Http\Controllers\AlertController;
 use App\Http\Controllers\AluguerController;
 use App\Http\Controllers\AuditoriaController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BackofficeBillingController;
+use App\Http\Controllers\BackofficeBillingPaymentController;
 use App\Http\Controllers\BackofficeChatController;
 use App\Http\Controllers\BackofficeClientController;
 use App\Http\Controllers\BackofficeCrmActivityController;
@@ -14,8 +16,6 @@ use App\Http\Controllers\BackofficeCrmLeadStageController;
 use App\Http\Controllers\BackofficeCrmPipelineController;
 use App\Http\Controllers\BackofficeCrmProspectController;
 use App\Http\Controllers\BackofficeCrmTagController;
-use App\Http\Controllers\BackofficeBillingController;
-use App\Http\Controllers\BackofficeBillingPaymentController;
 use App\Http\Controllers\BackofficeDashboardController;
 use App\Http\Controllers\BackofficeHelpCategoryController;
 use App\Http\Controllers\BackofficeHelpCenterController;
@@ -53,6 +53,7 @@ use App\Http\Controllers\ManutencaoPlanoController;
 use App\Http\Controllers\MotoristaAccountController;
 use App\Http\Controllers\MotoristaController;
 use App\Http\Controllers\MotoristaDashboardController;
+use App\Http\Controllers\MotoristaFotoController;
 use App\Http\Controllers\MultaController;
 use App\Http\Controllers\MyAccountController;
 use App\Http\Controllers\NotificationPreferenceController;
@@ -901,8 +902,17 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/motoristas/{id}', [MotoristaController::class, 'show']);
         });
 
+        Route::get(
+            '/motoristas/{id}/foto',
+            [MotoristaFotoController::class, 'show']
+        )->name('motoristas.foto');
+
         Route::middleware('permission:motoristas,configurar')->group(function () {
             Route::post('/motoristas', [MotoristaController::class, 'store']);
+            Route::post(
+                '/motoristas/{id}/foto',
+                [MotoristaFotoController::class, 'store']
+            );
             Route::patch('/motoristas/{id}', [MotoristaController::class, 'update']);
             Route::patch('/motoristas/{id}/status', [MotoristaController::class, 'status']);
             Route::delete('/motoristas/{id}', [MotoristaController::class, 'destroy']);
@@ -1149,6 +1159,5 @@ require __DIR__.'/public_analytics.php';
 require __DIR__.'/modelos_documento_saas.php';
 
 require __DIR__.'/checklist_process_presets.php';
-
 
 require __DIR__.'/productivity.php';

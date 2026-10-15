@@ -1,3 +1,4 @@
+import axios from "axios";
 import {
     FormEvent,
     useEffect,
@@ -58,10 +59,23 @@ export default function FuncionarioFormModal({
             "ativo"
         );
 
+    const [errors,setErrors]=
+        useState<
+            Record<string,string[]>
+        >({});
+
+    const [
+        generalError,
+        setGeneralError,
+    ]=useState("");
+
     useEffect(()=>{
         if(!open){
             return;
         }
+
+        setErrors({});
+        setGeneralError("");
 
         if(funcionario){
             setForm({
@@ -128,6 +142,69 @@ export default function FuncionarioFormModal({
                     value || null,
             })
         );
+
+        if(errors[field]){
+            setErrors(
+                current=>({
+                    ...current,
+                    [field]:[],
+                })
+            );
+        }
+    }
+
+    function focusFirstValidationError(
+        validationErrors:
+            Record<string,string[]>
+    ){
+        const firstField=
+            Object.keys(
+                validationErrors
+            )[0];
+
+        if(!firstField){
+            return;
+        }
+
+        requestAnimationFrame(()=>{
+            requestAnimationFrame(()=>{
+                const marker=
+                    Array.from(
+                        document
+                            .querySelectorAll<HTMLElement>(
+                                "[data-field-error]"
+                            )
+                    ).find(
+                        element=>
+                            element.dataset
+                                .fieldError===
+                            firstField
+                    );
+
+                const control=
+                    marker
+                        ?.parentElement
+                        ?.querySelector<HTMLElement>(
+                            "input, select, textarea"
+                        );
+
+                (
+                    control ??
+                    marker
+                )?.scrollIntoView({
+                    behavior:"smooth",
+                    block:"center",
+                });
+
+                control?.focus();
+            });
+        });
+    }
+
+    function fieldError(
+        field:keyof FuncionarioPayload
+    ):string | undefined{
+        return errors[field]?.[0];
     }
 
     async function submit(
@@ -135,12 +212,58 @@ export default function FuncionarioFormModal({
     ){
         event.preventDefault();
 
-        await onSubmit(
-            form,
-            funcionario
-                ? estado
-                : undefined
-        );
+        setErrors({});
+        setGeneralError("");
+
+        try{
+            await onSubmit(
+                form,
+                funcionario
+                    ? estado
+                    : undefined
+            );
+        }catch(error){
+            if(
+                axios.isAxiosError(
+                    error
+                )
+            ){
+                const response=
+                    error.response
+                        ?.data;
+
+                const validationErrors=
+                    response?.errors ??
+                    {};
+
+                setErrors(
+                    validationErrors
+                );
+
+                if(
+                    Object.keys(
+                        validationErrors
+                    ).length>0
+                ){
+                    setGeneralError(
+                        "Existem dados inválidos. Corrija os campos assinalados."
+                    );
+
+                    focusFirstValidationError(
+                        validationErrors
+                    );
+                }else{
+                    setGeneralError(
+                        response?.message ??
+                        "Não foi possível guardar o funcionário."
+                    );
+                }
+            }else{
+                setGeneralError(
+                    "Não foi possível guardar o funcionário."
+                );
+            }
+        }
     }
 
     return (
@@ -178,11 +301,25 @@ export default function FuncionarioFormModal({
                     </button>
                 </div>
 
+                {generalError && (
+                    <div className="mx-6 mt-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                        {generalError}
+                    </div>
+                )}
+
                 <div className="grid gap-4 p-6 sm:grid-cols-2">
                     <Field
+                        field="nome"
                         label="Nome"
-                        value={form.nome}
+                        value={
+                            form.nome
+                        }
                         required
+                        error={
+                            fieldError(
+                                "nome"
+                            )
+                        }
                         onChange={value=>
                             set(
                                 "nome",
@@ -192,11 +329,17 @@ export default function FuncionarioFormModal({
                     />
 
                     <Field
+                        field="numero_funcionario"
                         label="N.º funcionário"
                         value={
                             form
                                 .numero_funcionario ??
                             ""
+                        }
+                        error={
+                            fieldError(
+                                "numero_funcionario"
+                            )
                         }
                         onChange={value=>
                             set(
@@ -207,9 +350,15 @@ export default function FuncionarioFormModal({
                     />
 
                     <Field
+                        field="nif"
                         label="NIF"
                         value={
                             form.nif ?? ""
+                        }
+                        error={
+                            fieldError(
+                                "nif"
+                            )
                         }
                         onChange={value=>
                             set(
@@ -220,11 +369,17 @@ export default function FuncionarioFormModal({
                     />
 
                     <Field
+                        field="email"
                         label="E-mail"
                         type="email"
                         value={
                             form.email ??
                             ""
+                        }
+                        error={
+                            fieldError(
+                                "email"
+                            )
                         }
                         onChange={value=>
                             set(
@@ -235,10 +390,16 @@ export default function FuncionarioFormModal({
                     />
 
                     <Field
+                        field="telefone"
                         label="Telefone"
                         value={
                             form.telefone ??
                             ""
+                        }
+                        error={
+                            fieldError(
+                                "telefone"
+                            )
                         }
                         onChange={value=>
                             set(
@@ -249,12 +410,18 @@ export default function FuncionarioFormModal({
                     />
 
                     <Field
+                        field="data_nascimento"
                         label="Nascimento"
                         type="date"
                         value={
                             form
                                 .data_nascimento ??
                             ""
+                        }
+                        error={
+                            fieldError(
+                                "data_nascimento"
+                            )
                         }
                         onChange={value=>
                             set(
@@ -265,9 +432,15 @@ export default function FuncionarioFormModal({
                     />
 
                     <Field
+                        field="cargo"
                         label="Cargo"
                         value={
                             form.cargo ?? ""
+                        }
+                        error={
+                            fieldError(
+                                "cargo"
+                            )
                         }
                         onChange={value=>
                             set(
@@ -278,11 +451,17 @@ export default function FuncionarioFormModal({
                     />
 
                     <Field
+                        field="departamento"
                         label="Departamento"
                         value={
                             form
                                 .departamento ??
                             ""
+                        }
+                        error={
+                            fieldError(
+                                "departamento"
+                            )
                         }
                         onChange={value=>
                             set(
@@ -293,12 +472,18 @@ export default function FuncionarioFormModal({
                     />
 
                     <Field
+                        field="data_admissao"
                         label="Data de admissão"
                         type="date"
                         value={
                             form
                                 .data_admissao ??
                             ""
+                        }
+                        error={
+                            fieldError(
+                                "data_admissao"
+                            )
                         }
                         onChange={value=>
                             set(
@@ -363,12 +548,32 @@ export default function FuncionarioFormModal({
                                     event.target.value
                                 )
                             }
-                            className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-indigo-500"
+                            className={[
+                                "w-full rounded-xl border px-3 py-2.5 text-sm outline-none transition focus:ring-4",
+                                fieldError(
+                                    "observacoes"
+                                )
+                                    ? "border-red-400 focus:border-red-500 focus:ring-red-500/10"
+                                    : "border-slate-200 focus:border-indigo-500 focus:ring-indigo-500/10",
+                            ].join(" ")}
                         />
+
+                        {fieldError(
+                            "observacoes"
+                        ) && (
+                            <p
+                                data-field-error="observacoes"
+                                className="mt-1.5 text-xs text-red-600"
+                            >
+                                {fieldError(
+                                    "observacoes"
+                                )}
+                            </p>
+                        )}
                     </div>
                 </div>
 
-                <div className="flex justify-end gap-3 border-t border-slate-200 px-6 py-4">
+                <div className="sticky bottom-0 flex justify-end gap-3 border-t border-slate-200 bg-white px-6 py-4">
                     <button
                         type="button"
                         onClick={onClose}
@@ -399,22 +604,27 @@ export default function FuncionarioFormModal({
 }
 
 function Field({
+    field,
     label,
     value,
     type="text",
     required=false,
+    error,
     onChange,
 }:{
+    field:keyof FuncionarioPayload;
     label:string;
     value:string;
     type?:string;
     required?:boolean;
+    error?:string;
     onChange:(value:string)=>void;
 }){
     return (
         <div>
             <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
                 {label}
+                {required && " *"}
             </label>
 
             <input
@@ -426,8 +636,22 @@ function Field({
                         event.target.value
                     )
                 }
-                className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
+                className={[
+                    "h-11 w-full rounded-xl border px-3 text-sm outline-none transition focus:ring-4",
+                    error
+                        ? "border-red-400 focus:border-red-500 focus:ring-red-500/10"
+                        : "border-slate-200 focus:border-indigo-500 focus:ring-indigo-500/10",
+                ].join(" ")}
             />
+
+            {error && (
+                <p
+                    data-field-error={field}
+                    className="mt-1.5 text-xs text-red-600"
+                >
+                    {error}
+                </p>
+            )}
         </div>
     );
 }

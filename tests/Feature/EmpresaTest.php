@@ -129,7 +129,7 @@ test('cliente não pode definir tenant id ao criar empresa', function () {
         ->postJson('/api/empresas', [
             'tenant_id' => $outroTenant->id,
             'nome_empresa' => 'Empresa Maliciosa',
-            'nif' => '500000001',
+            'nif' => '500000000',
         ])
         ->assertUnprocessable()
         ->assertJsonValidationErrors('tenant_id');
@@ -156,7 +156,7 @@ test('tenant da empresa é definido pelo contexto e defaults são aplicados', fu
     $response = $this->withHeaders(empresaSpaHeaders())
         ->postJson('/api/empresas', [
             'nome_empresa' => 'Frota Lisboa Lda',
-            'nif' => '500000002',
+            'nif' => '500000018',
             'email' => 'geral@frotalisboa.pt',
             'capital_social' => 25000.50,
         ]);
@@ -171,7 +171,7 @@ test('tenant da empresa é definido pelo contexto e defaults são aplicados', fu
     $this->assertDatabaseHas('empresas', [
         'tenant_id' => $tenant->id,
         'nome_empresa' => 'Frota Lisboa Lda',
-        'nif' => '500000002',
+        'nif' => '500000018',
         'ativo' => true,
         'status_cadastro' => 'pendente',
     ]);
@@ -197,13 +197,13 @@ test('listagem retorna apenas empresas do tenant atual', function () {
     criarEmpresaNoTenant(
         $tenantA,
         'Empresa Visível',
-        '500000003'
+        '500000026'
     );
 
     criarEmpresaNoTenant(
         $tenantB,
         'Empresa Oculta',
-        '500000004'
+        '500000034'
     );
 
     autenticarUsuarioEmpresa($this, $user);
@@ -244,7 +244,7 @@ test('utilizador não consegue consultar empresa de outro tenant', function () {
     $empresaB = criarEmpresaNoTenant(
         $tenantB,
         'Empresa Tenant B',
-        '500000005'
+        '500000042'
     );
 
     autenticarUsuarioEmpresa($this, $user);
@@ -274,7 +274,7 @@ test('utilizador não consegue alterar nem apagar empresa de outro tenant', func
     $empresaB = criarEmpresaNoTenant(
         $tenantB,
         'Empresa Protegida',
-        '500000006'
+        '500000050'
     );
 
     autenticarUsuarioEmpresa($this, $user);
@@ -314,7 +314,7 @@ test('nível visualizar permite leitura mas bloqueia criação', function () {
     criarEmpresaNoTenant(
         $tenant,
         'Empresa Existente',
-        '500000007'
+        '500000069'
     );
 
     autenticarUsuarioEmpresa($this, $user);
@@ -326,7 +326,7 @@ test('nível visualizar permite leitura mas bloqueia criação', function () {
     $this->withHeaders(empresaSpaHeaders())
         ->postJson('/api/empresas', [
             'nome_empresa' => 'Empresa Não Permitida',
-            'nif' => '500000008',
+            'nif' => '500000077',
         ])
         ->assertForbidden()
         ->assertJsonPath(
@@ -356,7 +356,7 @@ test('nível configurar permite criar atualizar e apagar empresa do próprio ten
     $createResponse = $this->withHeaders(empresaSpaHeaders())
         ->postJson('/api/empresas', [
             'nome_empresa' => 'Empresa CRUD',
-            'nif' => '500000009',
+            'nif' => '500000085',
             'email' => 'crud@empresa.pt',
         ])
         ->assertCreated();
@@ -419,7 +419,7 @@ test(
         criarEmpresaNoTenant(
             $tenant,
             'Empresa Principal',
-            '500100001'
+            '500100004'
         );
 
         $user =
@@ -443,7 +443,7 @@ test(
                 [
                     'nome_empresa' => 'Segunda Empresa',
 
-                    'nif' => '500100002',
+                    'nif' => '500100012',
                 ]
             )
             ->assertForbidden()
@@ -487,7 +487,7 @@ test(
             criarEmpresaNoTenant(
                 $tenant,
                 'Empresa Principal',
-                '500100003'
+                '500100020'
             );
 
         $user =
@@ -536,7 +536,7 @@ test(
         criarEmpresaNoTenant(
             $tenant,
             'Empresa Um',
-            '500100004'
+            '500100039'
         );
 
         $user =
@@ -561,7 +561,7 @@ test(
                     [
                         'nome_empresa' => 'Empresa Dois',
 
-                        'nif' => '500100005',
+                        'nif' => '500100047',
                     ]
                 )
                 ->assertCreated();
@@ -579,5 +579,336 @@ test(
                 "/api/empresas/{$empresaId}"
             )
             ->assertNoContent();
+    }
+);
+
+test(
+    'empresa normaliza dados portugueses antes de guardar',
+    function () {
+        $tenant = criarTenantEmpresa(
+            'Tenant Normalização',
+            'tenant-normalizacao-empresa'
+        );
+
+        $user = criarUsuarioEmpresa(
+            'normalizacao.empresa@frotapro.test',
+            $tenant,
+            'configurar'
+        );
+
+        autenticarUsuarioEmpresa(
+            $this,
+            $user
+        );
+
+        $response = $this
+            ->withHeaders(
+                empresaSpaHeaders()
+            )
+            ->postJson(
+                '/api/empresas',
+                [
+                    'nome_empresa' => 'Empresa Normalizada Lda',
+
+                    'nif' => 'PT 501 234 560',
+
+                    'email' => '  GERAL@EMPRESA.PT  ',
+
+                    'telemovel' => '+351 912 345 678',
+
+                    'endereco_cep' => '1000 001',
+
+                    'iban' => 'PT50 1234 4321 1234 5678 9017 2',
+                ]
+            )
+            ->assertCreated();
+
+        $response
+            ->assertJsonPath(
+                'data.nif',
+                '501234560'
+            )
+            ->assertJsonPath(
+                'data.email',
+                'geral@empresa.pt'
+            )
+            ->assertJsonPath(
+                'data.telemovel',
+                '912345678'
+            )
+            ->assertJsonPath(
+                'data.endereco_cep',
+                '1000-001'
+            )
+            ->assertJsonPath(
+                'data.iban',
+                'PT50123443211234567890172'
+            );
+
+        $this->assertDatabaseHas(
+            'empresas',
+            [
+                'tenant_id' => $tenant->id,
+
+                'nif' => '501234560',
+
+                'email' => 'geral@empresa.pt',
+
+                'telemovel' => '912345678',
+
+                'endereco_cep' => '1000-001',
+
+                'iban' => 'PT50123443211234567890172',
+            ]
+        );
+    }
+);
+
+test(
+    'empresa rejeita dados portugueses estruturalmente invalidos',
+    function () {
+        $tenant = criarTenantEmpresa(
+            'Tenant Inválido',
+            'tenant-invalido-empresa'
+        );
+
+        $user = criarUsuarioEmpresa(
+            'invalido.empresa@frotapro.test',
+            $tenant,
+            'configurar'
+        );
+
+        autenticarUsuarioEmpresa(
+            $this,
+            $user
+        );
+
+        $this
+            ->withHeaders(
+                empresaSpaHeaders()
+            )
+            ->postJson(
+                '/api/empresas',
+                [
+                    'nome_empresa' => 'Empresa Inválida',
+
+                    'nif' => '123456780',
+
+                    'telemovel' => '123456780',
+
+                    'endereco_cep' => '0000-000',
+
+                    'iban' => 'PT50123443211234567890173',
+                ]
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'nif',
+                'telemovel',
+                'endereco_cep',
+                'iban',
+            ]);
+
+        $this->assertDatabaseMissing(
+            'empresas',
+            [
+                'tenant_id' => $tenant->id,
+
+                'nome_empresa' => 'Empresa Inválida',
+            ]
+        );
+    }
+);
+
+test(
+    'nif de empresa não pode repetir dentro do mesmo tenant',
+    function () {
+        $tenant = criarTenantEmpresa(
+            'Tenant NIF Único',
+            'tenant-nif-unico'
+        );
+
+        criarEmpresaNoTenant(
+            $tenant,
+            'Empresa Existente',
+            '501234560'
+        );
+
+        $user = criarUsuarioEmpresa(
+            'nif.unico@frotapro.test',
+            $tenant,
+            'configurar'
+        );
+
+        autenticarUsuarioEmpresa(
+            $this,
+            $user
+        );
+
+        $this
+            ->withHeaders(
+                empresaSpaHeaders()
+            )
+            ->postJson(
+                '/api/empresas',
+                [
+                    'nome_empresa' => 'Empresa Duplicada',
+
+                    'nif' => 'PT 501 234 560',
+                ]
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(
+                'nif'
+            );
+
+        $this->assertDatabaseMissing(
+            'empresas',
+            [
+                'tenant_id' => $tenant->id,
+
+                'nome_empresa' => 'Empresa Duplicada',
+            ]
+        );
+    }
+);
+
+test(
+    'mesmo nif de empresa pode existir em tenants diferentes',
+    function () {
+        $tenantA = criarTenantEmpresa(
+            'Tenant NIF A',
+            'tenant-nif-a'
+        );
+
+        $tenantB = criarTenantEmpresa(
+            'Tenant NIF B',
+            'tenant-nif-b'
+        );
+
+        criarEmpresaNoTenant(
+            $tenantB,
+            'Empresa Outro Tenant',
+            '501234560'
+        );
+
+        $user = criarUsuarioEmpresa(
+            'nif.outro.tenant@frotapro.test',
+            $tenantA,
+            'configurar'
+        );
+
+        autenticarUsuarioEmpresa(
+            $this,
+            $user
+        );
+
+        $this
+            ->withHeaders(
+                empresaSpaHeaders()
+            )
+            ->postJson(
+                '/api/empresas',
+                [
+                    'nome_empresa' => 'Empresa Tenant Atual',
+
+                    'nif' => '501234560',
+                ]
+            )
+            ->assertCreated();
+
+        $this->assertDatabaseHas(
+            'empresas',
+            [
+                'tenant_id' => $tenantA->id,
+
+                'nif' => '501234560',
+            ]
+        );
+
+        $this->assertDatabaseHas(
+            'empresas',
+            [
+                'tenant_id' => $tenantB->id,
+
+                'nif' => '501234560',
+            ]
+        );
+    }
+);
+
+test(
+    'atualizacao de empresa normaliza dados e ignora o proprio nif na unicidade',
+    function () {
+        $tenant = criarTenantEmpresa(
+            'Tenant Update Empresa',
+            'tenant-update-empresa'
+        );
+
+        $empresa = criarEmpresaNoTenant(
+            $tenant,
+            'Empresa Original',
+            '501234560'
+        );
+
+        $user = criarUsuarioEmpresa(
+            'update.empresa@frotapro.test',
+            $tenant,
+            'configurar'
+        );
+
+        autenticarUsuarioEmpresa(
+            $this,
+            $user
+        );
+
+        $this
+            ->withHeaders(
+                empresaSpaHeaders()
+            )
+            ->patchJson(
+                "/api/empresas/{$empresa->id}",
+                [
+                    'nif' => 'PT 501 234 560',
+
+                    'email' => '  NOVO@EMPRESA.PT ',
+
+                    'telemovel' => '00351 213 456 789',
+
+                    'endereco_cep' => '1999 999',
+                ]
+            )
+            ->assertOk()
+            ->assertJsonPath(
+                'data.nif',
+                '501234560'
+            )
+            ->assertJsonPath(
+                'data.email',
+                'novo@empresa.pt'
+            )
+            ->assertJsonPath(
+                'data.telemovel',
+                '213456789'
+            )
+            ->assertJsonPath(
+                'data.endereco_cep',
+                '1999-999'
+            );
+
+        $this->assertDatabaseHas(
+            'empresas',
+            [
+                'id' => $empresa->id,
+
+                'nif' => '501234560',
+
+                'email' => 'novo@empresa.pt',
+
+                'telemovel' => '213456789',
+
+                'endereco_cep' => '1999-999',
+            ]
+        );
     }
 );

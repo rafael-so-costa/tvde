@@ -4,7 +4,6 @@ use App\Jobs\SendFuncionarioInvitation;
 use App\Models\Funcionario;
 use App\Models\FuncionarioInvitation;
 use App\Models\Permission;
-use App\Models\Profile;
 use App\Models\Role;
 use App\Models\Tenant;
 use App\Models\TenantUser;
@@ -190,7 +189,7 @@ test('administrador cria funcionário sem criar conta de utilizador', function (
         ->postJson('/api/funcionarios', [
             'numero_funcionario' => 'FUNC-001',
             'nome' => 'Maria Funcionária',
-            'nif' => '245123456',
+            'nif' => '245123458',
             'email' => 'maria.funcionaria@example.test',
             'telefone' => '+351910000001',
             'cargo' => 'Administrativa',
@@ -345,7 +344,7 @@ test('nif email e número são únicos dentro do tenant', function () {
 
     criarFuncionarioDireto($tenant, [
         'numero_funcionario' => 'FUNC-100',
-        'nif' => '245999999',
+        'nif' => '245123466',
         'email' => 'unico@example.test',
     ]);
 
@@ -360,7 +359,7 @@ test('nif email e número são únicos dentro do tenant', function () {
         ->postJson('/api/funcionarios', [
             'numero_funcionario' => 'FUNC-100',
             'nome' => 'Duplicado',
-            'nif' => '245999999',
+            'nif' => '245123466',
             'email' => 'unico@example.test',
         ])
         ->assertUnprocessable()
@@ -384,7 +383,7 @@ test('mesmos dados únicos podem existir em tenants diferentes', function () {
 
     criarFuncionarioDireto($tenantB, [
         'numero_funcionario' => 'FUNC-200',
-        'nif' => '245888888',
+        'nif' => '245123474',
         'email' => 'compartilhado@example.test',
     ]);
 
@@ -399,7 +398,7 @@ test('mesmos dados únicos podem existir em tenants diferentes', function () {
         ->postJson('/api/funcionarios', [
             'numero_funcionario' => 'FUNC-200',
             'nome' => 'Funcionário Tenant A',
-            'nif' => '245888888',
+            'nif' => '245123474',
             'email' => 'compartilhado@example.test',
             'data_admissao' => '2026-09-01',
         ])
@@ -407,7 +406,7 @@ test('mesmos dados únicos podem existir em tenants diferentes', function () {
 
     expect(
         Funcionario::query()
-            ->where('nif', '245888888')
+            ->where('nif', '245123474')
             ->count()
     )->toBe(2);
 });
@@ -1193,4 +1192,217 @@ test('gestor não administrador não pode inativar acesso de admin empresa', fun
         'user_id' => $adminAlvo->id,
         'status' => 'ativo',
     ]);
+});
+
+test('funcionário normaliza nif email e telefone no cadastro', function () {
+    $tenant = criarTenantFuncionario(
+        'Empresa Normalização Funcionário',
+        'empresa-normalizacao-funcionario'
+    );
+
+    $admin = criarAdminFuncionario(
+        $tenant,
+        'admin.normalizacao.funcionario@frotapro.test'
+    );
+
+    autenticarFuncionario(
+        $this,
+        $admin
+    );
+
+    $this
+        ->withHeaders(
+            funcionarioSpaHeaders()
+        )
+        ->postJson(
+            '/api/funcionarios',
+            [
+                'nome' => 'Funcionário Normalizado',
+
+                'nif' => 'PT 245 123 458',
+
+                'email' => '  FUNCIONARIO.NORMALIZADO@EXAMPLE.TEST  ',
+
+                'telefone' => '+351 912 345 678',
+
+                'data_admissao' => '2026-10-01',
+            ]
+        )
+        ->assertCreated()
+        ->assertJsonPath(
+            'data.nif',
+            '245123458'
+        )
+        ->assertJsonPath(
+            'data.email',
+            'funcionario.normalizado@example.test'
+        )
+        ->assertJsonPath(
+            'data.telefone',
+            '912345678'
+        );
+
+    $this->assertDatabaseHas(
+        'funcionarios',
+        [
+            'tenant_id' => $tenant->id,
+
+            'nif' => '245123458',
+
+            'email' => 'funcionario.normalizado@example.test',
+
+            'telefone' => '912345678',
+        ]
+    );
+});
+
+test('funcionário rejeita nif telefone e nascimento inválidos', function () {
+    $tenant = criarTenantFuncionario(
+        'Empresa Validação Funcionário',
+        'empresa-validacao-funcionario'
+    );
+
+    $admin = criarAdminFuncionario(
+        $tenant,
+        'admin.validacao.funcionario@frotapro.test'
+    );
+
+    autenticarFuncionario(
+        $this,
+        $admin
+    );
+
+    $this
+        ->withHeaders(
+            funcionarioSpaHeaders()
+        )
+        ->postJson(
+            '/api/funcionarios',
+            [
+                'nome' => 'Funcionário Inválido',
+
+                'nif' => '245123459',
+
+                'telefone' => '123',
+
+                'data_nascimento' => now()
+                    ->addDay()
+                    ->toDateString(),
+            ]
+        )
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors([
+            'nif',
+            'telefone',
+            'data_nascimento',
+        ]);
+});
+
+test('nif duplicado é detetado após normalização', function () {
+    $tenant = criarTenantFuncionario(
+        'Empresa NIF Normalizado',
+        'empresa-nif-normalizado'
+    );
+
+    criarFuncionarioDireto(
+        $tenant,
+        [
+            'nif' => '245123466',
+        ]
+    );
+
+    $admin = criarAdminFuncionario(
+        $tenant,
+        'admin.nif.normalizado@frotapro.test'
+    );
+
+    autenticarFuncionario(
+        $this,
+        $admin
+    );
+
+    $this
+        ->withHeaders(
+            funcionarioSpaHeaders()
+        )
+        ->postJson(
+            '/api/funcionarios',
+            [
+                'nome' => 'Funcionário Duplicado',
+
+                'nif' => 'PT 245-123-466',
+            ]
+        )
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(
+            'nif'
+        );
+
+    expect(
+        Funcionario::query()
+            ->where(
+                'tenant_id',
+                $tenant->id
+            )
+            ->where(
+                'nif',
+                '245123466'
+            )
+            ->count()
+    )->toBe(1);
+});
+
+test('atualização normaliza dados e permite manter o próprio nif', function () {
+    $tenant = criarTenantFuncionario(
+        'Empresa Update Funcionário',
+        'empresa-update-funcionario'
+    );
+
+    $funcionario =
+        criarFuncionarioDireto(
+            $tenant,
+            [
+                'nif' => '245123482',
+
+                'email' => 'original.funcionario@example.test',
+            ]
+        );
+
+    $admin = criarAdminFuncionario(
+        $tenant,
+        'admin.update.funcionario@frotapro.test'
+    );
+
+    autenticarFuncionario(
+        $this,
+        $admin
+    );
+
+    $this
+        ->withHeaders(
+            funcionarioSpaHeaders()
+        )
+        ->patchJson(
+            "/api/funcionarios/{$funcionario->id}",
+            [
+                'nif' => 'PT 245 123 482',
+
+                'email' => '  NOVO.FUNCIONARIO@EXAMPLE.TEST ',
+
+                'telefone' => '00351 913 456 789',
+            ]
+        )
+        ->assertOk()
+        ->assertJsonPath(
+            'data.nif',
+            '245123482'
+        )
+        ->assertJsonPath(
+            'data.email',
+            'novo.funcionario@example.test'
+        )
+        ->assertJsonPath(
+            'data.telefone',
+            '913456789'
+        );
 });

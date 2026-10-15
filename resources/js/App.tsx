@@ -18,9 +18,7 @@ import ProprietarioShell from "./layouts/ProprietarioShell";
 const AlertsPage = lazy(
     () => import("./pages/AlertsPage"),
 );
-const AlugueresPage = lazy(
-    () => import("./pages/AlugueresPage"),
-);
+
 const AprovacaoManutencaoPublicaPage = lazy(
     () => import("./pages/AprovacaoManutencaoPublicaPage"),
 );
@@ -548,7 +546,12 @@ export default function App() {
 
                             <Route
                                 path="alugueres"
-                                element={<AlugueresPage />}
+                                element={
+                                    <Navigate
+                                        to="/contratos?tipo=aluguer"
+                                        replace
+                                    />
+                                }
                             />
 
                             <Route

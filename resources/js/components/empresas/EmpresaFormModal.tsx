@@ -279,18 +279,31 @@ export default function EmpresaFormModal({
                 const response =
                     error.response?.data;
 
+                const validationErrors =
+                    response?.errors ?? {};
+
+                setErrors(
+                    validationErrors
+                );
+
                 if (
-                    response?.errors
+                    Object.keys(
+                        validationErrors
+                    ).length > 0
                 ) {
-                    setErrors(
-                        response.errors
+                    setGeneralError(
+                        'Existem dados inválidos. Corrija os campos assinalados.'
+                    );
+
+                    focusFirstValidationError(
+                        validationErrors
+                    );
+                } else {
+                    setGeneralError(
+                        response?.message ??
+                            'Não foi possível guardar a empresa.'
                     );
                 }
-
-                setGeneralError(
-                    response?.message ??
-                        'Não foi possível guardar a empresa.'
-                );
             } else {
                 setGeneralError(
                     'Não foi possível guardar a empresa.'
@@ -307,6 +320,59 @@ export default function EmpresaFormModal({
     const labelClass =
         'block text-sm font-medium text-slate-700 mb-1.5';
 
+    function focusFirstValidationError(
+        validationErrors: Record<
+            string,
+            string[]
+        >
+    ) {
+        const firstField =
+            Object.keys(
+                validationErrors
+            )[0];
+
+        if (!firstField) {
+            return;
+        }
+
+        requestAnimationFrame(
+            () => {
+                requestAnimationFrame(
+                    () => {
+                        const marker =
+                            Array.from(
+                                document.querySelectorAll<HTMLElement>(
+                                    '[data-field-error]'
+                                )
+                            ).find(
+                                (element) =>
+                                    element.dataset
+                                        .fieldError ===
+                                    firstField
+                            );
+
+                        const control =
+                            marker?.parentElement
+                                ?.querySelector<HTMLElement>(
+                                    'input, select, textarea'
+                                );
+
+                        control?.scrollIntoView(
+                            {
+                                behavior:
+                                    'smooth',
+                                block:
+                                    'center',
+                            }
+                        );
+
+                        control?.focus();
+                    }
+                );
+            }
+        );
+    }
+
     function fieldError(
         field: keyof FormState
     ) {
@@ -318,7 +384,12 @@ export default function EmpresaFormModal({
         }
 
         return (
-            <p className="mt-1.5 text-xs text-red-600">
+            <p
+                data-field-error={
+                    field
+                }
+                className="mt-1.5 text-xs text-red-600"
+            >
                 {message}
             </p>
         );
@@ -364,11 +435,26 @@ export default function EmpresaFormModal({
                     </button>
                 </header>
 
+                <style>{`
+                    .advanced-validation-form div:has(> [data-field-error]) > input,
+                    .advanced-validation-form div:has(> [data-field-error]) > select,
+                    .advanced-validation-form div:has(> [data-field-error]) > textarea {
+                        border-color: rgb(239 68 68);
+                    }
+
+                    .advanced-validation-form div:has(> [data-field-error]) > input:focus,
+                    .advanced-validation-form div:has(> [data-field-error]) > select:focus,
+                    .advanced-validation-form div:has(> [data-field-error]) > textarea:focus {
+                        border-color: rgb(239 68 68);
+                        box-shadow: 0 0 0 4px rgb(239 68 68 / 0.10);
+                    }
+                `}</style>
+
                 <form
                     onSubmit={
                         handleSubmit
                     }
-                    className="overflow-y-auto max-h-[calc(92vh-80px)]"
+                    className="advanced-validation-form overflow-y-auto max-h-[calc(92vh-80px)]"
                 >
                     <div className="p-6 space-y-8">
                         {generalError && (

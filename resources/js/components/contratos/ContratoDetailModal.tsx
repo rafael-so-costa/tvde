@@ -15,6 +15,7 @@ import {
 
 import {
     AlertCircle,
+    Car,
     Check,
     CheckCircle2,
     Circle,
@@ -27,6 +28,7 @@ import {
     History,
     KeyRound,
     LoaderCircle,
+    PlayCircle,
     ShieldCheck,
     Trash2,
     X,
@@ -47,6 +49,10 @@ import type {
 } from "../../types/checklist";
 
 import type {
+    AluguerStatus,
+} from "../../types/aluguer";
+
+import type {
     Contrato,
     ContratoProcessItem,
 } from "../../types/contrato";
@@ -59,6 +65,17 @@ interface Props {
 
     onChanged:
         () => Promise<void>;
+
+    rentalProcess?: {
+        id: string;
+        status: AluguerStatus;
+    } | null;
+
+    canManageRentalProcess?:
+        boolean;
+
+    onOpenRentalProcess?:
+        () => void;
 }
 
 type Tab =
@@ -132,6 +149,9 @@ export default function ContratoDetailModal({
     id,
     onClose,
     onChanged,
+    rentalProcess = null,
+    canManageRentalProcess = false,
+    onOpenRentalProcess,
 }: Props) {
     const navigate =
         useNavigate();
@@ -799,6 +819,17 @@ export default function ContratoDetailModal({
                                         onDelete={
                                             deleteContract
                                         }
+                                        rentalProcess={
+                                            rentalProcess
+                                        }
+                                        canManageRentalProcess={
+                                            canManageRentalProcess
+                                        }
+                                        onOpenRentalProcess={() => {
+                                            onClose();
+
+                                            onOpenRentalProcess?.();
+                                        }}
                                     />
                                 )}
 
@@ -1048,6 +1079,58 @@ export default function ContratoDetailModal({
     );
 }
 
+function isRentalContract(
+    contrato:
+        Contrato,
+): boolean {
+    return [
+        contrato.tipo,
+        contrato
+            .tipo_contrato
+            ?.codigo,
+        contrato
+            .tipo_contrato
+            ?.slug,
+    ]
+        .filter(
+            (
+                value,
+            ): value is string =>
+                Boolean(
+                    value,
+                ),
+        )
+        .map(
+            (
+                value,
+            ) =>
+                value
+                    .trim()
+                    .toLocaleLowerCase(
+                        "pt-PT",
+                    ),
+        )
+        .includes(
+            "aluguer",
+        );
+}
+
+function rentalStatusLabel(
+    status:
+        AluguerStatus,
+): string {
+    return {
+        rascunho:
+            "Rascunho",
+        ativo:
+            "Ativo",
+        finalizado:
+            "Finalizado",
+        cancelado:
+            "Cancelado",
+    }[status];
+}
+
 function SummaryTab({
     contrato,
     endDate,
@@ -1062,6 +1145,9 @@ function SummaryTab({
     onEndDate,
     onEnd,
     onDelete,
+    rentalProcess,
+    canManageRentalProcess,
+    onOpenRentalProcess,
 }: {
     contrato: Contrato;
 
@@ -1102,9 +1188,85 @@ function SummaryTab({
 
     onDelete:
         () => Promise<void>;
+
+    rentalProcess: {
+        id: string;
+        status: AluguerStatus;
+    } | null;
+
+    canManageRentalProcess:
+        boolean;
+
+    onOpenRentalProcess:
+        () => void;
 }) {
     return (
         <div className="space-y-6">
+            {isRentalContract(
+                contrato,
+            ) && (
+                <section className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex items-start gap-3">
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                                <Car className="h-5 w-5" />
+                            </div>
+
+                            <div>
+                                <h3 className="font-semibold text-emerald-950">
+                                    Processo de aluguer
+                                </h3>
+
+                                <p className="mt-1 text-sm text-emerald-700">
+                                    {rentalProcess
+                                        ? `Estado operacional: ${rentalStatusLabel(
+                                              rentalProcess.status,
+                                          )}.`
+                                        : "Este contrato ainda não possui um processo operacional de aluguer."}
+                                </p>
+
+                                {rentalProcess &&
+                                    rentalProcess.status ===
+                                        "ativo" && (
+                                        <p className="mt-1 text-xs text-emerald-700">
+                                            O veículo encontra-se associado a um aluguer ativo.
+                                        </p>
+                                    )}
+
+                                {rentalProcess &&
+                                    rentalProcess.status ===
+                                        "finalizado" && (
+                                        <p className="mt-1 text-xs text-slate-600">
+                                            O processo operacional deste aluguer já foi finalizado.
+                                        </p>
+                                    )}
+                            </div>
+                        </div>
+
+                        {canManageRentalProcess &&
+                            (
+                                !rentalProcess ||
+                                rentalProcess.status ===
+                                    "rascunho"
+                            ) && (
+                                <button
+                                    type="button"
+                                    onClick={
+                                        onOpenRentalProcess
+                                    }
+                                    className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white hover:bg-emerald-700"
+                                >
+                                    <PlayCircle className="h-4 w-4" />
+
+                                    {rentalProcess
+                                        ? "Continuar processo"
+                                        : "Iniciar processo"}
+                                </button>
+                            )}
+                    </div>
+                </section>
+            )}
+
             <section className="rounded-2xl border border-slate-200 bg-slate-50/60 p-5">
                 <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
                     <div className="min-w-0">

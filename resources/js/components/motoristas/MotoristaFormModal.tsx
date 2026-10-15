@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { FormEvent, useEffect, useState } from 'react';
-import { LoaderCircle, UserRound, X } from 'lucide-react';
+import { Camera, LoaderCircle, UserRound, X } from 'lucide-react';
 import type {
     Motorista,
     MotoristaEstadoCivil,
@@ -12,7 +12,10 @@ interface Props {
     open: boolean;
     motorista: Motorista | null;
     onClose: () => void;
-    onSubmit: (payload: MotoristaPayload) => Promise<void>;
+    onSubmit: (
+        payload: MotoristaPayload,
+        foto: File | null
+    ) => Promise<void>;
 }
 
 interface FormState {
@@ -35,7 +38,6 @@ interface FormState {
     endereco_cidade: string;
     endereco_cep: string;
     iban: string;
-    foto_perfil_url: string;
     bolt_email: string;
     bolt_telemovel: string;
     uber_email: string;
@@ -67,7 +69,6 @@ const emptyForm: FormState = {
     endereco_cidade: '',
     endereco_cep: '',
     iban: '',
-    foto_perfil_url: '',
     bolt_email: '',
     bolt_telemovel: '',
     uber_email: '',
@@ -99,6 +100,9 @@ export default function MotoristaFormModal({
     const [errors, setErrors] = useState<Record<string, string[]>>({});
     const [generalError, setGeneralError] = useState('');
     const [submitting, setSubmitting] = useState(false);
+    const [foto, setFoto] = useState<File | null>(null);
+    const [fotoPreview, setFotoPreview] =
+        useState<string | null>(null);
 
     useEffect(() => {
         if (!open) {
@@ -107,6 +111,11 @@ export default function MotoristaFormModal({
 
         setErrors({});
         setGeneralError('');
+        setFoto(null);
+        setFotoPreview(
+            motorista?.foto_perfil_url ??
+                null
+        );
 
         if (!motorista) {
             setForm(emptyForm);
@@ -135,7 +144,6 @@ export default function MotoristaFormModal({
             endereco_cidade: motorista.endereco_cidade ?? '',
             endereco_cep: motorista.endereco_cep ?? '',
             iban: motorista.iban ?? '',
-            foto_perfil_url: motorista.foto_perfil_url ?? '',
             bolt_email: motorista.bolt_email ?? '',
             bolt_telemovel: motorista.bolt_telemovel ?? '',
             uber_email: motorista.uber_email ?? '',
@@ -150,6 +158,20 @@ export default function MotoristaFormModal({
                 motorista.contato_urgencia_telemovel ?? '',
         });
     }, [open, motorista]);
+
+    useEffect(() => {
+        return () => {
+            if (
+                fotoPreview?.startsWith(
+                    'blob:'
+                )
+            ) {
+                URL.revokeObjectURL(
+                    fotoPreview
+                );
+            }
+        };
+    }, [fotoPreview]);
 
     if (!open) {
         return null;
@@ -172,14 +194,129 @@ export default function MotoristaFormModal({
         }
     }
 
-    function fieldError(field: keyof FormState) {
-        const message = errors[field]?.[0];
+    function focusFirstValidationError(
+        validationErrors: Record<
+            string,
+            string[]
+        >
+    ) {
+        const firstField =
+            Object.keys(
+                validationErrors
+            )[0];
+
+        if (!firstField) {
+            return;
+        }
+
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                const marker =
+                    Array.from(
+                        document.querySelectorAll<HTMLElement>(
+                            '[data-field-error]'
+                        )
+                    ).find(
+                        (element) =>
+                            element.dataset
+                                .fieldError ===
+                            firstField
+                    );
+
+                const control =
+                    marker?.parentElement
+                        ?.querySelector<HTMLElement>(
+                            'input, select, textarea'
+                        );
+
+                (
+                    control ??
+                    marker
+                )?.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center',
+                });
+
+                control?.focus();
+            });
+        });
+    }
+
+    function fieldError(
+        field: keyof FormState | 'foto'
+    ) {
+        const message =
+            errors[field]?.[0];
 
         return message ? (
-            <p className="mt-1 text-xs text-red-600">{message}</p>
+            <p
+                data-field-error={field}
+                className="mt-1.5 text-xs text-red-600"
+            >
+                {message}
+            </p>
         ) : null;
     }
 
+    function selectFoto(
+        file: File | null
+    ) {
+        if (!file) {
+            setFoto(null);
+
+            setFotoPreview(
+                motorista?.foto_perfil_url ??
+                    null
+            );
+
+            return;
+        }
+
+        const mimeTypes = [
+            'image/jpeg',
+            'image/png',
+            'image/webp',
+        ];
+
+        if (
+            !mimeTypes.includes(
+                file.type
+            )
+        ) {
+            setErrors((current) => ({
+                ...current,
+                foto: [
+                    'A fotografia deve estar em JPG, PNG ou WebP.',
+                ],
+            }));
+
+            return;
+        }
+
+        if (
+            file.size >
+            5 * 1024 * 1024
+        ) {
+            setErrors((current) => ({
+                ...current,
+                foto: [
+                    'A fotografia não pode exceder 5 MB.',
+                ],
+            }));
+
+            return;
+        }
+
+        setErrors((current) => ({
+            ...current,
+            foto: [],
+        }));
+
+        setFoto(file);
+        setFotoPreview(
+            URL.createObjectURL(file)
+        );
+    }
     async function handleSubmit(event: FormEvent) {
         event.preventDefault();
 
@@ -209,7 +346,6 @@ export default function MotoristaFormModal({
             endereco_cidade: nullable(form.endereco_cidade),
             endereco_cep: nullable(form.endereco_cep),
             iban: nullable(form.iban),
-            foto_perfil_url: nullable(form.foto_perfil_url),
             bolt_email: nullable(form.bolt_email),
             bolt_telemovel: nullable(form.bolt_telemovel),
             uber_email: nullable(form.uber_email),
@@ -226,16 +362,36 @@ export default function MotoristaFormModal({
         };
 
         try {
-            await onSubmit(payload);
+            await onSubmit(payload, foto);
         } catch (error) {
             if (axios.isAxiosError(error)) {
                 const response = error.response?.data;
 
-                setErrors(response?.errors ?? {});
-                setGeneralError(
-                    response?.message ??
-                        'Não foi possível guardar o motorista.'
+                const validationErrors =
+                    response?.errors ?? {};
+
+                setErrors(
+                    validationErrors
                 );
+
+                if (
+                    Object.keys(
+                        validationErrors
+                    ).length > 0
+                ) {
+                    setGeneralError(
+                        'Existem dados inválidos. Corrija os campos assinalados.'
+                    );
+
+                    focusFirstValidationError(
+                        validationErrors
+                    );
+                } else {
+                    setGeneralError(
+                        response?.message ??
+                            'Não foi possível guardar o motorista.'
+                    );
+                }
             } else {
                 setGeneralError(
                     'Não foi possível guardar o motorista.'
@@ -290,9 +446,24 @@ export default function MotoristaFormModal({
                     </button>
                 </header>
 
+                <style>{`
+                    .advanced-validation-form div:has(> [data-field-error]) > input,
+                    .advanced-validation-form div:has(> [data-field-error]) > select,
+                    .advanced-validation-form div:has(> [data-field-error]) > textarea {
+                        border-color: rgb(239 68 68);
+                    }
+
+                    .advanced-validation-form div:has(> [data-field-error]) > input:focus,
+                    .advanced-validation-form div:has(> [data-field-error]) > select:focus,
+                    .advanced-validation-form div:has(> [data-field-error]) > textarea:focus {
+                        border-color: rgb(239 68 68);
+                        box-shadow: 0 0 0 4px rgb(239 68 68 / 0.10);
+                    }
+                `}</style>
+
                 <form
                     onSubmit={handleSubmit}
-                    className="overflow-y-auto max-h-[calc(94vh-80px)]"
+                    className="advanced-validation-form overflow-y-auto max-h-[calc(94vh-80px)]"
                 >
                     <div className="p-6 space-y-8">
                         {generalError && (
@@ -300,6 +471,69 @@ export default function MotoristaFormModal({
                                 {generalError}
                             </div>
                         )}
+
+                        <div className="rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-indigo-800">
+                            <strong>*</strong> Campos obrigatórios para o motorista ficar ativo. O cadastro pode ser guardado incompleto, mas permanecerá inativo.
+                        </div>
+
+                        <section>
+                            <h3 className="font-semibold text-slate-900 mb-4">
+                                Fotografia de perfil *
+                            </h3>
+
+                            <div
+                                className={[
+                                    'rounded-2xl border p-5 flex flex-col sm:flex-row sm:items-center gap-5',
+                                    errors.foto?.length
+                                        ? 'border-red-300 bg-red-50/40'
+                                        : 'border-slate-200 bg-slate-50',
+                                ].join(' ')}
+                            >
+                                <div className="w-28 h-28 shrink-0 rounded-2xl overflow-hidden border border-slate-200 bg-white flex items-center justify-center">
+                                    {fotoPreview ? (
+                                        <img
+                                            src={fotoPreview}
+                                            alt="Fotografia do motorista"
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : (
+                                        <UserRound className="w-10 h-10 text-slate-300" />
+                                    )}
+                                </div>
+
+                                <div className="flex-1">
+                                    <p className="font-semibold text-slate-900">
+                                        Foto do motorista
+                                    </p>
+
+                                    <p className="mt-1 text-sm text-slate-500">
+                                        JPG, PNG ou WebP. Máximo 5 MB. A fotografia só pode ser alterada pela frota.
+                                    </p>
+
+                                    <label className="mt-4 inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white hover:bg-indigo-700">
+                                        <Camera className="w-4 h-4" />
+
+                                        {fotoPreview
+                                            ? 'Substituir fotografia'
+                                            : 'Selecionar fotografia'}
+
+                                        <input
+                                            type="file"
+                                            accept="image/jpeg,image/png,image/webp"
+                                            className="hidden"
+                                            onChange={(event) =>
+                                                selectFoto(
+                                                    event.target.files?.[0] ??
+                                                        null
+                                                )
+                                            }
+                                        />
+                                    </label>
+
+                                    {fieldError('foto')}
+                                </div>
+                            </div>
+                        </section>
 
                         <section>
                             <h3 className="font-semibold text-slate-900 mb-4">
@@ -329,7 +563,7 @@ export default function MotoristaFormModal({
 
                                 <div>
                                     <label className={labelClass}>
-                                        NIF
+                                        NIF *
                                     </label>
 
                                     <input
@@ -348,7 +582,7 @@ export default function MotoristaFormModal({
 
                                 <div>
                                     <label className={labelClass}>
-                                        Data de nascimento
+                                        Data de nascimento *
                                     </label>
 
                                     <input
@@ -362,6 +596,8 @@ export default function MotoristaFormModal({
                                         }
                                         className={inputClass}
                                     />
+
+                                    {fieldError('data_nascimento')}
                                 </div>
 
                                 <div>
@@ -399,6 +635,8 @@ export default function MotoristaFormModal({
                                             União de facto
                                         </option>
                                     </select>
+
+                                    {fieldError('estado_civil')}
                                 </div>
 
                                 <div>
@@ -418,6 +656,8 @@ export default function MotoristaFormModal({
                                         }
                                         className={inputClass}
                                     />
+
+                                    {fieldError('filhos')}
                                 </div>
                             </div>
                         </section>
@@ -430,7 +670,7 @@ export default function MotoristaFormModal({
                             <div className="grid sm:grid-cols-2 gap-4">
                                 <div>
                                     <label className={labelClass}>
-                                        Tipo de documento
+                                        Tipo de documento *
                                     </label>
 
                                     <select
@@ -457,11 +697,13 @@ export default function MotoristaFormModal({
                                             Passaporte
                                         </option>
                                     </select>
+
+                                    {fieldError('tipo_documento')}
                                 </div>
 
                                 <div>
                                     <label className={labelClass}>
-                                        Número do documento
+                                        Número do documento *
                                     </label>
 
                                     <input
@@ -474,11 +716,13 @@ export default function MotoristaFormModal({
                                         }
                                         className={inputClass}
                                     />
+
+                                    {fieldError('numero_documento')}
                                 </div>
 
                                 <div>
                                     <label className={labelClass}>
-                                        Validade do documento
+                                        Validade do documento *
                                     </label>
 
                                     <input
@@ -492,11 +736,13 @@ export default function MotoristaFormModal({
                                         }
                                         className={inputClass}
                                     />
+
+                                    {fieldError('documento_valid_until')}
                                 </div>
 
                                 <div>
                                     <label className={labelClass}>
-                                        Carta de condução
+                                        Carta de condução *
                                     </label>
 
                                     <input
@@ -509,11 +755,13 @@ export default function MotoristaFormModal({
                                         }
                                         className={inputClass}
                                     />
+
+                                    {fieldError('carta_numero')}
                                 </div>
 
                                 <div>
                                     <label className={labelClass}>
-                                        Validade da carta
+                                        Validade da carta *
                                     </label>
 
                                     <input
@@ -527,11 +775,13 @@ export default function MotoristaFormModal({
                                         }
                                         className={inputClass}
                                     />
+
+                                    {fieldError('carta_valid_until')}
                                 </div>
 
                                 <div>
                                     <label className={labelClass}>
-                                        Validade do registo criminal
+                                        Validade do registo criminal *
                                     </label>
 
                                     <input
@@ -547,11 +797,13 @@ export default function MotoristaFormModal({
                                         }
                                         className={inputClass}
                                     />
+
+                                    {fieldError('registo_criminal_valid_until')}
                                 </div>
 
                                 <div>
                                     <label className={labelClass}>
-                                        Certificado TVDE
+                                        Certificado TVDE *
                                     </label>
 
                                     <input
@@ -564,11 +816,13 @@ export default function MotoristaFormModal({
                                         }
                                         className={inputClass}
                                     />
+
+                                    {fieldError('certificado_tvde')}
                                 </div>
 
                                 <div>
                                     <label className={labelClass}>
-                                        Validade certificado TVDE
+                                        Validade certificado TVDE *
                                     </label>
 
                                     <input
@@ -584,6 +838,8 @@ export default function MotoristaFormModal({
                                         }
                                         className={inputClass}
                                     />
+
+                                    {fieldError('certificado_tvde_valid_until')}
                                 </div>
                             </div>
                         </section>
@@ -596,7 +852,7 @@ export default function MotoristaFormModal({
                             <div className="grid sm:grid-cols-2 gap-4">
                                 <div>
                                     <label className={labelClass}>
-                                        E-mail
+                                        E-mail *
                                     </label>
 
                                     <input
@@ -616,7 +872,7 @@ export default function MotoristaFormModal({
 
                                 <div>
                                     <label className={labelClass}>
-                                        Telemóvel
+                                        Telemóvel *
                                     </label>
 
                                     <input
@@ -629,6 +885,8 @@ export default function MotoristaFormModal({
                                         }
                                         className={inputClass}
                                     />
+
+                                    {fieldError('telemovel')}
                                 </div>
 
                                 <div>
@@ -646,6 +904,8 @@ export default function MotoristaFormModal({
                                         }
                                         className={inputClass}
                                     />
+
+                                    {fieldError('contato_urgencia_nome')}
                                 </div>
 
                                 <div>
@@ -665,6 +925,8 @@ export default function MotoristaFormModal({
                                         }
                                         className={inputClass}
                                     />
+
+                                    {fieldError('contato_urgencia_telemovel')}
                                 </div>
                             </div>
                         </section>
@@ -677,7 +939,7 @@ export default function MotoristaFormModal({
                             <div className="grid sm:grid-cols-2 gap-4">
                                 <div className="sm:col-span-2">
                                     <label className={labelClass}>
-                                        Rua
+                                        Rua *
                                     </label>
 
                                     <input
@@ -690,6 +952,8 @@ export default function MotoristaFormModal({
                                         }
                                         className={inputClass}
                                     />
+
+                                    {fieldError('endereco_rua')}
                                 </div>
 
                                 <div>
@@ -707,6 +971,8 @@ export default function MotoristaFormModal({
                                         }
                                         className={inputClass}
                                     />
+
+                                    {fieldError('endereco_numero')}
                                 </div>
 
                                 <div>
@@ -724,11 +990,13 @@ export default function MotoristaFormModal({
                                         }
                                         className={inputClass}
                                     />
+
+                                    {fieldError('endereco_complemento')}
                                 </div>
 
                                 <div>
                                     <label className={labelClass}>
-                                        Código postal
+                                        Código postal *
                                     </label>
 
                                     <input
@@ -741,11 +1009,13 @@ export default function MotoristaFormModal({
                                         }
                                         className={inputClass}
                                     />
+
+                                    {fieldError('endereco_cep')}
                                 </div>
 
                                 <div>
                                     <label className={labelClass}>
-                                        Cidade
+                                        Cidade *
                                     </label>
 
                                     <input
@@ -758,6 +1028,8 @@ export default function MotoristaFormModal({
                                         }
                                         className={inputClass}
                                     />
+
+                                    {fieldError('endereco_cidade')}
                                 </div>
                             </div>
                         </section>
@@ -784,6 +1056,8 @@ export default function MotoristaFormModal({
                                         }
                                         className={inputClass}
                                     />
+
+                                    {fieldError('uber_email')}
                                 </div>
 
                                 <div>
@@ -801,6 +1075,8 @@ export default function MotoristaFormModal({
                                         }
                                         className={inputClass}
                                     />
+
+                                    {fieldError('uber_telemovel')}
                                 </div>
 
                                 <div>
@@ -819,6 +1095,8 @@ export default function MotoristaFormModal({
                                         }
                                         className={inputClass}
                                     />
+
+                                    {fieldError('bolt_email')}
                                 </div>
 
                                 <div>
@@ -836,6 +1114,8 @@ export default function MotoristaFormModal({
                                         }
                                         className={inputClass}
                                     />
+
+                                    {fieldError('bolt_telemovel')}
                                 </div>
                             </div>
                         </section>
@@ -861,6 +1141,8 @@ export default function MotoristaFormModal({
                                         }
                                         className={inputClass}
                                     />
+
+                                    {fieldError('iban')}
                                 </div>
 
                                 <div>
@@ -878,24 +1160,8 @@ export default function MotoristaFormModal({
                                         }
                                         className={inputClass}
                                     />
-                                </div>
 
-                                <div>
-                                    <label className={labelClass}>
-                                        URL da fotografia
-                                    </label>
-
-                                    <input
-                                        type="url"
-                                        value={form.foto_perfil_url}
-                                        onChange={(event) =>
-                                            update(
-                                                'foto_perfil_url',
-                                                event.target.value
-                                            )
-                                        }
-                                        className={inputClass}
-                                    />
+                                    {fieldError('cartao_frota')}
                                 </div>
                             </div>
                         </section>

@@ -2,7 +2,12 @@
 
 namespace App\Http\Requests;
 
+use App\Rules\PortugueseIban;
+use App\Rules\PortugueseNif;
+use App\Rules\PortuguesePhone;
+use App\Rules\PortuguesePostalCode;
 use App\Services\TenantContext;
+use App\Support\PortugueseDataNormalizer;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -16,6 +21,7 @@ class UpdateMotoristaRequest extends FormRequest
     public function rules(): array
     {
         $tenantId = app(TenantContext::class)->requireId();
+
         $id = $this->route('id');
 
         return [
@@ -35,6 +41,7 @@ class UpdateMotoristaRequest extends FormRequest
                 'sometimes',
                 'nullable',
                 'date',
+                'before_or_equal:today',
             ],
 
             'filhos' => [
@@ -102,12 +109,19 @@ class UpdateMotoristaRequest extends FormRequest
                 'sometimes',
                 'nullable',
                 'string',
-                'max:20',
-                Rule::unique('motoristas', 'nif')
+                'max:9',
+                new PortugueseNif,
+                Rule::unique(
+                    'motoristas',
+                    'nif'
+                )
                     ->ignore($id)
                     ->where(
                         fn ($query) => $query
-                            ->where('tenant_id', $tenantId)
+                            ->where(
+                                'tenant_id',
+                                $tenantId
+                            )
                     ),
             ],
 
@@ -123,31 +137,66 @@ class UpdateMotoristaRequest extends FormRequest
                 'nullable',
                 'string',
                 'max:20',
+                new PortuguesePhone,
             ],
 
-            'endereco' => ['sometimes', 'nullable', 'string'],
-            'endereco_rua' => ['sometimes', 'nullable', 'string'],
-            'endereco_numero' => ['sometimes', 'nullable', 'string'],
-            'endereco_complemento' => ['sometimes', 'nullable', 'string'],
-            'endereco_cidade' => ['sometimes', 'nullable', 'string'],
-            'endereco_cep' => ['sometimes', 'nullable', 'string'],
+            'endereco' => [
+                'sometimes',
+                'nullable',
+                'string',
+            ],
+
+            'endereco_rua' => [
+                'sometimes',
+                'nullable',
+                'string',
+            ],
+
+            'endereco_numero' => [
+                'sometimes',
+                'nullable',
+                'string',
+            ],
+
+            'endereco_complemento' => [
+                'sometimes',
+                'nullable',
+                'string',
+            ],
+
+            'endereco_cidade' => [
+                'sometimes',
+                'nullable',
+                'string',
+            ],
+
+            'endereco_cep' => [
+                'sometimes',
+                'nullable',
+                'string',
+                'max:8',
+                new PortuguesePostalCode,
+            ],
 
             'iban' => [
                 'sometimes',
                 'nullable',
                 'string',
-                'max:50',
+                'size:25',
+                new PortugueseIban,
             ],
 
-            'foto_perfil_url' => [
+            'foto_perfil_url' => ['prohibited'],
+
+            'fotos_galeria' => [
                 'sometimes',
-                'nullable',
+                'array',
+            ],
+
+            'fotos_galeria.*' => [
                 'string',
                 'max:2048',
             ],
-
-            'fotos_galeria' => ['sometimes', 'array'],
-            'fotos_galeria.*' => ['string', 'max:2048'],
 
             'bolt_email' => [
                 'sometimes',
@@ -160,7 +209,8 @@ class UpdateMotoristaRequest extends FormRequest
                 'sometimes',
                 'nullable',
                 'string',
-                'max:50',
+                'max:20',
+                new PortuguesePhone,
             ],
 
             'uber_email' => [
@@ -174,7 +224,8 @@ class UpdateMotoristaRequest extends FormRequest
                 'sometimes',
                 'nullable',
                 'string',
-                'max:50',
+                'max:20',
+                new PortuguesePhone,
             ],
 
             'certificado_tvde' => [
@@ -208,10 +259,14 @@ class UpdateMotoristaRequest extends FormRequest
                 'sometimes',
                 'nullable',
                 'string',
-                'max:50',
+                'max:20',
+                new PortuguesePhone,
             ],
 
-            'documentos_upload' => ['sometimes', 'array'],
+            'documentos_upload' => [
+                'sometimes',
+                'array',
+            ],
 
             'documentos_upload.*.url' => [
                 'required',
@@ -236,5 +291,66 @@ class UpdateMotoristaRequest extends FormRequest
                 'date',
             ],
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $data = [];
+
+        if ($this->has('nif')) {
+            $data['nif'] =
+                PortugueseDataNormalizer::nif(
+                    $this->input('nif')
+                );
+        }
+
+        foreach (
+            [
+                'email',
+                'bolt_email',
+                'uber_email',
+            ] as $field
+        ) {
+            if ($this->has($field)) {
+                $data[$field] =
+                    PortugueseDataNormalizer::email(
+                        $this->input($field)
+                    );
+            }
+        }
+
+        foreach (
+            [
+                'telemovel',
+                'bolt_telemovel',
+                'uber_telemovel',
+                'contato_urgencia_telemovel',
+            ] as $field
+        ) {
+            if ($this->has($field)) {
+                $data[$field] =
+                    PortugueseDataNormalizer::phone(
+                        $this->input($field)
+                    );
+            }
+        }
+
+        if ($this->has('endereco_cep')) {
+            $data['endereco_cep'] =
+                PortugueseDataNormalizer::postalCode(
+                    $this->input('endereco_cep')
+                );
+        }
+
+        if ($this->has('iban')) {
+            $data['iban'] =
+                PortugueseDataNormalizer::iban(
+                    $this->input('iban')
+                );
+        }
+
+        if ($data !== []) {
+            $this->merge($data);
+        }
     }
 }

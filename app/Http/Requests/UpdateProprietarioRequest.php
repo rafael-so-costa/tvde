@@ -2,7 +2,12 @@
 
 namespace App\Http\Requests;
 
+use App\Rules\PortugueseIban;
+use App\Rules\PortugueseNif;
+use App\Rules\PortuguesePhone;
+use App\Rules\PortuguesePostalCode;
 use App\Services\TenantContext;
+use App\Support\PortugueseDataNormalizer;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -16,6 +21,7 @@ class UpdateProprietarioRequest extends FormRequest
     public function rules(): array
     {
         $tenantId = app(TenantContext::class)->requireId();
+
         $id = $this->route('id');
 
         return [
@@ -26,27 +32,73 @@ class UpdateProprietarioRequest extends FormRequest
 
             'tipo' => [
                 'sometimes',
-                Rule::in(['empresa', 'pessoa_fisica']),
+                Rule::in([
+                    'empresa',
+                    'pessoa_fisica',
+                ]),
             ],
 
-            'nome_completo' => ['sometimes', 'nullable', 'string', 'max:255'],
-            'nome_empresa' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'nome_completo' => [
+                'sometimes',
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'nome_empresa' => [
+                'sometimes',
+                'nullable',
+                'string',
+                'max:255',
+            ],
 
             'nif' => [
                 'sometimes',
                 'nullable',
                 'string',
-                'max:20',
-                Rule::unique('proprietarios', 'nif')
+                'max:9',
+                new PortugueseNif,
+                Rule::unique(
+                    'proprietarios',
+                    'nif'
+                )
                     ->ignore($id)
-                    ->where(fn ($query) => $query->where('tenant_id', $tenantId)),
+                    ->where(
+                        fn ($query) => $query
+                            ->where(
+                                'tenant_id',
+                                $tenantId
+                            )
+                    ),
             ],
 
-            'email' => ['sometimes', 'nullable', 'email', 'max:190'],
-            'telemovel' => ['sometimes', 'nullable', 'string', 'max:50'],
+            'email' => [
+                'sometimes',
+                'nullable',
+                'email',
+                'max:190',
+            ],
 
-            'data_nascimento' => ['sometimes', 'nullable', 'date'],
-            'filhos' => ['sometimes', 'integer', 'min:0'],
+            'telemovel' => [
+                'sometimes',
+                'nullable',
+                'string',
+                'max:20',
+                new PortuguesePhone,
+            ],
+
+            'data_nascimento' => [
+                'sometimes',
+                'nullable',
+                'date',
+                'before_or_equal:today',
+            ],
+
+            'filhos' => [
+                'sometimes',
+                'integer',
+                'min:0',
+            ],
 
             'estado_civil' => [
                 'sometimes',
@@ -70,33 +122,171 @@ class UpdateProprietarioRequest extends FormRequest
                 ]),
             ],
 
-            'numero_documento' => ['sometimes', 'nullable', 'string', 'max:100'],
-            'documento_valid_until' => ['sometimes', 'nullable', 'date'],
+            'numero_documento' => [
+                'sometimes',
+                'nullable',
+                'string',
+                'max:100',
+            ],
 
-            'iban' => ['sometimes', 'nullable', 'string', 'max:50'],
+            'documento_valid_until' => [
+                'sometimes',
+                'nullable',
+                'date',
+            ],
 
-            'certidao_permanente' => ['sometimes', 'nullable', 'string', 'max:100'],
-            'certidao_valid_until' => ['sometimes', 'nullable', 'date'],
+            'iban' => [
+                'sometimes',
+                'nullable',
+                'string',
+                'size:25',
+                new PortugueseIban,
+            ],
 
-            'certificado_tvde' => ['sometimes', 'nullable', 'string', 'max:100'],
-            'certificado_tvde_valid_until' => ['sometimes', 'nullable', 'date'],
+            'certidao_permanente' => [
+                'sometimes',
+                'nullable',
+                'string',
+                'max:100',
+            ],
 
-            'capital_social' => ['sometimes', 'nullable', 'numeric', 'min:0'],
-            'nome_gerente' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'certidao_valid_until' => [
+                'sometimes',
+                'nullable',
+                'date',
+            ],
 
-            'endereco' => ['sometimes', 'nullable', 'string'],
-            'endereco_rua' => ['sometimes', 'nullable', 'string'],
-            'endereco_numero' => ['sometimes', 'nullable', 'string'],
-            'endereco_complemento' => ['sometimes', 'nullable', 'string'],
-            'endereco_cidade' => ['sometimes', 'nullable', 'string'],
-            'endereco_cep' => ['sometimes', 'nullable', 'string'],
+            'certificado_tvde' => [
+                'sometimes',
+                'nullable',
+                'string',
+                'max:100',
+            ],
 
-            'foto_perfil_url' => ['sometimes', 'nullable', 'string', 'max:2048'],
+            'certificado_tvde_valid_until' => [
+                'sometimes',
+                'nullable',
+                'date',
+            ],
 
-            'fotos_galeria' => ['sometimes', 'array'],
-            'fotos_galeria.*' => ['string', 'max:2048'],
+            'capital_social' => [
+                'sometimes',
+                'nullable',
+                'numeric',
+                'min:0',
+            ],
 
-            'cartao_frota' => ['sometimes', 'nullable', 'string'],
+            'nome_gerente' => [
+                'sometimes',
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'endereco' => [
+                'sometimes',
+                'nullable',
+                'string',
+            ],
+
+            'endereco_rua' => [
+                'sometimes',
+                'nullable',
+                'string',
+            ],
+
+            'endereco_numero' => [
+                'sometimes',
+                'nullable',
+                'string',
+            ],
+
+            'endereco_complemento' => [
+                'sometimes',
+                'nullable',
+                'string',
+            ],
+
+            'endereco_cidade' => [
+                'sometimes',
+                'nullable',
+                'string',
+            ],
+
+            'endereco_cep' => [
+                'sometimes',
+                'nullable',
+                'string',
+                'max:8',
+                new PortuguesePostalCode,
+            ],
+
+            'foto_perfil_url' => [
+                'sometimes',
+                'nullable',
+                'string',
+                'max:2048',
+            ],
+
+            'fotos_galeria' => [
+                'sometimes',
+                'array',
+            ],
+
+            'fotos_galeria.*' => [
+                'string',
+                'max:2048',
+            ],
+
+            'cartao_frota' => [
+                'sometimes',
+                'nullable',
+                'string',
+            ],
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $data = [];
+
+        if ($this->has('nif')) {
+            $data['nif'] =
+                PortugueseDataNormalizer::nif(
+                    $this->input('nif')
+                );
+        }
+
+        if ($this->has('email')) {
+            $data['email'] =
+                PortugueseDataNormalizer::email(
+                    $this->input('email')
+                );
+        }
+
+        if ($this->has('telemovel')) {
+            $data['telemovel'] =
+                PortugueseDataNormalizer::phone(
+                    $this->input('telemovel')
+                );
+        }
+
+        if ($this->has('endereco_cep')) {
+            $data['endereco_cep'] =
+                PortugueseDataNormalizer::postalCode(
+                    $this->input('endereco_cep')
+                );
+        }
+
+        if ($this->has('iban')) {
+            $data['iban'] =
+                PortugueseDataNormalizer::iban(
+                    $this->input('iban')
+                );
+        }
+
+        if ($data !== []) {
+            $this->merge($data);
+        }
     }
 }

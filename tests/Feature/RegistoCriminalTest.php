@@ -19,9 +19,9 @@ uses(RefreshDatabase::class);
 function registoCriminalHeaders(): array
 {
     return [
-        'Origin'=>'http://localhost:8000',
-        'Referer'=>'http://localhost:8000/',
-        'Accept'=>'application/json',
+        'Origin' => 'http://localhost:8000',
+        'Referer' => 'http://localhost:8000/',
+        'Accept' => 'application/json',
     ];
 }
 
@@ -30,9 +30,9 @@ function registoCriminalTenant(
     string $slug
 ): Tenant {
     return Tenant::create([
-        'nome'=>$nome,
-        'slug'=>$slug,
-        'ativo'=>true,
+        'nome' => $nome,
+        'slug' => $slug,
+        'ativo' => true,
     ]);
 }
 
@@ -40,65 +40,65 @@ function registoCriminalLogin(
     $test,
     User $user
 ): void {
-    $test->postJson('/login',[
-        'email'=>$user->email,
-        'password'=>'SenhaTeste123!',
+    $test->postJson('/login', [
+        'email' => $user->email,
+        'password' => 'SenhaTeste123!',
     ])->assertOk();
 }
 
 function registoCriminalFuncionario(
     Tenant $tenant,
     string $email,
-    string $nivel='configurar'
+    string $nivel = 'configurar'
 ): User {
-    $user=User::factory()->create([
-        'email'=>$email,
-        'password'=>Hash::make(
+    $user = User::factory()->create([
+        'email' => $email,
+        'password' => Hash::make(
             'SenhaTeste123!'
         ),
-        'ativo'=>true,
+        'ativo' => true,
     ]);
 
     TenantUser::create([
-        'tenant_id'=>$tenant->id,
-        'user_id'=>$user->id,
-        'status'=>'ativo',
-        'principal'=>true,
+        'tenant_id' => $tenant->id,
+        'user_id' => $user->id,
+        'status' => 'ativo',
+        'principal' => true,
     ]);
 
-    $role=Role::firstOrCreate(
+    $role = Role::firstOrCreate(
         [
-            'codigo'=>'funcionario',
+            'codigo' => 'funcionario',
         ],
         [
-            'nome'=>'Funcionário',
-            'sistema'=>true,
+            'nome' => 'Funcionário',
+            'sistema' => true,
         ]
     );
 
     UserRole::create([
-        'user_id'=>$user->id,
-        'role_id'=>$role->id,
-        'tenant_id'=>$tenant->id,
+        'user_id' => $user->id,
+        'role_id' => $role->id,
+        'tenant_id' => $tenant->id,
     ]);
 
-    $permission=Permission::firstOrCreate(
+    $permission = Permission::firstOrCreate(
         [
-            'codigo'=>'registos_criminais',
+            'codigo' => 'registos_criminais',
         ],
         [
-            'modulo'=>'registos_criminais',
-            'nome'=>'Registos criminais',
+            'modulo' => 'registos_criminais',
+            'nome' => 'Registos criminais',
         ]
     );
 
     RolePermission::updateOrCreate(
         [
-            'role_id'=>$role->id,
-            'permission_id'=>$permission->id,
+            'role_id' => $role->id,
+            'permission_id' => $permission->id,
         ],
         [
-            'nivel'=>$nivel,
+            'nivel' => $nivel,
         ]
     );
 
@@ -109,18 +109,18 @@ function registoCriminalMotorista(
     Tenant $tenant,
     string $nome,
     string $nif,
-    ?User $user=null
+    ?User $user = null
 ): Motorista {
-    $motorista=new Motorista([
-        'nome_completo'=>$nome,
-        'nif'=>$nif,
-        'email'=>$nif.'@motorista.test',
+    $motorista = new Motorista([
+        'nome_completo' => $nome,
+        'nif' => $nif,
+        'email' => $nif.'@motorista.test',
     ]);
 
-    $motorista->tenant_id=$tenant->id;
+    $motorista->tenant_id = $tenant->id;
 
-    if($user){
-        $motorista->user_id=$user->id;
+    if ($user) {
+        $motorista->user_id = $user->id;
     }
 
     $motorista->save();
@@ -134,38 +134,38 @@ function registoCriminalMotoristaUser(
     string $nome,
     string $nif
 ): array {
-    $user=User::factory()->create([
-        'email'=>$email,
-        'password'=>Hash::make(
+    $user = User::factory()->create([
+        'email' => $email,
+        'password' => Hash::make(
             'SenhaTeste123!'
         ),
-        'ativo'=>true,
+        'ativo' => true,
     ]);
 
     TenantUser::create([
-        'tenant_id'=>$tenant->id,
-        'user_id'=>$user->id,
-        'status'=>'ativo',
-        'principal'=>true,
+        'tenant_id' => $tenant->id,
+        'user_id' => $user->id,
+        'status' => 'ativo',
+        'principal' => true,
     ]);
 
-    $role=Role::firstOrCreate(
+    $role = Role::firstOrCreate(
         [
-            'codigo'=>'motorista',
+            'codigo' => 'motorista',
         ],
         [
-            'nome'=>'Motorista',
-            'sistema'=>true,
+            'nome' => 'Motorista',
+            'sistema' => true,
         ]
     );
 
     UserRole::create([
-        'user_id'=>$user->id,
-        'role_id'=>$role->id,
-        'tenant_id'=>$tenant->id,
+        'user_id' => $user->id,
+        'role_id' => $role->id,
+        'tenant_id' => $tenant->id,
     ]);
 
-    $motorista=registoCriminalMotorista(
+    $motorista = registoCriminalMotorista(
         $tenant,
         $nome,
         $nif,
@@ -182,32 +182,31 @@ function registoCriminalDocumento(
     Tenant $tenant,
     Motorista $motorista,
     User $user,
-    string $codigo='RC-TESTE-001'
+    string $codigo = 'RC-TESTE-001'
 ): RegistoCriminal {
-    $registo=new RegistoCriminal([
-        'motorista_id'=>$motorista->id,
-        'codigo_consulta'=>$codigo,
-        'data_validade'=>
-            now()->addMonths(2)
-                ->toDateString(),
+    $registo = new RegistoCriminal([
+        'motorista_id' => $motorista->id,
+        'codigo_consulta' => $codigo,
+        'data_validade' => now()->addMonths(2)
+            ->toDateString(),
     ]);
 
-    $registo->tenant_id=$tenant->id;
-    $registo->arquivo_path=
+    $registo->tenant_id = $tenant->id;
+    $registo->arquivo_path =
         'registos-criminais/teste/'.
         $codigo.
         '.pdf';
-    $registo->arquivo_nome='registo.pdf';
-    $registo->arquivo_mime='application/pdf';
-    $registo->arquivo_tamanho=100;
-    $registo->hash_arquivo=str_repeat('a',64);
-    $registo->enviado_por=$user->id;
+    $registo->arquivo_nome = 'registo.pdf';
+    $registo->arquivo_mime = 'application/pdf';
+    $registo->arquivo_tamanho = 100;
+    $registo->hash_arquivo = str_repeat('a', 64);
+    $registo->enviado_por = $user->id;
     $registo->save();
 
     return $registo;
 }
 
-test('rotas de registos criminais exigem autenticação',function(){
+test('rotas de registos criminais exigem autenticação', function () {
     $this
         ->withHeaders(
             registoCriminalHeaders()
@@ -218,20 +217,20 @@ test('rotas de registos criminais exigem autenticação',function(){
         ->assertUnauthorized();
 });
 
-test('gestor envia registo criminal privado e campos protegidos pertencem ao servidor',function(){
+test('gestor envia registo criminal privado e campos protegidos pertencem ao servidor', function () {
     Storage::fake('local');
 
-    $tenant=registoCriminalTenant(
+    $tenant = registoCriminalTenant(
         'Tenant RC',
         'tenant-rc'
     );
 
-    $user=registoCriminalFuncionario(
+    $user = registoCriminalFuncionario(
         $tenant,
         'gestor.rc@frotapro.test'
     );
 
-    $motorista=registoCriminalMotorista(
+    $motorista = registoCriminalMotorista(
         $tenant,
         'Motorista RC',
         '111111111'
@@ -242,24 +241,23 @@ test('gestor envia registo criminal privado e campos protegidos pertencem ao ser
         $user
     );
 
-    $response=$this
+    $response = $this
         ->withHeaders(
             registoCriminalHeaders()
         )
         ->post(
             '/api/registos-criminais',
             [
-                'motorista_id'=>$motorista->id,
-                'codigo_consulta'=>'ABC-123-XYZ',
-                'data_emissao'=>'2026-09-20',
-                'data_validade'=>'2026-12-20',
-                'arquivo'=>
-                    UploadedFile::fake()
-                        ->create(
-                            'registo.pdf',
-                            100,
-                            'application/pdf'
-                        ),
+                'motorista_id' => $motorista->id,
+                'codigo_consulta' => 'ABC-123-XYZ',
+                'data_emissao' => '2026-09-20',
+                'data_validade' => '2026-12-20',
+                'arquivo' => UploadedFile::fake()
+                    ->create(
+                        'registo.pdf',
+                        100,
+                        'application/pdf'
+                    ),
             ]
         )
         ->assertCreated()
@@ -272,9 +270,9 @@ test('gestor envia registo criminal privado e campos protegidos pertencem ao ser
             $tenant->id
         );
 
-    $id=$response->json('data.id');
+    $id = $response->json('data.id');
 
-    $registo=RegistoCriminal::findOrFail(
+    $registo = RegistoCriminal::findOrFail(
         $id
     );
 
@@ -297,25 +295,25 @@ test('gestor envia registo criminal privado e campos protegidos pertencem ao ser
         );
 });
 
-test('registo criminal não aceita motorista de outro tenant',function(){
+test('registo criminal não aceita motorista de outro tenant', function () {
     Storage::fake('local');
 
-    $tenantA=registoCriminalTenant(
+    $tenantA = registoCriminalTenant(
         'Tenant A',
         'rc-a'
     );
 
-    $tenantB=registoCriminalTenant(
+    $tenantB = registoCriminalTenant(
         'Tenant B',
         'rc-b'
     );
 
-    $user=registoCriminalFuncionario(
+    $user = registoCriminalFuncionario(
         $tenantA,
         'rc.a@frotapro.test'
     );
 
-    $motoristaB=registoCriminalMotorista(
+    $motoristaB = registoCriminalMotorista(
         $tenantB,
         'Motorista B',
         '222222222'
@@ -333,16 +331,15 @@ test('registo criminal não aceita motorista de outro tenant',function(){
         ->post(
             '/api/registos-criminais',
             [
-                'motorista_id'=>$motoristaB->id,
-                'codigo_consulta'=>'OUTRO-TENANT',
-                'data_validade'=>'2026-12-20',
-                'arquivo'=>
-                    UploadedFile::fake()
-                        ->create(
-                            'registo.pdf',
-                            100,
-                            'application/pdf'
-                        ),
+                'motorista_id' => $motoristaB->id,
+                'codigo_consulta' => 'OUTRO-TENANT',
+                'data_validade' => '2026-12-20',
+                'arquivo' => UploadedFile::fake()
+                    ->create(
+                        'registo.pdf',
+                        100,
+                        'application/pdf'
+                    ),
             ]
         )
         ->assertUnprocessable()
@@ -351,10 +348,10 @@ test('registo criminal não aceita motorista de outro tenant',function(){
         );
 });
 
-test('motorista envia apenas o próprio registo criminal',function(){
+test('motorista envia apenas o próprio registo criminal', function () {
     Storage::fake('local');
 
-    $tenant=registoCriminalTenant(
+    $tenant = registoCriminalTenant(
         'Tenant Motorista',
         'rc-motorista'
     );
@@ -362,14 +359,14 @@ test('motorista envia apenas o próprio registo criminal',function(){
     [
         $user,
         $motorista,
-    ]=registoCriminalMotoristaUser(
+    ] = registoCriminalMotoristaUser(
         $tenant,
         'motorista.rc@frotapro.test',
         'Motorista Próprio',
         '333333333'
     );
 
-    $outro=registoCriminalMotorista(
+    $outro = registoCriminalMotorista(
         $tenant,
         'Outro Motorista',
         '444444444'
@@ -387,15 +384,14 @@ test('motorista envia apenas o próprio registo criminal',function(){
         ->post(
             '/api/registos-criminais',
             [
-                'codigo_consulta'=>'MEU-RC',
-                'data_validade'=>'2026-12-20',
-                'arquivo'=>
-                    UploadedFile::fake()
-                        ->create(
-                            'meu-registo.pdf',
-                            100,
-                            'application/pdf'
-                        ),
+                'codigo_consulta' => 'MEU-RC',
+                'data_validade' => '2026-12-20',
+                'arquivo' => UploadedFile::fake()
+                    ->create(
+                        'meu-registo.pdf',
+                        100,
+                        'application/pdf'
+                    ),
             ]
         )
         ->assertCreated()
@@ -411,16 +407,15 @@ test('motorista envia apenas o próprio registo criminal',function(){
         ->post(
             '/api/registos-criminais',
             [
-                'motorista_id'=>$outro->id,
-                'codigo_consulta'=>'TENTATIVA',
-                'data_validade'=>'2026-12-20',
-                'arquivo'=>
-                    UploadedFile::fake()
-                        ->create(
-                            'outro.pdf',
-                            100,
-                            'application/pdf'
-                        ),
+                'motorista_id' => $outro->id,
+                'codigo_consulta' => 'TENTATIVA',
+                'data_validade' => '2026-12-20',
+                'arquivo' => UploadedFile::fake()
+                    ->create(
+                        'outro.pdf',
+                        100,
+                        'application/pdf'
+                    ),
             ]
         )
         ->assertUnprocessable()
@@ -429,8 +424,8 @@ test('motorista envia apenas o próprio registo criminal',function(){
         );
 });
 
-test('motorista consulta apenas os próprios registos criminais',function(){
-    $tenant=registoCriminalTenant(
+test('motorista consulta apenas os próprios registos criminais', function () {
+    $tenant = registoCriminalTenant(
         'Tenant Leitura',
         'rc-leitura'
     );
@@ -438,27 +433,27 @@ test('motorista consulta apenas os próprios registos criminais',function(){
     [
         $user,
         $motorista,
-    ]=registoCriminalMotoristaUser(
+    ] = registoCriminalMotoristaUser(
         $tenant,
         'motorista.leitura@frotapro.test',
         'Motorista Leitura',
         '555555555'
     );
 
-    $outro=registoCriminalMotorista(
+    $outro = registoCriminalMotorista(
         $tenant,
         'Motorista Alheio',
         '666666666'
     );
 
-    $proprio=registoCriminalDocumento(
+    $proprio = registoCriminalDocumento(
         $tenant,
         $motorista,
         $user,
         'PROPRIO'
     );
 
-    $alheio=registoCriminalDocumento(
+    $alheio = registoCriminalDocumento(
         $tenant,
         $outro,
         $user,
@@ -497,20 +492,20 @@ test('motorista consulta apenas os próprios registos criminais',function(){
         ->assertNotFound();
 });
 
-test('validação sincroniza validade do registo criminal no motorista',function(){
+test('validação sincroniza validade do registo criminal no motorista', function () {
     Storage::fake('local');
 
-    $tenant=registoCriminalTenant(
+    $tenant = registoCriminalTenant(
         'Tenant Validação',
         'rc-validacao'
     );
 
-    $user=registoCriminalFuncionario(
+    $user = registoCriminalFuncionario(
         $tenant,
         'validacao.rc@frotapro.test'
     );
 
-    $motorista=registoCriminalMotorista(
+    $motorista = registoCriminalMotorista(
         $tenant,
         'Motorista Validado',
         '777777777'
@@ -521,28 +516,27 @@ test('validação sincroniza validade do registo criminal no motorista',function
         $user
     );
 
-    $response=$this
+    $response = $this
         ->withHeaders(
             registoCriminalHeaders()
         )
         ->post(
             '/api/registos-criminais',
             [
-                'motorista_id'=>$motorista->id,
-                'codigo_consulta'=>'VALIDAR-001',
-                'data_validade'=>'2027-01-15',
-                'arquivo'=>
-                    UploadedFile::fake()
-                        ->create(
-                            'validar.pdf',
-                            100,
-                            'application/pdf'
-                        ),
+                'motorista_id' => $motorista->id,
+                'codigo_consulta' => 'VALIDAR-001',
+                'data_validade' => '2027-01-15',
+                'arquivo' => UploadedFile::fake()
+                    ->create(
+                        'validar.pdf',
+                        100,
+                        'application/pdf'
+                    ),
             ]
         )
         ->assertCreated();
 
-    $id=$response->json('data.id');
+    $id = $response->json('data.id');
 
     $this
         ->withHeaders(
@@ -557,7 +551,7 @@ test('validação sincroniza validade do registo criminal no motorista',function
             'validado'
         );
 
-    $registo=RegistoCriminal::findOrFail(
+    $registo = RegistoCriminal::findOrFail(
         $id
     );
 
@@ -578,20 +572,20 @@ test('validação sincroniza validade do registo criminal no motorista',function
     );
 });
 
-test('rejeição guarda motivo e não altera validade do motorista',function(){
+test('rejeição guarda motivo e não altera validade do motorista', function () {
     Storage::fake('local');
 
-    $tenant=registoCriminalTenant(
+    $tenant = registoCriminalTenant(
         'Tenant Rejeição',
         'rc-rejeicao'
     );
 
-    $user=registoCriminalFuncionario(
+    $user = registoCriminalFuncionario(
         $tenant,
         'rejeicao.rc@frotapro.test'
     );
 
-    $motorista=registoCriminalMotorista(
+    $motorista = registoCriminalMotorista(
         $tenant,
         'Motorista Rejeitado',
         '888888888'
@@ -602,28 +596,27 @@ test('rejeição guarda motivo e não altera validade do motorista',function(){
         $user
     );
 
-    $response=$this
+    $response = $this
         ->withHeaders(
             registoCriminalHeaders()
         )
         ->post(
             '/api/registos-criminais',
             [
-                'motorista_id'=>$motorista->id,
-                'codigo_consulta'=>'REJEITAR-001',
-                'data_validade'=>'2027-01-15',
-                'arquivo'=>
-                    UploadedFile::fake()
-                        ->create(
-                            'rejeitar.pdf',
-                            100,
-                            'application/pdf'
-                        ),
+                'motorista_id' => $motorista->id,
+                'codigo_consulta' => 'REJEITAR-001',
+                'data_validade' => '2027-01-15',
+                'arquivo' => UploadedFile::fake()
+                    ->create(
+                        'rejeitar.pdf',
+                        100,
+                        'application/pdf'
+                    ),
             ]
         )
         ->assertCreated();
 
-    $id=$response->json('data.id');
+    $id = $response->json('data.id');
 
     $this
         ->withHeaders(
@@ -632,8 +625,7 @@ test('rejeição guarda motivo e não altera validade do motorista',function(){
         ->postJson(
             "/api/registos-criminais/{$id}/rejeitar",
             [
-                'motivo'=>
-                    'Documento ilegível.',
+                'motivo' => 'Documento ilegível.',
             ]
         )
         ->assertOk()
@@ -654,27 +646,27 @@ test('rejeição guarda motivo e não altera validade do motorista',function(){
     )->toBeNull();
 });
 
-test('permissão visualizar permite leitura mas não valida nem envia documentos',function(){
+test('permissão visualizar permite leitura mas não valida nem envia documentos', function () {
     Storage::fake('local');
 
-    $tenant=registoCriminalTenant(
+    $tenant = registoCriminalTenant(
         'Tenant Visualizar',
         'rc-visualizar'
     );
 
-    $user=registoCriminalFuncionario(
+    $user = registoCriminalFuncionario(
         $tenant,
         'visualizar.rc@frotapro.test',
         'visualizar'
     );
 
-    $motorista=registoCriminalMotorista(
+    $motorista = registoCriminalMotorista(
         $tenant,
         'Motorista Visualizar',
         '999999999'
     );
 
-    $registo=registoCriminalDocumento(
+    $registo = registoCriminalDocumento(
         $tenant,
         $motorista,
         $user,
@@ -702,16 +694,15 @@ test('permissão visualizar permite leitura mas não valida nem envia documentos
         ->post(
             '/api/registos-criminais',
             [
-                'motorista_id'=>$motorista->id,
-                'codigo_consulta'=>'BLOQUEADO',
-                'data_validade'=>'2027-01-15',
-                'arquivo'=>
-                    UploadedFile::fake()
-                        ->create(
-                            'bloqueado.pdf',
-                            100,
-                            'application/pdf'
-                        ),
+                'motorista_id' => $motorista->id,
+                'codigo_consulta' => 'BLOQUEADO',
+                'data_validade' => '2027-01-15',
+                'arquivo' => UploadedFile::fake()
+                    ->create(
+                        'bloqueado.pdf',
+                        100,
+                        'application/pdf'
+                    ),
             ]
         )
         ->assertForbidden();
@@ -725,3 +716,273 @@ test('permissão visualizar permite leitura mas não valida nem envia documentos
         )
         ->assertForbidden();
 });
+
+test(
+    'código de consulta é normalizado antes de guardar',
+    function () {
+        Storage::fake(
+            'local'
+        );
+
+        $tenant =
+            registoCriminalTenant(
+                'Tenant Código Normalizado',
+                'rc-codigo-normalizado'
+            );
+
+        $user =
+            registoCriminalFuncionario(
+                $tenant,
+                'codigo.normalizado@frotapro.test'
+            );
+
+        $motorista =
+            registoCriminalMotorista(
+                $tenant,
+                'Motorista Código',
+                '245123458'
+            );
+
+        registoCriminalLogin(
+            $this,
+            $user
+        );
+
+        $response =
+            $this
+                ->withHeaders(
+                    registoCriminalHeaders()
+                )
+                ->post(
+                    '/api/registos-criminais',
+                    [
+                        'motorista_id' => $motorista->id,
+
+                        'codigo_consulta' => '  ABC   123   XYZ  ',
+
+                        'data_emissao' => '2026-09-20',
+
+                        'data_validade' => '2026-12-20',
+
+                        'arquivo' => UploadedFile::fake()
+                            ->create(
+                                'registo.pdf',
+                                100,
+                                'application/pdf'
+                            ),
+                    ]
+                )
+                ->assertCreated()
+                ->assertJsonPath(
+                    'data.codigo_consulta',
+                    'ABC 123 XYZ'
+                );
+
+        $this->assertDatabaseHas(
+            'registos_criminais',
+            [
+                'id' => $response->json(
+                    'data.id'
+                ),
+
+                'codigo_consulta' => 'ABC 123 XYZ',
+            ]
+        );
+    }
+);
+
+test(
+    'registo criminal rejeita data de emissão futura ou posterior à validade',
+    function () {
+        Storage::fake(
+            'local'
+        );
+
+        $tenant =
+            registoCriminalTenant(
+                'Tenant Datas Inválidas',
+                'rc-datas-invalidas'
+            );
+
+        $user =
+            registoCriminalFuncionario(
+                $tenant,
+                'datas.invalidas@frotapro.test'
+            );
+
+        $motorista =
+            registoCriminalMotorista(
+                $tenant,
+                'Motorista Datas',
+                '245123466'
+            );
+
+        registoCriminalLogin(
+            $this,
+            $user
+        );
+
+        $this
+            ->withHeaders(
+                registoCriminalHeaders()
+            )
+            ->post(
+                '/api/registos-criminais',
+                [
+                    'motorista_id' => $motorista->id,
+
+                    'codigo_consulta' => 'RC-FUTURO',
+
+                    'data_emissao' => now()
+                        ->addDay()
+                        ->toDateString(),
+
+                    'data_validade' => now()
+                        ->addMonth()
+                        ->toDateString(),
+
+                    'arquivo' => UploadedFile::fake()
+                        ->create(
+                            'futuro.pdf',
+                            100,
+                            'application/pdf'
+                        ),
+                ]
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(
+                'data_emissao'
+            );
+
+        $this
+            ->withHeaders(
+                registoCriminalHeaders()
+            )
+            ->post(
+                '/api/registos-criminais',
+                [
+                    'motorista_id' => $motorista->id,
+
+                    'codigo_consulta' => 'RC-CRONOLOGIA',
+
+                    'data_emissao' => '2026-10-10',
+
+                    'data_validade' => '2026-10-09',
+
+                    'arquivo' => UploadedFile::fake()
+                        ->create(
+                            'cronologia.pdf',
+                            100,
+                            'application/pdf'
+                        ),
+                ]
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(
+                'data_emissao'
+            );
+
+        expect(
+            RegistoCriminal::query()
+                ->where(
+                    'tenant_id',
+                    $tenant->id
+                )
+                ->count()
+        )->toBe(0);
+    }
+);
+
+test(
+    'registo criminal rejeita ficheiro inválido ou demasiado grande',
+    function () {
+        Storage::fake(
+            'local'
+        );
+
+        $tenant =
+            registoCriminalTenant(
+                'Tenant Ficheiro Inválido',
+                'rc-ficheiro-invalido'
+            );
+
+        $user =
+            registoCriminalFuncionario(
+                $tenant,
+                'ficheiro.invalido@frotapro.test'
+            );
+
+        $motorista =
+            registoCriminalMotorista(
+                $tenant,
+                'Motorista Ficheiro',
+                '245123474'
+            );
+
+        registoCriminalLogin(
+            $this,
+            $user
+        );
+
+        $this
+            ->withHeaders(
+                registoCriminalHeaders()
+            )
+            ->post(
+                '/api/registos-criminais',
+                [
+                    'motorista_id' => $motorista->id,
+
+                    'codigo_consulta' => 'RC-TXT',
+
+                    'data_validade' => '2026-12-20',
+
+                    'arquivo' => UploadedFile::fake()
+                        ->create(
+                            'registo.txt',
+                            100,
+                            'text/plain'
+                        ),
+                ]
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(
+                'arquivo'
+            );
+
+        $this
+            ->withHeaders(
+                registoCriminalHeaders()
+            )
+            ->post(
+                '/api/registos-criminais',
+                [
+                    'motorista_id' => $motorista->id,
+
+                    'codigo_consulta' => 'RC-GRANDE',
+
+                    'data_validade' => '2026-12-20',
+
+                    'arquivo' => UploadedFile::fake()
+                        ->create(
+                            'registo.pdf',
+                            10241,
+                            'application/pdf'
+                        ),
+                ]
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(
+                'arquivo'
+            );
+
+        expect(
+            RegistoCriminal::query()
+                ->where(
+                    'tenant_id',
+                    $tenant->id
+                )
+                ->count()
+        )->toBe(0);
+    }
+);

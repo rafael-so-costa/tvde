@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Aluguer;
+use App\Models\ChecklistProcessRun;
 use App\Models\ChecklistRecord;
 use App\Models\Contrato;
 use App\Models\ContratoAtivoVeiculo;
@@ -14,7 +15,6 @@ use App\Models\TenantUser;
 use App\Models\User;
 use App\Models\UserRole;
 use App\Models\Veiculo;
-use App\Models\ChecklistProcessRun;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
@@ -129,21 +129,20 @@ function aluguerEntidades(
     $proprietario->save();
 
     $veiculo = new Veiculo([
-        'matricula' =>
-        'AL-' .
+        'matricula' => 'AL-'.
             str_pad(
                 (string) random_int(1, 99),
                 2,
                 '0',
                 STR_PAD_LEFT
-            ) .
-            '-' .
+            ).
+            '-'.
             strtoupper(
                 substr(
                     preg_replace(
                         '/[^A-Za-z]/',
                         '',
-                        $sufixo . 'AA'
+                        $sufixo.'AA'
                     ),
                     0,
                     2
@@ -152,8 +151,7 @@ function aluguerEntidades(
 
         'marca' => 'Tesla',
         'modelo' => 'Model 3',
-        'proprietario_id' =>
-        $proprietario->id,
+        'proprietario_id' => $proprietario->id,
     ]);
 
     $veiculo->tenant_id =
@@ -194,9 +192,9 @@ function aluguerCriarDireto(
 
 function aluguerSignaturePng(): string
 {
-    return 'data:image/png;base64,' .
-        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB' .
-        'CAQAAAC1HAwCAAAAC0lEQVR42mNk+A8A' .
+    return 'data:image/png;base64,'.
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB'.
+        'CAQAAAC1HAwCAAAAC0lEQVR42mNk+A8A'.
         'AQUBAScY42YAAAAASUVORK5CYII=';
 }
 
@@ -208,20 +206,15 @@ function aluguerContrato(
 ): Contrato {
     $contrato =
         new Contrato([
-            'tipo' =>
-            $tipo,
+            'tipo' => $tipo,
 
-            'motorista_id' =>
-            $entidades['motorista']->id,
+            'motorista_id' => $entidades['motorista']->id,
 
-            'veiculo_id' =>
-            $entidades['veiculo']->id,
+            'veiculo_id' => $entidades['veiculo']->id,
 
-            'proprietario_id' =>
-            $entidades['proprietario']->id,
+            'proprietario_id' => $entidades['proprietario']->id,
 
-            'data_inicio' =>
-            '2026-09-01',
+            'data_inicio' => '2026-09-01',
         ]);
 
     $contrato->tenant_id =
@@ -245,34 +238,25 @@ function aluguerProcessoContrato(
 ): ChecklistProcessRun {
     $run =
         new ChecklistProcessRun([
-            'template_codigo_snapshot' =>
-            'teste_' .
+            'template_codigo_snapshot' => 'teste_'.
                 $contrato->tipo,
 
-            'template_nome_snapshot' =>
-            'Checklist ' .
+            'template_nome_snapshot' => 'Checklist '.
                 $contrato->tipo,
 
-            'template_versao_snapshot' =>
-            1,
+            'template_versao_snapshot' => 1,
 
-            'entidade_tipo' =>
-            'contrato',
+            'entidade_tipo' => 'contrato',
 
-            'entidade_id' =>
-            $contrato->id,
+            'entidade_id' => $contrato->id,
 
-            'status' =>
-            $status,
+            'status' => $status,
 
-            'contexto' =>
-            [],
+            'contexto' => [],
 
-            'iniciado_em' =>
-            now(),
+            'iniciado_em' => now(),
 
-            'concluido_em' =>
-            $status ===
+            'concluido_em' => $status ===
                 'concluido'
                 ? now()
                 : null,
@@ -297,31 +281,23 @@ function aluguerChecklist(
 ): ChecklistRecord {
     $checklist =
         new ChecklistRecord([
-            'tipo' =>
-            $tipo,
+            'tipo' => $tipo,
 
-            'motorista_id' =>
-            $motorista->id,
+            'motorista_id' => $motorista->id,
 
-            'veiculo_id' =>
-            $veiculo->id,
+            'veiculo_id' => $veiculo->id,
 
-            'entrega_vinculada_id' =>
-            $entrega?->id,
+            'entrega_vinculada_id' => $entrega?->id,
 
-            'data_operacao' =>
-            '2026-09-19',
+            'data_operacao' => '2026-09-19',
 
-            'quilometragem' =>
-            $tipo === 'entrega'
+            'quilometragem' => $tipo === 'entrega'
                 ? 1000
                 : 1500,
 
-            'nivel_combustivel' =>
-            'cheio',
+            'nivel_combustivel' => 'cheio',
 
-            'penalizacao_total' =>
-            $penalizacao,
+            'penalizacao_total' => $penalizacao,
         ]);
 
     $checklist->tenant_id =
@@ -361,11 +337,9 @@ function aluguerAssociacaoAtiva(
 ): ContratoAtivoVeiculo {
     $associacao =
         new ContratoAtivoVeiculo([
-            'data_inicio' =>
-            now(),
+            'data_inicio' => now(),
 
-            'ativo' =>
-            true,
+            'ativo' => true,
         ]);
 
     $associacao->tenant_id =
@@ -432,28 +406,21 @@ test(
             ->postJson(
                 '/api/alugueres',
                 [
-                    'tenant_id' =>
-                    $outroTenant->id,
+                    'tenant_id' => $outroTenant->id,
 
-                    'status' =>
-                    'finalizado',
+                    'status' => 'finalizado',
 
-                    'created_by' =>
-                    Str::uuid()
+                    'created_by' => Str::uuid()
                         ->toString(),
 
-                    'data_finalizacao' =>
-                    now()
+                    'data_finalizacao' => now()
                         ->toISOString(),
 
-                    'devolucao_tipo' =>
-                    'atraso',
+                    'devolucao_tipo' => 'atraso',
 
-                    'devolucao_total_pagar' =>
-                    9999,
+                    'devolucao_total_pagar' => 9999,
 
-                    'devolucao_declaracao_aceite' =>
-                    true,
+                    'devolucao_declaracao_aceite' => true,
                 ]
             )
             ->assertUnprocessable()
@@ -495,35 +462,33 @@ test(
 
         $response =
             $this
-            ->withHeaders(
-                aluguerHeaders()
-            )
-            ->postJson(
-                '/api/alugueres',
-                [
-                    'rascunho_dados' => [
-                        'template_aluguer_id' =>
-                        Str::uuid()
-                            ->toString(),
-                    ],
+                ->withHeaders(
+                    aluguerHeaders()
+                )
+                ->postJson(
+                    '/api/alugueres',
+                    [
+                        'rascunho_dados' => [
+                            'template_aluguer_id' => Str::uuid()
+                                ->toString(),
+                        ],
 
-                    'observacoes' =>
-                    'Primeiro rascunho',
-                ]
-            )
-            ->assertCreated()
-            ->assertJsonPath(
-                'data.status',
-                'rascunho'
-            )
-            ->assertJsonPath(
-                'data.rascunho_passo',
-                1
-            )
-            ->assertJsonPath(
-                'data.created_by',
-                $user->id
-            );
+                        'observacoes' => 'Primeiro rascunho',
+                    ]
+                )
+                ->assertCreated()
+                ->assertJsonPath(
+                    'data.status',
+                    'rascunho'
+                )
+                ->assertJsonPath(
+                    'data.rascunho_passo',
+                    1
+                )
+                ->assertJsonPath(
+                    'data.created_by',
+                    $user->id
+                );
 
         $id =
             $response->json(
@@ -533,23 +498,17 @@ test(
         $this->assertDatabaseHas(
             'alugueres',
             [
-                'id' =>
-                $id,
+                'id' => $id,
 
-                'tenant_id' =>
-                $tenant->id,
+                'tenant_id' => $tenant->id,
 
-                'status' =>
-                'rascunho',
+                'status' => 'rascunho',
 
-                'created_by' =>
-                $user->id,
+                'created_by' => $user->id,
 
-                'rascunho_passo' =>
-                1,
+                'rascunho_passo' => 1,
 
-                'observacoes' =>
-                'Primeiro rascunho',
+                'observacoes' => 'Primeiro rascunho',
             ]
         );
     }
@@ -588,30 +547,22 @@ test(
             ->postJson(
                 '/api/alugueres',
                 [
-                    'motorista_id' =>
-                    $entidades['motorista']->id,
+                    'motorista_id' => $entidades['motorista']->id,
 
-                    'veiculo_id' =>
-                    $entidades['veiculo']->id,
+                    'veiculo_id' => $entidades['veiculo']->id,
 
-                    'proprietario_id' =>
-                    $entidades['proprietario']->id,
+                    'proprietario_id' => $entidades['proprietario']->id,
 
-                    'data_inicio' =>
-                    '2026-09-20',
+                    'data_inicio' => '2026-09-20',
 
-                    'data_fim' =>
-                    '2026-10-20',
+                    'data_fim' => '2026-10-20',
 
-                    'rascunho_passo' =>
-                    3,
+                    'rascunho_passo' => 3,
 
                     'rascunho_dados' => [
-                        'motorista_id' =>
-                        $entidades['motorista']->id,
+                        'motorista_id' => $entidades['motorista']->id,
 
-                        'veiculo_id' =>
-                        $entidades['veiculo']->id,
+                        'veiculo_id' => $entidades['veiculo']->id,
                     ],
                 ]
             )
@@ -674,14 +625,11 @@ test(
             ->postJson(
                 '/api/alugueres',
                 [
-                    'motorista_id' =>
-                    $entidadesB['motorista']->id,
+                    'motorista_id' => $entidadesB['motorista']->id,
 
-                    'veiculo_id' =>
-                    $entidadesB['veiculo']->id,
+                    'veiculo_id' => $entidadesB['veiculo']->id,
 
-                    'proprietario_id' =>
-                    $entidadesB['proprietario']->id,
+                    'proprietario_id' => $entidadesB['proprietario']->id,
                 ]
             )
             ->assertUnprocessable()
@@ -714,8 +662,7 @@ test(
 
         $contratoAluguer =
             new Contrato([
-                'tipo' =>
-                'aluguer',
+                'tipo' => 'aluguer',
             ]);
 
         $contratoAluguer->tenant_id =
@@ -725,8 +672,7 @@ test(
 
         $contratoPrestacao =
             new Contrato([
-                'tipo' =>
-                'prestacao_servico',
+                'tipo' => 'prestacao_servico',
             ]);
 
         $contratoPrestacao->tenant_id =
@@ -736,17 +682,13 @@ test(
 
         $checklistEntrega =
             new ChecklistRecord([
-                'tipo' =>
-                'entrega',
+                'tipo' => 'entrega',
 
-                'data_operacao' =>
-                '2026-09-20',
+                'data_operacao' => '2026-09-20',
 
-                'quilometragem' =>
-                1000,
+                'quilometragem' => 1000,
 
-                'nivel_combustivel' =>
-                'cheio',
+                'nivel_combustivel' => 'cheio',
             ]);
 
         $checklistEntrega->tenant_id =
@@ -772,14 +714,11 @@ test(
             ->postJson(
                 '/api/alugueres',
                 [
-                    'contrato_aluguer_id' =>
-                    $contratoAluguer->id,
+                    'contrato_aluguer_id' => $contratoAluguer->id,
 
-                    'contrato_prestacao_id' =>
-                    $contratoPrestacao->id,
+                    'contrato_prestacao_id' => $contratoPrestacao->id,
 
-                    'checklist_entrega_id' =>
-                    $checklistEntrega->id,
+                    'checklist_entrega_id' => $checklistEntrega->id,
                 ]
             )
             ->assertCreated()
@@ -821,8 +760,7 @@ test(
 
         $contratoOutroTenant =
             new Contrato([
-                'tipo' =>
-                'aluguer',
+                'tipo' => 'aluguer',
             ]);
 
         $contratoOutroTenant->tenant_id =
@@ -832,8 +770,7 @@ test(
 
         $contratoTipoErrado =
             new Contrato([
-                'tipo' =>
-                'prestacao_servico',
+                'tipo' => 'prestacao_servico',
             ]);
 
         $contratoTipoErrado->tenant_id =
@@ -853,8 +790,7 @@ test(
             ->postJson(
                 '/api/alugueres',
                 [
-                    'contrato_aluguer_id' =>
-                    Str::uuid()
+                    'contrato_aluguer_id' => Str::uuid()
                         ->toString(),
                 ]
             )
@@ -870,8 +806,7 @@ test(
             ->postJson(
                 '/api/alugueres',
                 [
-                    'contrato_aluguer_id' =>
-                    $contratoOutroTenant->id,
+                    'contrato_aluguer_id' => $contratoOutroTenant->id,
                 ]
             )
             ->assertUnprocessable()
@@ -886,8 +821,7 @@ test(
             ->postJson(
                 '/api/alugueres',
                 [
-                    'contrato_aluguer_id' =>
-                    $contratoTipoErrado->id,
+                    'contrato_aluguer_id' => $contratoTipoErrado->id,
                 ]
             )
             ->assertUnprocessable()
@@ -923,8 +857,7 @@ test(
             $tenantA,
             $userA,
             [
-                'status' =>
-                'rascunho',
+                'status' => 'rascunho',
             ]
         );
 
@@ -941,14 +874,13 @@ test(
 
         $userB =
             User::factory()
-            ->create();
+                ->create();
 
         aluguerCriarDireto(
             $tenantB,
             $userB,
             [
-                'status' =>
-                'rascunho',
+                'status' => 'rascunho',
             ]
         );
 
@@ -972,21 +904,21 @@ test(
 
         $response =
             $this
-            ->withHeaders(
-                aluguerHeaders()
-            )
-            ->getJson(
-                '/api/alugueres?status=ativo'
-            )
-            ->assertOk()
-            ->assertJsonCount(
-                1,
-                'data'
-            )
-            ->assertJsonPath(
-                'data.0.id',
-                $ativo->id
-            );
+                ->withHeaders(
+                    aluguerHeaders()
+                )
+                ->getJson(
+                    '/api/alugueres?status=ativo'
+                )
+                ->assertOk()
+                ->assertJsonCount(
+                    1,
+                    'data'
+                )
+                ->assertJsonPath(
+                    'data.0.id',
+                    $ativo->id
+                );
 
         expect(
             collect(
@@ -1029,7 +961,7 @@ test(
 
         $userB =
             User::factory()
-            ->create();
+                ->create();
 
         $aluguerB =
             aluguerCriarDireto(
@@ -1058,8 +990,7 @@ test(
             ->patchJson(
                 "/api/alugueres/{$aluguerB->id}",
                 [
-                    'observacoes' =>
-                    'Ataque',
+                    'observacoes' => 'Ataque',
                 ]
             )
             ->assertNotFound();
@@ -1076,8 +1007,7 @@ test(
         $this->assertDatabaseHas(
             'alugueres',
             [
-                'id' =>
-                $aluguerB->id,
+                'id' => $aluguerB->id,
             ]
         );
     }
@@ -1121,8 +1051,7 @@ test(
             ->patchJson(
                 "/api/alugueres/{$aluguer->id}",
                 [
-                    'observacoes' =>
-                    'Não deve alterar',
+                    'observacoes' => 'Não deve alterar',
                 ]
             )
             ->assertUnprocessable();
@@ -1130,11 +1059,9 @@ test(
         $this->assertDatabaseMissing(
             'alugueres',
             [
-                'id' =>
-                $aluguer->id,
+                'id' => $aluguer->id,
 
-                'observacoes' =>
-                'Não deve alterar',
+                'observacoes' => 'Não deve alterar',
             ]
         );
     }
@@ -1193,8 +1120,7 @@ test(
             ->patchJson(
                 "/api/alugueres/{$aluguer->id}",
                 [
-                    'observacoes' =>
-                    'Bloqueado',
+                    'observacoes' => 'Bloqueado',
                 ]
             )
             ->assertForbidden();
@@ -1272,15 +1198,12 @@ test(
             ->patchJson(
                 "/api/alugueres/{$aluguer->id}",
                 [
-                    'rascunho_passo' =>
-                    4,
+                    'rascunho_passo' => 4,
 
-                    'observacoes' =>
-                    'Rascunho atualizado',
+                    'observacoes' => 'Rascunho atualizado',
 
                     'rascunho_dados' => [
-                        'observacoes' =>
-                        'Rascunho atualizado',
+                        'observacoes' => 'Rascunho atualizado',
                     ],
                 ]
             )
@@ -1306,8 +1229,7 @@ test(
         $this->assertDatabaseMissing(
             'alugueres',
             [
-                'id' =>
-                $aluguer->id,
+                'id' => $aluguer->id,
             ]
         );
     }
@@ -1363,11 +1285,9 @@ test(
         $this->assertDatabaseHas(
             'alugueres',
             [
-                'id' =>
-                $aluguer->id,
+                'id' => $aluguer->id,
 
-                'status' =>
-                'finalizado',
+                'status' => 'finalizado',
             ]
         );
     }
@@ -1497,26 +1417,19 @@ test(
             ->postJson(
                 "/api/alugueres/{$aluguer->id}/ativar",
                 [
-                    'motorista_id' =>
-                    $entidades['motorista']->id,
+                    'motorista_id' => $entidades['motorista']->id,
 
-                    'veiculo_id' =>
-                    $entidades['veiculo']->id,
+                    'veiculo_id' => $entidades['veiculo']->id,
 
-                    'contrato_aluguer_id' =>
-                    $contratoAluguer->id,
+                    'contrato_aluguer_id' => $contratoAluguer->id,
 
-                    'contrato_prestacao_id' =>
-                    $contratoPrestacao->id,
+                    'contrato_prestacao_id' => $contratoPrestacao->id,
 
-                    'checklist_entrega_id' =>
-                    $checklist->id,
+                    'checklist_entrega_id' => $checklist->id,
 
-                    'data_inicio' =>
-                    '2026-09-20',
+                    'data_inicio' => '2026-09-20',
 
-                    'observacoes' =>
-                    'Aluguer ativo',
+                    'observacoes' => 'Aluguer ativo',
                 ]
             )
             ->assertOk()
@@ -1635,20 +1548,15 @@ test(
             ->postJson(
                 "/api/alugueres/{$aluguer->id}/ativar",
                 [
-                    'motorista_id' =>
-                    $entidadesA['motorista']->id,
+                    'motorista_id' => $entidadesA['motorista']->id,
 
-                    'veiculo_id' =>
-                    $entidadesA['veiculo']->id,
+                    'veiculo_id' => $entidadesA['veiculo']->id,
 
-                    'contrato_aluguer_id' =>
-                    $contratoAluguer->id,
+                    'contrato_aluguer_id' => $contratoAluguer->id,
 
-                    'contrato_prestacao_id' =>
-                    $contratoPrestacao->id,
+                    'contrato_prestacao_id' => $contratoPrestacao->id,
 
-                    'checklist_entrega_id' =>
-                    $checklistOutroVeiculo->id,
+                    'checklist_entrega_id' => $checklistOutroVeiculo->id,
                 ]
             )
             ->assertUnprocessable()
@@ -1730,20 +1638,15 @@ test(
                 $tenant,
                 $user,
                 [
-                    'motorista_id' =>
-                    $entidades['motorista']->id,
+                    'motorista_id' => $entidades['motorista']->id,
 
-                    'veiculo_id' =>
-                    $entidades['veiculo']->id,
+                    'veiculo_id' => $entidades['veiculo']->id,
 
-                    'proprietario_id' =>
-                    $entidades['proprietario']->id,
+                    'proprietario_id' => $entidades['proprietario']->id,
 
-                    'contrato_aluguer_id' =>
-                    $contratoAluguer->id,
+                    'contrato_aluguer_id' => $contratoAluguer->id,
 
-                    'contrato_prestacao_id' =>
-                    $contratoPrestacao->id,
+                    'contrato_prestacao_id' => $contratoPrestacao->id,
                 ]
             );
 
@@ -1881,27 +1784,21 @@ test(
                 aluguerHeaders()
             )
             ->postJson(
-                '/api/alugueres/' .
-                    Str::uuid() .
+                '/api/alugueres/'.
+                    Str::uuid().
                     '/finalizar-devolucao',
                 [
-                    'devolucao_multa_atraso' =>
-                    9999,
+                    'devolucao_multa_atraso' => 9999,
 
-                    'devolucao_penalizacoes_checklist' =>
-                    9999,
+                    'devolucao_penalizacoes_checklist' => 9999,
 
-                    'devolucao_total_pagar' =>
-                    9999,
+                    'devolucao_total_pagar' => 9999,
 
-                    'devolucao_assinatura_motorista_url' =>
-                    'ataque.png',
+                    'devolucao_assinatura_motorista_url' => 'ataque.png',
 
-                    'devolucao_assinatura_empresa_url' =>
-                    'ataque.png',
+                    'devolucao_assinatura_empresa_url' => 'ataque.png',
 
-                    'devolucao_pdf_url' =>
-                    'ataque.pdf',
+                    'devolucao_pdf_url' => 'ataque.pdf',
                 ]
             )
             ->assertUnprocessable()
@@ -1990,23 +1887,17 @@ test(
                 $tenant,
                 $user,
                 [
-                    'motorista_id' =>
-                    $entidades['motorista']->id,
+                    'motorista_id' => $entidades['motorista']->id,
 
-                    'veiculo_id' =>
-                    $entidades['veiculo']->id,
+                    'veiculo_id' => $entidades['veiculo']->id,
 
-                    'proprietario_id' =>
-                    $entidades['proprietario']->id,
+                    'proprietario_id' => $entidades['proprietario']->id,
 
-                    'contrato_aluguer_id' =>
-                    $contratoAluguer->id,
+                    'contrato_aluguer_id' => $contratoAluguer->id,
 
-                    'contrato_prestacao_id' =>
-                    $contratoPrestacao->id,
+                    'contrato_prestacao_id' => $contratoPrestacao->id,
 
-                    'checklist_entrega_id' =>
-                    $entrega->id,
+                    'checklist_entrega_id' => $entrega->id,
                 ]
             );
 
@@ -2027,50 +1918,37 @@ test(
             ->postJson(
                 "/api/alugueres/{$aluguer->id}/finalizar-devolucao",
                 [
-                    'checklist_devolucao_id' =>
-                    $recolha->id,
+                    'checklist_devolucao_id' => $recolha->id,
 
-                    'contrato_prestacao_id' =>
-                    $contratoPrestacao->id,
+                    'contrato_prestacao_id' => $contratoPrestacao->id,
 
-                    'devolucao_tipo' =>
-                    'atraso',
+                    'devolucao_tipo' => 'atraso',
 
-                    'devolucao_dias_atraso' =>
-                    3,
+                    'devolucao_dias_atraso' => 3,
 
-                    'devolucao_valor_dia' =>
-                    20,
+                    'devolucao_valor_dia' => 20,
 
                     'devolucao_multas_adicionais' => [
                         [
-                            'nome' =>
-                            'Limpeza',
+                            'nome' => 'Limpeza',
 
-                            'valor' =>
-                            5.25,
+                            'valor' => 5.25,
                         ],
 
                         [
-                            'nome' =>
-                            'Portagem',
+                            'nome' => 'Portagem',
 
-                            'valor' =>
-                            4.75,
+                            'valor' => 4.75,
                         ],
                     ],
 
-                    'devolucao_declaracao_aceite' =>
-                    true,
+                    'devolucao_declaracao_aceite' => true,
 
-                    'assinatura_motorista' =>
-                    aluguerSignaturePng(),
+                    'assinatura_motorista' => aluguerSignaturePng(),
 
-                    'assinatura_empresa' =>
-                    aluguerSignaturePng(),
+                    'assinatura_empresa' => aluguerSignaturePng(),
 
-                    'devolucao_observacoes' =>
-                    'Devolução de teste',
+                    'devolucao_observacoes' => 'Devolução de teste',
                 ]
             )
             ->assertOk()
@@ -2141,17 +2019,17 @@ test(
         )->toBeFalse();
 
         $motoristaPath =
-            'rental-return-signatures/' .
-            $tenant->id .
-            '/' .
-            $aluguer->id .
+            'rental-return-signatures/'.
+            $tenant->id.
+            '/'.
+            $aluguer->id.
             '/motorista.png';
 
         $empresaPath =
-            'rental-return-signatures/' .
-            $tenant->id .
-            '/' .
-            $aluguer->id .
+            'rental-return-signatures/'.
+            $tenant->id.
+            '/'.
+            $aluguer->id.
             '/empresa.png';
 
         expect(
@@ -2252,23 +2130,17 @@ test(
                 $tenant,
                 $user,
                 [
-                    'motorista_id' =>
-                    $entidades['motorista']->id,
+                    'motorista_id' => $entidades['motorista']->id,
 
-                    'veiculo_id' =>
-                    $entidades['veiculo']->id,
+                    'veiculo_id' => $entidades['veiculo']->id,
 
-                    'proprietario_id' =>
-                    $entidades['proprietario']->id,
+                    'proprietario_id' => $entidades['proprietario']->id,
 
-                    'contrato_aluguer_id' =>
-                    $contratoAluguer->id,
+                    'contrato_aluguer_id' => $contratoAluguer->id,
 
-                    'contrato_prestacao_id' =>
-                    $contratoPrestacao->id,
+                    'contrato_prestacao_id' => $contratoPrestacao->id,
 
-                    'checklist_entrega_id' =>
-                    $entregaCorreta->id,
+                    'checklist_entrega_id' => $entregaCorreta->id,
                 ]
             );
 
@@ -2289,23 +2161,17 @@ test(
             ->postJson(
                 "/api/alugueres/{$aluguer->id}/finalizar-devolucao",
                 [
-                    'checklist_devolucao_id' =>
-                    $recolhaErrada->id,
+                    'checklist_devolucao_id' => $recolhaErrada->id,
 
-                    'contrato_prestacao_id' =>
-                    $contratoPrestacao->id,
+                    'contrato_prestacao_id' => $contratoPrestacao->id,
 
-                    'devolucao_tipo' =>
-                    'no_prazo',
+                    'devolucao_tipo' => 'no_prazo',
 
-                    'devolucao_declaracao_aceite' =>
-                    true,
+                    'devolucao_declaracao_aceite' => true,
 
-                    'assinatura_motorista' =>
-                    aluguerSignaturePng(),
+                    'assinatura_motorista' => aluguerSignaturePng(),
 
-                    'assinatura_empresa' =>
-                    aluguerSignaturePng(),
+                    'assinatura_empresa' => aluguerSignaturePng(),
                 ]
             )
             ->assertUnprocessable()
@@ -2328,7 +2194,6 @@ test(
         )->toBe([]);
     }
 );
-
 
 test(
     'ativação rejeita contrato com checklist de processo pendente',
@@ -2403,20 +2268,15 @@ test(
             ->postJson(
                 "/api/alugueres/{$aluguer->id}/ativar",
                 [
-                    'motorista_id' =>
-                    $entidades['motorista']->id,
+                    'motorista_id' => $entidades['motorista']->id,
 
-                    'veiculo_id' =>
-                    $entidades['veiculo']->id,
+                    'veiculo_id' => $entidades['veiculo']->id,
 
-                    'contrato_aluguer_id' =>
-                    $contratoAluguer->id,
+                    'contrato_aluguer_id' => $contratoAluguer->id,
 
-                    'contrato_prestacao_id' =>
-                    $contratoPrestacao->id,
+                    'contrato_prestacao_id' => $contratoPrestacao->id,
 
-                    'checklist_entrega_id' =>
-                    $checklist->id,
+                    'checklist_entrega_id' => $checklist->id,
                 ]
             )
             ->assertUnprocessable()
@@ -2485,12 +2345,346 @@ test(
         $this->assertDatabaseHas(
             'alugueres',
             [
-                'id' =>
-                $aluguer->id,
+                'id' => $aluguer->id,
 
-                'status' =>
-                'ativo',
+                'status' => 'ativo',
             ]
+        );
+    }
+);
+
+test(
+    'criação rejeita data fim anterior à data início',
+    function () {
+        $tenant =
+            aluguerTenant(
+                'Tenant Cronologia Criação',
+                'tenant-cronologia-criacao-aluguer'
+            );
+
+        $user =
+            aluguerUsuario(
+                $tenant,
+                'cronologia.criacao.aluguer@frotapro.test'
+            );
+
+        aluguerLogin(
+            $this,
+            $user
+        );
+
+        $this
+            ->withHeaders(
+                aluguerHeaders()
+            )
+            ->postJson(
+                '/api/alugueres',
+                [
+                    'data_inicio' => '2026-10-20',
+
+                    'data_fim' => '2026-10-19',
+                ]
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(
+                'data_fim'
+            );
+
+        expect(
+            Aluguer::query()
+                ->where(
+                    'tenant_id',
+                    $tenant->id
+                )
+                ->count()
+        )->toBe(0);
+    }
+);
+
+test(
+    'patch rejeita data fim anterior à data início já guardada',
+    function () {
+        $tenant =
+            aluguerTenant(
+                'Tenant Cronologia Patch Fim',
+                'tenant-cronologia-patch-fim'
+            );
+
+        $user =
+            aluguerUsuario(
+                $tenant,
+                'cronologia.patch.fim@frotapro.test'
+            );
+
+        $aluguer =
+            aluguerCriarDireto(
+                $tenant,
+                $user,
+                [
+                    'data_inicio' => '2026-10-20',
+                ]
+            );
+
+        aluguerLogin(
+            $this,
+            $user
+        );
+
+        $this
+            ->withHeaders(
+                aluguerHeaders()
+            )
+            ->patchJson(
+                "/api/alugueres/{$aluguer->id}",
+                [
+                    'data_fim' => '2026-10-19',
+                ]
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(
+                'data_fim'
+            );
+
+        $aluguer->refresh();
+
+        expect(
+            $aluguer
+                ->data_inicio
+                ?->toDateString()
+        )->toBe(
+            '2026-10-20'
+        );
+
+        expect(
+            $aluguer->data_fim
+        )->toBeNull();
+    }
+);
+
+test(
+    'patch rejeita data início posterior à data fim já guardada',
+    function () {
+        $tenant =
+            aluguerTenant(
+                'Tenant Cronologia Patch Início',
+                'tenant-cronologia-patch-inicio'
+            );
+
+        $user =
+            aluguerUsuario(
+                $tenant,
+                'cronologia.patch.inicio@frotapro.test'
+            );
+
+        $aluguer =
+            aluguerCriarDireto(
+                $tenant,
+                $user,
+                [
+                    'data_fim' => '2026-10-20',
+                ]
+            );
+
+        aluguerLogin(
+            $this,
+            $user
+        );
+
+        $this
+            ->withHeaders(
+                aluguerHeaders()
+            )
+            ->patchJson(
+                "/api/alugueres/{$aluguer->id}",
+                [
+                    'data_inicio' => '2026-10-21',
+                ]
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(
+                'data_fim'
+            );
+
+        $aluguer->refresh();
+
+        expect(
+            $aluguer->data_inicio
+        )->toBeNull();
+
+        expect(
+            $aluguer
+                ->data_fim
+                ?->toDateString()
+        )->toBe(
+            '2026-10-20'
+        );
+    }
+);
+
+test(
+    'contrato de aluguer só pode possuir um processo operacional',
+    function () {
+        $tenant =
+            aluguerTenant(
+                'Tenant Processo Único',
+                'tenant-processo-unico-aluguer'
+            );
+
+        $user =
+            aluguerUsuario(
+                $tenant,
+                'processo.unico.aluguer@frotapro.test'
+            );
+
+        $contrato =
+            new Contrato([
+                'tipo' => 'aluguer',
+            ]);
+
+        $contrato->tenant_id =
+            $tenant->id;
+
+        $contrato->save();
+
+        aluguerLogin(
+            $this,
+            $user
+        );
+
+        $this
+            ->withHeaders(
+                aluguerHeaders()
+            )
+            ->postJson(
+                '/api/alugueres',
+                [
+                    'contrato_aluguer_id' => $contrato->id,
+                ]
+            )
+            ->assertCreated();
+
+        $this
+            ->withHeaders(
+                aluguerHeaders()
+            )
+            ->postJson(
+                '/api/alugueres',
+                [
+                    'contrato_aluguer_id' => $contrato->id,
+                ]
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(
+                'contrato_aluguer_id'
+            )
+            ->assertJsonPath(
+                'errors.contrato_aluguer_id.0',
+                'Este contrato de aluguer já possui um processo operacional.'
+            );
+
+        expect(
+            Aluguer::query()
+                ->where(
+                    'tenant_id',
+                    $tenant->id
+                )
+                ->where(
+                    'contrato_aluguer_id',
+                    $contrato->id
+                )
+                ->count()
+        )->toBe(1);
+    }
+);
+
+test(
+    'patch não pode reutilizar contrato ligado a outro processo operacional',
+    function () {
+        $tenant =
+            aluguerTenant(
+                'Tenant Processo Único Patch',
+                'tenant-processo-unico-patch'
+            );
+
+        $user =
+            aluguerUsuario(
+                $tenant,
+                'processo.unico.patch@frotapro.test'
+            );
+
+        $contratoA =
+            new Contrato([
+                'tipo' => 'aluguer',
+            ]);
+
+        $contratoA->tenant_id =
+            $tenant->id;
+
+        $contratoA->save();
+
+        $contratoB =
+            new Contrato([
+                'tipo' => 'aluguer',
+            ]);
+
+        $contratoB->tenant_id =
+            $tenant->id;
+
+        $contratoB->save();
+
+        $aluguerA =
+            aluguerCriarDireto(
+                $tenant,
+                $user,
+                [
+                    'contrato_aluguer_id' => $contratoA->id,
+                ]
+            );
+
+        $aluguerB =
+            aluguerCriarDireto(
+                $tenant,
+                $user,
+                [
+                    'contrato_aluguer_id' => $contratoB->id,
+                ]
+            );
+
+        aluguerLogin(
+            $this,
+            $user
+        );
+
+        $this
+            ->withHeaders(
+                aluguerHeaders()
+            )
+            ->patchJson(
+                "/api/alugueres/{$aluguerB->id}",
+                [
+                    'contrato_aluguer_id' => $contratoA->id,
+                ]
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(
+                'contrato_aluguer_id'
+            );
+
+        $aluguerA->refresh();
+        $aluguerB->refresh();
+
+        expect(
+            $aluguerA
+                ->contrato_aluguer_id
+        )->toBe(
+            $contratoA->id
+        );
+
+        expect(
+            $aluguerB
+                ->contrato_aluguer_id
+        )->toBe(
+            $contratoB->id
         );
     }
 );

@@ -2,7 +2,12 @@
 
 namespace App\Http\Requests;
 
+use App\Rules\PortugueseIban;
+use App\Rules\PortugueseNif;
+use App\Rules\PortuguesePhone;
+use App\Rules\PortuguesePostalCode;
 use App\Services\TenantContext;
+use App\Support\PortugueseDataNormalizer;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -25,7 +30,10 @@ class StoreProprietarioRequest extends FormRequest
 
             'tipo' => [
                 'required',
-                Rule::in(['empresa', 'pessoa_fisica']),
+                Rule::in([
+                    'empresa',
+                    'pessoa_fisica',
+                ]),
             ],
 
             'nome_completo' => [
@@ -45,16 +53,44 @@ class StoreProprietarioRequest extends FormRequest
             'nif' => [
                 'nullable',
                 'string',
-                'max:20',
-                Rule::unique('proprietarios', 'nif')
-                    ->where(fn ($query) => $query->where('tenant_id', $tenantId)),
+                'max:9',
+                new PortugueseNif,
+                Rule::unique(
+                    'proprietarios',
+                    'nif'
+                )->where(
+                    fn ($query) => $query
+                        ->where(
+                            'tenant_id',
+                            $tenantId
+                        )
+                ),
             ],
 
-            'email' => ['nullable', 'email', 'max:190'],
-            'telemovel' => ['nullable', 'string', 'max:50'],
+            'email' => [
+                'nullable',
+                'email',
+                'max:190',
+            ],
 
-            'data_nascimento' => ['nullable', 'date'],
-            'filhos' => ['sometimes', 'integer', 'min:0'],
+            'telemovel' => [
+                'nullable',
+                'string',
+                'max:20',
+                new PortuguesePhone,
+            ],
+
+            'data_nascimento' => [
+                'nullable',
+                'date',
+                'before_or_equal:today',
+            ],
+
+            'filhos' => [
+                'sometimes',
+                'integer',
+                'min:0',
+            ],
 
             'estado_civil' => [
                 'nullable',
@@ -76,33 +112,154 @@ class StoreProprietarioRequest extends FormRequest
                 ]),
             ],
 
-            'numero_documento' => ['nullable', 'string', 'max:100'],
-            'documento_valid_until' => ['nullable', 'date'],
+            'numero_documento' => [
+                'nullable',
+                'string',
+                'max:100',
+            ],
 
-            'iban' => ['nullable', 'string', 'max:50'],
+            'documento_valid_until' => [
+                'nullable',
+                'date',
+            ],
 
-            'certidao_permanente' => ['nullable', 'string', 'max:100'],
-            'certidao_valid_until' => ['nullable', 'date'],
+            'iban' => [
+                'nullable',
+                'string',
+                'size:25',
+                new PortugueseIban,
+            ],
 
-            'certificado_tvde' => ['nullable', 'string', 'max:100'],
-            'certificado_tvde_valid_until' => ['nullable', 'date'],
+            'certidao_permanente' => [
+                'nullable',
+                'string',
+                'max:100',
+            ],
 
-            'capital_social' => ['nullable', 'numeric', 'min:0'],
-            'nome_gerente' => ['nullable', 'string', 'max:255'],
+            'certidao_valid_until' => [
+                'nullable',
+                'date',
+            ],
 
-            'endereco' => ['nullable', 'string'],
-            'endereco_rua' => ['nullable', 'string'],
-            'endereco_numero' => ['nullable', 'string'],
-            'endereco_complemento' => ['nullable', 'string'],
-            'endereco_cidade' => ['nullable', 'string'],
-            'endereco_cep' => ['nullable', 'string'],
+            'certificado_tvde' => [
+                'nullable',
+                'string',
+                'max:100',
+            ],
 
-            'foto_perfil_url' => ['nullable', 'string', 'max:2048'],
+            'certificado_tvde_valid_until' => [
+                'nullable',
+                'date',
+            ],
 
-            'fotos_galeria' => ['sometimes', 'array'],
-            'fotos_galeria.*' => ['string', 'max:2048'],
+            'capital_social' => [
+                'nullable',
+                'numeric',
+                'min:0',
+            ],
 
-            'cartao_frota' => ['nullable', 'string'],
+            'nome_gerente' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'endereco' => [
+                'nullable',
+                'string',
+            ],
+
+            'endereco_rua' => [
+                'nullable',
+                'string',
+            ],
+
+            'endereco_numero' => [
+                'nullable',
+                'string',
+            ],
+
+            'endereco_complemento' => [
+                'nullable',
+                'string',
+            ],
+
+            'endereco_cidade' => [
+                'nullable',
+                'string',
+            ],
+
+            'endereco_cep' => [
+                'nullable',
+                'string',
+                'max:8',
+                new PortuguesePostalCode,
+            ],
+
+            'foto_perfil_url' => [
+                'nullable',
+                'string',
+                'max:2048',
+            ],
+
+            'fotos_galeria' => [
+                'sometimes',
+                'array',
+            ],
+
+            'fotos_galeria.*' => [
+                'string',
+                'max:2048',
+            ],
+
+            'cartao_frota' => [
+                'nullable',
+                'string',
+            ],
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $data = [];
+
+        if ($this->has('nif')) {
+            $data['nif'] =
+                PortugueseDataNormalizer::nif(
+                    $this->input('nif')
+                );
+        }
+
+        if ($this->has('email')) {
+            $data['email'] =
+                PortugueseDataNormalizer::email(
+                    $this->input('email')
+                );
+        }
+
+        if ($this->has('telemovel')) {
+            $data['telemovel'] =
+                PortugueseDataNormalizer::phone(
+                    $this->input('telemovel')
+                );
+        }
+
+        if ($this->has('endereco_cep')) {
+            $data['endereco_cep'] =
+                PortugueseDataNormalizer::postalCode(
+                    $this->input('endereco_cep')
+                );
+        }
+
+        if ($this->has('iban')) {
+            $data['iban'] =
+                PortugueseDataNormalizer::iban(
+                    $this->input('iban')
+                );
+        }
+
+        if ($data !== []) {
+            $this->merge($data);
+        }
     }
 }

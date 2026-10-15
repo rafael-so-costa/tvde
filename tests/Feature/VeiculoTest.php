@@ -124,7 +124,7 @@ function dadosVeiculoCompleto(
         'combustivel' => 'Elétrico',
         'lugares' => 5,
         'portas' => 4,
-        'chassi' => 'VIN123456789',
+        'chassi' => 'WVWZZZ1JZXW000001',
         'potencia' => 283,
         'proprietario_id' => $proprietario->id,
         'carta_verde' => 'CV-123456',

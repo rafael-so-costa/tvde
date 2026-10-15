@@ -10,6 +10,7 @@ import {
 import {
     ChangeEvent,
     FormEvent,
+    useEffect,
     useState,
 } from 'react';
 import {
@@ -30,34 +31,58 @@ interface Props {
     ) => Promise<void>;
 }
 
+function validationErrors(
+    error: unknown
+): Record<string,string[]> {
+    if(
+        !axios.isAxiosError(
+            error
+        )
+    ){
+        return {};
+    }
+
+    const errors =
+        error.response?.data
+            ?.errors;
+
+    if(
+        !errors ||
+        typeof errors !==
+            'object'
+    ){
+        return {};
+    }
+
+    return errors as
+        Record<string,string[]>;
+}
+
 function errorMessage(
     error: unknown
 ): string | null {
-    if (!error) {
+    if(!error){
         return null;
     }
 
-    if (axios.isAxiosError(error)) {
-        const errors =
-            error.response?.data
-                ?.errors;
+    const errors =
+        validationErrors(
+            error
+        );
 
-        if (errors) {
-            const first =
-                Object.values(
-                    errors
-                )[0];
+    if(
+        Object.keys(
+            errors
+        ).length>0
+    ){
+        return 'Existem dados inválidos. Corrija os campos assinalados.';
+    }
 
-            if (
-                Array.isArray(first) &&
-                first.length > 0
-            ) {
-                return String(
-                    first[0]
-                );
-            }
-        }
-
+    if(
+        axios.isAxiosError(
+            error
+        )
+    ){
         return (
             error.response?.data
                 ?.message ??
@@ -67,7 +92,6 @@ function errorMessage(
 
     return 'Não foi possível enviar o documento.';
 }
-
 export default function RegistoCriminalUploadModal({
     open,
     motoristaMode,
@@ -124,6 +148,58 @@ export default function RegistoCriminalUploadModal({
         null
     );
 
+    const apiValidationErrors =
+        validationErrors(
+            error
+        );
+
+    function fieldError(
+        field: string
+    ): string | undefined {
+        return apiValidationErrors[
+            field
+        ]?.[0];
+    }
+
+    useEffect(() => {
+        const firstField =
+            Object.keys(
+                apiValidationErrors
+            )[0];
+
+        if (!firstField) {
+            return;
+        }
+
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                const marker =
+                    document.querySelector<HTMLElement>(
+                        `[data-field-error="${firstField}"]`
+                    );
+
+                const control =
+                    marker
+                        ?.parentElement
+                        ?.querySelector<HTMLElement>(
+                            'input, select, textarea'
+                        );
+
+                (
+                    control ??
+                    marker
+                )?.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center',
+                });
+
+                control?.focus();
+            });
+        });
+    }, [
+        error,
+    ]);
+
     if (!open) {
         return null;
     }
@@ -140,6 +216,41 @@ export default function RegistoCriminalUploadModal({
         setReadingError(null);
 
         if (!file) {
+            return;
+        }
+
+        const filename =
+            file.name
+                .toLowerCase();
+
+        const allowed =
+            file.type ===
+                'application/pdf' ||
+            file.type ===
+                'image/jpeg' ||
+            file.type ===
+                'image/png' ||
+            filename.endsWith(
+                '.pdf'
+            ) ||
+            filename.endsWith(
+                '.jpg'
+            ) ||
+            filename.endsWith(
+                '.jpeg'
+            ) ||
+            filename.endsWith(
+                '.png'
+            );
+
+        if (!allowed) {
+            setReadingError(
+                'O documento deve ser PDF, JPG ou PNG.'
+            );
+
+            setArquivo(null);
+            event.target.value = '';
+
             return;
         }
 
@@ -329,7 +440,7 @@ export default function RegistoCriminalUploadModal({
 
             <form
                 onSubmit={submit}
-                className="relative w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-2xl bg-white shadow-2xl"
+                className="advanced-validation-form relative w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-2xl bg-white shadow-2xl"
             >
                 <div className="sticky top-0 bg-white z-10 px-6 py-5 border-b border-slate-200 flex items-center justify-between">
                     <div>
@@ -358,7 +469,7 @@ export default function RegistoCriminalUploadModal({
                     {!motoristaMode && (
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-2">
-                                Motorista
+                                Motorista *
                             </label>
 
                             <select
@@ -375,7 +486,14 @@ export default function RegistoCriminalUploadModal({
                                     )
                                 }
                                 required
-                                className="w-full h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
+                                className={[
+                                    "w-full h-11 rounded-xl border bg-white px-3 text-sm outline-none focus:ring-4",
+                                    fieldError(
+                                        'motorista_id'
+                                    )
+                                        ? "border-red-400 focus:border-red-500 focus:ring-red-500/10"
+                                        : "border-slate-200 focus:border-indigo-500 focus:ring-indigo-500/10",
+                                ].join(' ')}
                             >
                                 <option value="">
                                     Selecione
@@ -404,12 +522,25 @@ export default function RegistoCriminalUploadModal({
                                     )
                                 )}
                             </select>
+
+                            {fieldError(
+                                'motorista_id'
+                            ) && (
+                                <p
+                                    data-field-error="motorista_id"
+                                    className="mt-1.5 text-xs text-red-600"
+                                >
+                                    {fieldError(
+                                        'motorista_id'
+                                    )}
+                                </p>
+                            )}
                         </div>
                     )}
 
                     <div>
                         <label className="block text-sm font-medium text-slate-700 mb-2">
-                            Documento
+                            Documento *
                         </label>
 
                         <label className="min-h-36 rounded-2xl border-2 border-dashed border-slate-300 hover:border-indigo-400 bg-slate-50 hover:bg-indigo-50/30 flex flex-col items-center justify-center px-6 py-6 cursor-pointer transition">
@@ -479,6 +610,19 @@ export default function RegistoCriminalUploadModal({
                                 className="hidden"
                             />
                         </label>
+
+                        {fieldError(
+                            'arquivo'
+                        ) && (
+                            <p
+                                data-field-error="arquivo"
+                                className="mt-1.5 text-xs text-red-600"
+                            >
+                                {fieldError(
+                                    'arquivo'
+                                )}
+                            </p>
+                        )}
                     </div>
 
                     {extracted && (
@@ -533,7 +677,7 @@ export default function RegistoCriminalUploadModal({
                     <div>
                         <label className="block text-sm font-medium text-slate-700 mb-2">
                             Código de
-                            consulta
+                            consulta *
                         </label>
 
                         <input
@@ -549,8 +693,28 @@ export default function RegistoCriminalUploadModal({
                             required
                             maxLength={120}
                             placeholder="Código indicado no certificado"
-                            className="w-full h-11 rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
+                            className={[
+                                "w-full h-11 rounded-xl border px-3 text-sm outline-none focus:ring-4",
+                                fieldError(
+                                    'codigo_consulta'
+                                )
+                                    ? "border-red-400 focus:border-red-500 focus:ring-red-500/10"
+                                    : "border-slate-200 focus:border-indigo-500 focus:ring-indigo-500/10",
+                            ].join(' ')}
                         />
+
+                        {fieldError(
+                            'codigo_consulta'
+                        ) && (
+                            <p
+                                data-field-error="codigo_consulta"
+                                className="mt-1.5 text-xs text-red-600"
+                            >
+                                {fieldError(
+                                    'codigo_consulta'
+                                )}
+                            </p>
+                        )}
                     </div>
 
                     <div className="grid sm:grid-cols-2 gap-4">
@@ -574,14 +738,34 @@ export default function RegistoCriminalUploadModal({
                                             .value
                                     )
                                 }
-                                className="w-full h-11 rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
+                                className={[
+                                    "w-full h-11 rounded-xl border px-3 text-sm outline-none focus:ring-4",
+                                    fieldError(
+                                        'data_emissao'
+                                    )
+                                        ? "border-red-400 focus:border-red-500 focus:ring-red-500/10"
+                                        : "border-slate-200 focus:border-indigo-500 focus:ring-indigo-500/10",
+                                ].join(' ')}
                             />
+
+                            {fieldError(
+                                'data_emissao'
+                            ) && (
+                                <p
+                                    data-field-error="data_emissao"
+                                    className="mt-1.5 text-xs text-red-600"
+                                >
+                                    {fieldError(
+                                        'data_emissao'
+                                    )}
+                                </p>
+                            )}
                         </div>
 
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-2">
                                 Data de
-                                validade
+                                validade *
                             </label>
 
                             <input
@@ -599,8 +783,28 @@ export default function RegistoCriminalUploadModal({
                                     )
                                 }
                                 required
-                                className="w-full h-11 rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
+                                className={[
+                                    "w-full h-11 rounded-xl border px-3 text-sm outline-none focus:ring-4",
+                                    fieldError(
+                                        'data_validade'
+                                    )
+                                        ? "border-red-400 focus:border-red-500 focus:ring-red-500/10"
+                                        : "border-slate-200 focus:border-indigo-500 focus:ring-indigo-500/10",
+                                ].join(' ')}
                             />
+
+                            {fieldError(
+                                'data_validade'
+                            ) && (
+                                <p
+                                    data-field-error="data_validade"
+                                    className="mt-1.5 text-xs text-red-600"
+                                >
+                                    {fieldError(
+                                        'data_validade'
+                                    )}
+                                </p>
+                            )}
                         </div>
                     </div>
 

@@ -137,12 +137,7 @@ const navigation = [
         icon: Car,
         permission: "veiculos",
     },
-    {
-        to: "/alugueres",
-        label: "Alugueres",
-        icon: ReceiptText,
-        permission: "alugueres",
-    },
+
     {
         to: "/contratos",
         label: "Contratos",

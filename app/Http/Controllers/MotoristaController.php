@@ -9,6 +9,8 @@ use App\Models\Motorista;
 use App\Services\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class MotoristaController extends Controller
 {
@@ -74,7 +76,7 @@ class MotoristaController extends Controller
 
         if (
             $request->boolean('ativo') &&
-            !$motorista->cadastroCompleto()
+            ! $motorista->cadastroCompleto()
         ) {
             return response()->json([
                 'message' => 'O motorista possui cadastro incompleto e não pode ser ativado.',
@@ -96,7 +98,25 @@ class MotoristaController extends Controller
     {
         $motorista = $this->findMotorista($id);
 
+        $fotoPath = $motorista->getRawOriginal(
+            'foto_perfil_url'
+        );
+
         $motorista->delete();
+
+        if (
+            filled($fotoPath) &&
+            ! Str::startsWith(
+                $fotoPath,
+                [
+                    'http://',
+                    'https://',
+                ]
+            )
+        ) {
+            Storage::disk('local')
+                ->delete($fotoPath);
+        }
 
         return response()->noContent();
     }
@@ -110,7 +130,7 @@ class MotoristaController extends Controller
 
     private function tenantId(): string
     {
-        if (!$this->tenantContext->hasTenant()) {
+        if (! $this->tenantContext->hasTenant()) {
             abort(
                 403,
                 'Selecione uma organização para aceder a este recurso.'

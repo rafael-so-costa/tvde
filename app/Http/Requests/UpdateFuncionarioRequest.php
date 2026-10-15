@@ -2,6 +2,10 @@
 
 namespace App\Http\Requests;
 
+use App\Rules\PortugueseNif;
+use App\Rules\PortuguesePhone;
+use App\Services\TenantContext;
+use App\Support\PortugueseDataNormalizer;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -14,128 +18,184 @@ class UpdateFuncionarioRequest extends FormRequest
 
     public function rules(): array
     {
-        $tenantId=
-            $this->attributes->get(
-                'tenant_id'
-            );
+        $tenantId = app(TenantContext::class)
+            ->requireId();
 
-        $id=$this->route('id');
+        $id = $this->route('id');
 
         return [
-            'numero_funcionario'=>[
+            'numero_funcionario' => [
                 'sometimes',
                 'nullable',
                 'string',
                 'max:50',
-
                 Rule::unique(
                     'funcionarios',
                     'numero_funcionario'
                 )
                     ->where(
-                        fn($query)=>
-                        $query->where(
-                            'tenant_id',
-                            $tenantId
-                        )
+                        fn ($query) => $query
+                            ->where(
+                                'tenant_id',
+                                $tenantId
+                            )
                     )
                     ->ignore($id),
             ],
 
-            'nome'=>[
+            'nome' => [
                 'sometimes',
                 'required',
                 'string',
                 'max:255',
             ],
 
-            'nif'=>[
+            'nif' => [
                 'sometimes',
                 'nullable',
                 'string',
-                'max:20',
-
+                'max:9',
+                new PortugueseNif,
                 Rule::unique(
                     'funcionarios',
                     'nif'
                 )
                     ->where(
-                        fn($query)=>
-                        $query->where(
-                            'tenant_id',
-                            $tenantId
-                        )
+                        fn ($query) => $query
+                            ->where(
+                                'tenant_id',
+                                $tenantId
+                            )
                     )
                     ->ignore($id),
             ],
 
-            'email'=>[
+            'email' => [
                 'sometimes',
                 'nullable',
                 'email',
                 'max:190',
-
                 Rule::unique(
                     'funcionarios',
                     'email'
                 )
                     ->where(
-                        fn($query)=>
-                        $query->where(
-                            'tenant_id',
-                            $tenantId
-                        )
+                        fn ($query) => $query
+                            ->where(
+                                'tenant_id',
+                                $tenantId
+                            )
                     )
                     ->ignore($id),
             ],
 
-            'telefone'=>[
+            'telefone' => [
                 'sometimes',
                 'nullable',
                 'string',
-                'max:30',
+                'max:20',
+                new PortuguesePhone,
             ],
 
-            'data_nascimento'=>[
+            'data_nascimento' => [
                 'sometimes',
                 'nullable',
                 'date',
                 'before_or_equal:today',
             ],
 
-            'cargo'=>[
+            'cargo' => [
                 'sometimes',
                 'nullable',
                 'string',
                 'max:150',
             ],
 
-            'departamento'=>[
+            'departamento' => [
                 'sometimes',
                 'nullable',
                 'string',
                 'max:150',
             ],
 
-            'data_admissao'=>[
+            'data_admissao' => [
                 'sometimes',
+                'nullable',
                 'date',
             ],
 
-            'observacoes'=>[
+            'observacoes' => [
                 'sometimes',
                 'nullable',
                 'string',
                 'max:10000',
             ],
 
-            'id'=>['prohibited'],
-            'tenant_id'=>['prohibited'],
-            'user_id'=>['prohibited'],
-            'estado'=>['prohibited'],
-            'data_saida'=>['prohibited'],
-            'created_by'=>['prohibited'],
-            'updated_by'=>['prohibited'],
+            'id' => ['prohibited'],
+            'tenant_id' => ['prohibited'],
+            'user_id' => ['prohibited'],
+            'estado' => ['prohibited'],
+            'data_saida' => ['prohibited'],
+            'created_by' => ['prohibited'],
+            'updated_by' => ['prohibited'],
         ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'nome.required' => 'O nome do funcionário é obrigatório.',
+
+            'email.email' => 'Informe um endereço de e-mail válido.',
+
+            'data_nascimento.date' => 'Informe uma data de nascimento válida.',
+
+            'data_nascimento.before_or_equal' => 'A data de nascimento não pode ser futura.',
+
+            'data_admissao.date' => 'Informe uma data de admissão válida.',
+        ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $merge = [];
+
+        if ($this->has('nif')) {
+            $merge['nif'] =
+                PortugueseDataNormalizer::nif(
+                    $this->input('nif')
+                );
+        }
+
+        if ($this->has('email')) {
+            $merge['email'] =
+                PortugueseDataNormalizer::email(
+                    $this->input('email')
+                );
+        }
+
+        if ($this->has('telefone')) {
+            $merge['telefone'] =
+                PortugueseDataNormalizer::phone(
+                    $this->input('telefone')
+                );
+        }
+
+        if ($this->has('numero_funcionario')) {
+            $value = trim(
+                (string) $this->input(
+                    'numero_funcionario'
+                )
+            );
+
+            $merge['numero_funcionario'] =
+                $value === ''
+                    ? null
+                    : $value;
+        }
+
+        if ($merge !== []) {
+            $this->merge($merge);
+        }
     }
 }

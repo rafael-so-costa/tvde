@@ -140,10 +140,13 @@ export default function MotoristasPage() {
         mutationFn: async (
             payload: MotoristaPayload
         ) => {
-            await api.post(
+            const response = await api.post(
                 '/api/motoristas',
                 payload
             );
+
+            return response.data
+                .data as Motorista;
         },
     });
 
@@ -155,10 +158,39 @@ export default function MotoristasPage() {
             id: string;
             payload: MotoristaPayload;
         }) => {
-            await api.patch(
+            const response = await api.patch(
                 `/api/motoristas/${id}`,
                 payload
             );
+
+            return response.data
+                .data as Motorista;
+        },
+    });
+
+    const photoMutation = useMutation({
+        mutationFn: async ({
+            id,
+            foto,
+        }: {
+            id: string;
+            foto: File;
+        }) => {
+            const formData =
+                new FormData();
+
+            formData.append(
+                'foto',
+                foto
+            );
+
+            const response = await api.post(
+                `/api/motoristas/${id}/foto`,
+                formData
+            );
+
+            return response.data
+                .data as Motorista;
         },
     });
 
@@ -204,17 +236,45 @@ export default function MotoristasPage() {
     }
 
     async function save(
-        payload: MotoristaPayload
+        payload: MotoristaPayload,
+        foto: File | null
     ) {
+        let motorista: Motorista;
+        let created = false;
+
         if (editing) {
-            await updateMutation.mutateAsync({
-                id: editing.id,
-                payload,
-            });
+            motorista =
+                await updateMutation.mutateAsync({
+                    id: editing.id,
+                    payload,
+                });
         } else {
-            await createMutation.mutateAsync(
-                payload
-            );
+            motorista =
+                await createMutation.mutateAsync(
+                    payload
+                );
+
+            created = true;
+        }
+
+        try {
+            if (foto) {
+                motorista =
+                    await photoMutation.mutateAsync({
+                        id: motorista.id,
+                        foto,
+                    });
+            }
+        } catch (error) {
+            if (created) {
+                await api
+                    .delete(
+                        `/api/motoristas/${motorista.id}`
+                    )
+                    .catch(() => undefined);
+            }
+
+            throw error;
         }
 
         await refresh();
@@ -438,13 +498,13 @@ export default function MotoristasPage() {
                                         >
                                             <td className="px-5 py-4">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center overflow-hidden">
+                                                    <div className="w-14 h-14 shrink-0 rounded-2xl border border-slate-200 bg-indigo-50 text-indigo-600 flex items-center justify-center overflow-hidden shadow-sm">
                                                         {motorista.foto_perfil_url ? (
                                                             <img
                                                                 src={
                                                                     motorista.foto_perfil_url
                                                                 }
-                                                                alt=""
+                                                                alt={motorista.nome_completo}
                                                                 className="w-full h-full object-cover"
                                                             />
                                                         ) : (

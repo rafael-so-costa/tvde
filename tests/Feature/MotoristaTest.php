@@ -88,7 +88,7 @@ function dadosMotoristaCompleto(array $overrides = []): array
 {
     return array_merge([
         'nome_completo' => 'Motorista Teste',
-        'nif' => '245123456',
+        'nif' => '245123458',
         'email' => 'motorista@example.test',
         'telemovel' => '+351912345678',
         'data_nascimento' => '1990-05-10',
@@ -155,6 +155,18 @@ function criarMotoristaDireto(
     );
 
     $motorista->tenant_id = $tenant->id;
+
+    if (
+        blank(
+            $motorista->getRawOriginal(
+                'foto_perfil_url'
+            )
+        )
+    ) {
+        $motorista->foto_perfil_url =
+            'motoristas/testes/perfil.jpg';
+    }
+
     $motorista->sincronizarCadastro();
     $motorista->save();
 
@@ -206,7 +218,7 @@ test('cliente não pode definir tenant user ativo ou status do motorista', funct
         ]);
 
     $this->assertDatabaseMissing('motoristas', [
-        'nif' => '245123456',
+        'nif' => '245123458',
     ]);
 });
 
@@ -249,7 +261,7 @@ test('motorista incompleto é guardado inativo', function () {
     ]);
 });
 
-test('motorista completo é criado ativo com dados adicionais e documentos', function () {
+test('motorista sem fotografia fica incompleto mesmo com restantes dados completos', function () {
     $tenant = criarTenantMotorista(
         'Tenant Completo Motorista',
         'tenant-completo-motorista'
@@ -271,9 +283,9 @@ test('motorista completo é criado ativo com dados adicionais e documentos', fun
         ->assertCreated();
 
     $response
-        ->assertJsonPath('data.ativo', true)
-        ->assertJsonPath('data.status_cadastro', 'ativo')
-        ->assertJsonPath('data.nif', '245123456')
+        ->assertJsonPath('data.ativo', false)
+        ->assertJsonPath('data.status_cadastro', 'incompleto')
+        ->assertJsonPath('data.nif', '245123458')
         ->assertJsonPath(
             'data.bolt_email',
             'bolt@example.test'
@@ -314,9 +326,9 @@ test('motorista completo é criado ativo com dados adicionais e documentos', fun
     $this->assertDatabaseHas('motoristas', [
         'tenant_id' => $tenant->id,
         'nome_completo' => 'Motorista Teste',
-        'nif' => '245123456',
-        'ativo' => true,
-        'status_cadastro' => 'ativo',
+        'nif' => '245123458',
+        'ativo' => false,
+        'status_cadastro' => 'incompleto',
         'certificado_tvde' => 'TVDE-123456',
         'cartao_frota' => 'FROTA-123',
     ]);
@@ -360,7 +372,7 @@ test('nif não pode repetir dentro do mesmo tenant', function () {
     );
 
     criarMotoristaDireto($tenant, [
-        'nif' => '245999999',
+        'nif' => '245999990',
         'email' => 'existente@example.test',
     ]);
 
@@ -376,7 +388,7 @@ test('nif não pode repetir dentro do mesmo tenant', function () {
         ->postJson(
             '/api/motoristas',
             dadosMotoristaCompleto([
-                'nif' => '245999999',
+                'nif' => '245999990',
                 'email' => 'novo@example.test',
             ])
         )
@@ -385,7 +397,7 @@ test('nif não pode repetir dentro do mesmo tenant', function () {
 
     expect(
         Motorista::where('tenant_id', $tenant->id)
-            ->where('nif', '245999999')
+            ->where('nif', '245999990')
             ->count()
     )->toBe(1);
 });
@@ -448,13 +460,13 @@ test('listagem retorna apenas motoristas do tenant atual', function () {
 
     criarMotoristaDireto($tenantA, [
         'nome_completo' => 'Motorista Tenant A',
-        'nif' => '245111111',
+        'nif' => '245111115',
         'email' => 'lista.a@example.test',
     ]);
 
     criarMotoristaDireto($tenantB, [
         'nome_completo' => 'Motorista Tenant B',
-        'nif' => '245222222',
+        'nif' => '245222227',
         'email' => 'lista.b@example.test',
     ]);
 
@@ -497,7 +509,7 @@ test('não permite ler alterar ou excluir motorista de outro tenant', function (
 
     $motoristaB = criarMotoristaDireto($tenantB, [
         'nome_completo' => 'Motorista Protegido',
-        'nif' => '245333333',
+        'nif' => '245333339',
         'email' => 'protegido@example.test',
     ]);
 
@@ -540,7 +552,7 @@ test('permissão visualizar permite leitura e bloqueia criação', function () {
     );
 
     criarMotoristaDireto($tenant, [
-        'nif' => '245444444',
+        'nif' => '245444440',
         'email' => 'visualizar@example.test',
     ]);
 
@@ -560,14 +572,14 @@ test('permissão visualizar permite leitura e bloqueia criação', function () {
         ->postJson(
             '/api/motoristas',
             dadosMotoristaCompleto([
-                'nif' => '245444445',
+                'nif' => '245444459',
                 'email' => 'bloqueado@example.test',
             ])
         )
         ->assertForbidden();
 
     $this->assertDatabaseMissing('motoristas', [
-        'nif' => '245444445',
+        'nif' => '245444459',
     ]);
 });
 
@@ -582,6 +594,18 @@ test('motorista incompleto não pode ser ativado manualmente', function () {
     ]);
 
     $motorista->tenant_id = $tenant->id;
+
+    if (
+        blank(
+            $motorista->getRawOriginal(
+                'foto_perfil_url'
+            )
+        )
+    ) {
+        $motorista->foto_perfil_url =
+            'motoristas/testes/perfil.jpg';
+    }
+
     $motorista->sincronizarCadastro();
     $motorista->save();
 
@@ -618,7 +642,7 @@ test('motorista completo pode ser inativado e reativado', function () {
     );
 
     $motorista = criarMotoristaDireto($tenant, [
-        'nif' => '245555555',
+        'nif' => '245555552',
         'email' => 'status.completo@example.test',
     ]);
 
@@ -674,7 +698,7 @@ test('permissão configurar permite atualizar e excluir motorista', function () 
     );
 
     $motorista = criarMotoristaDireto($tenant, [
-        'nif' => '245666666',
+        'nif' => '245666664',
         'email' => 'configurar@example.test',
     ]);
 
@@ -724,4 +748,47 @@ test('permissão configurar permite atualizar e excluir motorista', function () 
     $this->assertDatabaseMissing('motoristas', [
         'id' => $motorista->id,
     ]);
+});
+
+test('foto privada conta como preenchida antes do primeiro save', function () {
+    $tenant = criarTenantMotorista(
+        'Tenant Foto Pré Save',
+        'tenant-foto-pre-save'
+    );
+
+    $motorista = new Motorista(
+        dadosMotoristaCompleto()
+    );
+
+    $motorista->tenant_id =
+        $tenant->id;
+
+    $motorista->foto_perfil_url =
+        'motoristas/testes/perfil.jpg';
+
+    expect(
+        $motorista->exists
+    )->toBeFalse();
+
+    $motorista->sincronizarCadastro();
+
+    expect(
+        $motorista->status_cadastro
+    )->toBe('ativo');
+
+    expect(
+        $motorista->ativo
+    )->toBeTrue();
+
+    $motorista->save();
+
+    $motorista->refresh();
+
+    expect(
+        $motorista->status_cadastro
+    )->toBe('ativo');
+
+    expect(
+        $motorista->ativo
+    )->toBeTrue();
 });

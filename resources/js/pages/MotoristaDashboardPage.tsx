@@ -2,14 +2,14 @@ import {useQuery} from "@tanstack/react-query";
 import {Link} from "react-router-dom";
 import {
     AlertTriangle,CalendarClock,Car,Clock3,FileText,LoaderCircle,
-    ReceiptText,ShieldAlert,TriangleAlert,
+    ReceiptText,ShieldAlert,TriangleAlert,UserRound,
 } from "lucide-react";
 import api from "../lib/api";
 import {useTenant} from "../contexts/TenantContext";
 import AdDisplay from "../components/ads/AdDisplay";
 
 interface DashboardData{
-    motorista:{id:string;nome:string;ativo:boolean;status_cadastro:string};
+    motorista:{id:string;nome:string;ativo:boolean;status_cadastro:string;foto_perfil_url:string|null};
     expediente:{
         em_servico:boolean;
         desde:string|null;
@@ -95,10 +95,24 @@ export default function MotoristaDashboardPage(){
 
     return (
         <div className="max-w-7xl mx-auto space-y-6">
-            <div>
-                <p className="text-sm text-slate-500">{tenant?.nome}</p>
-                <h1 className="mt-1 text-2xl font-bold text-slate-950">Olá, {data.motorista.nome}</h1>
-                <p className="mt-1 text-sm text-slate-500">Aqui está o resumo da sua atividade e das pendências que precisam da sua atenção.</p>
+            <div className="flex items-center gap-4">
+                <div className="w-16 h-16 shrink-0 rounded-2xl overflow-hidden border border-slate-200 bg-white shadow-sm flex items-center justify-center">
+                    {data.motorista.foto_perfil_url?(
+                        <img
+                            src={data.motorista.foto_perfil_url}
+                            alt={data.motorista.nome}
+                            className="w-full h-full object-cover"
+                        />
+                    ):(
+                        <UserRound className="w-7 h-7 text-slate-300"/>
+                    )}
+                </div>
+
+                <div>
+                    <p className="text-sm text-slate-500">{tenant?.nome}</p>
+                    <h1 className="mt-1 text-2xl font-bold text-slate-950">Olá, {data.motorista.nome}</h1>
+                    <p className="mt-1 text-sm text-slate-500">Aqui está o resumo da sua atividade e das pendências que precisam da sua atenção.</p>
+                </div>
             </div>
             <AdDisplay surface="driver_portal"/>
 

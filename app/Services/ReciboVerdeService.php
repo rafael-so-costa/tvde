@@ -6,6 +6,7 @@ use App\Models\Empresa;
 use App\Models\Motorista;
 use App\Models\ReciboVerde;
 use App\Models\User;
+use App\Support\PortugueseDataNormalizer;
 use Carbon\Carbon;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\UploadedFile;
@@ -28,13 +29,13 @@ class ReciboVerdeService
         User $actor,
         string $tenantId
     ): ReciboVerde {
-        $motorista=$this->resolveMotorista(
+        $motorista = $this->resolveMotorista(
             $data,
             $actor,
             $tenantId
         );
 
-        $numeroDocumento=$this
+        $numeroDocumento = $this
             ->normalizeDocumentNumber(
                 $data['numero_documento']
             );
@@ -45,40 +46,40 @@ class ReciboVerdeService
             $numeroDocumento
         );
 
-        $nifEmitente=$this->normalizeNif(
+        $nifEmitente = $this->normalizeNif(
             $data['nif_emitente']
         );
 
-        $nifAdquirente=$this->normalizeNif(
+        $nifAdquirente = $this->normalizeNif(
             $data['nif_adquirente']
         );
 
-        $empresa=$this->resolveEmpresa(
+        $empresa = $this->resolveEmpresa(
             $tenantId,
             $nifAdquirente
         );
 
-        $dataEmissao=Carbon::parse(
+        $dataEmissao = Carbon::parse(
             $data['data_emissao']
         )->startOfDay();
 
-        $valorBase=$this->money(
+        $valorBase = $this->money(
             $data['valor_base']
         );
 
-        $valorIva=$this->money(
+        $valorIva = $this->money(
             $data['valor_iva'] ?? 0
         );
 
-        $retencaoIrs=$this->money(
+        $retencaoIrs = $this->money(
             $data['retencao_irs'] ?? 0
         );
 
-        $valorTotal=$this->money(
+        $valorTotal = $this->money(
             $data['valor_total']
         );
 
-        $avisos=$this->buildWarnings(
+        $avisos = $this->buildWarnings(
             $motorista,
             $empresa,
             $nifEmitente,
@@ -90,36 +91,36 @@ class ReciboVerdeService
             $valorTotal
         );
 
-        $directory=
+        $directory =
             'recibos-verdes/'.
             $tenantId.'/'.
             $motorista->id;
 
-        $filename=
+        $filename =
             Str::uuid()->toString().
             '.pdf';
 
-        $path=$arquivo->storeAs(
+        $path = $arquivo->storeAs(
             $directory,
             $filename,
             'local'
         );
 
-        if(!$path){
+        if (! $path) {
             throw new RuntimeException(
                 'Não foi possível guardar o recibo verde.'
             );
         }
 
-        $absolutePath=Storage::disk('local')
+        $absolutePath = Storage::disk('local')
             ->path($path);
 
-        $hash=hash_file(
+        $hash = hash_file(
             'sha256',
             $absolutePath
         );
 
-        if(!$hash){
+        if (! $hash) {
             Storage::disk('local')
                 ->delete($path);
 
@@ -128,8 +129,8 @@ class ReciboVerdeService
             );
         }
 
-        try{
-            return DB::transaction(function() use(
+        try {
+            return DB::transaction(function () use (
                 $data,
                 $arquivo,
                 $actor,
@@ -147,72 +148,60 @@ class ReciboVerdeService
                 $avisos,
                 $path,
                 $hash
-            ){
-                $recibo=new ReciboVerde([
-                    'motorista_id'=>
-                        $motorista->id,
-                    'numero_documento'=>
-                        $numeroDocumento,
-                    'data_emissao'=>
-                        $dataEmissao->toDateString(),
-                    'nif_emitente'=>
-                        $nifEmitente,
-                    'nome_emitente'=>
-                        $this->nullableTrim(
-                            $data['nome_emitente'] ??
-                            null
-                        ),
-                    'nif_adquirente'=>
-                        $nifAdquirente,
-                    'nome_adquirente'=>
-                        $this->nullableTrim(
-                            $data['nome_adquirente'] ??
-                            null
-                        ),
-                    'valor_base'=>
-                        $valorBase,
-                    'valor_iva'=>
-                        $valorIva,
-                    'retencao_irs'=>
-                        $retencaoIrs,
-                    'valor_total'=>
-                        $valorTotal,
-                    'dados_extraidos'=>
-                        $data['dados_extraidos'] ??
+            ) {
+                $recibo = new ReciboVerde([
+                    'motorista_id' => $motorista->id,
+                    'numero_documento' => $numeroDocumento,
+                    'data_emissao' => $dataEmissao->toDateString(),
+                    'nif_emitente' => $nifEmitente,
+                    'nome_emitente' => $this->nullableTrim(
+                        $data['nome_emitente'] ??
+                        null
+                    ),
+                    'nif_adquirente' => $nifAdquirente,
+                    'nome_adquirente' => $this->nullableTrim(
+                        $data['nome_adquirente'] ??
+                        null
+                    ),
+                    'valor_base' => $valorBase,
+                    'valor_iva' => $valorIva,
+                    'retencao_irs' => $retencaoIrs,
+                    'valor_total' => $valorTotal,
+                    'dados_extraidos' => $data['dados_extraidos'] ??
                         null,
                 ]);
 
-                $recibo->tenant_id=$tenantId;
-                $recibo->empresa_id=$empresa?->id;
+                $recibo->tenant_id = $tenantId;
+                $recibo->empresa_id = $empresa?->id;
 
-                $recibo->ano=
+                $recibo->ano =
                     $dataEmissao->year;
 
-                $recibo->mes=
+                $recibo->mes =
                     $dataEmissao->month;
 
-                $recibo->status=
+                $recibo->status =
                     'pendente_validacao';
 
-                $recibo->avisos_validacao=
+                $recibo->avisos_validacao =
                     $avisos;
 
-                $recibo->arquivo_path=$path;
+                $recibo->arquivo_path = $path;
 
-                $recibo->arquivo_nome=
+                $recibo->arquivo_nome =
                     $arquivo
                         ->getClientOriginalName();
 
-                $recibo->arquivo_mime=
+                $recibo->arquivo_mime =
                     $arquivo->getMimeType() ??
                     $arquivo->getClientMimeType() ??
                     'application/pdf';
 
-                $recibo->arquivo_tamanho=
+                $recibo->arquivo_tamanho =
                     $arquivo->getSize();
 
-                $recibo->hash_arquivo=$hash;
-                $recibo->created_by=$actor->id;
+                $recibo->hash_arquivo = $hash;
+                $recibo->created_by = $actor->id;
 
                 $recibo->save();
 
@@ -220,23 +209,22 @@ class ReciboVerdeService
                     $recibo
                 );
             });
-        }catch(QueryException $exception){
+        } catch (QueryException $exception) {
             Storage::disk('local')
                 ->delete($path);
 
-            if(
+            if (
                 $this->isUniqueViolation(
                     $exception
                 )
-            ){
+            ) {
                 throw ValidationException::withMessages([
-                    'numero_documento'=>
-                        'Este recibo verde já foi enviado para este motorista.',
+                    'numero_documento' => 'Este recibo verde já foi enviado para este motorista.',
                 ]);
             }
 
             throw $exception;
-        }catch(Throwable $exception){
+        } catch (Throwable $exception) {
             Storage::disk('local')
                 ->delete($path);
 
@@ -254,12 +242,12 @@ class ReciboVerdeService
             $tenantId
         );
 
-        return DB::transaction(function() use(
+        return DB::transaction(function () use (
             $id,
             $tenantId,
             $actor
-        ){
-            $recibo=ReciboVerde::query()
+        ) {
+            $recibo = ReciboVerde::query()
                 ->where(
                     'tenant_id',
                     $tenantId
@@ -268,23 +256,22 @@ class ReciboVerdeService
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            if(
-                $recibo->status!==
+            if (
+                $recibo->status !==
                 'pendente_validacao'
-            ){
+            ) {
                 throw ValidationException::withMessages([
-                    'recibo_verde'=>
-                        'Apenas recibos pendentes podem ser validados.',
+                    'recibo_verde' => 'Apenas recibos pendentes podem ser validados.',
                 ]);
             }
 
-            $recibo->status='validado';
-            $recibo->validado_por=$actor->id;
-            $recibo->validado_em=now();
+            $recibo->status = 'validado';
+            $recibo->validado_por = $actor->id;
+            $recibo->validado_em = now();
 
-            $recibo->rejeitado_por=null;
-            $recibo->rejeitado_em=null;
-            $recibo->observacoes_empresa=null;
+            $recibo->rejeitado_por = null;
+            $recibo->rejeitado_em = null;
+            $recibo->observacoes_empresa = null;
 
             $recibo->save();
 
@@ -305,13 +292,13 @@ class ReciboVerdeService
             $tenantId
         );
 
-        return DB::transaction(function() use(
+        return DB::transaction(function () use (
             $id,
             $tenantId,
             $actor,
             $motivo
-        ){
-            $recibo=ReciboVerde::query()
+        ) {
+            $recibo = ReciboVerde::query()
                 ->where(
                     'tenant_id',
                     $tenantId
@@ -320,26 +307,25 @@ class ReciboVerdeService
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            if(
-                $recibo->status!==
+            if (
+                $recibo->status !==
                 'pendente_validacao'
-            ){
+            ) {
                 throw ValidationException::withMessages([
-                    'recibo_verde'=>
-                        'Apenas recibos pendentes podem ser rejeitados.',
+                    'recibo_verde' => 'Apenas recibos pendentes podem ser rejeitados.',
                 ]);
             }
 
-            $recibo->status='rejeitado';
+            $recibo->status = 'rejeitado';
 
-            $recibo->observacoes_empresa=
+            $recibo->observacoes_empresa =
                 trim($motivo);
 
-            $recibo->rejeitado_por=$actor->id;
-            $recibo->rejeitado_em=now();
+            $recibo->rejeitado_por = $actor->id;
+            $recibo->rejeitado_em = now();
 
-            $recibo->validado_por=null;
-            $recibo->validado_em=null;
+            $recibo->validado_por = null;
+            $recibo->validado_em = null;
 
             $recibo->save();
 
@@ -360,88 +346,81 @@ class ReciboVerdeService
         float $retencaoIrs,
         float $valorTotal
     ): array {
-        $avisos=[];
+        $avisos = [];
 
-        $motoristaNif=$this->normalizeNif(
+        $motoristaNif = $this->normalizeNif(
             $motorista->nif
         );
 
-        if(blank($motoristaNif)){
-            $avisos[]=[
-                'codigo'=>'motorista_sem_nif',
-                'campo'=>'nif_emitente',
-                'mensagem'=>
-                    'O motorista não possui NIF preenchido no cadastro para comparação.',
+        if (blank($motoristaNif)) {
+            $avisos[] = [
+                'codigo' => 'motorista_sem_nif',
+                'campo' => 'nif_emitente',
+                'mensagem' => 'O motorista não possui NIF preenchido no cadastro para comparação.',
             ];
-        }elseif(
-            $motoristaNif!==$nifEmitente
-        ){
-            $avisos[]=[
-                'codigo'=>'nif_emitente_divergente',
-                'campo'=>'nif_emitente',
-                'mensagem'=>
-                    'O NIF do emitente não corresponde ao NIF do motorista.',
+        } elseif (
+            $motoristaNif !== $nifEmitente
+        ) {
+            $avisos[] = [
+                'codigo' => 'nif_emitente_divergente',
+                'campo' => 'nif_emitente',
+                'mensagem' => 'O NIF do emitente não corresponde ao NIF do motorista.',
             ];
         }
 
-        if(!$empresa){
-            $avisos[]=[
-                'codigo'=>'nif_adquirente_nao_encontrado',
-                'campo'=>'nif_adquirente',
-                'mensagem'=>
-                    'O NIF do adquirente não corresponde a nenhuma empresa desta organização.',
+        if (! $empresa) {
+            $avisos[] = [
+                'codigo' => 'nif_adquirente_nao_encontrado',
+                'campo' => 'nif_adquirente',
+                'mensagem' => 'O NIF do adquirente não corresponde a nenhuma empresa desta organização.',
             ];
-        }elseif(
+        } elseif (
             $this->normalizeNif(
                 $empresa->nif
-            )!==$nifAdquirente
-        ){
-            $avisos[]=[
-                'codigo'=>'nif_adquirente_divergente',
-                'campo'=>'nif_adquirente',
-                'mensagem'=>
-                    'O NIF do adquirente não corresponde à empresa identificada.',
+            ) !== $nifAdquirente
+        ) {
+            $avisos[] = [
+                'codigo' => 'nif_adquirente_divergente',
+                'campo' => 'nif_adquirente',
+                'mensagem' => 'O NIF do adquirente não corresponde à empresa identificada.',
             ];
         }
 
-        if(
+        if (
             $dataEmissao->gt(
                 today()
             )
-        ){
-            $avisos[]=[
-                'codigo'=>'data_emissao_futura',
-                'campo'=>'data_emissao',
-                'mensagem'=>
-                    'A data de emissão do recibo está no futuro.',
+        ) {
+            $avisos[] = [
+                'codigo' => 'data_emissao_futura',
+                'campo' => 'data_emissao',
+                'mensagem' => 'A data de emissão do recibo está no futuro.',
             ];
         }
 
-        $valorCalculado=round(
-            $valorBase+
-            $valorIva-
+        $valorCalculado = round(
+            $valorBase +
+            $valorIva -
             $retencaoIrs,
             2
         );
 
-        if(
+        if (
             abs(
-                $valorCalculado-
+                $valorCalculado -
                 $valorTotal
-            )>0.02
-        ){
-            $avisos[]=[
-                'codigo'=>'valor_total_incoerente',
-                'campo'=>'valor_total',
-                'mensagem'=>
-                    'O valor total não corresponde a valor base + IVA - retenção de IRS.',
-                'valor_calculado'=>
-                    number_format(
-                        $valorCalculado,
-                        2,
-                        '.',
-                        ''
-                    ),
+            ) > 0.02
+        ) {
+            $avisos[] = [
+                'codigo' => 'valor_total_incoerente',
+                'campo' => 'valor_total',
+                'mensagem' => 'O valor total não corresponde a valor base + IVA - retenção de IRS.',
+                'valor_calculado' => number_format(
+                    $valorCalculado,
+                    2,
+                    '.',
+                    ''
+                ),
             ];
         }
 
@@ -453,7 +432,7 @@ class ReciboVerdeService
         User $actor,
         string $tenantId
     ): Motorista {
-        if(
+        if (
             $this->permissionService
                 ->allows(
                     $actor,
@@ -461,16 +440,15 @@ class ReciboVerdeService
                     'configurar',
                     $tenantId
                 )
-        ){
-            if(
+        ) {
+            if (
                 blank(
                     $data['motorista_id'] ??
                     null
                 )
-            ){
+            ) {
                 throw ValidationException::withMessages([
-                    'motorista_id'=>
-                        'Selecione o motorista.',
+                    'motorista_id' => 'Selecione o motorista.',
                 ]);
             }
 
@@ -484,19 +462,19 @@ class ReciboVerdeService
                 );
         }
 
-        if(
-            !$actor->hasRole(
+        if (
+            ! $actor->hasRole(
                 'motorista',
                 $tenantId
             )
-        ){
+        ) {
             abort(
                 403,
                 'Sem permissão suficiente para enviar recibos verdes.'
             );
         }
 
-        $motorista=Motorista::query()
+        $motorista = Motorista::query()
             ->where(
                 'tenant_id',
                 $tenantId
@@ -507,23 +485,21 @@ class ReciboVerdeService
             )
             ->first();
 
-        if(!$motorista){
+        if (! $motorista) {
             throw ValidationException::withMessages([
-                'motorista'=>
-                    'A conta não possui um motorista associado.',
+                'motorista' => 'A conta não possui um motorista associado.',
             ]);
         }
 
-        if(
-            !empty(
+        if (
+            ! empty(
                 $data['motorista_id']
             ) &&
-            $data['motorista_id']!==
+            $data['motorista_id'] !==
                 $motorista->id
-        ){
+        ) {
             throw ValidationException::withMessages([
-                'motorista_id'=>
-                    'O motorista só pode enviar recibos para o próprio cadastro.',
+                'motorista_id' => 'O motorista só pode enviar recibos para o próprio cadastro.',
             ]);
         }
 
@@ -534,7 +510,7 @@ class ReciboVerdeService
         string $tenantId,
         string $nifAdquirente
     ): ?Empresa {
-        if(blank($nifAdquirente)){
+        if (blank($nifAdquirente)) {
             return null;
         }
 
@@ -546,10 +522,9 @@ class ReciboVerdeService
             ->orderByDesc('ativo')
             ->get()
             ->first(
-                fn(Empresa $empresa)=>
-                    $this->normalizeNif(
-                        $empresa->nif
-                    )===$nifAdquirente
+                fn (Empresa $empresa) => $this->normalizeNif(
+                    $empresa->nif
+                ) === $nifAdquirente
             );
     }
 
@@ -558,7 +533,7 @@ class ReciboVerdeService
         string $motoristaId,
         string $numeroDocumento
     ): void {
-        $exists=ReciboVerde::query()
+        $exists = ReciboVerde::query()
             ->where(
                 'tenant_id',
                 $tenantId
@@ -573,10 +548,9 @@ class ReciboVerdeService
             )
             ->exists();
 
-        if($exists){
+        if ($exists) {
             throw ValidationException::withMessages([
-                'numero_documento'=>
-                    'Este recibo verde já foi enviado para este motorista.',
+                'numero_documento' => 'Este recibo verde já foi enviado para este motorista.',
             ]);
         }
     }
@@ -585,15 +559,15 @@ class ReciboVerdeService
         User $actor,
         string $tenantId
     ): void {
-        if(
-            !$this->permissionService
+        if (
+            ! $this->permissionService
                 ->allows(
                     $actor,
                     'recibos_verdes',
                     'configurar',
                     $tenantId
                 )
-        ){
+        ) {
             abort(
                 403,
                 'Sem permissão suficiente para este recurso.'
@@ -604,13 +578,7 @@ class ReciboVerdeService
     private function normalizeNif(
         ?string $value
     ): string {
-        if(blank($value)){
-            return '';
-        }
-
-        return preg_replace(
-            '/\D+/',
-            '',
+        return PortugueseDataNormalizer::nif(
             $value
         ) ?? '';
     }
@@ -628,7 +596,7 @@ class ReciboVerdeService
     private function nullableTrim(
         ?string $value
     ): ?string {
-        if(blank($value)){
+        if (blank($value)) {
             return null;
         }
 

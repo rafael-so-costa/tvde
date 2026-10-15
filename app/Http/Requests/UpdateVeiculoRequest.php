@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests;
 
+use App\Rules\PortugueseRegistrationPlate;
+use App\Rules\Vin;
 use App\Services\TenantContext;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -28,6 +30,7 @@ class UpdateVeiculoRequest extends FormRequest
                 'required',
                 'string',
                 'max:20',
+                new PortugueseRegistrationPlate,
                 Rule::unique('veiculos', 'matricula')
                     ->ignore($id)
                     ->where(
@@ -51,43 +54,58 @@ class UpdateVeiculoRequest extends FormRequest
                 'sometimes',
                 'nullable',
                 'date',
+                'before_or_equal:today',
             ],
+
             'marca' => [
                 'sometimes',
                 'required',
                 'string',
                 'max:100',
             ],
+
             'modelo' => [
                 'sometimes',
                 'required',
                 'string',
                 'max:100',
             ],
+
             'chassi' => [
                 'sometimes',
                 'nullable',
                 'string',
-                'max:100',
+                'size:17',
+                new Vin,
+                Rule::unique('veiculos', 'chassi')
+                    ->ignore($id)
+                    ->where(
+                        fn ($query) => $query
+                            ->where('tenant_id', $tenantId)
+                    ),
             ],
+
             'cilindrada' => [
                 'sometimes',
                 'nullable',
                 'integer',
                 'min:0',
             ],
+
             'potencia' => [
                 'sometimes',
                 'nullable',
                 'integer',
                 'min:0',
             ],
+
             'combustivel' => [
                 'sometimes',
                 'nullable',
                 'string',
                 'max:50',
             ],
+
             'lugares' => [
                 'sometimes',
                 'nullable',
@@ -95,6 +113,7 @@ class UpdateVeiculoRequest extends FormRequest
                 'min:1',
                 'max:99',
             ],
+
             'portas' => [
                 'sometimes',
                 'nullable',
@@ -102,6 +121,7 @@ class UpdateVeiculoRequest extends FormRequest
                 'min:1',
                 'max:20',
             ],
+
             'cor' => [
                 'sometimes',
                 'nullable',
@@ -115,6 +135,7 @@ class UpdateVeiculoRequest extends FormRequest
                 'string',
                 'max:100',
             ],
+
             'carta_verde_valid_until' => [
                 'sometimes',
                 'nullable',
@@ -127,6 +148,7 @@ class UpdateVeiculoRequest extends FormRequest
                 'string',
                 'max:100',
             ],
+
             'inspecao_tvde_valid_until' => [
                 'sometimes',
                 'nullable',
@@ -138,11 +160,13 @@ class UpdateVeiculoRequest extends FormRequest
                 'nullable',
                 'date',
             ],
+
             'bolt_valid_until' => [
                 'sometimes',
                 'nullable',
                 'date',
             ],
+
             'extintor_valid_until' => [
                 'sometimes',
                 'nullable',
@@ -156,8 +180,15 @@ class UpdateVeiculoRequest extends FormRequest
                 'max:2048',
             ],
 
-            'fotos_galeria' => ['sometimes', 'array'],
-            'fotos_galeria.*' => ['string', 'max:2048'],
+            'fotos_galeria' => [
+                'sometimes',
+                'array',
+            ],
+
+            'fotos_galeria.*' => [
+                'string',
+                'max:2048',
+            ],
 
             'valor_caucao' => [
                 'sometimes',
@@ -165,6 +196,7 @@ class UpdateVeiculoRequest extends FormRequest
                 'numeric',
                 'min:0',
             ],
+
             'valor_aluguel' => [
                 'sometimes',
                 'nullable',
@@ -182,12 +214,62 @@ class UpdateVeiculoRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        $merge = [];
+
         if ($this->has('matricula')) {
-            $this->merge([
-                'matricula' => mb_strtoupper(
-                    trim((string) $this->input('matricula'))
-                ),
-            ]);
+            $merge['matricula'] = $this->normalizarMatricula(
+                $this->input('matricula')
+            );
         }
+
+        if ($this->has('chassi')) {
+            $merge['chassi'] = $this->normalizarVin(
+                $this->input('chassi')
+            );
+        }
+
+        if ($merge !== []) {
+            $this->merge($merge);
+        }
+    }
+
+    private function normalizarMatricula(mixed $value): ?string
+    {
+        $value = trim((string) $value);
+
+        if ($value === '') {
+            return null;
+        }
+
+        $compact = preg_replace(
+            '/[^A-Z0-9]/',
+            '',
+            mb_strtoupper($value)
+        );
+
+        if (strlen($compact) !== 6) {
+            return mb_strtoupper($value);
+        }
+
+        return substr($compact, 0, 2)
+            .'-'
+            .substr($compact, 2, 2)
+            .'-'
+            .substr($compact, 4, 2);
+    }
+
+    private function normalizarVin(mixed $value): ?string
+    {
+        $value = trim((string) $value);
+
+        if ($value === '') {
+            return null;
+        }
+
+        return preg_replace(
+            '/[\s-]+/',
+            '',
+            mb_strtoupper($value)
+        );
     }
 }

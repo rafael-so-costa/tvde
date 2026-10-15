@@ -49,23 +49,23 @@ function backofficeNifAdmin(): User
 {
     $user =
         User::factory()
-            ->create([
-                'email' => 'nif.backoffice@frotapro.test',
+        ->create([
+            'email' => 'nif.backoffice@frotapro.test',
 
-                'password' => Hash::make(
-                    'SenhaTeste123!'
-                ),
+            'password' => Hash::make(
+                'SenhaTeste123!'
+            ),
 
-                'ativo' => true,
-            ]);
+            'ativo' => true,
+        ]);
 
     $role =
         Role::query()
-            ->where(
-                'codigo',
-                'super_admin'
-            )
-            ->firstOrFail();
+        ->where(
+            'codigo',
+            'super_admin'
+        )
+        ->firstOrFail();
 
     UserRole::create([
         'user_id' => $user->id,
@@ -379,8 +379,8 @@ test(
          * à quota operacional de 1 consulta externa/minuto.
          */
         $this->travel(
-            61
-        )->seconds();
+            49
+        )->minutes();
 
         $this
             ->withHeaders(

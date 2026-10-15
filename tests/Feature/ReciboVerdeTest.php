@@ -20,9 +20,9 @@ uses(RefreshDatabase::class);
 function rvHeaders(): array
 {
     return [
-        'Origin'=>'http://localhost:8000',
-        'Referer'=>'http://localhost:8000/',
-        'Accept'=>'application/json',
+        'Origin' => 'http://localhost:8000',
+        'Referer' => 'http://localhost:8000/',
+        'Accept' => 'application/json',
     ];
 }
 
@@ -31,9 +31,9 @@ function rvTenant(
     string $slug
 ): Tenant {
     return Tenant::create([
-        'nome'=>$nome,
-        'slug'=>$slug,
-        'ativo'=>true,
+        'nome' => $nome,
+        'slug' => $slug,
+        'ativo' => true,
     ]);
 }
 
@@ -41,65 +41,65 @@ function rvLogin(
     $test,
     User $user
 ): void {
-    $test->postJson('/login',[
-        'email'=>$user->email,
-        'password'=>'SenhaTeste123!',
+    $test->postJson('/login', [
+        'email' => $user->email,
+        'password' => 'SenhaTeste123!',
     ])->assertOk();
 }
 
 function rvFuncionario(
     Tenant $tenant,
     string $email,
-    string $nivel='configurar'
+    string $nivel = 'configurar'
 ): User {
-    $user=User::factory()->create([
-        'email'=>$email,
-        'password'=>Hash::make(
+    $user = User::factory()->create([
+        'email' => $email,
+        'password' => Hash::make(
             'SenhaTeste123!'
         ),
-        'ativo'=>true,
+        'ativo' => true,
     ]);
 
     TenantUser::create([
-        'tenant_id'=>$tenant->id,
-        'user_id'=>$user->id,
-        'status'=>'ativo',
-        'principal'=>true,
+        'tenant_id' => $tenant->id,
+        'user_id' => $user->id,
+        'status' => 'ativo',
+        'principal' => true,
     ]);
 
-    $role=Role::firstOrCreate(
+    $role = Role::firstOrCreate(
         [
-            'codigo'=>'funcionario',
+            'codigo' => 'funcionario',
         ],
         [
-            'nome'=>'Funcionário',
-            'sistema'=>true,
+            'nome' => 'Funcionário',
+            'sistema' => true,
         ]
     );
 
     UserRole::create([
-        'user_id'=>$user->id,
-        'role_id'=>$role->id,
-        'tenant_id'=>$tenant->id,
+        'user_id' => $user->id,
+        'role_id' => $role->id,
+        'tenant_id' => $tenant->id,
     ]);
 
-    $permission=Permission::firstOrCreate(
+    $permission = Permission::firstOrCreate(
         [
-            'codigo'=>'recibos_verdes',
+            'codigo' => 'recibos_verdes',
         ],
         [
-            'modulo'=>'recibos_verdes',
-            'nome'=>'Recibos verdes',
+            'modulo' => 'recibos_verdes',
+            'nome' => 'Recibos verdes',
         ]
     );
 
     RolePermission::updateOrCreate(
         [
-            'role_id'=>$role->id,
-            'permission_id'=>$permission->id,
+            'role_id' => $role->id,
+            'permission_id' => $permission->id,
         ],
         [
-            'nivel'=>$nivel,
+            'nivel' => $nivel,
         ]
     );
 
@@ -111,12 +111,12 @@ function rvEmpresa(
     string $nome,
     string $nif
 ): Empresa {
-    $empresa=new Empresa([
-        'nome_empresa'=>$nome,
-        'nif'=>$nif,
+    $empresa = new Empresa([
+        'nome_empresa' => $nome,
+        'nif' => $nif,
     ]);
 
-    $empresa->tenant_id=
+    $empresa->tenant_id =
         $tenant->id;
 
     $empresa->save();
@@ -128,20 +128,19 @@ function rvMotorista(
     Tenant $tenant,
     string $nome,
     string $nif,
-    ?User $user=null
+    ?User $user = null
 ): Motorista {
-    $motorista=new Motorista([
-        'nome_completo'=>$nome,
-        'nif'=>$nif,
-        'email'=>
-            $nif.'@recibo.test',
+    $motorista = new Motorista([
+        'nome_completo' => $nome,
+        'nif' => $nif,
+        'email' => $nif.'@recibo.test',
     ]);
 
-    $motorista->tenant_id=
+    $motorista->tenant_id =
         $tenant->id;
 
-    if($user){
-        $motorista->user_id=
+    if ($user) {
+        $motorista->user_id =
             $user->id;
     }
 
@@ -156,38 +155,38 @@ function rvMotoristaUser(
     string $nome,
     string $nif
 ): array {
-    $user=User::factory()->create([
-        'email'=>$email,
-        'password'=>Hash::make(
+    $user = User::factory()->create([
+        'email' => $email,
+        'password' => Hash::make(
             'SenhaTeste123!'
         ),
-        'ativo'=>true,
+        'ativo' => true,
     ]);
 
     TenantUser::create([
-        'tenant_id'=>$tenant->id,
-        'user_id'=>$user->id,
-        'status'=>'ativo',
-        'principal'=>true,
+        'tenant_id' => $tenant->id,
+        'user_id' => $user->id,
+        'status' => 'ativo',
+        'principal' => true,
     ]);
 
-    $role=Role::firstOrCreate(
+    $role = Role::firstOrCreate(
         [
-            'codigo'=>'motorista',
+            'codigo' => 'motorista',
         ],
         [
-            'nome'=>'Motorista',
-            'sistema'=>true,
+            'nome' => 'Motorista',
+            'sistema' => true,
         ]
     );
 
     UserRole::create([
-        'user_id'=>$user->id,
-        'role_id'=>$role->id,
-        'tenant_id'=>$tenant->id,
+        'user_id' => $user->id,
+        'role_id' => $role->id,
+        'tenant_id' => $tenant->id,
     ]);
 
-    $motorista=rvMotorista(
+    $motorista = rvMotorista(
         $tenant,
         $nome,
         $nif,
@@ -202,35 +201,27 @@ function rvMotoristaUser(
 
 function rvPayload(
     Motorista $motorista,
-    string $numero='FR 2026/001',
-    string $adquirente='509999999'
+    string $numero = 'FR 2026/001',
+    string $adquirente = '509999999'
 ): array {
     return [
-        'motorista_id'=>
-            $motorista->id,
-        'numero_documento'=>
-            $numero,
-        'data_emissao'=>
-            '2026-09-20',
-        'nif_emitente'=>
-            $motorista->nif,
-        'nome_emitente'=>
-            $motorista->nome_completo,
-        'nif_adquirente'=>
-            $adquirente,
-        'nome_adquirente'=>
-            'Empresa TVDE',
-        'valor_base'=>'100.00',
-        'valor_iva'=>'23.00',
-        'retencao_irs'=>'0.00',
-        'valor_total'=>'123.00',
-        'arquivo'=>
-            UploadedFile::fake()
-                ->create(
-                    'recibo.pdf',
-                    100,
-                    'application/pdf'
-                ),
+        'motorista_id' => $motorista->id,
+        'numero_documento' => $numero,
+        'data_emissao' => '2026-09-20',
+        'nif_emitente' => $motorista->nif,
+        'nome_emitente' => $motorista->nome_completo,
+        'nif_adquirente' => $adquirente,
+        'nome_adquirente' => 'Empresa TVDE',
+        'valor_base' => '100.00',
+        'valor_iva' => '23.00',
+        'retencao_irs' => '0.00',
+        'valor_total' => '123.00',
+        'arquivo' => UploadedFile::fake()
+            ->create(
+                'recibo.pdf',
+                100,
+                'application/pdf'
+            ),
     ];
 }
 
@@ -238,56 +229,49 @@ function rvDocumento(
     Tenant $tenant,
     Motorista $motorista,
     User $user,
-    string $numero='FR 2026/TESTE'
+    string $numero = 'FR 2026/TESTE'
 ): ReciboVerde {
-    $recibo=new ReciboVerde([
-        'motorista_id'=>
-            $motorista->id,
-        'numero_documento'=>
-            $numero,
-        'data_emissao'=>
-            '2026-09-20',
-        'nif_emitente'=>
-            $motorista->nif,
-        'nome_emitente'=>
-            $motorista->nome_completo,
-        'nif_adquirente'=>
-            '509999999',
-        'nome_adquirente'=>
-            'Empresa',
-        'valor_base'=>'100.00',
-        'valor_iva'=>'23.00',
-        'retencao_irs'=>'0.00',
-        'valor_total'=>'123.00',
+    $recibo = new ReciboVerde([
+        'motorista_id' => $motorista->id,
+        'numero_documento' => $numero,
+        'data_emissao' => '2026-09-20',
+        'nif_emitente' => $motorista->nif,
+        'nome_emitente' => $motorista->nome_completo,
+        'nif_adquirente' => '509999999',
+        'nome_adquirente' => 'Empresa',
+        'valor_base' => '100.00',
+        'valor_iva' => '23.00',
+        'retencao_irs' => '0.00',
+        'valor_total' => '123.00',
     ]);
 
-    $recibo->tenant_id=
+    $recibo->tenant_id =
         $tenant->id;
 
-    $recibo->ano=2026;
-    $recibo->mes=9;
+    $recibo->ano = 2026;
+    $recibo->mes = 9;
 
-    $recibo->arquivo_path=
+    $recibo->arquivo_path =
         'recibos-verdes/teste/'.
         md5($numero).
         '.pdf';
 
-    $recibo->arquivo_nome=
+    $recibo->arquivo_nome =
         'recibo.pdf';
 
-    $recibo->arquivo_mime=
+    $recibo->arquivo_mime =
         'application/pdf';
 
-    $recibo->arquivo_tamanho=
+    $recibo->arquivo_tamanho =
         100;
 
-    $recibo->hash_arquivo=
-        str_repeat('a',64);
+    $recibo->hash_arquivo =
+        str_repeat('a', 64);
 
-    $recibo->created_by=
+    $recibo->created_by =
         $user->id;
 
-    $recibo->avisos_validacao=
+    $recibo->avisos_validacao =
         [];
 
     $recibo->save();
@@ -295,7 +279,7 @@ function rvDocumento(
     return $recibo;
 }
 
-test('rotas de recibos verdes exigem autenticação',function(){
+test('rotas de recibos verdes exigem autenticação', function () {
     $this
         ->withHeaders(
             rvHeaders()
@@ -306,26 +290,26 @@ test('rotas de recibos verdes exigem autenticação',function(){
         ->assertUnauthorized();
 });
 
-test('gestor envia recibo privado com campos protegidos calculados pelo servidor',function(){
+test('gestor envia recibo privado com campos protegidos calculados pelo servidor', function () {
     Storage::fake('local');
 
-    $tenant=rvTenant(
+    $tenant = rvTenant(
         'Tenant Recibos',
         'tenant-recibos'
     );
 
-    $user=rvFuncionario(
+    $user = rvFuncionario(
         $tenant,
         'gestor.recibos@frotapro.test'
     );
 
-    $motorista=rvMotorista(
+    $motorista = rvMotorista(
         $tenant,
         'Motorista Recibo',
-        '245678901'
+        '245123458'
     );
 
-    $empresa=rvEmpresa(
+    $empresa = rvEmpresa(
         $tenant,
         'Empresa TVDE',
         '509999999'
@@ -336,7 +320,7 @@ test('gestor envia recibo privado com campos protegidos calculados pelo servidor
         $user
     );
 
-    $response=$this
+    $response = $this
         ->withHeaders(
             rvHeaders()
         )
@@ -368,7 +352,7 @@ test('gestor envia recibo privado com campos protegidos calculados pelo servidor
             9
         );
 
-    $recibo=ReciboVerde::findOrFail(
+    $recibo = ReciboVerde::findOrFail(
         $response->json(
             'data.id'
         )
@@ -400,23 +384,23 @@ test('gestor envia recibo privado com campos protegidos calculados pelo servidor
         );
 });
 
-test('backend gera avisos sem bloquear recibo inconsistente',function(){
+test('backend gera avisos sem bloquear recibo inconsistente', function () {
     Storage::fake('local');
 
-    $tenant=rvTenant(
+    $tenant = rvTenant(
         'Tenant Avisos',
         'tenant-avisos'
     );
 
-    $user=rvFuncionario(
+    $user = rvFuncionario(
         $tenant,
         'avisos@frotapro.test'
     );
 
-    $motorista=rvMotorista(
+    $motorista = rvMotorista(
         $tenant,
         'Motorista Avisos',
-        '211111111'
+        '245123466'
     );
 
     rvLogin(
@@ -424,24 +408,24 @@ test('backend gera avisos sem bloquear recibo inconsistente',function(){
         $user
     );
 
-    $payload=rvPayload(
+    $payload = rvPayload(
         $motorista,
         'FR 2026/AVISOS',
-        '588888888'
+        '509123457'
     );
 
-    $payload['nif_emitente']=
-        '299999999';
+    $payload['nif_emitente'] =
+        '245123474';
 
-    $payload['data_emissao']=
+    $payload['data_emissao'] =
         now()
             ->addDay()
             ->toDateString();
 
-    $payload['valor_total']=
+    $payload['valor_total'] =
         '999.00';
 
-    $response=$this
+    $response = $this
         ->withHeaders(
             rvHeaders()
         )
@@ -451,11 +435,11 @@ test('backend gera avisos sem bloquear recibo inconsistente',function(){
         )
         ->assertCreated();
 
-    $avisos=$response->json(
+    $avisos = $response->json(
         'data.avisos_validacao'
     );
 
-    $codigos=collect(
+    $codigos = collect(
         $avisos
     )->pluck('codigo');
 
@@ -474,23 +458,23 @@ test('backend gera avisos sem bloquear recibo inconsistente',function(){
         );
 });
 
-test('recibo duplicado do mesmo motorista é bloqueado',function(){
+test('recibo duplicado do mesmo motorista é bloqueado', function () {
     Storage::fake('local');
 
-    $tenant=rvTenant(
+    $tenant = rvTenant(
         'Tenant Duplicado',
         'tenant-duplicado'
     );
 
-    $user=rvFuncionario(
+    $user = rvFuncionario(
         $tenant,
         'duplicado@frotapro.test'
     );
 
-    $motorista=rvMotorista(
+    $motorista = rvMotorista(
         $tenant,
         'Motorista Duplicado',
-        '222222222'
+        '245123482'
     );
 
     rvEmpresa(
@@ -504,7 +488,7 @@ test('recibo duplicado do mesmo motorista é bloqueado',function(){
         $user
     );
 
-    $payload=rvPayload(
+    $payload = rvPayload(
         $motorista,
         'FR 2026/DUPLICADO'
     );
@@ -519,7 +503,7 @@ test('recibo duplicado do mesmo motorista é bloqueado',function(){
         )
         ->assertCreated();
 
-    $payload=rvPayload(
+    $payload = rvPayload(
         $motorista,
         'FR 2026/DUPLICADO'
     );
@@ -542,28 +526,28 @@ test('recibo duplicado do mesmo motorista é bloqueado',function(){
     )->toBe(1);
 });
 
-test('recibo não aceita motorista de outro tenant',function(){
+test('recibo não aceita motorista de outro tenant', function () {
     Storage::fake('local');
 
-    $tenantA=rvTenant(
+    $tenantA = rvTenant(
         'Tenant A',
         'rv-a'
     );
 
-    $tenantB=rvTenant(
+    $tenantB = rvTenant(
         'Tenant B',
         'rv-b'
     );
 
-    $user=rvFuncionario(
+    $user = rvFuncionario(
         $tenantA,
         'tenant.a@recibo.test'
     );
 
-    $motoristaB=rvMotorista(
+    $motoristaB = rvMotorista(
         $tenantB,
         'Motorista B',
-        '233333333'
+        '245123490'
     );
 
     rvLogin(
@@ -587,10 +571,10 @@ test('recibo não aceita motorista de outro tenant',function(){
         );
 });
 
-test('motorista envia e consulta apenas os próprios recibos',function(){
+test('motorista envia e consulta apenas os próprios recibos', function () {
     Storage::fake('local');
 
-    $tenant=rvTenant(
+    $tenant = rvTenant(
         'Tenant Motorista',
         'rv-motorista'
     );
@@ -598,14 +582,14 @@ test('motorista envia e consulta apenas os próprios recibos',function(){
     [
         $user,
         $motorista,
-    ]=rvMotoristaUser(
+    ] = rvMotoristaUser(
         $tenant,
         'motorista@recibo.test',
         'Motorista Próprio',
-        '244444444'
+        '245123504'
     );
 
-    $outro=rvMotorista(
+    $outro = rvMotorista(
         $tenant,
         'Outro Motorista',
         '255555555'
@@ -629,7 +613,7 @@ test('motorista envia e consulta apenas os próprios recibos',function(){
         $user
     );
 
-    $payload=rvPayload(
+    $payload = rvPayload(
         $motorista,
         'FR 2026/PROPRIO'
     );
@@ -670,10 +654,10 @@ test('motorista envia e consulta apenas os próprios recibos',function(){
         );
 });
 
-test('motorista não consegue enviar recibo para outro motorista',function(){
+test('motorista não consegue enviar recibo para outro motorista', function () {
     Storage::fake('local');
 
-    $tenant=rvTenant(
+    $tenant = rvTenant(
         'Tenant Segurança',
         'rv-seguranca'
     );
@@ -681,17 +665,17 @@ test('motorista não consegue enviar recibo para outro motorista',function(){
     [
         $user,
         $motorista,
-    ]=rvMotoristaUser(
+    ] = rvMotoristaUser(
         $tenant,
         'seguranca@recibo.test',
         'Motorista Segurança',
-        '266666666'
+        '245123512'
     );
 
-    $outro=rvMotorista(
+    $outro = rvMotorista(
         $tenant,
         'Motorista Alheio',
-        '277777777'
+        '245123520'
     );
 
     rvLogin(
@@ -720,24 +704,24 @@ test('motorista não consegue enviar recibo para outro motorista',function(){
     )->toBe(0);
 });
 
-test('gestor valida recibo pendente',function(){
-    $tenant=rvTenant(
+test('gestor valida recibo pendente', function () {
+    $tenant = rvTenant(
         'Tenant Validação',
         'rv-validacao'
     );
 
-    $user=rvFuncionario(
+    $user = rvFuncionario(
         $tenant,
         'validar@recibo.test'
     );
 
-    $motorista=rvMotorista(
+    $motorista = rvMotorista(
         $tenant,
         'Motorista Validar',
-        '288888888'
+        '245123539'
     );
 
-    $recibo=rvDocumento(
+    $recibo = rvDocumento(
         $tenant,
         $motorista,
         $user,
@@ -775,24 +759,24 @@ test('gestor valida recibo pendente',function(){
     )->not->toBeNull();
 });
 
-test('gestor rejeita recibo pendente com motivo',function(){
-    $tenant=rvTenant(
+test('gestor rejeita recibo pendente com motivo', function () {
+    $tenant = rvTenant(
         'Tenant Rejeição',
         'rv-rejeicao'
     );
 
-    $user=rvFuncionario(
+    $user = rvFuncionario(
         $tenant,
         'rejeitar@recibo.test'
     );
 
-    $motorista=rvMotorista(
+    $motorista = rvMotorista(
         $tenant,
         'Motorista Rejeitar',
         '299999998'
     );
 
-    $recibo=rvDocumento(
+    $recibo = rvDocumento(
         $tenant,
         $motorista,
         $user,
@@ -811,8 +795,7 @@ test('gestor rejeita recibo pendente com motivo',function(){
         ->postJson(
             "/api/recibos-verdes/{$recibo->id}/rejeitar",
             [
-                'motivo'=>
-                    'Valor incorreto.',
+                'motivo' => 'Valor incorreto.',
             ]
         )
         ->assertOk()
@@ -834,27 +817,27 @@ test('gestor rejeita recibo pendente com motivo',function(){
     );
 });
 
-test('permissão visualizar permite leitura mas não envio nem validação',function(){
+test('permissão visualizar permite leitura mas não envio nem validação', function () {
     Storage::fake('local');
 
-    $tenant=rvTenant(
+    $tenant = rvTenant(
         'Tenant Visualizar',
         'rv-visualizar'
     );
 
-    $user=rvFuncionario(
+    $user = rvFuncionario(
         $tenant,
         'visualizar@recibo.test',
         'visualizar'
     );
 
-    $motorista=rvMotorista(
+    $motorista = rvMotorista(
         $tenant,
         'Motorista Visualizar',
-        '299999997'
+        '245123547'
     );
 
-    $recibo=rvDocumento(
+    $recibo = rvDocumento(
         $tenant,
         $motorista,
         $user,
@@ -898,23 +881,23 @@ test('permissão visualizar permite leitura mas não envio nem validação',func
         ->assertForbidden();
 });
 
-test('ficheiro privado do recibo pode ser visualizado e descarregado',function(){
+test('ficheiro privado do recibo pode ser visualizado e descarregado', function () {
     Storage::fake('local');
 
-    $tenant=rvTenant(
+    $tenant = rvTenant(
         'Tenant Arquivo',
         'rv-arquivo'
     );
 
-    $user=rvFuncionario(
+    $user = rvFuncionario(
         $tenant,
         'arquivo@recibo.test'
     );
 
-    $motorista=rvMotorista(
+    $motorista = rvMotorista(
         $tenant,
         'Motorista Arquivo',
-        '299999996'
+        '245123555'
     );
 
     rvEmpresa(
@@ -928,7 +911,7 @@ test('ficheiro privado do recibo pode ser visualizado e descarregado',function()
         $user
     );
 
-    $response=$this
+    $response = $this
         ->withHeaders(
             rvHeaders()
         )
@@ -941,7 +924,7 @@ test('ficheiro privado do recibo pode ser visualizado e descarregado',function()
         )
         ->assertCreated();
 
-    $id=$response->json(
+    $id = $response->json(
         'data.id'
     );
 
@@ -971,3 +954,252 @@ test('ficheiro privado do recibo pode ser visualizado e descarregado',function()
             'application/pdf'
         );
 });
+
+test(
+    'nifs e número do documento são normalizados no envio',
+    function () {
+        Storage::fake(
+            'local'
+        );
+
+        $tenant =
+            rvTenant(
+                'Tenant Normalização Recibo',
+                'rv-normalizacao'
+            );
+
+        $user =
+            rvFuncionario(
+                $tenant,
+                'normalizacao@recibo.test'
+            );
+
+        $motorista =
+            rvMotorista(
+                $tenant,
+                'Motorista Normalização',
+                '245123458'
+            );
+
+        $empresa =
+            rvEmpresa(
+                $tenant,
+                'Empresa Normalização',
+                '509999999'
+            );
+
+        rvLogin(
+            $this,
+            $user
+        );
+
+        $payload =
+            rvPayload(
+                $motorista,
+                'FR 2026/NORMALIZADO'
+            );
+
+        $payload['numero_documento'] =
+            '  FR   2026/NORMALIZADO  ';
+
+        $payload['nif_emitente'] =
+            'PT 245 123 458';
+
+        $payload['nif_adquirente'] =
+            'PT 509-999-999';
+
+        $response =
+            $this
+                ->withHeaders(
+                    rvHeaders()
+                )
+                ->post(
+                    '/api/recibos-verdes',
+                    $payload
+                )
+                ->assertCreated()
+                ->assertJsonPath(
+                    'data.numero_documento',
+                    'FR 2026/NORMALIZADO'
+                )
+                ->assertJsonPath(
+                    'data.nif_emitente',
+                    '245123458'
+                )
+                ->assertJsonPath(
+                    'data.nif_adquirente',
+                    '509999999'
+                )
+                ->assertJsonPath(
+                    'data.empresa_id',
+                    $empresa->id
+                );
+
+        $this->assertDatabaseHas(
+            'recibos_verdes',
+            [
+                'id' => $response->json(
+                    'data.id'
+                ),
+
+                'numero_documento' => 'FR 2026/NORMALIZADO',
+
+                'nif_emitente' => '245123458',
+
+                'nif_adquirente' => '509999999',
+            ]
+        );
+    }
+);
+
+test(
+    'recibo rejeita nifs portugueses inválidos',
+    function () {
+        Storage::fake(
+            'local'
+        );
+
+        $tenant =
+            rvTenant(
+                'Tenant NIF Inválido',
+                'rv-nif-invalido'
+            );
+
+        $user =
+            rvFuncionario(
+                $tenant,
+                'nif.invalido@recibo.test'
+            );
+
+        $motorista =
+            rvMotorista(
+                $tenant,
+                'Motorista NIF Inválido',
+                '245123458'
+            );
+
+        rvLogin(
+            $this,
+            $user
+        );
+
+        $payload =
+            rvPayload(
+                $motorista,
+                'FR 2026/NIF-INVALIDO'
+            );
+
+        $payload['nif_emitente'] =
+            '245123459';
+
+        $payload['nif_adquirente'] =
+            '509999998';
+
+        $this
+            ->withHeaders(
+                rvHeaders()
+            )
+            ->post(
+                '/api/recibos-verdes',
+                $payload
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'nif_emitente',
+                'nif_adquirente',
+            ]);
+
+        expect(
+            ReciboVerde::query()
+                ->where(
+                    'tenant_id',
+                    $tenant->id
+                )
+                ->count()
+        )->toBe(0);
+    }
+);
+
+test(
+    'documento duplicado é detetado após normalização dos espaços',
+    function () {
+        Storage::fake(
+            'local'
+        );
+
+        $tenant =
+            rvTenant(
+                'Tenant Duplicado Normalizado',
+                'rv-duplicado-normalizado'
+            );
+
+        $user =
+            rvFuncionario(
+                $tenant,
+                'duplicado.normalizado@recibo.test'
+            );
+
+        $motorista =
+            rvMotorista(
+                $tenant,
+                'Motorista Duplicado Normalizado',
+                '245123466'
+            );
+
+        rvEmpresa(
+            $tenant,
+            'Empresa Duplicado Normalizado',
+            '509999999'
+        );
+
+        rvLogin(
+            $this,
+            $user
+        );
+
+        $this
+            ->withHeaders(
+                rvHeaders()
+            )
+            ->post(
+                '/api/recibos-verdes',
+                rvPayload(
+                    $motorista,
+                    'FR 2026/DUP NORM'
+                )
+            )
+            ->assertCreated();
+
+        $payload =
+            rvPayload(
+                $motorista,
+                '  FR   2026/DUP   NORM  '
+            );
+
+        $this
+            ->withHeaders(
+                rvHeaders()
+            )
+            ->post(
+                '/api/recibos-verdes',
+                $payload
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(
+                'numero_documento'
+            );
+
+        expect(
+            ReciboVerde::query()
+                ->where(
+                    'tenant_id',
+                    $tenant->id
+                )
+                ->where(
+                    'motorista_id',
+                    $motorista->id
+                )
+                ->count()
+        )->toBe(1);
+    }
+);

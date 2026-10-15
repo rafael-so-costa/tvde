@@ -3,8 +3,10 @@
 namespace App\Http\Requests;
 
 use App\Services\TenantContext;
+use Carbon\Carbon;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class StoreAluguerRequest extends FormRequest
 {
@@ -15,7 +17,8 @@ class StoreAluguerRequest extends FormRequest
 
     public function rules(): array
     {
-        $tenantId = app(TenantContext::class)->requireId();
+        $tenantId = app(TenantContext::class)
+            ->requireId();
 
         return [
             'tenant_id' => ['prohibited'],
@@ -39,66 +42,108 @@ class StoreAluguerRequest extends FormRequest
             'motorista_id' => [
                 'nullable',
                 'uuid',
-                Rule::exists('motoristas', 'id')
-                    ->where(
-                        fn($query) => $query
-                            ->where('tenant_id', $tenantId)
-                    ),
+                Rule::exists(
+                    'motoristas',
+                    'id'
+                )->where(
+                    fn ($query) => $query
+                        ->where(
+                            'tenant_id',
+                            $tenantId
+                        )
+                ),
             ],
 
             'veiculo_id' => [
                 'nullable',
                 'uuid',
-                Rule::exists('veiculos', 'id')
-                    ->where(
-                        fn($query) => $query
-                            ->where('tenant_id', $tenantId)
-                    ),
+                Rule::exists(
+                    'veiculos',
+                    'id'
+                )->where(
+                    fn ($query) => $query
+                        ->where(
+                            'tenant_id',
+                            $tenantId
+                        )
+                ),
             ],
 
             'proprietario_id' => [
                 'nullable',
                 'uuid',
-                Rule::exists('proprietarios', 'id')
-                    ->where(
-                        fn($query) => $query
-                            ->where('tenant_id', $tenantId)
-                    ),
+                Rule::exists(
+                    'proprietarios',
+                    'id'
+                )->where(
+                    fn ($query) => $query
+                        ->where(
+                            'tenant_id',
+                            $tenantId
+                        )
+                ),
             ],
 
-            /*
-             * Validação referencial será acrescentada quando
-             * Contratos e Checklists existirem no Laravel.
-             */
             'contrato_aluguer_id' => [
                 'nullable',
                 'uuid',
-                Rule::exists('contratos', 'id')
-                    ->where(
-                        fn($query) => $query
-                            ->where('tenant_id', $tenantId)
-                            ->where('tipo', 'aluguer')
-                    ),
+
+                Rule::exists(
+                    'contratos',
+                    'id'
+                )->where(
+                    fn ($query) => $query
+                        ->where(
+                            'tenant_id',
+                            $tenantId
+                        )
+                        ->where(
+                            'tipo',
+                            'aluguer'
+                        )
+                ),
+
+                Rule::unique(
+                    'alugueres',
+                    'contrato_aluguer_id'
+                )->where(
+                    fn ($query) => $query
+                        ->where(
+                            'tenant_id',
+                            $tenantId
+                        )
+                ),
             ],
 
             'contrato_prestacao_id' => [
                 'nullable',
                 'uuid',
-                Rule::exists('contratos', 'id')
-                    ->where(
-                        fn($query) => $query
-                            ->where('tenant_id', $tenantId)
-                            ->where('tipo', 'prestacao_servico')
-                    ),
+
+                Rule::exists(
+                    'contratos',
+                    'id'
+                )->where(
+                    fn ($query) => $query
+                        ->where(
+                            'tenant_id',
+                            $tenantId
+                        )
+                        ->where(
+                            'tipo',
+                            'prestacao_servico'
+                        )
+                ),
             ],
+
             'checklist_entrega_id' => [
                 'nullable',
                 'uuid',
+
                 Rule::exists(
                     'checklist_records',
                     'id'
                 )->where(
-                    fn($query) => $query
+                    fn ($query) => $query
                         ->where(
                             'tenant_id',
                             $tenantId
@@ -113,10 +158,20 @@ class StoreAluguerRequest extends FormRequest
                         )
                 ),
             ],
-            'checklist_devolucao_id' => ['prohibited'],
 
-            'data_inicio' => ['nullable', 'date'],
-            'data_fim' => ['nullable', 'date'],
+            'checklist_devolucao_id' => [
+                'prohibited',
+            ],
+
+            'data_inicio' => [
+                'nullable',
+                'date',
+            ],
+
+            'data_fim' => [
+                'nullable',
+                'date',
+            ],
 
             'rascunho_passo' => [
                 'sometimes',
@@ -134,5 +189,73 @@ class StoreAluguerRequest extends FormRequest
                 'string',
             ],
         ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'contrato_aluguer_id.unique' => 'Este contrato de aluguer já possui um processo operacional.',
+
+            'data_inicio.date' => 'Informe uma data de início válida.',
+
+            'data_fim.date' => 'Informe uma data de fim válida.',
+
+            'rascunho_passo.between' => 'A etapa do processo deve estar entre 1 e 4.',
+        ];
+    }
+
+    public function withValidator(
+        Validator $validator
+    ): void {
+        $validator->after(
+            function (
+                Validator $validator
+            ): void {
+                if (
+                    $validator
+                        ->errors()
+                        ->hasAny([
+                            'data_inicio',
+                            'data_fim',
+                        ])
+                ) {
+                    return;
+                }
+
+                $inicio =
+                    $this->input(
+                        'data_inicio'
+                    );
+
+                $fim =
+                    $this->input(
+                        'data_fim'
+                    );
+
+                if (
+                    ! $inicio ||
+                    ! $fim
+                ) {
+                    return;
+                }
+
+                if (
+                    Carbon::parse(
+                        $fim
+                    )->lt(
+                        Carbon::parse(
+                            $inicio
+                        )
+                    )
+                ) {
+                    $validator
+                        ->errors()
+                        ->add(
+                            'data_fim',
+                            'A data de fim deve ser igual ou posterior à data de início.'
+                        );
+                }
+            }
+        );
     }
 }

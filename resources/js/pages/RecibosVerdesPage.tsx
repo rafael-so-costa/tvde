@@ -370,7 +370,10 @@ export default function RecibosVerdesPage() {
 
                     <button
                         type="button"
-                        onClick={() => setUploadOpen(true)}
+                        onClick={() => {
+                            createMutation.reset();
+                            setUploadOpen(true);
+                        }}
                         className="h-11 px-5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold flex items-center gap-2"
                     >
                         <Plus className="w-4 h-4" />
@@ -749,6 +752,7 @@ export default function RecibosVerdesPage() {
                 error={createMutation.error}
                 onClose={() => {
                     if (!createMutation.isPending) {
+                        createMutation.reset();
                         setUploadOpen(false);
                     }
                 }}

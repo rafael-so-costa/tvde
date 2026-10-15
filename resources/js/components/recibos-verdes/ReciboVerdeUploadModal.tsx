@@ -11,6 +11,7 @@ import {
 import {
     ChangeEvent,
     FormEvent,
+    useEffect,
     useMemo,
     useState,
 } from 'react';
@@ -32,6 +33,33 @@ interface Props {
     ) => Promise<void>;
 }
 
+function validationErrors(
+    error: unknown
+): Record<string,string[]> {
+    if(
+        !axios.isAxiosError(
+            error
+        )
+    ){
+        return {};
+    }
+
+    const errors=
+        error.response?.data
+            ?.errors;
+
+    if(
+        !errors ||
+        typeof errors !==
+            'object'
+    ){
+        return {};
+    }
+
+    return errors as
+        Record<string,string[]>;
+}
+
 function errorMessage(
     error: unknown
 ): string | null {
@@ -39,33 +67,24 @@ function errorMessage(
         return null;
     }
 
+    const errors=
+        validationErrors(
+            error
+        );
+
+    if(
+        Object.keys(
+            errors
+        ).length>0
+    ){
+        return 'Existem dados inválidos. Corrija os campos assinalados.';
+    }
+
     if(
         axios.isAxiosError(
             error
         )
     ){
-        const errors=
-            error.response?.data
-                ?.errors;
-
-        if(errors){
-            const first=
-                Object.values(
-                    errors
-                )[0];
-
-            if(
-                Array.isArray(
-                    first
-                ) &&
-                first.length
-            ){
-                return String(
-                    first[0]
-                );
-            }
-        }
-
         return (
             error.response?.data
                 ?.message ??
@@ -75,7 +94,6 @@ function errorMessage(
 
     return 'Não foi possível enviar o recibo verde.';
 }
-
 function moneyInput(
     value:
         | number
@@ -182,6 +200,58 @@ export default function ReciboVerdeUploadModal({
         useState<string | null>(
             null
         );
+
+    const apiValidationErrors=
+        validationErrors(
+            error
+        );
+
+    function fieldError(
+        field:string
+    ):string | undefined{
+        return apiValidationErrors[
+            field
+        ]?.[0];
+    }
+
+    useEffect(()=>{
+        const firstField=
+            Object.keys(
+                apiValidationErrors
+            )[0];
+
+        if(!firstField){
+            return;
+        }
+
+        requestAnimationFrame(()=>{
+            requestAnimationFrame(()=>{
+                const marker=
+                    document.querySelector<HTMLElement>(
+                        `[data-field-error="${firstField}"]`
+                    );
+
+                const control=
+                    marker
+                        ?.parentElement
+                        ?.querySelector<HTMLElement>(
+                            'input, select, textarea'
+                        );
+
+                (
+                    control ??
+                    marker
+                )?.scrollIntoView({
+                    behavior:'smooth',
+                    block:'center',
+                });
+
+                control?.focus();
+            });
+        });
+    },[
+        error,
+    ]);
 
     const expectedTotal=
         useMemo(()=>{
@@ -645,7 +715,7 @@ export default function ReciboVerdeUploadModal({
 
             <form
                 onSubmit={submit}
-                className="relative w-full max-w-3xl max-h-[94vh] overflow-y-auto rounded-2xl bg-white shadow-2xl"
+                className="advanced-validation-form relative w-full max-w-3xl max-h-[94vh] overflow-y-auto rounded-2xl bg-white shadow-2xl"
             >
                 <div className="sticky top-0 z-20 px-6 py-5 bg-white border-b border-slate-200 flex items-center justify-between">
                     <div>
@@ -672,7 +742,7 @@ export default function ReciboVerdeUploadModal({
                     {!motoristaMode && (
                         <div>
                             <label className="block mb-2 text-sm font-medium text-slate-700">
-                                Motorista
+                                Motorista *
                             </label>
 
                             <select
@@ -683,7 +753,14 @@ export default function ReciboVerdeUploadModal({
                                         event.target.value
                                     )
                                 }
-                                className="w-full h-11 px-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
+                                className={[
+                                    "w-full h-11 px-3 rounded-xl border bg-white text-sm outline-none focus:ring-4",
+                                    fieldError(
+                                        'motorista_id'
+                                    )
+                                        ? "border-red-400 focus:border-red-500 focus:ring-red-500/10"
+                                        : "border-slate-200 focus:border-indigo-500 focus:ring-indigo-500/10",
+                                ].join(' ')}
                             >
                                 <option value="">
                                     Selecione o motorista
@@ -703,12 +780,25 @@ export default function ReciboVerdeUploadModal({
                                     )
                                 )}
                             </select>
+
+                            {fieldError(
+                                'motorista_id'
+                            ) && (
+                                <p
+                                    data-field-error="motorista_id"
+                                    className="mt-1.5 text-xs text-red-600"
+                                >
+                                    {fieldError(
+                                        'motorista_id'
+                                    )}
+                                </p>
+                            )}
                         </div>
                     )}
 
                     <div>
                         <label className="block mb-2 text-sm font-medium text-slate-700">
-                            PDF do recibo
+                            PDF do recibo *
                         </label>
 
                         <label className="min-h-36 px-6 py-6 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 hover:bg-indigo-50/30 hover:border-indigo-400 flex flex-col items-center justify-center cursor-pointer transition">
@@ -761,6 +851,19 @@ export default function ReciboVerdeUploadModal({
                                 className="hidden"
                             />
                         </label>
+
+                        {fieldError(
+                            'arquivo'
+                        ) && (
+                            <p
+                                data-field-error="arquivo"
+                                className="mt-1.5 text-xs text-red-600"
+                            >
+                                {fieldError(
+                                    'arquivo'
+                                )}
+                            </p>
+                        )}
                     </div>
 
                     {extracted && (
@@ -795,15 +898,19 @@ export default function ReciboVerdeUploadModal({
 
                     <div className="grid sm:grid-cols-2 gap-4">
                         <Field
+                            field="numero_documento"
                             label="Número do documento"
                             value={numeroDocumento}
                             onChange={setNumeroDocumento}
+                            error={fieldError(
+                                'numero_documento'
+                            )}
                             required
                         />
 
                         <div>
                             <label className="block mb-2 text-sm font-medium text-slate-700">
-                                Data de emissão
+                                Data de emissão *
                             </label>
 
                             <input
@@ -815,8 +922,28 @@ export default function ReciboVerdeUploadModal({
                                         event.target.value
                                     )
                                 }
-                                className="w-full h-11 px-3 rounded-xl border border-slate-200 text-sm outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
+                                className={[
+                                    "w-full h-11 px-3 rounded-xl border text-sm outline-none focus:ring-4",
+                                    fieldError(
+                                        'data_emissao'
+                                    )
+                                        ? "border-red-400 focus:border-red-500 focus:ring-red-500/10"
+                                        : "border-slate-200 focus:border-indigo-500 focus:ring-indigo-500/10",
+                                ].join(' ')}
                             />
+
+                            {fieldError(
+                                'data_emissao'
+                            ) && (
+                                <p
+                                    data-field-error="data_emissao"
+                                    className="mt-1.5 text-xs text-red-600"
+                                >
+                                    {fieldError(
+                                        'data_emissao'
+                                    )}
+                                </p>
+                            )}
                         </div>
                     </div>
 
@@ -831,16 +958,24 @@ export default function ReciboVerdeUploadModal({
 
                         <div className="grid sm:grid-cols-2 gap-4">
                             <Field
+                                field="nif_emitente"
                                 label="NIF do emitente"
                                 value={nifEmitente}
                                 onChange={setNifEmitente}
+                                error={fieldError(
+                                    'nif_emitente'
+                                )}
                                 required
                             />
 
                             <Field
+                                field="nome_emitente"
                                 label="Nome do emitente"
                                 value={nomeEmitente}
                                 onChange={setNomeEmitente}
+                                error={fieldError(
+                                    'nome_emitente'
+                                )}
                             />
                         </div>
                     </section>
@@ -856,16 +991,24 @@ export default function ReciboVerdeUploadModal({
 
                         <div className="grid sm:grid-cols-2 gap-4">
                             <Field
+                                field="nif_adquirente"
                                 label="NIF do adquirente"
                                 value={nifAdquirente}
                                 onChange={setNifAdquirente}
+                                error={fieldError(
+                                    'nif_adquirente'
+                                )}
                                 required
                             />
 
                             <Field
+                                field="nome_adquirente"
                                 label="Nome do adquirente"
                                 value={nomeAdquirente}
                                 onChange={setNomeAdquirente}
+                                error={fieldError(
+                                    'nome_adquirente'
+                                )}
                             />
                         </div>
                     </section>
@@ -881,28 +1024,44 @@ export default function ReciboVerdeUploadModal({
 
                         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
                             <MoneyField
+                                field="valor_base"
                                 label="Valor base"
                                 value={valorBase}
                                 onChange={setValorBase}
+                                error={fieldError(
+                                    'valor_base'
+                                )}
                                 required
                             />
 
                             <MoneyField
+                                field="valor_iva"
                                 label="IVA"
                                 value={valorIva}
                                 onChange={setValorIva}
+                                error={fieldError(
+                                    'valor_iva'
+                                )}
                             />
 
                             <MoneyField
+                                field="retencao_irs"
                                 label="Retenção IRS"
                                 value={retencaoIrs}
                                 onChange={setRetencaoIrs}
+                                error={fieldError(
+                                    'retencao_irs'
+                                )}
                             />
 
                             <MoneyField
+                                field="valor_total"
                                 label="Valor total"
                                 value={valorTotal}
                                 onChange={setValorTotal}
+                                error={fieldError(
+                                    'valor_total'
+                                )}
                                 required
                             />
                         </div>
@@ -942,7 +1101,7 @@ export default function ReciboVerdeUploadModal({
                     )}
 
                     <p className="text-xs text-slate-500">
-                        O servidor voltará a validar NIFs, data e valores no momento do envio. Apenas um documento duplicado bloqueia automaticamente o registo.
+                        O servidor valida o formato dos NIFs, ficheiro e valores. Divergências entre motorista, empresa, data ou cálculo do total são sinalizadas para conferência antes da validação final.
                     </p>
 
                     {apiError && (
@@ -987,22 +1146,27 @@ export default function ReciboVerdeUploadModal({
 }
 
 function Field({
+    field,
     label,
     value,
     onChange,
     required=false,
+    error,
 }: {
+    field: string;
     label: string;
     value: string;
     onChange: (
         value: string
     )=>void;
     required?: boolean;
+    error?: string;
 }) {
     return (
         <div>
             <label className="block mb-2 text-sm font-medium text-slate-700">
                 {label}
+                {required && ' *'}
             </label>
 
             <input
@@ -1013,29 +1177,47 @@ function Field({
                         event.target.value
                     )
                 }
-                className="w-full h-11 px-3 rounded-xl border border-slate-200 text-sm outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
+                className={[
+                    "w-full h-11 px-3 rounded-xl border text-sm outline-none focus:ring-4",
+                    error
+                        ? "border-red-400 focus:border-red-500 focus:ring-red-500/10"
+                        : "border-slate-200 focus:border-indigo-500 focus:ring-indigo-500/10",
+                ].join(' ')}
             />
+
+            {error && (
+                <p
+                    data-field-error={field}
+                    className="mt-1.5 text-xs text-red-600"
+                >
+                    {error}
+                </p>
+            )}
         </div>
     );
 }
-
 function MoneyField({
+    field,
     label,
     value,
     onChange,
     required=false,
+    error,
 }: {
+    field: string;
     label: string;
     value: string;
     onChange: (
         value: string
     )=>void;
     required?: boolean;
+    error?: string;
 }) {
     return (
         <div>
             <label className="block mb-2 text-sm font-medium text-slate-700">
                 {label}
+                {required && ' *'}
             </label>
 
             <div className="relative">
@@ -1054,9 +1236,23 @@ function MoneyField({
                             event.target.value
                         )
                     }
-                    className="w-full h-11 pl-8 pr-3 rounded-xl border border-slate-200 text-sm outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
+                    className={[
+                        "w-full h-11 pl-8 pr-3 rounded-xl border text-sm outline-none focus:ring-4",
+                        error
+                            ? "border-red-400 focus:border-red-500 focus:ring-red-500/10"
+                            : "border-slate-200 focus:border-indigo-500 focus:ring-indigo-500/10",
+                    ].join(' ')}
                 />
             </div>
+
+            {error && (
+                <p
+                    data-field-error={field}
+                    className="mt-1.5 text-xs text-red-600"
+                >
+                    {error}
+                </p>
+            )}
         </div>
     );
 }

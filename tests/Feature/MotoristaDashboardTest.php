@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Hash;
 
 uses(RefreshDatabase::class);
 
-beforeEach(fn() => $this->seed(RoleSeeder::class));
+beforeEach(fn () => $this->seed(RoleSeeder::class));
 
 function mdHeaders(): array
 {
@@ -85,6 +85,7 @@ function mdMotorista(User $user, Tenant $tenant, string $nome = 'Motorista Dashb
         'email' => $user->email,
         'carta_valid_until' => now()->addDays(10)->toDateString(),
         'registo_criminal_valid_until' => now()->addDays(40)->toDateString(),
+        'foto_perfil_url' => 'motoristas/dashboard/perfil.jpg',
     ]);
 
     $motorista->tenant_id = $tenant->id;
@@ -170,7 +171,7 @@ test('dashboard apresenta apenas resumo operacional do próprio motorista', func
     $atribuicao->contrato_id = $contrato->id;
     $atribuicao->save();
 
-    $registo = new RegistoExpediente();
+    $registo = new RegistoExpediente;
     $registo->tenant_id = $tenant->id;
     $registo->motorista_id = $motorista->id;
     $registo->data_hora = now()->subHour();
@@ -247,6 +248,13 @@ test('dashboard apresenta apenas resumo operacional do próprio motorista', func
         ->assertOk()
         ->assertJsonPath('data.motorista.id', $motorista->id)
         ->assertJsonPath('data.motorista.nome', 'Motorista Dashboard')
+        ->assertJsonPath(
+            'data.motorista.foto_perfil_url',
+            route(
+                'motoristas.foto',
+                ['id' => $motorista->id]
+            )
+        )
         ->assertJsonPath('data.expediente.em_servico', true)
         ->assertJsonPath('data.veiculo.id', $veiculo->id)
         ->assertJsonPath('data.veiculo.matricula', '00-AA-00')

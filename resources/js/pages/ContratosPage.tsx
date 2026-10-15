@@ -17,6 +17,7 @@ import {
     FileText,
     LoaderCircle,
     Pencil,
+    PlayCircle,
     Plus,
     RefreshCw,
     Search,
@@ -29,13 +30,24 @@ import {
 import {
     useContractTypes,
 } from "../hooks/useContractTypes";
+import {
+    useCurrentPermissions,
+} from "../hooks/useCurrentPermissions";
 import ContratoDetailModal from "../components/contratos/ContratoDetailModal";
 import ContratoFormModal from "../components/contratos/ContratoFormModal";
 import ContractWizard from "../components/contratos/wizard/ContractWizard";
+import AluguerWizard from "../components/alugueres/AluguerWizard";
 import type {
     Contrato,
     ContratoStatus,
 } from "../types/contrato";
+import type {
+    Aluguer,
+    AluguerStatus,
+} from "../types/aluguer";
+import type {
+    ChecklistRecord,
+} from "../types/checklist";
 import type {
     Empresa,
 } from "../types/empresa";
@@ -133,11 +145,33 @@ const legacyTypeLabels:
             "Checklist devolução",
     };
 
+const rentalStatusLabels:
+    Record<
+        AluguerStatus,
+        string
+    > = {
+        rascunho: "Rascunho",
+        ativo: "Ativo",
+        finalizado: "Finalizado",
+        cancelado: "Cancelado",
+    };
+
 export default function ContratosPage() {
     const {
         tenant,
     } =
         useTenant();
+
+    const {
+        can,
+    } =
+        useCurrentPermissions();
+
+    const canManageRentalProcess =
+        can(
+            "alugueres",
+            "configurar",
+        );
 
     const navigate =
         useNavigate();
@@ -193,7 +227,11 @@ export default function ContratosPage() {
         setType,
     ] =
         useState<TypeFilter>(
-            "todos",
+            () =>
+                searchParams.get(
+                    "tipo",
+                ) ??
+                "todos",
         );
 
     const [
@@ -215,6 +253,30 @@ export default function ContratosPage() {
         setWizardOpen,
     ] =
         useState(false);
+
+    const [
+        rentalWizardId,
+        setRentalWizardId,
+    ] =
+        useState<
+            string | null
+        >(null);
+
+    const [
+        startingRentalContractId,
+        setStartingRentalContractId,
+    ] =
+        useState<
+            string | null
+        >(null);
+
+    const [
+        rentalProcessError,
+        setRentalProcessError,
+    ] =
+        useState<
+            string | null
+        >(null);
 
     const [
         editing,
@@ -312,7 +374,12 @@ export default function ContratosPage() {
             enabled:
                 Boolean(
                     tenant?.id &&
-                        formOpen,
+                        (
+                            formOpen ||
+                            Boolean(
+                                rentalWizardId,
+                            )
+                        ),
                 ),
 
             queryFn:
@@ -340,7 +407,10 @@ export default function ContratosPage() {
                     tenant?.id &&
                         (
                             formOpen ||
-                            wizardOpen
+                            wizardOpen ||
+                            Boolean(
+                                rentalWizardId,
+                            )
                         ),
                 ),
 
@@ -369,7 +439,10 @@ export default function ContratosPage() {
                     tenant?.id &&
                         (
                             formOpen ||
-                            wizardOpen
+                            wizardOpen ||
+                            Boolean(
+                                rentalWizardId,
+                            )
                         ),
                 ),
 
@@ -398,7 +471,10 @@ export default function ContratosPage() {
                     tenant?.id &&
                         (
                             formOpen ||
-                            wizardOpen
+                            wizardOpen ||
+                            Boolean(
+                                rentalWizardId,
+                            )
                         ),
                 ),
 
@@ -427,7 +503,10 @@ export default function ContratosPage() {
                     tenant?.id &&
                         (
                             formOpen ||
-                            wizardOpen
+                            wizardOpen ||
+                            Boolean(
+                                rentalWizardId,
+                            )
                         ),
                 ),
 
@@ -444,14 +523,270 @@ export default function ContratosPage() {
                 },
         });
 
+    const alugueresQuery =
+        useQuery({
+            queryKey: [
+                "alugueres",
+                tenant?.id,
+            ],
+
+            enabled:
+                Boolean(
+                    tenant?.id &&
+                    canManageRentalProcess,
+                ),
+
+            queryFn:
+                async () => {
+                    const response =
+                        await api.get(
+                            "/api/alugueres",
+                        );
+
+                    return response
+                        .data
+                        .data as Aluguer[];
+                },
+        });
+
+    const checklistsQuery =
+        useQuery({
+            queryKey: [
+                "checklists",
+                tenant?.id,
+            ],
+
+            enabled:
+                Boolean(
+                    tenant?.id &&
+                    rentalWizardId,
+                ),
+
+            queryFn:
+                async () => {
+                    const response =
+                        await api.get(
+                            "/api/checklists",
+                        );
+
+                    return response
+                        .data
+                        .data as ChecklistRecord[];
+                },
+        });
+
     async function refresh() {
-        await queryClient
-            .invalidateQueries({
-                queryKey: [
-                    "contratos",
-                    tenant?.id,
-                ],
-            });
+        await Promise.all([
+            queryClient
+                .invalidateQueries({
+                    queryKey: [
+                        "contratos",
+                        tenant?.id,
+                    ],
+                }),
+
+            queryClient
+                .invalidateQueries({
+                    queryKey: [
+                        "alugueres",
+                        tenant?.id,
+                    ],
+                }),
+
+            queryClient
+                .invalidateQueries({
+                    queryKey: [
+                        "checklists",
+                        tenant?.id,
+                    ],
+                }),
+        ]);
+    }
+
+    const rentalByContract =
+        useMemo(
+            () =>
+                new Map<
+                    string,
+                    Aluguer
+                >(
+                    (
+                        alugueresQuery
+                            .data ??
+                        []
+                    )
+                        .filter(
+                            (
+                                aluguer,
+                            ) =>
+                                Boolean(
+                                    aluguer
+                                        .contrato_aluguer_id,
+                                ),
+                        )
+                        .map(
+                            (
+                                aluguer,
+                            ) => [
+                                aluguer
+                                    .contrato_aluguer_id!,
+                                aluguer,
+                            ],
+                        ),
+                ),
+            [
+                alugueresQuery.data,
+            ],
+        );
+
+    async function openRentalProcess(
+        contract:
+            Contrato,
+    ) {
+        setRentalProcessError(
+            null,
+        );
+
+        if (
+            !canManageRentalProcess
+        ) {
+            setRentalProcessError(
+                "Não possui permissão para gerir processos de aluguer.",
+            );
+
+            return;
+        }
+
+        const existing =
+            rentalByContract
+                .get(
+                    contract.id,
+                );
+
+        if (existing) {
+            if (
+                existing.status ===
+                "rascunho"
+            ) {
+                setRentalWizardId(
+                    existing.id,
+                );
+
+                return;
+            }
+
+            setRentalProcessError(
+                `O processo de aluguer deste contrato encontra-se ${rentalStatusLabels[
+                    existing.status
+                ].toLocaleLowerCase(
+                    "pt-PT",
+                )}.`,
+            );
+
+            return;
+        }
+
+        if (
+            [
+                "cancelado",
+                "expirado",
+                "encerrado",
+                "renovado",
+            ].includes(
+                contract.status,
+            )
+        ) {
+            setRentalProcessError(
+                "Não é possível iniciar um novo processo operacional para este contrato.",
+            );
+
+            return;
+        }
+
+        setStartingRentalContractId(
+            contract.id,
+        );
+
+        try {
+            const response =
+                await api.post(
+                    "/api/alugueres",
+                    {
+                        contrato_aluguer_id:
+                            contract.id,
+
+                        motorista_id:
+                            contract
+                                .motorista_id,
+
+                        veiculo_id:
+                            contract
+                                .veiculo_id,
+
+                        proprietario_id:
+                            contract
+                                .proprietario_id,
+
+                        data_inicio:
+                            contract
+                                .data_inicio
+                                ?.slice(
+                                    0,
+                                    10,
+                                ) ??
+                            null,
+
+                        data_fim:
+                            contract
+                                .data_fim
+                                ?.slice(
+                                    0,
+                                    10,
+                                ) ??
+                            null,
+
+                        rascunho_passo:
+                            2,
+
+                        rascunho_dados: {
+                            origem:
+                                "contratos",
+
+                            contrato_aluguer_id:
+                                contract.id,
+                        },
+                    },
+                );
+
+            const created =
+                response.data
+                    .data as Aluguer;
+
+            await queryClient
+                .invalidateQueries({
+                    queryKey: [
+                        "alugueres",
+                        tenant?.id,
+                    ],
+                });
+
+            setRentalWizardId(
+                created.id,
+            );
+        } catch (
+            requestError
+        ) {
+            setRentalProcessError(
+                requestError instanceof
+                    Error
+                    ? requestError.message
+                    : "Não foi possível iniciar o processo de aluguer.",
+            );
+        } finally {
+            setStartingRentalContractId(
+                null,
+            );
+        }
     }
 
     const contractTypesById =
@@ -790,6 +1125,52 @@ export default function ContratosPage() {
             .data ??
         [];
 
+    const selectedContract =
+        selectedId
+            ? all.find(
+                  (
+                      contract,
+                  ) =>
+                      contract.id ===
+                      selectedId,
+              ) ??
+              null
+            : null;
+
+    const rentalWizardLoading =
+        Boolean(
+            rentalWizardId,
+        ) &&
+        (
+            templatesQuery
+                .isLoading ||
+            motoristasQuery
+                .isLoading ||
+            veiculosQuery
+                .isLoading ||
+            empresasQuery
+                .isLoading ||
+            checklistsQuery
+                .isLoading
+        );
+
+    const rentalWizardError =
+        Boolean(
+            rentalWizardId,
+        ) &&
+        (
+            templatesQuery
+                .isError ||
+            motoristasQuery
+                .isError ||
+            veiculosQuery
+                .isError ||
+            empresasQuery
+                .isError ||
+            checklistsQuery
+                .isError
+        );
+
     const wizardLoading =
         motoristasQuery
             .isLoading ||
@@ -889,6 +1270,28 @@ export default function ContratosPage() {
                     </button>
                 </div>
             </div>
+
+            {rentalProcessError && (
+                <div className="mb-6 flex items-start justify-between gap-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                    <span>
+                        {
+                            rentalProcessError
+                        }
+                    </span>
+
+                    <button
+                        type="button"
+                        onClick={() =>
+                            setRentalProcessError(
+                                null,
+                            )
+                        }
+                        className="shrink-0 font-semibold"
+                    >
+                        Fechar
+                    </button>
+                </div>
+            )}
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <Stat
@@ -1125,6 +1528,13 @@ export default function ContratosPage() {
                                                 contract,
                                             );
 
+                                        const rentalProcess =
+                                            rentalByContract
+                                                .get(
+                                                    contract.id,
+                                                ) ??
+                                            null;
+
                                         return (
                                             <tr
                                                 key={
@@ -1271,6 +1681,80 @@ export default function ContratosPage() {
                                                             Ver
                                                         </button>
 
+                                                        {isRentalContract(
+                                                            contract,
+                                                        ) &&
+                                                            canManageRentalProcess &&
+                                                            (
+                                                                !rentalProcess ||
+                                                                rentalProcess
+                                                                    .status ===
+                                                                    "rascunho"
+                                                            ) && (
+                                                                <button
+                                                                    type="button"
+                                                                    disabled={
+                                                                        startingRentalContractId ===
+                                                                            contract
+                                                                                .id ||
+                                                                        alugueresQuery
+                                                                            .isLoading
+                                                                    }
+                                                                    onClick={() =>
+                                                                        void openRentalProcess(
+                                                                            contract,
+                                                                        )
+                                                                    }
+                                                                    className="h-9 px-3 rounded-lg bg-emerald-50 text-sm font-medium text-emerald-700 flex items-center gap-2 disabled:opacity-50"
+                                                                >
+                                                                    {startingRentalContractId ===
+                                                                    contract
+                                                                        .id ? (
+                                                                        <LoaderCircle className="w-4 h-4 animate-spin" />
+                                                                    ) : (
+                                                                        <PlayCircle className="w-4 h-4" />
+                                                                    )}
+
+                                                                    {rentalProcess
+                                                                        ? "Processo"
+                                                                        : "Iniciar aluguer"}
+                                                                </button>
+                                                            )}
+
+                                                        {isRentalContract(
+                                                            contract,
+                                                        ) &&
+                                                            rentalProcess &&
+                                                            rentalProcess
+                                                                .status !==
+                                                                "rascunho" && (
+                                                                <span
+                                                                    className={[
+                                                                        "inline-flex h-9 items-center rounded-lg px-3 text-xs font-semibold",
+
+                                                                        rentalProcess
+                                                                            .status ===
+                                                                        "ativo"
+                                                                            ? "bg-emerald-50 text-emerald-700"
+                                                                            : rentalProcess
+                                                                                    .status ===
+                                                                                "finalizado"
+                                                                              ? "bg-slate-100 text-slate-600"
+                                                                              : "bg-red-50 text-red-700",
+                                                                    ].join(
+                                                                        " ",
+                                                                    )}
+                                                                >
+                                                                    Aluguer{" "}
+                                                                    {
+                                                                        rentalStatusLabels[
+                                                                            rentalProcess
+                                                                                .status
+                                                                        ]
+                                                                    }
+                                                                </span>
+                                                            )}
+
                                                         {contract
                                                             .status ===
                                                             "rascunho" &&
@@ -1342,6 +1826,28 @@ export default function ContratosPage() {
                     onChanged={
                         refresh
                     }
+                    rentalProcess={
+                        selectedContract
+                            ? rentalByContract
+                                  .get(
+                                      selectedContract
+                                          .id,
+                                  ) ??
+                              null
+                            : null
+                    }
+                    canManageRentalProcess={
+                        canManageRentalProcess
+                    }
+                    onOpenRentalProcess={() => {
+                        if (
+                            selectedContract
+                        ) {
+                            void openRentalProcess(
+                                selectedContract,
+                            );
+                        }
+                    }}
                 />
             )}
 
@@ -1429,6 +1935,99 @@ export default function ContratosPage() {
                             setSelectedId(
                                 contract
                                     .id,
+                            );
+                        }}
+                    />
+                )}
+
+            {rentalWizardId &&
+                rentalWizardLoading && (
+                    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/65 backdrop-blur-sm">
+                        <div className="rounded-2xl bg-white px-8 py-7 text-center shadow-2xl">
+                            <LoaderCircle className="mx-auto h-8 w-8 animate-spin text-emerald-600" />
+
+                            <p className="mt-3 text-sm font-medium text-slate-700">
+                                A carregar processo de aluguer...
+                            </p>
+                        </div>
+                    </div>
+                )}
+
+            {rentalWizardId &&
+                !rentalWizardLoading &&
+                rentalWizardError && (
+                    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/65 p-4 backdrop-blur-sm">
+                        <div className="w-full max-w-md rounded-2xl bg-white p-7 text-center shadow-2xl">
+                            <AlertCircle className="mx-auto h-10 w-10 text-red-500" />
+
+                            <h3 className="mt-4 font-semibold text-slate-900">
+                                Não foi possível carregar o processo
+                            </h3>
+
+                            <p className="mt-2 text-sm text-slate-500">
+                                Verifique as permissões de alugueres, contratos, checklists, motoristas e veículos.
+                            </p>
+
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    setRentalWizardId(
+                                        null,
+                                    )
+                                }
+                                className="mt-5 h-10 rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white"
+                            >
+                                Fechar
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+            {rentalWizardId &&
+                !rentalWizardLoading &&
+                !rentalWizardError && (
+                    <AluguerWizard
+                        id={
+                            rentalWizardId
+                        }
+                        templates={
+                            templatesQuery
+                                .data ??
+                            []
+                        }
+                        motoristas={
+                            motoristasQuery
+                                .data ??
+                            []
+                        }
+                        veiculos={
+                            veiculosQuery
+                                .data ??
+                            []
+                        }
+                        empresas={
+                            empresasQuery
+                                .data ??
+                            []
+                        }
+                        checklists={
+                            checklistsQuery
+                                .data ??
+                            []
+                        }
+                        onClose={() =>
+                            setRentalWizardId(
+                                null,
+                            )
+                        }
+                        onChanged={
+                            refresh
+                        }
+                        onActivated={async () => {
+                            await refresh();
+
+                            setRentalWizardId(
+                                null,
                             );
                         }}
                     />
@@ -1541,6 +2140,43 @@ function dateLabel(
                 10,
             )}T12:00:00`,
         ),
+    );
+}
+
+function isRentalContract(
+    contract:
+        Contrato,
+): boolean {
+    const values = [
+        contract.tipo,
+        contract
+            .tipo_contrato
+            ?.codigo,
+        contract
+            .tipo_contrato
+            ?.slug,
+    ]
+        .filter(
+            (
+                value,
+            ): value is string =>
+                Boolean(
+                    value,
+                ),
+        )
+        .map(
+            (
+                value,
+            ) =>
+                value
+                    .trim()
+                    .toLocaleLowerCase(
+                        "pt-PT",
+                    ),
+        );
+
+    return values.includes(
+        "aluguer",
     );
 }
 

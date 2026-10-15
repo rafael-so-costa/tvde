@@ -83,7 +83,6 @@ export interface MotoristaPayload {
     endereco_cidade: string | null;
     endereco_cep: string | null;
     iban: string | null;
-    foto_perfil_url: string | null;
     bolt_email: string | null;
     bolt_telemovel: string | null;
     uber_email: string | null;

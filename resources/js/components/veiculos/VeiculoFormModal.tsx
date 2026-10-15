@@ -274,6 +274,54 @@ export default function VeiculoFormModal({
         }
     }
 
+    function focusFirstValidationError(
+        validationErrors: Record<
+            string,
+            string[]
+        >
+    ) {
+        const firstField =
+            Object.keys(
+                validationErrors
+            )[0];
+
+        if (!firstField) {
+            return;
+        }
+
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                const marker =
+                    Array.from(
+                        document.querySelectorAll<HTMLElement>(
+                            '[data-field-error]'
+                        )
+                    ).find(
+                        (element) =>
+                            element.dataset
+                                .fieldError ===
+                            firstField
+                    );
+
+                const control =
+                    marker?.parentElement
+                        ?.querySelector<HTMLElement>(
+                            'input, select, textarea'
+                        );
+
+                (
+                    control ??
+                    marker
+                )?.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center',
+                });
+
+                control?.focus();
+            });
+        });
+    }
+
     function fieldError(
         field: keyof FormState
     ) {
@@ -281,12 +329,14 @@ export default function VeiculoFormModal({
             errors[field]?.[0];
 
         return message ? (
-            <p className="mt-1.5 text-xs text-red-600">
+            <p
+                data-field-error={field}
+                className="mt-1.5 text-xs text-red-600"
+            >
                 {message}
             </p>
         ) : null;
     }
-
     async function handleSubmit(
         event: FormEvent
     ) {
@@ -398,15 +448,31 @@ export default function VeiculoFormModal({
                 const response =
                     error.response?.data;
 
+                const validationErrors =
+                    response?.errors ?? {};
+
                 setErrors(
-                    response?.errors ??
-                    {}
+                    validationErrors
                 );
 
-                setGeneralError(
-                    response?.message ??
-                        'Não foi possível guardar o veículo.'
-                );
+                if (
+                    Object.keys(
+                        validationErrors
+                    ).length > 0
+                ) {
+                    setGeneralError(
+                        'Existem dados inválidos. Corrija os campos assinalados.'
+                    );
+
+                    focusFirstValidationError(
+                        validationErrors
+                    );
+                } else {
+                    setGeneralError(
+                        response?.message ??
+                            'Não foi possível guardar o veículo.'
+                    );
+                }
             } else {
                 setGeneralError(
                     'Não foi possível guardar o veículo.'
@@ -461,11 +527,26 @@ export default function VeiculoFormModal({
                     </button>
                 </header>
 
+                <style>{`
+                    .advanced-validation-form div:has(> [data-field-error]) > input,
+                    .advanced-validation-form div:has(> [data-field-error]) > select,
+                    .advanced-validation-form div:has(> [data-field-error]) > textarea {
+                        border-color: rgb(239 68 68);
+                    }
+
+                    .advanced-validation-form div:has(> [data-field-error]) > input:focus,
+                    .advanced-validation-form div:has(> [data-field-error]) > select:focus,
+                    .advanced-validation-form div:has(> [data-field-error]) > textarea:focus {
+                        border-color: rgb(239 68 68);
+                        box-shadow: 0 0 0 4px rgb(239 68 68 / 0.10);
+                    }
+                `}</style>
+
                 <form
                     onSubmit={
                         handleSubmit
                     }
-                    className="overflow-y-auto max-h-[calc(94vh-80px)]"
+                    className="advanced-validation-form overflow-y-auto max-h-[calc(94vh-80px)]"
                 >
                     <div className="p-6 space-y-8">
                         {generalError && (
@@ -475,6 +556,10 @@ export default function VeiculoFormModal({
                                 }
                             </div>
                         )}
+
+                        <div className="rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-indigo-800">
+                            <strong>*</strong> Campos obrigatórios para o veículo ficar ativo. O cadastro pode ser guardado incompleto, mas permanecerá inativo.
+                        </div>
 
                         <section>
                             <h3 className="font-semibold text-slate-900 mb-4">
@@ -514,7 +599,7 @@ export default function VeiculoFormModal({
 
                                 <div>
                                     <label className={labelClass}>
-                                        Data da matrícula
+                                        Data da matrícula *
                                     </label>
 
                                     <input
@@ -534,6 +619,9 @@ export default function VeiculoFormModal({
                                             inputClass
                                         }
                                     />
+                                    {fieldError(
+                                        'data_matricula'
+                                    )}
                                 </div>
 
                                 <div>
@@ -594,7 +682,7 @@ export default function VeiculoFormModal({
 
                                 <div>
                                     <label className={labelClass}>
-                                        Cor
+                                        Cor *
                                     </label>
 
                                     <input
@@ -613,11 +701,14 @@ export default function VeiculoFormModal({
                                             inputClass
                                         }
                                     />
+                                    {fieldError(
+                                        'cor'
+                                    )}
                                 </div>
 
                                 <div>
                                     <label className={labelClass}>
-                                        Chassi / VIN
+                                        Chassi / VIN *
                                     </label>
 
                                     <input
@@ -636,11 +727,14 @@ export default function VeiculoFormModal({
                                             inputClass
                                         }
                                     />
+                                    {fieldError(
+                                        'chassi'
+                                    )}
                                 </div>
 
                                 <div className="sm:col-span-2">
                                     <label className={labelClass}>
-                                        Proprietário
+                                        Proprietário *
                                     </label>
 
                                     <select
@@ -724,6 +818,9 @@ export default function VeiculoFormModal({
                                             inputClass
                                         }
                                     />
+                                    {fieldError(
+                                        'combustivel'
+                                    )}
 
                                     <datalist id="combustiveis">
                                         <option value="Elétrico" />
@@ -758,6 +855,9 @@ export default function VeiculoFormModal({
                                             inputClass
                                         }
                                     />
+                                    {fieldError(
+                                        'cilindrada'
+                                    )}
                                 </div>
 
                                 <div>
@@ -783,6 +883,9 @@ export default function VeiculoFormModal({
                                             inputClass
                                         }
                                     />
+                                    {fieldError(
+                                        'potencia'
+                                    )}
                                 </div>
 
                                 <div>
@@ -809,6 +912,9 @@ export default function VeiculoFormModal({
                                             inputClass
                                         }
                                     />
+                                    {fieldError(
+                                        'lugares'
+                                    )}
                                 </div>
 
                                 <div>
@@ -835,6 +941,9 @@ export default function VeiculoFormModal({
                                             inputClass
                                         }
                                     />
+                                    {fieldError(
+                                        'portas'
+                                    )}
                                 </div>
 
                                 <div>
@@ -858,6 +967,9 @@ export default function VeiculoFormModal({
                                             inputClass
                                         }
                                     />
+                                    {fieldError(
+                                        'via_verde'
+                                    )}
                                 </div>
                             </div>
                         </section>
@@ -870,7 +982,7 @@ export default function VeiculoFormModal({
                             <div className="grid sm:grid-cols-2 gap-4">
                                 <div>
                                     <label className={labelClass}>
-                                        Carta Verde
+                                        Carta Verde *
                                     </label>
 
                                     <input
@@ -889,11 +1001,14 @@ export default function VeiculoFormModal({
                                             inputClass
                                         }
                                     />
+                                    {fieldError(
+                                        'carta_verde'
+                                    )}
                                 </div>
 
                                 <div>
                                     <label className={labelClass}>
-                                        Validade da Carta Verde
+                                        Validade da Carta Verde *
                                     </label>
 
                                     <input
@@ -913,11 +1028,14 @@ export default function VeiculoFormModal({
                                             inputClass
                                         }
                                     />
+                                    {fieldError(
+                                        'carta_verde_valid_until'
+                                    )}
                                 </div>
 
                                 <div>
                                     <label className={labelClass}>
-                                        Inspeção TVDE
+                                        Inspeção TVDE *
                                     </label>
 
                                     <input
@@ -936,11 +1054,14 @@ export default function VeiculoFormModal({
                                             inputClass
                                         }
                                     />
+                                    {fieldError(
+                                        'inspecao_tvde'
+                                    )}
                                 </div>
 
                                 <div>
                                     <label className={labelClass}>
-                                        Validade da inspeção
+                                        Validade da inspeção *
                                     </label>
 
                                     <input
@@ -960,6 +1081,9 @@ export default function VeiculoFormModal({
                                             inputClass
                                         }
                                     />
+                                    {fieldError(
+                                        'inspecao_tvde_valid_until'
+                                    )}
                                 </div>
 
                                 <div>
@@ -984,6 +1108,9 @@ export default function VeiculoFormModal({
                                             inputClass
                                         }
                                     />
+                                    {fieldError(
+                                        'uber_valid_until'
+                                    )}
                                 </div>
 
                                 <div>
@@ -1008,6 +1135,9 @@ export default function VeiculoFormModal({
                                             inputClass
                                         }
                                     />
+                                    {fieldError(
+                                        'bolt_valid_until'
+                                    )}
                                 </div>
 
                                 <div>
@@ -1032,6 +1162,9 @@ export default function VeiculoFormModal({
                                             inputClass
                                         }
                                     />
+                                    {fieldError(
+                                        'extintor_valid_until'
+                                    )}
                                 </div>
                             </div>
                         </section>
@@ -1066,6 +1199,9 @@ export default function VeiculoFormModal({
                                             inputClass
                                         }
                                     />
+                                    {fieldError(
+                                        'valor_caucao'
+                                    )}
                                 </div>
 
                                 <div>
@@ -1092,6 +1228,9 @@ export default function VeiculoFormModal({
                                             inputClass
                                         }
                                     />
+                                    {fieldError(
+                                        'valor_aluguel'
+                                    )}
                                 </div>
                             </div>
                         </section>
@@ -1122,6 +1261,9 @@ export default function VeiculoFormModal({
                                     inputClass
                                 }
                             />
+                                    {fieldError(
+                                        'foto_principal_url'
+                                    )}
                         </section>
                     </div>
 

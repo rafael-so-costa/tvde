@@ -89,7 +89,7 @@ function dadosProprietarioPessoaFisica(array $overrides = []): array
     return array_merge([
         'tipo' => 'pessoa_fisica',
         'nome_completo' => 'João da Silva',
-        'nif' => '245123456',
+        'nif' => '245123458',
         'email' => 'joao@example.test',
         'telemovel' => '+351912345678',
         'data_nascimento' => '1985-05-10',
@@ -102,7 +102,7 @@ function dadosProprietarioPessoaFisica(array $overrides = []): array
         'endereco_numero' => '10',
         'endereco_cidade' => 'Lisboa',
         'endereco_cep' => '1000-100',
-        'iban' => 'PT50000000000000000000000',
+        'iban' => 'PT50123443211234567890172',
         'fotos_galeria' => [],
     ], $overrides);
 }
@@ -113,14 +113,14 @@ function dadosProprietarioEmpresa(array $overrides = []): array
         'tipo' => 'empresa',
         'nome_empresa' => 'Frota Proprietária Lda',
         'nome_gerente' => 'Maria Ferreira',
-        'nif' => '509123456',
+        'nif' => '509123457',
         'email' => 'geral@frotaproprietaria.test',
         'telemovel' => '+351913456789',
         'endereco_rua' => 'Avenida da República',
         'endereco_numero' => '20',
         'endereco_cidade' => 'Lisboa',
         'endereco_cep' => '1050-100',
-        'iban' => 'PT50000000000000000000001',
+        'iban' => 'PT50123443211234567890172',
         'capital_social' => 50000,
         'certidao_permanente' => 'CERT-123456',
         'certidao_valid_until' => '2030-01-01',
@@ -190,7 +190,7 @@ test('cliente não pode definir tenant user ativo ou status do proprietário', f
         ]);
 
     $this->assertDatabaseMissing('proprietarios', [
-        'nif' => '245123456',
+        'nif' => '245123458',
     ]);
 });
 
@@ -212,7 +212,7 @@ test('proprietário pessoa física incompleto é guardado inativo', function () 
         ->postJson('/api/proprietarios', [
             'tipo' => 'pessoa_fisica',
             'nome_completo' => 'Pessoa Incompleta',
-            'nif' => '245123457',
+            'nif' => '245123466',
         ])
         ->assertCreated();
 
@@ -224,7 +224,7 @@ test('proprietário pessoa física incompleto é guardado inativo', function () 
 
     $this->assertDatabaseHas('proprietarios', [
         'tenant_id' => $tenant->id,
-        'nif' => '245123457',
+        'nif' => '245123466',
         'ativo' => false,
         'status_cadastro' => 'incompleto',
     ]);
@@ -257,7 +257,7 @@ test('proprietário pessoa física completo é criado ativo', function () {
 
     $this->assertDatabaseHas('proprietarios', [
         'tenant_id' => $tenant->id,
-        'nif' => '245123456',
+        'nif' => '245123458',
         'tipo' => 'pessoa_fisica',
         'ativo' => true,
         'status_cadastro' => 'ativo',
@@ -291,7 +291,7 @@ test('proprietário empresa completo é criado ativo', function () {
 
     $this->assertDatabaseHas('proprietarios', [
         'tenant_id' => $tenant->id,
-        'nif' => '509123456',
+        'nif' => '509123457',
         'tipo' => 'empresa',
         'ativo' => true,
     ]);
@@ -310,7 +310,7 @@ test('nif não pode ser repetido dentro do mesmo tenant', function () {
     );
 
     criarProprietarioDireto($tenant, [
-        'nif' => '245123458',
+        'nif' => '245123474',
         'email' => 'primeiro@example.test',
     ]);
 
@@ -320,7 +320,7 @@ test('nif não pode ser repetido dentro do mesmo tenant', function () {
         ->postJson(
             '/api/proprietarios',
             dadosProprietarioPessoaFisica([
-                'nif' => '245123458',
+                'nif' => '245123474',
                 'email' => 'segundo@example.test',
             ])
         )
@@ -329,7 +329,7 @@ test('nif não pode ser repetido dentro do mesmo tenant', function () {
 
     expect(
         Proprietario::where('tenant_id', $tenant->id)
-            ->where('nif', '245123458')
+            ->where('nif', '245123474')
             ->count()
     )->toBe(1);
 });
@@ -346,7 +346,7 @@ test('o mesmo nif pode existir em tenants diferentes', function () {
     );
 
     criarProprietarioDireto($tenantB, [
-        'nif' => '245123459',
+        'nif' => '245123482',
         'email' => 'tenant-b@example.test',
     ]);
 
@@ -362,7 +362,7 @@ test('o mesmo nif pode existir em tenants diferentes', function () {
         ->postJson(
             '/api/proprietarios',
             dadosProprietarioPessoaFisica([
-                'nif' => '245123459',
+                'nif' => '245123482',
                 'email' => 'tenant-a@example.test',
             ])
         )
@@ -370,12 +370,12 @@ test('o mesmo nif pode existir em tenants diferentes', function () {
 
     $this->assertDatabaseHas('proprietarios', [
         'tenant_id' => $tenantA->id,
-        'nif' => '245123459',
+        'nif' => '245123482',
     ]);
 
     $this->assertDatabaseHas('proprietarios', [
         'tenant_id' => $tenantB->id,
-        'nif' => '245123459',
+        'nif' => '245123482',
     ]);
 });
 
@@ -398,13 +398,13 @@ test('listagem retorna apenas proprietários do tenant atual', function () {
 
     criarProprietarioDireto($tenantA, [
         'nome_completo' => 'Proprietário Visível',
-        'nif' => '245123460',
+        'nif' => '245123490',
         'email' => 'visivel@example.test',
     ]);
 
     criarProprietarioDireto($tenantB, [
         'nome_completo' => 'Proprietário Oculto',
-        'nif' => '245123461',
+        'nif' => '245123504',
         'email' => 'oculto@example.test',
     ]);
 
@@ -442,7 +442,7 @@ test('proprietário de outro tenant não pode ser consultado alterado ou apagado
 
     $proprietarioB = criarProprietarioDireto($tenantB, [
         'nome_completo' => 'Proprietário Protegido',
-        'nif' => '245123462',
+        'nif' => '245123512',
         'email' => 'protegido@example.test',
     ]);
 
@@ -481,7 +481,7 @@ test('nível visualizar permite leitura mas bloqueia escrita', function () {
     );
 
     criarProprietarioDireto($tenant, [
-        'nif' => '245123463',
+        'nif' => '245123520',
         'email' => 'existente@example.test',
     ]);
 
@@ -495,7 +495,7 @@ test('nível visualizar permite leitura mas bloqueia escrita', function () {
         ->postJson(
             '/api/proprietarios',
             dadosProprietarioPessoaFisica([
-                'nif' => '245123464',
+                'nif' => '245123539',
             ])
         )
         ->assertForbidden()
@@ -505,7 +505,7 @@ test('nível visualizar permite leitura mas bloqueia escrita', function () {
         );
 
     $this->assertDatabaseMissing('proprietarios', [
-        'nif' => '245123464',
+        'nif' => '245123539',
     ]);
 });
 
@@ -524,7 +524,7 @@ test('proprietário incompleto não pode ser ativado manualmente', function () {
     $proprietario = new Proprietario([
         'tipo' => 'pessoa_fisica',
         'nome_completo' => 'Perfil Incompleto',
-        'nif' => '245123465',
+        'nif' => '245123547',
     ]);
 
     $proprietario->tenant_id = $tenant->id;
@@ -563,7 +563,7 @@ test('proprietário completo pode ser inativado e reativado', function () {
     );
 
     $proprietario = criarProprietarioDireto($tenant, [
-        'nif' => '245123466',
+        'nif' => '245123555',
         'email' => 'status@example.test',
     ]);
 
@@ -618,7 +618,7 @@ test('nível configurar permite atualizar e apagar proprietário do próprio ten
         ->postJson(
             '/api/proprietarios',
             dadosProprietarioPessoaFisica([
-                'nif' => '245123467',
+                'nif' => '245123563',
                 'email' => 'crud@example.test',
             ])
         )
@@ -655,3 +655,290 @@ test('nível configurar permite atualizar e apagar proprietário do próprio ten
         'id' => $id,
     ]);
 });
+
+test(
+    'proprietário normaliza dados portugueses antes de guardar',
+    function () {
+        $tenant = criarTenantProprietario(
+            'Tenant Normalização Proprietário',
+            'tenant-normalizacao-proprietario'
+        );
+
+        $user = criarUsuarioProprietario(
+            'normalizacao.proprietario@frotapro.test',
+            $tenant,
+            'configurar'
+        );
+
+        autenticarUsuarioProprietario(
+            $this,
+            $user
+        );
+
+        $response = $this
+            ->withHeaders(
+                proprietarioSpaHeaders()
+            )
+            ->postJson(
+                '/api/proprietarios',
+                dadosProprietarioPessoaFisica([
+                    'nif' => 'PT 245 123 458',
+
+                    'email' => '  PESSOA@EXAMPLE.TEST  ',
+
+                    'telemovel' => '+351 912 345 678',
+
+                    'endereco_cep' => '1000 100',
+
+                    'iban' => 'PT50 1234 4321 1234 5678 9017 2',
+                ])
+            )
+            ->assertCreated();
+
+        $response
+            ->assertJsonPath(
+                'data.nif',
+                '245123458'
+            )
+            ->assertJsonPath(
+                'data.email',
+                'pessoa@example.test'
+            )
+            ->assertJsonPath(
+                'data.telemovel',
+                '912345678'
+            )
+            ->assertJsonPath(
+                'data.endereco_cep',
+                '1000-100'
+            )
+            ->assertJsonPath(
+                'data.iban',
+                'PT50123443211234567890172'
+            );
+
+        $this->assertDatabaseHas(
+            'proprietarios',
+            [
+                'tenant_id' => $tenant->id,
+
+                'nif' => '245123458',
+
+                'email' => 'pessoa@example.test',
+
+                'telemovel' => '912345678',
+
+                'endereco_cep' => '1000-100',
+
+                'iban' => 'PT50123443211234567890172',
+            ]
+        );
+    }
+);
+
+test(
+    'proprietário rejeita dados portugueses invalidos e nascimento futuro',
+    function () {
+        $tenant = criarTenantProprietario(
+            'Tenant Validação Proprietário',
+            'tenant-validacao-proprietario'
+        );
+
+        $user = criarUsuarioProprietario(
+            'validacao.proprietario@frotapro.test',
+            $tenant,
+            'configurar'
+        );
+
+        autenticarUsuarioProprietario(
+            $this,
+            $user
+        );
+
+        $this
+            ->withHeaders(
+                proprietarioSpaHeaders()
+            )
+            ->postJson(
+                '/api/proprietarios',
+                dadosProprietarioPessoaFisica([
+                    'nif' => '245123459',
+
+                    'telemovel' => '123456780',
+
+                    'endereco_cep' => '0000-000',
+
+                    'iban' => 'PT50123443211234567890173',
+
+                    'data_nascimento' => now()
+                        ->addDay()
+                        ->toDateString(),
+                ])
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'nif',
+                'telemovel',
+                'endereco_cep',
+                'iban',
+                'data_nascimento',
+            ]);
+
+        $this->assertDatabaseMissing(
+            'proprietarios',
+            [
+                'tenant_id' => $tenant->id,
+
+                'nif' => '245123459',
+            ]
+        );
+    }
+);
+
+test(
+    'nif duplicado é detectado depois da normalização',
+    function () {
+        $tenant = criarTenantProprietario(
+            'Tenant NIF Normalizado',
+            'tenant-nif-normalizado-proprietario'
+        );
+
+        criarProprietarioDireto(
+            $tenant,
+            [
+                'nif' => '245123571',
+
+                'email' => 'primeiro.normalizado@example.test',
+            ]
+        );
+
+        $user = criarUsuarioProprietario(
+            'duplicado.normalizado@frotapro.test',
+            $tenant,
+            'configurar'
+        );
+
+        autenticarUsuarioProprietario(
+            $this,
+            $user
+        );
+
+        $this
+            ->withHeaders(
+                proprietarioSpaHeaders()
+            )
+            ->postJson(
+                '/api/proprietarios',
+                dadosProprietarioPessoaFisica([
+                    'nif' => 'PT 245 123 571',
+
+                    'email' => 'segundo.normalizado@example.test',
+                ])
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(
+                'nif'
+            );
+
+        expect(
+            Proprietario::query()
+                ->where(
+                    'tenant_id',
+                    $tenant->id
+                )
+                ->where(
+                    'nif',
+                    '245123571'
+                )
+                ->count()
+        )->toBe(1);
+    }
+);
+
+test(
+    'atualização normaliza dados e mantém o próprio nif',
+    function () {
+        $tenant = criarTenantProprietario(
+            'Tenant Update Normalizado',
+            'tenant-update-normalizado-proprietario'
+        );
+
+        $proprietario =
+            criarProprietarioDireto(
+                $tenant,
+                [
+                    'nif' => '245123580',
+
+                    'email' => 'original@example.test',
+                ]
+            );
+
+        $user = criarUsuarioProprietario(
+            'update.normalizado@frotapro.test',
+            $tenant,
+            'configurar'
+        );
+
+        autenticarUsuarioProprietario(
+            $this,
+            $user
+        );
+
+        $this
+            ->withHeaders(
+                proprietarioSpaHeaders()
+            )
+            ->patchJson(
+                "/api/proprietarios/{$proprietario->id}",
+                [
+                    'nif' => 'PT 245 123 580',
+
+                    'email' => '  ATUALIZADO@EXAMPLE.TEST  ',
+
+                    'telemovel' => '00351 213 456 789',
+
+                    'endereco_cep' => '1999 999',
+
+                    'iban' => 'PT50 1234 4321 1234 5678 9017 2',
+                ]
+            )
+            ->assertOk()
+            ->assertJsonPath(
+                'data.nif',
+                '245123580'
+            )
+            ->assertJsonPath(
+                'data.email',
+                'atualizado@example.test'
+            )
+            ->assertJsonPath(
+                'data.telemovel',
+                '213456789'
+            )
+            ->assertJsonPath(
+                'data.endereco_cep',
+                '1999-999'
+            )
+            ->assertJsonPath(
+                'data.iban',
+                'PT50123443211234567890172'
+            );
+
+        $this->assertDatabaseHas(
+            'proprietarios',
+            [
+                'id' => $proprietario->id,
+
+                'nif' => '245123580',
+
+                'email' => 'atualizado@example.test',
+
+                'telemovel' => '213456789',
+
+                'endereco_cep' => '1999-999',
+
+                'iban' => 'PT50123443211234567890172',
+            ]
+        );
+    }
+);
