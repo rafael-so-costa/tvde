@@ -2,9 +2,12 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Contrato;
 use App\Services\TenantContext;
+use Carbon\Carbon;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class UpdateContratoRequest extends FormRequest
 {
@@ -47,7 +50,8 @@ class UpdateContratoRequest extends FormRequest
                 'uuid',
                 Rule::exists('proprietarios','id')
                     ->where(fn($query)=>$query
-                        ->where('tenant_id',$tenantId)),
+                        ->where('tenant_id',$tenantId)
+                        ->where('ativo',true)),
             ],
 
             'motorista_id'=>[
@@ -56,7 +60,8 @@ class UpdateContratoRequest extends FormRequest
                 'uuid',
                 Rule::exists('motoristas','id')
                     ->where(fn($query)=>$query
-                        ->where('tenant_id',$tenantId)),
+                        ->where('tenant_id',$tenantId)
+                        ->where('ativo',true)),
             ],
 
             'veiculo_id'=>[
@@ -65,7 +70,8 @@ class UpdateContratoRequest extends FormRequest
                 'uuid',
                 Rule::exists('veiculos','id')
                     ->where(fn($query)=>$query
-                        ->where('tenant_id',$tenantId)),
+                        ->where('tenant_id',$tenantId)
+                        ->where('ativo',true)),
             ],
 
             'data_inicio'=>[
@@ -106,5 +112,103 @@ class UpdateContratoRequest extends FormRequest
                 'array',
             ],
         ];
+    }
+    public function messages(): array
+    {
+        return [
+            'data_inicio.date' =>
+                'Informe uma data de início válida.',
+
+            'data_fim.date' =>
+                'Informe uma data de fim válida.',
+        ];
+    }
+
+    public function withValidator(
+        Validator $validator
+    ): void {
+        $validator->after(
+            function (
+                Validator $validator
+            ): void {
+                if (
+                    $validator
+                        ->errors()
+                        ->hasAny([
+                            'data_inicio',
+                            'data_fim',
+                        ])
+                ) {
+                    return;
+                }
+
+                $tenantId =
+                    app(
+                        TenantContext::class
+                    )->requireId();
+
+                $contrato =
+                    Contrato::query()
+                        ->where(
+                            'tenant_id',
+                            $tenantId
+                        )
+                        ->find(
+                            $this->route(
+                                'id'
+                            )
+                        );
+
+                if (! $contrato) {
+                    return;
+                }
+
+                $inicio =
+                    $this->exists(
+                        'data_inicio'
+                    )
+                        ? $this->input(
+                            'data_inicio'
+                        )
+                        : $contrato
+                            ->data_inicio
+                            ?->toDateString();
+
+                $fim =
+                    $this->exists(
+                        'data_fim'
+                    )
+                        ? $this->input(
+                            'data_fim'
+                        )
+                        : $contrato
+                            ->data_fim
+                            ?->toDateString();
+
+                if (
+                    ! $inicio ||
+                    ! $fim
+                ) {
+                    return;
+                }
+
+                if (
+                    Carbon::parse(
+                        $fim
+                    )->lt(
+                        Carbon::parse(
+                            $inicio
+                        )
+                    )
+                ) {
+                    $validator
+                        ->errors()
+                        ->add(
+                            'data_fim',
+                            'A data de fim deve ser igual ou posterior à data de início.'
+                        );
+                }
+            }
+        );
     }
 }

@@ -62,7 +62,8 @@ class StoreContratoRequest extends FormRequest
                 'uuid',
                 Rule::exists('empresas','id')
                     ->where(fn($query)=>$query
-                        ->where('tenant_id',$tenantId)),
+                        ->where('tenant_id',$tenantId)
+                        ->where('ativo',true)),
             ],
 
             'proprietario_id'=>[
@@ -70,7 +71,8 @@ class StoreContratoRequest extends FormRequest
                 'uuid',
                 Rule::exists('proprietarios','id')
                     ->where(fn($query)=>$query
-                        ->where('tenant_id',$tenantId)),
+                        ->where('tenant_id',$tenantId)
+                        ->where('ativo',true)),
             ],
 
             'motorista_id'=>[
@@ -78,7 +80,8 @@ class StoreContratoRequest extends FormRequest
                 'uuid',
                 Rule::exists('motoristas','id')
                     ->where(fn($query)=>$query
-                        ->where('tenant_id',$tenantId)),
+                        ->where('tenant_id',$tenantId)
+                        ->where('ativo',true)),
             ],
 
             'veiculo_id'=>[
@@ -86,7 +89,8 @@ class StoreContratoRequest extends FormRequest
                 'uuid',
                 Rule::exists('veiculos','id')
                     ->where(fn($query)=>$query
-                        ->where('tenant_id',$tenantId)),
+                        ->where('tenant_id',$tenantId)
+                        ->where('ativo',true)),
             ],
 
             'data_inicio'=>[

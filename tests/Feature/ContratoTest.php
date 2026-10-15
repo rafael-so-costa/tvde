@@ -2539,3 +2539,378 @@ test(
         )->toBeFalse();
     }
 );
+
+test(
+    'contrato não aceita data final anterior à inicial na criação',
+    function () {
+        $tenant =
+            contratoTenant(
+                'Tenant Cronologia Create',
+                'tenant-cronologia-create'
+            );
+
+        $user =
+            contratoUsuario(
+                $tenant,
+                'cronologia.create@frotapro.test'
+            );
+
+        contratoLogin(
+            $this,
+            $user
+        );
+
+        $this
+            ->withHeaders(
+                contratoHeaders()
+            )
+            ->postJson(
+                '/api/contratos',
+                [
+                    'tipo' => 'aluguer',
+
+                    'data_inicio' =>
+                        '2026-10-20',
+
+                    'data_fim' =>
+                        '2026-10-19',
+                ]
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(
+                'data_fim'
+            );
+
+        expect(
+            Contrato::count()
+        )->toBe(0);
+    }
+);
+
+test(
+    'atualização não permite data final anterior à data inicial já gravada',
+    function () {
+        $tenant =
+            contratoTenant(
+                'Tenant Cronologia Update',
+                'tenant-cronologia-update'
+            );
+
+        $user =
+            contratoUsuario(
+                $tenant,
+                'cronologia.update@frotapro.test'
+            );
+
+        $contrato =
+            new Contrato([
+                'tipo' => 'aluguer',
+
+                'data_inicio' =>
+                    '2026-10-20',
+            ]);
+
+        $contrato->tenant_id =
+            $tenant->id;
+
+        $contrato->save();
+
+        contratoLogin(
+            $this,
+            $user
+        );
+
+        $this
+            ->withHeaders(
+                contratoHeaders()
+            )
+            ->patchJson(
+                "/api/contratos/{$contrato->id}",
+                [
+                    'data_fim' =>
+                        '2026-10-19',
+                ]
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(
+                'data_fim'
+            );
+
+        expect(
+            $contrato
+                ->fresh()
+                ->data_fim
+        )->toBeNull();
+    }
+);
+
+test(
+    'atualização não permite mover início para depois da data final existente',
+    function () {
+        $tenant =
+            contratoTenant(
+                'Tenant Cronologia Inicio',
+                'tenant-cronologia-inicio'
+            );
+
+        $user =
+            contratoUsuario(
+                $tenant,
+                'cronologia.inicio@frotapro.test'
+            );
+
+        $contrato =
+            new Contrato([
+                'tipo' => 'aluguer',
+
+                'data_inicio' =>
+                    '2026-10-01',
+
+                'data_fim' =>
+                    '2026-10-20',
+            ]);
+
+        $contrato->tenant_id =
+            $tenant->id;
+
+        $contrato->save();
+
+        contratoLogin(
+            $this,
+            $user
+        );
+
+        $this
+            ->withHeaders(
+                contratoHeaders()
+            )
+            ->patchJson(
+                "/api/contratos/{$contrato->id}",
+                [
+                    'data_inicio' =>
+                        '2026-10-21',
+                ]
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(
+                'data_fim'
+            );
+
+        $contrato->refresh();
+
+        expect(
+            $contrato
+                ->data_inicio
+                ->toDateString()
+        )->toBe(
+            '2026-10-01'
+        );
+    }
+);
+
+test(
+    'contrato rejeita entidades inativas',
+    function () {
+        $tenant =
+            contratoTenant(
+                'Tenant Entidades Inativas',
+                'tenant-entidades-inativas'
+            );
+
+        $user =
+            contratoUsuario(
+                $tenant,
+                'entidades.inativas@frotapro.test'
+            );
+
+        $motorista =
+            contratoMotorista(
+                $tenant,
+                'Inativo'
+            );
+
+        $motorista->ativo = false;
+        $motorista->save();
+
+        $proprietario =
+            contratoProprietario(
+                $tenant,
+                'Inativo'
+            );
+
+        $proprietario->ativo = false;
+        $proprietario->save();
+
+        $veiculo =
+            contratoVeiculo(
+                $tenant,
+                'IN-10-AA',
+                300
+            );
+
+        $veiculo->ativo = false;
+        $veiculo->save();
+
+        contratoLogin(
+            $this,
+            $user
+        );
+
+        $this
+            ->withHeaders(
+                contratoHeaders()
+            )
+            ->postJson(
+                '/api/contratos',
+                [
+                    'tipo' => 'aluguer',
+
+                    'motorista_id' =>
+                        $motorista->id,
+
+                    'proprietario_id' =>
+                        $proprietario->id,
+
+                    'veiculo_id' =>
+                        $veiculo->id,
+                ]
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'motorista_id',
+                'proprietario_id',
+                'veiculo_id',
+            ]);
+
+        expect(
+            Contrato::count()
+        )->toBe(0);
+    }
+);
+
+test(
+    'atualização de contrato não aceita motorista inativo',
+    function () {
+        $tenant =
+            contratoTenant(
+                'Tenant Update Motorista Inativo',
+                'tenant-update-motorista-inativo'
+            );
+
+        $user =
+            contratoUsuario(
+                $tenant,
+                'update.motorista.inativo@frotapro.test'
+            );
+
+        $motorista =
+            contratoMotorista(
+                $tenant,
+                'UpdateInativo'
+            );
+
+        $motorista->ativo = false;
+        $motorista->save();
+
+        $contrato =
+            new Contrato([
+                'tipo' => 'aluguer',
+            ]);
+
+        $contrato->tenant_id =
+            $tenant->id;
+
+        $contrato->save();
+
+        contratoLogin(
+            $this,
+            $user
+        );
+
+        $this
+            ->withHeaders(
+                contratoHeaders()
+            )
+            ->patchJson(
+                "/api/contratos/{$contrato->id}",
+                [
+                    'motorista_id' =>
+                        $motorista->id,
+                ]
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(
+                'motorista_id'
+            );
+
+        expect(
+            $contrato
+                ->fresh()
+                ->motorista_id
+        )->toBeNull();
+    }
+);
+
+test(
+    'atualização de contrato não aceita veículo inativo',
+    function () {
+        $tenant =
+            contratoTenant(
+                'Tenant Update Veiculo Inativo',
+                'tenant-update-veiculo-inativo'
+            );
+
+        $user =
+            contratoUsuario(
+                $tenant,
+                'update.veiculo.inativo@frotapro.test'
+            );
+
+        $veiculo =
+            contratoVeiculo(
+                $tenant,
+                'IN-20-BB',
+                320
+            );
+
+        $veiculo->ativo = false;
+        $veiculo->save();
+
+        $contrato =
+            new Contrato([
+                'tipo' => 'aluguer',
+            ]);
+
+        $contrato->tenant_id =
+            $tenant->id;
+
+        $contrato->save();
+
+        contratoLogin(
+            $this,
+            $user
+        );
+
+        $this
+            ->withHeaders(
+                contratoHeaders()
+            )
+            ->patchJson(
+                "/api/contratos/{$contrato->id}",
+                [
+                    'veiculo_id' =>
+                        $veiculo->id,
+                ]
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(
+                'veiculo_id'
+            );
+
+        expect(
+            $contrato
+                ->fresh()
+                ->veiculo_id
+        )->toBeNull();
+    }
+);
