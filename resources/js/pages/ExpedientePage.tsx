@@ -1,3 +1,4 @@
+import { appUrl } from "../lib/runtime";
 import axios from 'axios';
 import {
     AlertCircle,
@@ -556,7 +557,7 @@ export default function ExpedientePage({mode}:Props){
                         </div>
 
                         <a
-                            href={`/registo-expediente-publico?tenant=${tenant.id}`}
+                            href={appUrl(`registo-expediente-publico?tenant=${tenant.id}`)}
                             target="_blank"
                             rel="noreferrer"
                             className="h-10 px-4 rounded-xl bg-indigo-600 text-white text-sm font-semibold flex items-center justify-center gap-2"
@@ -708,7 +709,7 @@ export default function ExpedientePage({mode}:Props){
 
                 <div className="flex gap-3">
                     <a
-                        href={`/registo-expediente-publico?tenant=${tenant.id}`}
+                        href={appUrl(`registo-expediente-publico?tenant=${tenant.id}`)}
                         target="_blank"
                         rel="noreferrer"
                         className="h-11 px-4 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-600 flex items-center gap-2"

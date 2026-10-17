@@ -21,56 +21,8 @@ $initialStep = $legalErrors
 @endphp
 
 <div class="min-h-screen bg-gradient-to-b from-indigo-50 via-white to-white">
-
-    <header class="border-b border-slate-200/80 bg-white/80 backdrop-blur">
-
-        <div class="mx-auto flex h-20 max-w-7xl items-center justify-between px-5 sm:px-6 lg:px-8">
-
-            <a href="{{ route('site.home') }}" class="flex items-center gap-3">
-
-                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 shadow-lg shadow-indigo-600/20">
-
-                    <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M3 17V8.5A2.5 2.5 0 0 1 5.5 6H14v11" />
-                        <path d="M14 10h3.3a2 2 0 0 1 1.7.94L21 14v3h-2" />
-                        <path d="M6 17h8" />
-                        <circle cx="5" cy="18" r="2" />
-                        <circle cx="17" cy="18" r="2" />
-                    </svg>
-
-                </span>
-
-                <span>
-                    <span class="block text-xl font-bold tracking-tight text-slate-950">
-                        Frota<span class="text-indigo-600">PRO</span>
-                    </span>
-
-                    <span class="block text-[9px] font-semibold uppercase tracking-[0.2em] text-slate-400">
-                        Gestão TVDE
-                    </span>
-                </span>
-
-            </a>
-
-
-            <div class="flex items-center gap-4">
-
-                <span class="hidden text-sm text-slate-500 sm:block">
-                    Já tem conta?
-                </span>
-
-                <a href="{{ route('login') }}" class="text-sm font-semibold text-indigo-600 hover:text-indigo-700">
-                    Entrar
-                </a>
-
-            </div>
-
-        </div>
-
-    </header>
-
-
-    <main class="mx-auto max-w-7xl px-5 py-14 sm:px-6 sm:py-20 lg:px-8">
+    @include('site.partials.public-header',['active'=>'register'])
+<main class="mx-auto max-w-7xl px-5 py-14 sm:px-6 sm:py-20 lg:px-8">
 
         <div class="grid gap-14 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
 
@@ -583,6 +535,9 @@ $initialStep = $legalErrors
         </div>
 
     </main>
+
+
+    @include('site.partials.public-footer')
 
 </div>
 

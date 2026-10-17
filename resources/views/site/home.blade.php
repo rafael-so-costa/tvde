@@ -1,150 +1,29 @@
 @extends('site.layouts.site')
 
-@section('title','FrotaPRO — Gestão completa da sua frota TVDE')
+@php
+    $seoOgImage=$seo['og_image_path']??null;
 
-@section('description','Motoristas, veículos, contratos, alugueres, documentação, manutenção e operação da sua frota TVDE numa única plataforma.')
+    if($seoOgImage && !\Illuminate\Support\Str::startsWith($seoOgImage,['http://','https://'])){
+        $seoOgImage=\Illuminate\Support\Facades\Storage::disk('public')->url($seoOgImage);
+    }
+@endphp
+
+@section('title',$seo['titulo'])
+@section('description',$seo['descricao'])
+@section('robots',$seo['robots'])
+@section('canonical',$seo['canonical_url']?:route('site.home'))
+@section('og_title',$seo['og_title'])
+@section('og_description',$seo['og_description'])
+@section('twitter_card',$seo['twitter_card'])
+
+@if($seoOgImage)
+@section('og_image',$seoOgImage)
+@endif
 
 @section('content')
 <div class="min-h-screen bg-white">
 
-    <header class="absolute inset-x-0 top-0 z-50">
-
-        <div class="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
-
-            <div class="flex h-20 items-center justify-between">
-
-                <a href="{{ route('site.home') }}" class="flex items-center gap-3">
-
-                    <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 shadow-lg shadow-indigo-600/20">
-                        <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M3 17V8.5A2.5 2.5 0 0 1 5.5 6H14v11" />
-                            <path d="M14 10h3.3a2 2 0 0 1 1.7.94L21 14v3h-2" />
-                            <path d="M6 17h8" />
-                            <circle cx="5" cy="18" r="2" />
-                            <circle cx="17" cy="18" r="2" />
-                        </svg>
-                    </span>
-
-                    <span>
-                        <span class="block text-xl font-bold tracking-tight text-slate-950">
-                            Frota<span class="text-indigo-600">PRO</span>
-                        </span>
-
-                        <span class="block text-[9px] font-semibold uppercase tracking-[0.2em] text-slate-400">
-                            Gestão TVDE
-                        </span>
-                    </span>
-
-                </a>
-
-
-                <nav class="hidden items-center gap-8 lg:flex">
-
-                    <a href="#funcionalidades" class="text-sm font-medium text-slate-600 transition hover:text-indigo-600">
-                        Funcionalidades
-                    </a>
-
-                    <a href="#como-funciona" class="text-sm font-medium text-slate-600 transition hover:text-indigo-600">
-                        Como funciona
-                    </a>
-
-                    <a href="#integracoes" class="text-sm font-medium text-slate-600 transition hover:text-indigo-600">
-                        Integrações
-                    </a>
-
-                    <a href="{{ route('site.ads.index') }}" class="text-sm font-medium text-slate-600 transition hover:text-indigo-600">
-                        Anúncios
-                    </a>
-
-                    <a href="{{ (config('app.web_base_path') ?: '') . '/registo-expediente-publico' }}" class="text-sm font-medium text-slate-600 transition hover:text-indigo-600">
-                        Registo de expediente
-                    </a>
-
-                    <a href="#faq" class="text-sm font-medium text-slate-600 transition hover:text-indigo-600">
-                        FAQ
-                    </a>
-
-                </nav>
-
-
-                <div class="hidden items-center gap-4 lg:flex">
-
-                    <a href="{{ route('login') }}" class="text-sm font-semibold text-slate-700 transition hover:text-indigo-600">
-                        Entrar
-                    </a>
-
-                    <a href="{{ route('site.register') }}" class="inline-flex h-11 items-center justify-center rounded-xl bg-indigo-600 px-5 text-sm font-semibold text-white shadow-lg shadow-indigo-600/20 transition hover:bg-indigo-700">
-                        Começar agora
-                    </a>
-
-                </div>
-
-
-                <details class="relative lg:hidden">
-
-                    <summary class="flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm">
-
-                        <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current" stroke-width="2" stroke-linecap="round">
-                            <path d="M4 6h16" />
-                            <path d="M4 12h16" />
-                            <path d="M4 18h16" />
-                        </svg>
-
-                    </summary>
-
-
-                    <div class="absolute right-0 mt-3 w-72 overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-2xl shadow-slate-900/10">
-
-                        <nav class="space-y-1">
-
-                            <a href="#funcionalidades" class="block rounded-xl px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
-                                Funcionalidades
-                            </a>
-
-                            <a href="#como-funciona" class="block rounded-xl px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
-                                Como funciona
-                            </a>
-
-                            <a href="#integracoes" class="block rounded-xl px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
-                                Integrações
-                            </a>
-
-                            <a href="{{ route('site.ads.index') }}" class="block rounded-xl px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
-                                Anúncios
-                            </a>
-
-                            <a href="{{ (config('app.web_base_path') ?: '') . '/registo-expediente-publico' }}" class="block rounded-xl px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
-                                Registo de expediente
-                            </a>
-
-                            <a href="#faq" class="block rounded-xl px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
-                                FAQ
-                            </a>
-
-                        </nav>
-
-
-                        <div class="mt-3 border-t border-slate-100 pt-3">
-
-                            <a href="{{ route('login') }}" class="flex h-11 items-center justify-center rounded-xl text-sm font-semibold text-slate-700">
-                                Entrar
-                            </a>
-
-                            <a href="{{ route('site.register') }}" class="mt-2 flex h-11 items-center justify-center rounded-xl bg-indigo-600 text-sm font-semibold text-white">
-                                Começar agora
-                            </a>
-
-                        </div>
-
-                    </div>
-
-                </details>
-
-            </div>
-
-        </div>
-
-    </header>
+    @include('site.partials.public-header',['active'=>'home'])
 
 
     <main>
@@ -1347,7 +1226,7 @@
                         <div class="mt-8 flex flex-col gap-3 sm:flex-row">
 
                             <a
-                                href="{{ (config('app.web_base_path') ?: '') . '/registo-expediente-publico' }}"
+                                href="{{ rtrim(config('app.url'), '/') . '/registo-expediente-publico' }}"
                                 target="_blank"
                                 rel="noreferrer"
                                 class="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-6 font-semibold text-white shadow-lg shadow-indigo-600/20 transition hover:bg-indigo-700">
@@ -1827,135 +1706,7 @@
         </section>
 
 
-        <footer class="bg-slate-950 text-slate-400">
-
-            <div class="mx-auto max-w-7xl px-5 py-16 sm:px-6 lg:px-8">
-
-                <div class="grid gap-12 border-b border-white/10 pb-12 md:grid-cols-2 lg:grid-cols-5">
-
-                    <div class="lg:col-span-2">
-
-                        <a href="{{ route('site.home') }}" class="inline-flex items-center gap-3">
-
-                            <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500">
-                                <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M3 17V8.5A2.5 2.5 0 0 1 5.5 6H14v11" />
-                                    <path d="M14 10h3.3a2 2 0 0 1 1.7.94L21 14v3h-2" />
-                                    <path d="M6 17h8" />
-                                    <circle cx="5" cy="18" r="2" />
-                                    <circle cx="17" cy="18" r="2" />
-                                </svg>
-                            </span>
-
-                            <span class="text-xl font-bold text-white">
-                                Frota<span class="text-indigo-400">PRO</span>
-                            </span>
-
-                        </a>
-
-                        <p class="mt-5 max-w-sm text-sm leading-7 text-slate-400">
-                            Plataforma de gestão criada para centralizar a operação de
-                            empresas e frotas TVDE.
-                        </p>
-
-                    </div>
-
-
-                    <div>
-
-                        <h3 class="text-sm font-semibold text-white">
-                            Produto
-                        </h3>
-
-                        <div class="mt-5 space-y-3 text-sm">
-
-                            <a href="#funcionalidades" class="block hover:text-white">
-                                Funcionalidades
-                            </a>
-
-                            <a href="#integracoes" class="block hover:text-white">
-                                Integrações
-                            </a>
-
-                            <a href="#como-funciona" class="block hover:text-white">
-                                Como funciona
-                            </a>
-                            <a href="{{ route('site.ads.index') }}" class="block hover:text-white">
-                                Anúncios
-                            </a>
-
-                        </div>
-
-                    </div>
-
-
-                    <div>
-
-                        <h3 class="text-sm font-semibold text-white">
-                            FrotaPRO
-                        </h3>
-
-                        <div class="mt-5 space-y-3 text-sm">
-
-                            <a href="{{ route('site.register') }}" class="block hover:text-white">
-                                Criar conta
-                            </a>
-
-                            <a href="{{ route('login') }}" class="block hover:text-white">
-                                Entrar
-                            </a>
-
-                            <a href="#faq" class="block hover:text-white">
-                                FAQ
-                            </a>
-
-                        </div>
-
-                    </div>
-
-
-                    <div>
-
-                        <h3 class="text-sm font-semibold text-white">
-                            Legal
-                        </h3>
-
-                        <div class="mt-5 space-y-3 text-sm">
-
-                            <a href="{{ route('site.legal.terms') }}" class="block hover:text-white">
-                                Termos de utilização
-                            </a>
-
-                            <a href="{{ route('site.legal.privacy') }}" class="block hover:text-white">
-                                Política de privacidade
-                            </a>
-
-                            <a href="{{ route('site.legal.cookies') }}" class="block hover:text-white">
-                                Cookies
-                            </a>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-
-                <div class="flex flex-col gap-4 pt-8 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-
-                    <p>
-                        &copy; {{ date('Y') }} FrotaPRO. Todos os direitos reservados.
-                    </p>
-
-                    <p>
-                        Plataforma de gestão TVDE.
-                    </p>
-
-                </div>
-
-            </div>
-
-        </footer>
+        @include('site.partials.public-footer')
 
     </main>
 

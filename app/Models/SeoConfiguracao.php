@@ -21,6 +21,8 @@ class SeoConfiguracao extends Model
         'og_title',
         'og_description',
         'og_image_path',
+        'favicon_path',
+        'social_image_path',
         'twitter_card',
         'schema_type',
         'configuracao',
@@ -28,11 +30,16 @@ class SeoConfiguracao extends Model
 
     protected function casts(): array
     {
-        return ['configuracao'=>'array'];
+        return [
+            'configuracao'=>'array',
+        ];
     }
 
     public function atualizadoPor(): BelongsTo
     {
-        return $this->belongsTo(User::class,'updated_by');
+        return $this->belongsTo(
+            User::class,
+            'updated_by'
+        );
     }
 }

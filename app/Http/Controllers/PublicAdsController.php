@@ -6,6 +6,8 @@ use App\Models\AdCategory;
 use App\Models\AdCreative;
 use App\Services\Ads\AdDeliveryService;
 use App\Services\Ads\AdTrackingService;
+use App\Services\SeoService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
@@ -17,30 +19,36 @@ class PublicAdsController extends Controller
 
     public function __construct(
         private readonly AdDeliveryService $delivery,
-        private readonly AdTrackingService $tracking
+        private readonly AdTrackingService $tracking,
+        private readonly SeoService $seo
     ) {}
 
     public function index(
         Request $request
     ): Response {
-        $category =
-            trim(
-                (string) $request->query(
-                    'categoria',
-                    ''
-                )
-            );
+        $category=trim(
+            (string)$request->query(
+                'categoria',
+                ''
+            )
+        );
 
-        $query =
+        $search=trim(
+            (string)$request->query(
+                'q',
+                ''
+            )
+        );
+
+        $baseQuery=
             $this
                 ->delivery
                 ->publicCatalogQuery()
                 ->with([
                     'category:id,slug,name',
-
                     'advertiser:id,name,type',
 
-                    'creatives' => fn ($query) => $query
+                    'creatives'=>fn($query)=>$query
                         ->where(
                             'active',
                             true
@@ -54,7 +62,7 @@ class PublicAdsController extends Controller
                 ])
                 ->whereHas(
                     'category',
-                    fn ($query) => $query
+                    fn($query)=>$query
                         ->where(
                             'active',
                             true
@@ -65,12 +73,169 @@ class PublicAdsController extends Controller
                         )
                 );
 
-        if (
-            $category !== ''
-        ) {
+        /*
+         * Categorias são calculadas exclusivamente a partir
+         * de campanhas atualmente elegíveis no marketplace.
+         */
+        $categoryCounts=
+            (clone $baseQuery)
+                ->selectRaw(
+                    'category_id, COUNT(*) as total'
+                )
+                ->groupBy(
+                    'category_id'
+                )
+                ->pluck(
+                    'total',
+                    'category_id'
+                );
+
+        $categories=
+            AdCategory::query()
+                ->where(
+                    'active',
+                    true
+                )
+                ->where(
+                    'allowed_on_public',
+                    true
+                )
+                ->whereIn(
+                    'id',
+                    $categoryCounts
+                        ->keys()
+                        ->all()
+                )
+                ->orderBy(
+                    'sort_order'
+                )
+                ->orderBy(
+                    'name'
+                )
+                ->get([
+                    'id',
+                    'slug',
+                    'name',
+                    'description',
+                ]);
+
+        $categories->each(
+            function($category) use($categoryCounts): void {
+                $category->setAttribute(
+                    'campaigns_count',
+                    (int)(
+                        $categoryCounts[
+                            $category->id
+                        ]??0
+                    )
+                );
+            }
+        );
+
+        /*
+         * Índice leve usado para autocomplete.
+         */
+        $suggestionCampaigns=
+            (clone $baseQuery)
+                ->orderByDesc(
+                    'priority'
+                )
+                ->limit(
+                    150
+                )
+                ->get();
+
+        $suggestions=collect();
+
+        foreach($categories as $item){
+            $suggestions->push([
+                'type'=>'category',
+                'label'=>$item->name,
+                'meta'=>'Categoria',
+                'url'=>route(
+                    'site.ads.index',
+                    [
+                        'categoria'=>$item->slug,
+                    ]
+                ),
+            ]);
+        }
+
+        foreach($suggestionCampaigns as $campaign){
+            if(filled($campaign->title)){
+                $suggestions->push([
+                    'type'=>'ad',
+                    'label'=>$campaign->title,
+                    'meta'=>$campaign->advertiser?->name
+                        ?: 'Anúncio',
+                    'url'=>route(
+                        'site.ads.index',
+                        [
+                            'q'=>$campaign->title,
+                        ]
+                    ),
+                ]);
+            }
+
+            if(filled($campaign->advertiser?->name)){
+                $suggestions->push([
+                    'type'=>'advertiser',
+                    'label'=>$campaign->advertiser->name,
+                    'meta'=>'Anunciante',
+                    'url'=>route(
+                        'site.ads.index',
+                        [
+                            'q'=>$campaign->advertiser->name,
+                        ]
+                    ),
+                ]);
+            }
+
+            $creative=
+                $campaign
+                    ->creatives
+                    ->first();
+
+            if(
+                $creative &&
+                filled($creative->headline) &&
+                $creative->headline!==$campaign->title
+            ){
+                $suggestions->push([
+                    'type'=>'ad',
+                    'label'=>$creative->headline,
+                    'meta'=>$campaign->advertiser?->name
+                        ?: 'Anúncio',
+                    'url'=>route(
+                        'site.ads.index',
+                        [
+                            'q'=>$creative->headline,
+                        ]
+                    ),
+                ]);
+            }
+        }
+
+        $suggestions=
+            $suggestions
+                ->unique(
+                    fn(array $item)=>
+                        mb_strtolower(
+                            $item['type'].'|'.$item['label']
+                        )
+                )
+                ->values()
+                ->take(
+                    150
+                );
+
+        $query=
+            clone $baseQuery;
+
+        if($category!==''){
             $query->whereHas(
                 'category',
-                fn ($query) => $query
+                fn($query)=>$query
                     ->where(
                         'slug',
                         $category
@@ -78,7 +243,73 @@ class PublicAdsController extends Controller
             );
         }
 
-        $campaigns =
+        if($search!==''){
+            $like='%'.$search.'%';
+
+            $query->where(
+                function(Builder $query) use($like): void {
+                    $query
+                        ->where(
+                            'title',
+                            'like',
+                            $like
+                        )
+                        ->orWhere(
+                            'name',
+                            'like',
+                            $like
+                        )
+                        ->orWhere(
+                            'description',
+                            'like',
+                            $like
+                        )
+                        ->orWhereHas(
+                            'advertiser',
+                            fn($query)=>$query
+                                ->where(
+                                    'name',
+                                    'like',
+                                    $like
+                                )
+                        )
+                        ->orWhereHas(
+                            'category',
+                            fn($query)=>$query
+                                ->where(
+                                    'name',
+                                    'like',
+                                    $like
+                                )
+                        )
+                        ->orWhereHas(
+                            'creatives',
+                            fn($query)=>$query
+                                ->where(
+                                    'active',
+                                    true
+                                )
+                                ->where(
+                                    function($query) use($like): void {
+                                        $query
+                                            ->where(
+                                                'headline',
+                                                'like',
+                                                $like
+                                            )
+                                            ->orWhere(
+                                                'body',
+                                                'like',
+                                                $like
+                                            );
+                                    }
+                                )
+                        );
+                }
+            );
+        }
+
+        $campaigns=
             $query
                 ->orderByDesc(
                     'priority'
@@ -94,26 +325,23 @@ class PublicAdsController extends Controller
                 )
                 ->withQueryString();
 
-        $visitorId =
-            trim(
-                (string) $request->cookie(
-                    self::VISITOR_COOKIE
-                )
-            );
+        $visitorId=trim(
+            (string)$request->cookie(
+                self::VISITOR_COOKIE
+            )
+        );
 
-        $newVisitor =
-            ! Str::isUuid(
+        $newVisitor=
+            !Str::isUuid(
                 $visitorId
             );
 
-        if (
-            $newVisitor
-        ) {
-            $visitorId =
-                (string) Str::uuid();
+        if($newVisitor){
+            $visitorId=
+                (string)Str::uuid();
         }
 
-        $viewerKey =
+        $viewerKey=
             $this
                 ->tracking
                 ->anonymousViewerKey(
@@ -124,92 +352,61 @@ class PublicAdsController extends Controller
             $campaigns
                 ->getCollection()
                 ->map(
-                    function (
-                        $campaign
-                    ) use (
-                        $viewerKey
-                    ): ?array {
+                    function($campaign) use($viewerKey): ?array {
                         /** @var AdCreative|null $creative */
-                        $creative =
+                        $creative=
                             $campaign
                                 ->creatives
                                 ->first();
 
-                        if (
-                            ! $creative
-                        ) {
+                        if(!$creative){
                             return null;
                         }
 
-                        $deliveryToken =
+                        $deliveryToken=
                             $this
                                 ->tracking
                                 ->recordServed(
-                                    campaign:
-                                        $campaign,
-
-                                    creative:
-                                        $creative,
-
-                                    surface:
-                                        AdDeliveryService::SURFACE_PUBLIC,
-
-                                    viewerKey:
-                                        $viewerKey,
-
-                                    userId:
-                                        null,
-
-                                    tenantId:
-                                        null
+                                    campaign:$campaign,
+                                    creative:$creative,
+                                    surface:AdDeliveryService::SURFACE_PUBLIC,
+                                    viewerKey:$viewerKey,
+                                    userId:null,
+                                    tenantId:null
                                 );
 
                         return [
-                            'campaign_id' =>
-                                $campaign->id,
+                            'campaign_id'=>$campaign->id,
+                            'creative_id'=>$creative->id,
+                            'delivery_token'=>$deliveryToken,
 
-                            'creative_id' =>
-                                $creative->id,
-
-                            'delivery_token' =>
-                                $deliveryToken,
-
-                            'title' =>
-                                $creative->headline
+                            'title'=>$creative->headline
                                 ?: $campaign->title,
 
-                            'description' =>
-                                $creative->body
+                            'description'=>$creative->body
                                 ?: $campaign->description,
 
-                            'advertiser' =>
-                                $campaign
-                                    ->advertiser
+                            'advertiser'=>$campaign
+                                ->advertiser
+                                ->name,
+
+                            'source'=>$campaign->source,
+
+                            'category'=>[
+                                'slug'=>$campaign
+                                    ->category
+                                    ->slug,
+
+                                'name'=>$campaign
+                                    ->category
                                     ->name,
-
-                            'source' =>
-                                $campaign->source,
-
-                            'category' => [
-                                'slug' =>
-                                    $campaign
-                                        ->category
-                                        ->slug,
-
-                                'name' =>
-                                    $campaign
-                                        ->category
-                                        ->name,
                             ],
 
-                            'type' =>
-                                $creative->type,
+                            'type'=>$creative->type,
 
-                            'media_type' =>
-                                $creative->media_type,
+                            'media_type'=>$creative->media_type,
 
-                            'image_url' =>
-                                $creative->image_path
+                            'image_url'=>$creative->image_path
                                 ? Storage::disk(
                                     'public'
                                 )->url(
@@ -217,8 +414,7 @@ class PublicAdsController extends Controller
                                 )
                                 : null,
 
-                            'mobile_image_url' =>
-                                $creative->mobile_image_path
+                            'mobile_image_url'=>$creative->mobile_image_path
                                 ? Storage::disk(
                                     'public'
                                 )->url(
@@ -226,8 +422,7 @@ class PublicAdsController extends Controller
                                 )
                                 : null,
 
-                            'video_url' =>
-                                $creative->video_path
+                            'video_url'=>$creative->video_path
                                 ? Storage::disk(
                                     'public'
                                 )->url(
@@ -235,25 +430,20 @@ class PublicAdsController extends Controller
                                 )
                                 : $creative->video_url,
 
-                            'alt_text' =>
-                                $creative->alt_text,
+                            'alt_text'=>$creative->alt_text,
 
-                            'cta_label' =>
-                                $creative->cta_label,
+                            'cta_label'=>$creative->cta_label,
 
-                            'destination_type' =>
-                                $creative
-                                    ->destination_type,
+                            'destination_type'=>$creative
+                                ->destination_type,
 
-                            'click_url' =>
-                                $creative
-                                    ->destination_type !==
-                                AdCreative::DESTINATION_NONE
+                            'click_url'=>$creative
+                                ->destination_type!==
+                                    AdCreative::DESTINATION_NONE
                                 ? route(
                                     'ads.click',
                                     [
-                                        'token' =>
-                                            $deliveryToken,
+                                        'token'=>$deliveryToken,
                                     ]
                                 )
                                 : null,
@@ -264,45 +454,22 @@ class PublicAdsController extends Controller
                 ->values()
         );
 
-        $categories =
-            AdCategory::query()
-                ->where(
-                    'active',
-                    true
-                )
-                ->where(
-                    'allowed_on_public',
-                    true
-                )
-                ->orderBy(
-                    'sort_order'
-                )
-                ->orderBy(
-                    'name'
-                )
-                ->get([
-                    'slug',
-                    'name',
-                ]);
-
-        $response =
+        $response=
             response()->view(
                 'site.ads.index',
                 [
-                    'campaigns' =>
-                        $campaigns,
-
-                    'categories' =>
-                        $categories,
-
-                    'selectedCategory' =>
-                        $category,
+                    'campaigns'=>$campaigns,
+                    'categories'=>$categories,
+                    'selectedCategory'=>$category,
+                    'search'=>$search,
+                    'suggestions'=>$suggestions,
+                    'seo'=>$this->seo->resolve(
+                        'anuncios'
+                    ),
                 ]
             );
 
-        if (
-            $newVisitor
-        ) {
+        if($newVisitor){
             $response->withCookie(
                 cookie(
                     self::VISITOR_COOKIE,

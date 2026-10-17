@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+<title id="title">FrotaPRO</title>
+
+<defs>
+    <linearGradient id="brand" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#4f46e5"/>
+        <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+</defs>
+
+<rect width="512" height="512" rx="128" fill="url(#brand)"/>
+
+<g transform="translate(92 125)"
+   fill="none"
+   stroke="#ffffff"
+   stroke-width="28"
+   stroke-linecap="round"
+   stroke-linejoin="round">
+
+    <path d="M18 204V92C18 56 44 30 80 30H208V204"/>
+
+    <path d="M208 94H265C291 94 308 108 322 132L352 173V204H321"/>
+
+    <path d="M67 204H208"/>
+
+    <circle cx="58" cy="224" r="39"/>
+
+    <circle cx="283" cy="224" r="39"/>
+
+</g>
+</svg>

@@ -20,6 +20,10 @@ class AdDeliveryService
 
     public const SURFACE_PUBLIC = 'public';
 
+    public const SURFACE_BLOG_SIDEBAR = 'blog_sidebar';
+
+    public const SURFACE_BLOG_FOOTER = 'blog_footer';
+
     public function __construct(
         private readonly AdTrackingService $tracking
     ) {}
@@ -31,7 +35,15 @@ class AdDeliveryService
         ?string $userId = null
     ): ?array {
         if (
-            $surface === self::SURFACE_PUBLIC &&
+            in_array(
+                $surface,
+                [
+                    self::SURFACE_PUBLIC,
+                    self::SURFACE_BLOG_SIDEBAR,
+                    self::SURFACE_BLOG_FOOTER,
+                ],
+                true
+            ) &&
             ! $this->publicMarketplaceEnabled()
         ) {
             return null;
@@ -56,7 +68,9 @@ class AdDeliveryService
                 $tenantId
             ),
 
-            self::SURFACE_PUBLIC => $this->publicEligibility(
+            self::SURFACE_PUBLIC,
+            self::SURFACE_BLOG_SIDEBAR,
+            self::SURFACE_BLOG_FOOTER => $this->publicEligibility(
                 $query
             ),
 
@@ -569,7 +583,12 @@ class AdDeliveryService
                  */
                 'click_url' => $creative->destination_type !==
                     AdCreative::DESTINATION_NONE
-                    ? "/api/ads/c/{$deliveryToken}"
+                    ? route(
+                        'ads.click',
+                        [
+                            'token'=>$deliveryToken,
+                        ]
+                    )
                     : null,
 
                 'image_url' => $creative->image_path
@@ -611,7 +630,9 @@ class AdDeliveryService
 
             self::SURFACE_OWNER => 'owner_portal',
 
-            self::SURFACE_PUBLIC => 'public_marketplace',
+            self::SURFACE_PUBLIC,
+            self::SURFACE_BLOG_SIDEBAR,
+            self::SURFACE_BLOG_FOOTER => 'public_marketplace',
 
             default => '__invalid__',
         };

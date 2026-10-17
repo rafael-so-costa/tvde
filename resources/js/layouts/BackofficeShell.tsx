@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import {
     Activity,
     BellRing,
+    BarChart3,
     BookOpenText,
     Building2,
     CreditCard,
@@ -17,7 +18,9 @@ import {
     Megaphone,
     Menu,
     MessageSquareText,
+    Newspaper,
     Rows3,
+    Search,
     ShieldCheck,
     Tag,
     Truck,
@@ -133,6 +136,11 @@ export default function BackofficeShell() {
                         Dashboard
                     </NavLink>
 
+                    <NavLink to="/backoffice/analytics" className={navClass}>
+                        <BarChart3 className="h-5 w-5 shrink-0" />
+                        Analytics
+                    </NavLink>
+
                     <NavLink to="/backoffice/clientes" className={navClass}>
                         <UsersRound className="h-5 w-5 shrink-0" />
                         Clientes
@@ -193,6 +201,30 @@ export default function BackofficeShell() {
                     <NavLink to="/backoffice/ads" className={navClass}>
                         <Megaphone className="h-5 w-5 shrink-0" />
                         FrotaPro Ads
+                    </NavLink>
+                </div>
+
+                <div className="px-1 pb-3 pt-7">
+                    <div className="px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">
+                        Site público
+                    </div>
+                </div>
+
+                <div className="space-y-1">
+                    <NavLink
+                        to="/backoffice/conteudo"
+                        className={navClass}
+                    >
+                        <Newspaper className="h-5 w-5 shrink-0" />
+                        Blog e Conteúdo
+                    </NavLink>
+
+                    <NavLink
+                        to="/backoffice/seo"
+                        className={navClass}
+                    >
+                        <Search className="h-5 w-5 shrink-0" />
+                        SEO
                     </NavLink>
                 </div>
 

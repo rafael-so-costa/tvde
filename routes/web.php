@@ -4,9 +4,18 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BlogController;
 use App\Http\Controllers\PublicAdsController;
 use App\Http\Controllers\SaasRegistrationController;
+use App\Services\SeoService;
 use Illuminate\Support\Facades\Route;
 
-Route::view('/', 'site.home')->name('site.home');
+Route::get(
+    '/',
+    fn (SeoService $seoService) => view(
+        'site.home',
+        [
+            'seo' => $seoService->resolve('home'),
+        ]
+    )
+)->name('site.home');
 Route::view('/termos', 'site.legal.terms')
     ->name('site.legal.terms');
 

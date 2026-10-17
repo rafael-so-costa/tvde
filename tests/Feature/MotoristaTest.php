@@ -792,3 +792,526 @@ test('foto privada conta como preenchida antes do primeiro save', function () {
         $motorista->ativo
     )->toBeTrue();
 });
+
+test(
+    'motorista normaliza dados portugueses no cadastro',
+    function () {
+        $tenant =
+            criarTenantMotorista(
+                'Tenant Normalização Motorista',
+                'tenant-normalizacao-motorista'
+            );
+
+        $user =
+            criarUsuarioMotorista(
+                'normalizacao.motorista@frotapro.test',
+                $tenant,
+                'configurar'
+            );
+
+        autenticarUsuarioMotorista(
+            $this,
+            $user
+        );
+
+        $response =
+            $this
+                ->withHeaders(
+                    motoristaSpaHeaders()
+                )
+                ->postJson(
+                    '/api/motoristas',
+                    [
+                        'nome_completo' =>
+                            'Motorista Normalizado',
+
+                        'nif' =>
+                            'PT 245 716 297',
+
+                        'email' =>
+                            ' MOTORISTA.NORMALIZADO@EXAMPLE.TEST ',
+
+                        'telemovel' =>
+                            '+351 912 345 678',
+
+                        'endereco_cep' =>
+                            '1000 001',
+
+                        'iban' =>
+                            'PT50 1234 4321 1234 5678 9017 2',
+
+                        'bolt_email' =>
+                            ' BOLT.MOTORISTA@EXAMPLE.TEST ',
+
+                        'bolt_telemovel' =>
+                            '+351 911 111 111',
+
+                        'uber_email' =>
+                            ' UBER.MOTORISTA@EXAMPLE.TEST ',
+
+                        'uber_telemovel' =>
+                            '00351 922 222 222',
+
+                        'contato_urgencia_nome' =>
+                            'Contacto Teste',
+
+                        'contato_urgencia_telemovel' =>
+                            '+351 933 333 333',
+                    ]
+                )
+                ->assertCreated()
+                ->assertJsonPath(
+                    'data.nif',
+                    '245716297'
+                )
+                ->assertJsonPath(
+                    'data.email',
+                    'motorista.normalizado@example.test'
+                )
+                ->assertJsonPath(
+                    'data.telemovel',
+                    '912345678'
+                )
+                ->assertJsonPath(
+                    'data.endereco_cep',
+                    '1000-001'
+                )
+                ->assertJsonPath(
+                    'data.iban',
+                    'PT50123443211234567890172'
+                )
+                ->assertJsonPath(
+                    'data.bolt_email',
+                    'bolt.motorista@example.test'
+                )
+                ->assertJsonPath(
+                    'data.bolt_telemovel',
+                    '911111111'
+                )
+                ->assertJsonPath(
+                    'data.uber_email',
+                    'uber.motorista@example.test'
+                )
+                ->assertJsonPath(
+                    'data.uber_telemovel',
+                    '922222222'
+                )
+                ->assertJsonPath(
+                    'data.contato_urgencia_telemovel',
+                    '933333333'
+                );
+
+        $id =
+            $response->json(
+                'data.id'
+            );
+
+        $this->assertDatabaseHas(
+            'motoristas',
+            [
+                'id' => $id,
+
+                'tenant_id' =>
+                    $tenant->id,
+
+                'nif' =>
+                    '245716297',
+
+                'email' =>
+                    'motorista.normalizado@example.test',
+
+                'telemovel' =>
+                    '912345678',
+
+                'endereco_cep' =>
+                    '1000-001',
+
+                'iban' =>
+                    'PT50123443211234567890172',
+
+                'bolt_email' =>
+                    'bolt.motorista@example.test',
+
+                'bolt_telemovel' =>
+                    '911111111',
+
+                'uber_email' =>
+                    'uber.motorista@example.test',
+
+                'uber_telemovel' =>
+                    '922222222',
+
+                'contato_urgencia_telemovel' =>
+                    '933333333',
+            ]
+        );
+    }
+);
+
+test(
+    'motorista rejeita dados portugueses inválidos no cadastro',
+    function () {
+        $tenant =
+            criarTenantMotorista(
+                'Tenant Validação Motorista',
+                'tenant-validacao-motorista'
+            );
+
+        $user =
+            criarUsuarioMotorista(
+                'validacao.motorista@frotapro.test',
+                $tenant,
+                'configurar'
+            );
+
+        autenticarUsuarioMotorista(
+            $this,
+            $user
+        );
+
+        $this
+            ->withHeaders(
+                motoristaSpaHeaders()
+            )
+            ->postJson(
+                '/api/motoristas',
+                [
+                    'nome_completo' =>
+                        'Motorista Inválido',
+
+                    'nif' =>
+                        '245716298',
+
+                    'email' =>
+                        'email-invalido',
+
+                    'telemovel' =>
+                        '+34 612 345 678',
+
+                    'endereco_cep' =>
+                        '0000-000',
+
+                    'iban' =>
+                        'PT50123443211234567890173',
+
+                    'bolt_email' =>
+                        'bolt-invalido',
+
+                    'bolt_telemovel' =>
+                        '123456789',
+
+                    'uber_email' =>
+                        'uber-invalido',
+
+                    'uber_telemovel' =>
+                        '91234567',
+
+                    'contato_urgencia_nome' =>
+                        'Contacto Inválido',
+
+                    'contato_urgencia_telemovel' =>
+                        '+34 699 999 999',
+                ]
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'nif',
+                'email',
+                'telemovel',
+                'endereco_cep',
+                'iban',
+                'bolt_email',
+                'bolt_telemovel',
+                'uber_email',
+                'uber_telemovel',
+                'contato_urgencia_telemovel',
+            ]);
+
+        expect(
+            Motorista::query()
+                ->where(
+                    'tenant_id',
+                    $tenant->id
+                )
+                ->count()
+        )->toBe(0);
+    }
+);
+
+test(
+    'motorista normaliza dados portugueses na atualização',
+    function () {
+        $tenant =
+            criarTenantMotorista(
+                'Tenant Update Normalização Motorista',
+                'tenant-update-normalizacao-motorista'
+            );
+
+        $user =
+            criarUsuarioMotorista(
+                'update.normalizacao.motorista@frotapro.test',
+                $tenant,
+                'configurar'
+            );
+
+        $motorista =
+            criarMotoristaDireto(
+                $tenant,
+                [
+                    'email' =>
+                        'antes.update@example.test',
+                ]
+            );
+
+        autenticarUsuarioMotorista(
+            $this,
+            $user
+        );
+
+        $this
+            ->withHeaders(
+                motoristaSpaHeaders()
+            )
+            ->patchJson(
+                "/api/motoristas/{$motorista->id}",
+                [
+                    'nif' =>
+                        'PT 501 234 560',
+
+                    'email' =>
+                        ' MOTORISTA.UPDATE@EXAMPLE.TEST ',
+
+                    'telemovel' =>
+                        '00351 934 567 890',
+
+                    'endereco_cep' =>
+                        '1200 321',
+
+                    'iban' =>
+                        'PT50 1234 4321 1234 5678 9017 2',
+
+                    'bolt_email' =>
+                        ' BOLT.UPDATE@EXAMPLE.TEST ',
+
+                    'bolt_telemovel' =>
+                        '+351 935 111 111',
+
+                    'uber_email' =>
+                        ' UBER.UPDATE@EXAMPLE.TEST ',
+
+                    'uber_telemovel' =>
+                        '+351 936 222 222',
+
+                    'contato_urgencia_telemovel' =>
+                        '+351 937 333 333',
+                ]
+            )
+            ->assertOk()
+            ->assertJsonPath(
+                'data.nif',
+                '501234560'
+            )
+            ->assertJsonPath(
+                'data.email',
+                'motorista.update@example.test'
+            )
+            ->assertJsonPath(
+                'data.telemovel',
+                '934567890'
+            )
+            ->assertJsonPath(
+                'data.endereco_cep',
+                '1200-321'
+            )
+            ->assertJsonPath(
+                'data.iban',
+                'PT50123443211234567890172'
+            )
+            ->assertJsonPath(
+                'data.bolt_email',
+                'bolt.update@example.test'
+            )
+            ->assertJsonPath(
+                'data.bolt_telemovel',
+                '935111111'
+            )
+            ->assertJsonPath(
+                'data.uber_email',
+                'uber.update@example.test'
+            )
+            ->assertJsonPath(
+                'data.uber_telemovel',
+                '936222222'
+            )
+            ->assertJsonPath(
+                'data.contato_urgencia_telemovel',
+                '937333333'
+            );
+
+        $this->assertDatabaseHas(
+            'motoristas',
+            [
+                'id' =>
+                    $motorista->id,
+
+                'nif' =>
+                    '501234560',
+
+                'email' =>
+                    'motorista.update@example.test',
+
+                'telemovel' =>
+                    '934567890',
+
+                'endereco_cep' =>
+                    '1200-321',
+
+                'iban' =>
+                    'PT50123443211234567890172',
+
+                'bolt_email' =>
+                    'bolt.update@example.test',
+
+                'bolt_telemovel' =>
+                    '935111111',
+
+                'uber_email' =>
+                    'uber.update@example.test',
+
+                'uber_telemovel' =>
+                    '936222222',
+
+                'contato_urgencia_telemovel' =>
+                    '937333333',
+            ]
+        );
+    }
+);
+
+test(
+    'motorista rejeita dados portugueses inválidos na atualização sem alterar registo',
+    function () {
+        $tenant =
+            criarTenantMotorista(
+                'Tenant Update Inválido Motorista',
+                'tenant-update-invalido-motorista'
+            );
+
+        $user =
+            criarUsuarioMotorista(
+                'update.invalido.motorista@frotapro.test',
+                $tenant,
+                'configurar'
+            );
+
+        $motorista =
+            criarMotoristaDireto(
+                $tenant,
+                [
+                    'nif' =>
+                        '245123458',
+
+                    'email' =>
+                        'original@example.test',
+
+                    'telemovel' =>
+                        '912345678',
+
+                    'endereco_cep' =>
+                        '1000-100',
+
+                    'iban' =>
+                        'PT50000201231234567890154',
+                ]
+            );
+
+        autenticarUsuarioMotorista(
+            $this,
+            $user
+        );
+
+        $this
+            ->withHeaders(
+                motoristaSpaHeaders()
+            )
+            ->patchJson(
+                "/api/motoristas/{$motorista->id}",
+                [
+                    'nif' =>
+                        '245716298',
+
+                    'email' =>
+                        'email-invalido',
+
+                    'telemovel' =>
+                        '123456789',
+
+                    'endereco_cep' =>
+                        '0000-000',
+
+                    'iban' =>
+                        'PT50123443211234567890173',
+
+                    'bolt_email' =>
+                        'bolt-invalido',
+
+                    'bolt_telemovel' =>
+                        '123456789',
+
+                    'uber_email' =>
+                        'uber-invalido',
+
+                    'uber_telemovel' =>
+                        '123456789',
+
+                    'contato_urgencia_telemovel' =>
+                        '123456789',
+                ]
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'nif',
+                'email',
+                'telemovel',
+                'endereco_cep',
+                'iban',
+                'bolt_email',
+                'bolt_telemovel',
+                'uber_email',
+                'uber_telemovel',
+                'contato_urgencia_telemovel',
+            ]);
+
+        $motorista->refresh();
+
+        expect(
+            $motorista->nif
+        )->toBe(
+            '245123458'
+        );
+
+        expect(
+            $motorista->email
+        )->toBe(
+            'original@example.test'
+        );
+
+        expect(
+            $motorista->telemovel
+        )->toBe(
+            '912345678'
+        );
+
+        expect(
+            $motorista->endereco_cep
+        )->toBe(
+            '1000-100'
+        );
+
+        expect(
+            $motorista->iban
+        )->toBe(
+            'PT50000201231234567890154'
+        );
+    }
+);

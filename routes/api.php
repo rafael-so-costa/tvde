@@ -17,6 +17,10 @@ use App\Http\Controllers\BackofficeCrmPipelineController;
 use App\Http\Controllers\BackofficeCrmProspectController;
 use App\Http\Controllers\BackofficeCrmTagController;
 use App\Http\Controllers\BackofficeDashboardController;
+use App\Http\Controllers\Backoffice\BackofficeConteudoController;
+use App\Http\Controllers\Backoffice\BackofficeConteudoBuscaController;
+use App\Http\Controllers\Backoffice\BackofficeConteudoDashboardController;
+use App\Http\Controllers\Backoffice\BackofficeSeoController;
 use App\Http\Controllers\BackofficeHelpCategoryController;
 use App\Http\Controllers\BackofficeHelpCenterController;
 use App\Http\Controllers\BackofficeHelpdeskController;
@@ -117,6 +121,85 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('super_admin')
         ->prefix('backoffice')
         ->group(function () {
+
+            Route::get(
+                '/seo',
+                [BackofficeSeoController::class, 'index']
+            );
+
+            Route::patch(
+                '/seo/{chave}',
+                [BackofficeSeoController::class, 'update']
+            )->where(
+                'chave',
+                '[A-Za-z0-9_-]+'
+            );
+
+
+            Route::post(
+                '/seo/assets',
+                [BackofficeSeoController::class, 'uploadAsset']
+            );
+                        Route::get(
+                '/conteudo/dashboard',
+                BackofficeConteudoDashboardController::class
+            );
+Route::get(
+                '/conteudo/resumo',
+                [BackofficeConteudoController::class, 'summary']
+            );
+            Route::post(
+                '/conteudo/imagem',
+                [BackofficeConteudoController::class, 'uploadImage']
+            );
+            Route::get(
+                '/conteudo/buscas',
+                [BackofficeConteudoBuscaController::class, 'index']
+            );
+
+            Route::post(
+                '/conteudo/buscas/{id}/pauta',
+                [BackofficeConteudoBuscaController::class, 'createDraft']
+            )->whereUuid('id');
+Route::get(
+                '/conteudo/categorias',
+                [BackofficeConteudoController::class, 'categories']
+            );
+
+            Route::post(
+                '/conteudo/categorias',
+                [BackofficeConteudoController::class, 'storeCategory']
+            );
+
+            Route::get(
+                '/conteudo',
+                [BackofficeConteudoController::class, 'index']
+            );
+
+            Route::post(
+                '/conteudo',
+                [BackofficeConteudoController::class, 'store']
+            );
+
+            Route::get(
+                '/conteudo/{id}',
+                [BackofficeConteudoController::class, 'show']
+            )->whereUuid('id');
+
+            Route::patch(
+                '/conteudo/{id}',
+                [BackofficeConteudoController::class, 'update']
+            )->whereUuid('id');
+
+            Route::post(
+                '/conteudo/{id}/publicar',
+                [BackofficeConteudoController::class, 'publish']
+            )->whereUuid('id');
+
+            Route::post(
+                '/conteudo/{id}/arquivar',
+                [BackofficeConteudoController::class, 'archive']
+            )->whereUuid('id');
 
             Route::prefix(
                 'notificacoes'

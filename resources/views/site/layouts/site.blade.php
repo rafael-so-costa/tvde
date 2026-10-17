@@ -1,28 +1,64 @@
+@inject('globalSeoService','App\Services\SeoService')
 <!DOCTYPE html>
 <html lang="pt-PT" class="scroll-smooth">
 <head>
+    @php
+        $globalSeoSettings=$globalSeoService->resolve('global');
+
+        $globalFaviconUrl=$globalSeoSettings['favicon_url']??null;
+
+        $globalSocialImageUrl=
+            $globalSeoSettings['social_image_url']??null;
+    @endphp
+    @php
+        $pageTitle=trim($__env->yieldContent('title')) ?: 'FrotaPRO — Gestão completa para operadores TVDE';
+        $pageDescription=trim($__env->yieldContent('description')) ?: 'Centralize motoristas, veículos, contratos, alugueres, documentação, manutenção e operação da sua frota TVDE no FrotaPRO.';
+        $pageCanonical=trim($__env->yieldContent('canonical')) ?: url()->current();
+        $pageRobots=trim($__env->yieldContent('robots')) ?: 'index,follow';
+        $ogTitle=trim($__env->yieldContent('og_title')) ?: $pageTitle;
+        $ogDescription=trim($__env->yieldContent('og_description')) ?: $pageDescription;
+        $ogType=trim($__env->yieldContent('og_type')) ?: 'website';
+        $twitterCard=trim($__env->yieldContent('twitter_card')) ?: 'summary_large_image';
+        $pageOgImage=
+            trim($__env->yieldContent('og_image'))
+            ?: $globalSocialImageUrl;
+    @endphp
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="app-base-path" content="{{ config('app.web_base_path','') }}">
 
-    <title>@yield('title','FrotaPRO — Gestão completa para operadores TVDE')</title>
+    <title>{{ $pageTitle }}</title>
 
-    <meta name="description" content="@yield('description','Centralize motoristas, veículos, contratos, alugueres, documentação, manutenção e operação da sua frota TVDE no FrotaPRO.')">
-    <meta name="robots" content="@yield('robots','index,follow')">
+    <meta name="description" content="{{ $pageDescription }}">
+    <meta name="robots" content="{{ $pageRobots }}">
 
-    <link rel="canonical" href="@yield('canonical',url()->current())">
+    <link rel="canonical" href="{{ $pageCanonical }}">
 
-    <meta property="og:type" content="website">
-    <meta property="og:title" content="@yield('title','FrotaPRO — Gestão completa para operadores TVDE')">
-    <meta property="og:description" content="@yield('description','Uma plataforma para gerir toda a operação da sua frota TVDE.')">
-    <meta property="og:url" content="{{ url()->current() }}">
+    <meta property="og:type" content="{{ $ogType }}">
+    <meta property="og:title" content="{{ $ogTitle }}">
+    <meta property="og:description" content="{{ $ogDescription }}">
+    <meta property="og:url" content="{{ $pageCanonical }}">
 
-    @hasSection('og_image')
-        <meta property="og:image" content="@yield('og_image')">
+    @if($pageOgImage)
+        <meta property="og:image" content="{{ $pageOgImage }}">
     @endif
 
-    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:card" content="{{ $twitterCard }}">
+
+    @if($globalFaviconUrl)
+        <link
+            rel="icon"
+            href="{{ $globalFaviconUrl }}"
+            data-frotapro-global-favicon>
+    @endif
+    <meta name="twitter:title" content="{{ $ogTitle }}">
+    <meta name="twitter:description" content="{{ $ogDescription }}">
+
+    @if($pageOgImage)
+        <meta name="twitter:image" content="{{ $pageOgImage }}">
+    @endif
 
     @vite([
         'resources/css/app.css',

@@ -5,7 +5,7 @@
 
 @section('content')
 <div class="min-h-screen bg-slate-50">
-@include('site.legal._header')
+@include('site.partials.public-header',['active'=>'legal'])
 
 <main class="mx-auto max-w-4xl px-5 py-14 sm:px-6 lg:px-8">
     <p class="text-sm font-semibold uppercase tracking-[0.18em] text-indigo-600">Proteção de dados</p>
@@ -131,6 +131,6 @@
     </div>
 </main>
 
-@include('site.legal._footer')
+@include('site.partials.public-footer')
 </div>
 @endsection

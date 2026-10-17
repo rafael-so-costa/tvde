@@ -55,6 +55,18 @@ const BackofficeBillingOrdersPage = lazy(
 const BackofficeDashboardPage = lazy(
     () => import("./pages/BackofficeDashboardPage"),
 );
+const BackofficeAnalyticsPage = lazy(
+    () => import("./pages/BackofficeAnalyticsPage"),
+);
+const BackofficeSeoPage = lazy(
+    () => import("./pages/BackofficeSeoPage"),
+);
+const BackofficeConteudoPage = lazy(
+    () => import("./pages/BackofficeConteudoPage"),
+);
+const BackofficeConteudoEditPage = lazy(
+    () => import("./pages/BackofficeConteudoEditPage"),
+);
 const BackofficeNifEnrichmentBatchPage = lazy(
     () => import("./pages/BackofficeNifEnrichmentBatchPage"),
 );
@@ -282,6 +294,11 @@ export default function App() {
                         <Route index element={<BackofficeDashboardPage />} />
 
                         <Route
+                            path="analytics"
+                            element={<BackofficeAnalyticsPage />}
+                        />
+
+                        <Route
                             path="clientes"
                             element={<BackofficeClientsPage />}
                         />
@@ -323,6 +340,26 @@ export default function App() {
                         <Route
                             path="faturacao/pedidos"
                             element={<BackofficeBillingOrdersPage />}
+                        />
+
+                        <Route
+                            path="seo"
+                            element={<BackofficeSeoPage />}
+                        />
+
+                        <Route
+                            path="conteudo"
+                            element={<BackofficeConteudoPage />}
+                        />
+
+                        <Route
+                            path="conteudo/novo"
+                            element={<BackofficeConteudoEditPage />}
+                        />
+
+                        <Route
+                            path="conteudo/:id"
+                            element={<BackofficeConteudoEditPage />}
                         />
 
                         <Route path="ads" element={<BackofficeAdsRouterPage />}>

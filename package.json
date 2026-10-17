@@ -23,6 +23,13 @@
     },
     "dependencies": {
         "@tanstack/react-query": "^5.83.0",
+        "@tiptap/extension-image": "^3.32.0",
+        "@tiptap/extension-link": "^3.32.0",
+        "@tiptap/extension-placeholder": "^3.32.0",
+        "@tiptap/extension-text-align": "^3.32.0",
+        "@tiptap/extension-underline": "^3.32.0",
+        "@tiptap/react": "^3.32.0",
+        "@tiptap/starter-kit": "^3.32.0",
         "axios": "^1.20.0",
         "lucide-react": "^0.462.0",
         "pdfjs-dist": "^6.3.289",

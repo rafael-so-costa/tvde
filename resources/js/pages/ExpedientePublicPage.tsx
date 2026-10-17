@@ -11,6 +11,8 @@ import {
 import {FormEvent,useEffect,useState} from 'react';
 import {useSearchParams} from 'react-router-dom';
 import api from '../lib/api';
+import PublicSiteFooter from '../components/public/PublicSiteFooter';
+import PublicSiteHeader from '../components/public/PublicSiteHeader';
 import type {RegistoExpediente} from '../types/expediente';
 
 const NIF_KEY='frotapro_expediente_nif';
@@ -92,7 +94,10 @@ export default function ExpedientePublicPage(){
     }
 
     return (
-        <main className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
+        <div className="flex min-h-screen flex-col bg-slate-950">
+            <PublicSiteHeader active="expediente"/>
+
+            <main className="flex flex-1 items-center justify-center p-4 py-12">
             <div className="w-full max-w-md">
                 <div className="text-center mb-6">
                     <div className="w-14 h-14 mx-auto rounded-2xl bg-indigo-500 flex items-center justify-center shadow-xl shadow-indigo-950">
@@ -207,6 +212,9 @@ export default function ExpedientePublicPage(){
                     Os registos são associados à empresa e ao motorista identificado pelo NIF.
                 </p>
             </div>
-        </main>
+            </main>
+
+            <PublicSiteFooter/>
+        </div>
     );
 }

@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="280" viewBox="0 0 1200 280" role="img" aria-labelledby="title desc">
+<title id="title">FrotaPRO</title>
+<desc id="desc">FrotaPRO - Gestão TVDE - versão para fundo escuro</desc>
+
+<defs>
+    <linearGradient id="brand" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#6366f1"/>
+        <stop offset="100%" stop-color="#818cf8"/>
+    </linearGradient>
+</defs>
+
+<g transform="translate(30 30)">
+    <rect width="220" height="220" rx="58" fill="url(#brand)"/>
+
+    <g transform="translate(39 47)" fill="none" stroke="#ffffff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8 107V45C8 29 20 17 36 17H97V107"/>
+        <path d="M97 48H124C136 48 143 54 150 65L166 89V107H151"/>
+        <path d="M31 107H97"/>
+        <circle cx="27" cy="116" r="18"/>
+        <circle cx="132" cy="116" r="18"/>
+    </g>
+</g>
+
+<g transform="translate(290 64)">
+    <text x="0" y="92"
+          font-family="Inter,Arial,Helvetica,sans-serif"
+          font-size="92"
+          font-weight="700"
+          letter-spacing="-4"
+          fill="#ffffff">Frota</text>
+
+    <text x="224" y="92"
+          font-family="Inter,Arial,Helvetica,sans-serif"
+          font-size="92"
+          font-weight="700"
+          letter-spacing="-4"
+          fill="#818cf8">PRO</text>
+
+    <text x="4" y="146"
+          font-family="Inter,Arial,Helvetica,sans-serif"
+          font-size="25"
+          font-weight="600"
+          letter-spacing="7"
+          fill="#94a3b8">GESTÃO TVDE</text>
+</g>
+</svg>
