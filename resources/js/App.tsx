@@ -178,6 +178,10 @@ const RegistosCriminaisPage = lazy(
 const RemoteSignaturePage = lazy(
     () => import("./pages/RemoteSignaturePage"),
 );
+
+const ChecklistRemoteSignaturePage = lazy(
+    () => import("./pages/ChecklistRemoteSignaturePage"),
+);
 const SinistrosPage = lazy(
     () => import("./pages/SinistrosPage"),
 );
@@ -250,6 +254,11 @@ export default function App() {
             <Route
                 path="/assinaturas/remotas/:token"
                 element={<RemoteSignaturePage />}
+            />
+
+            <Route
+                path="/assinaturas/checklists/:token"
+                element={<ChecklistRemoteSignaturePage />}
             />
 
             <Route

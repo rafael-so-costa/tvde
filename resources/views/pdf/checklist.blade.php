@@ -218,6 +218,14 @@ body{font-family:"DejaVu Sans",sans-serif;color:#1e293b;font-size:9.5pt;line-hei
 
             <div class="signature-line">
                 Empresa / Gestor
+                @if(data_get($checklist->metadados_seguranca,'assinaturas.empresa.nome'))
+                    <br>
+                    <strong>
+                        {{ data_get($checklist->metadados_seguranca,'assinaturas.empresa.nome') }}
+                    </strong>
+                @endif
+                <br>
+                Assinatura presencial
             </div>
         </div>
     @endif
@@ -228,6 +236,14 @@ body{font-family:"DejaVu Sans",sans-serif;color:#1e293b;font-size:9.5pt;line-hei
 
             <div class="signature-line">
                 Motorista
+                @if(data_get($checklist->metadados_seguranca,'assinaturas.motorista.nome'))
+                    <br>
+                    <strong>
+                        {{ data_get($checklist->metadados_seguranca,'assinaturas.motorista.nome') }}
+                    </strong>
+                @endif
+                <br>
+                Assinatura presencial
             </div>
         </div>
     @endif

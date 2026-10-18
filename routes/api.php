@@ -1250,3 +1250,5 @@ require __DIR__.'/modelos_documento_saas.php';
 require __DIR__.'/checklist_process_presets.php';
 
 require __DIR__.'/productivity.php';
+
+require __DIR__.'/checklist_signatures.php';

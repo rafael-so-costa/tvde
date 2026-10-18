@@ -15,33 +15,53 @@ class FinalizeChecklistRecordRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'assinatura_empresa' =>
+            'assinatura_empresa'=>
                 $this->signatureRules(),
 
-            'assinatura_motorista' =>
+            'assinatura_motorista'=>
                 $this->signatureRules(),
 
-            'assinatura_empresa_path' => [
+            'signatario_empresa_nome'=>[
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'signatario_motorista_nome'=>[
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'assinatura_empresa_path'=>[
                 'prohibited',
             ],
 
-            'assinatura_motorista_path' => [
+            'assinatura_motorista_path'=>[
                 'prohibited',
             ],
 
-            'tenant_id' => [
+            'tenant_id'=>[
                 'prohibited',
             ],
 
-            'estado' => [
+            'estado'=>[
                 'prohibited',
             ],
 
-            'finalizado_em' => [
+            'finalizado_em'=>[
                 'prohibited',
             ],
 
-            'realizado_por' => [
+            'realizado_por'=>[
+                'prohibited',
+            ],
+
+            'pdf_url'=>[
+                'prohibited',
+            ],
+
+            'hash_documento'=>[
                 'prohibited',
             ],
         ];
@@ -53,24 +73,25 @@ class FinalizeChecklistRecordRequest extends FormRequest
             'required',
             'string',
             'max:1500000',
-            function (
+
+            function(
                 string $attribute,
                 mixed $value,
                 Closure $fail
-            ): void {
-                if (!is_string($value)) {
+            ):void{
+                if(!is_string($value)){
                     return;
                 }
 
-                $prefix =
+                $prefix=
                     'data:image/png;base64,';
 
-                if (
+                if(
                     !str_starts_with(
                         $value,
                         $prefix
                     )
-                ) {
+                ){
                     $fail(
                         'A assinatura deve ser uma imagem PNG válida.'
                     );
@@ -78,7 +99,7 @@ class FinalizeChecklistRecordRequest extends FormRequest
                     return;
                 }
 
-                $binary =
+                $binary=
                     base64_decode(
                         substr(
                             $value,
@@ -87,13 +108,13 @@ class FinalizeChecklistRecordRequest extends FormRequest
                         true
                     );
 
-                if (
-                    $binary === false ||
+                if(
+                    $binary===false ||
                     !str_starts_with(
                         $binary,
                         "\x89PNG\r\n\x1a\n"
                     )
-                ) {
+                ){
                     $fail(
                         'A assinatura deve ser uma imagem PNG válida.'
                     );
@@ -101,10 +122,10 @@ class FinalizeChecklistRecordRequest extends FormRequest
                     return;
                 }
 
-                if (
-                    strlen($binary) >
-                    1024 * 1024
-                ) {
+                if(
+                    strlen($binary)>
+                    1024*1024
+                ){
                     $fail(
                         'A assinatura não pode exceder 1 MB.'
                     );

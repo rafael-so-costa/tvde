@@ -4,6 +4,7 @@ export type ChecklistTipo =
 
 export type ChecklistEstado =
     | 'rascunho'
+    | 'aguardando_assinaturas'
     | 'finalizado';
 
 export type FuelLevel =
@@ -98,6 +99,9 @@ export interface ChecklistRecord {
 
     assinatura_empresa_path: string | null;
     assinatura_motorista_path: string | null;
+
+    pdf_url: string | null;
+    hash_documento: string | null;
 
     observacoes: string | null;
 

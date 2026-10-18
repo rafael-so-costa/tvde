@@ -1664,3 +1664,223 @@ test(
             );
     }
 );
+test(
+    'assinatura remota de checklist finaliza e gera pdf',
+    function () {
+        Storage::fake('local');
+
+        \Illuminate\Support\Facades\Mail::fake();
+
+        $tenant =
+            checklistTenant(
+                'Tenant Assinatura Remota',
+                'tenant-assinatura-remota'
+            );
+
+        $user =
+            checklistUsuario(
+                $tenant,
+                'assinatura.remota@frotapro.test'
+            );
+
+        $entidades =
+            checklistEntidades(
+                $tenant,
+                'AR'
+            );
+
+        $checklist =
+            checklistCriarDireto(
+                $tenant,
+                $user,
+                $entidades[
+                    'motorista'
+                ],
+                $entidades[
+                    'veiculo'
+                ]
+            );
+
+        checklistLogin(
+            $this,
+            $user
+        );
+
+        $this
+            ->withHeaders(
+                checklistHeaders()
+            )
+            ->postJson(
+                "/api/checklists/{$checklist->id}/assinaturas/preparar",
+                [
+                    'empresa' => [
+                        'modo' =>
+                            'remota',
+
+                        'nome' =>
+                            'Gestor Remoto',
+
+                        'email' =>
+                            'gestor.remoto@example.test',
+
+                        'assinatura' =>
+                            null,
+                    ],
+
+                    'motorista' => [
+                        'modo' =>
+                            'presencial',
+
+                        'nome' =>
+                            $entidades[
+                                'motorista'
+                            ]->nome_completo,
+
+                        'email' =>
+                            null,
+
+                        'assinatura' =>
+                            checklistSignaturePng(),
+                    ],
+                ]
+            )
+            ->assertOk()
+            ->assertJsonPath(
+                'data.estado',
+                'aguardando_assinaturas'
+            );
+
+        $checklist->refresh();
+
+        expect(
+            $checklist->estado
+        )->toBe(
+            'aguardando_assinaturas'
+        );
+
+        $assinatura =
+            \App\Models\ChecklistAssinatura::query()
+                ->where(
+                    'checklist_record_id',
+                    $checklist->id
+                )
+                ->where(
+                    'papel',
+                    'empresa'
+                )
+                ->firstOrFail();
+
+        expect(
+            $assinatura->modo
+        )->toBe(
+            'remota'
+        );
+
+        expect(
+            $assinatura->status
+        )->toBe(
+            'pendente'
+        );
+
+        expect(
+            $assinatura
+                ->token_verificacao
+        )->not->toBeNull();
+
+        expect(
+            $assinatura
+                ->codigo_otp
+        )->not->toBeNull();
+
+        \Illuminate\Support\Facades\Mail::assertSent(
+            \App\Mail\ChecklistRemoteSignatureRequestMail::class,
+            1
+        );
+
+        $token =
+            $assinatura
+                ->token_verificacao;
+
+        $otp =
+            $assinatura
+                ->codigo_otp;
+
+        $this
+            ->getJson(
+                "/api/checklists/assinaturas/remotas/{$token}"
+            )
+            ->assertOk()
+            ->assertJsonPath(
+                'data.assinatura.papel',
+                'empresa'
+            )
+            ->assertJsonPath(
+                'data.checklist.id',
+                $checklist->id
+            );
+
+        $this
+            ->postJson(
+                "/api/checklists/assinaturas/remotas/{$token}/confirmar",
+                [
+                    'codigo_otp' =>
+                        $otp,
+
+                    'aceite' =>
+                        true,
+
+                    'assinatura' =>
+                        checklistSignaturePng(),
+                ]
+            )
+            ->assertOk()
+            ->assertJsonPath(
+                'data.checklist_finalizado',
+                true
+            );
+
+        $checklist->refresh();
+
+        expect(
+            $checklist->estado
+        )->toBe(
+            'finalizado'
+        );
+
+        expect(
+            $checklist->finalizado_em
+        )->not->toBeNull();
+
+        expect(
+            $checklist->pdf_url
+        )->not->toBeNull();
+
+        expect(
+            $checklist->hash_documento
+        )->not->toBeNull();
+
+        Storage::disk('local')
+            ->assertExists(
+                $checklist
+                    ->pdf_url
+            );
+
+        $documento =
+            \App\Models\Documento::query()
+                ->where(
+                    'entidade_tipo',
+                    'checklist'
+                )
+                ->where(
+                    'entidade_id',
+                    $checklist->id
+                )
+                ->firstOrFail();
+
+        expect(
+            $documento->codigo
+        )->toStartWith(
+            'G'
+        );
+    }
+);

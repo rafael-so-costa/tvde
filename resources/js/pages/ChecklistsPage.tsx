@@ -572,6 +572,10 @@ export default function ChecklistsPage() {
                                 Pendentes
                             </option>
 
+                            <option value="aguardando_assinaturas">
+                                Aguardando assinaturas
+                            </option>
+
                             <option value="finalizado">
                                 Finalizados
                             </option>
@@ -773,15 +777,23 @@ export default function ChecklistsPage() {
                                                         record.estado ===
                                                         'finalizado'
                                                             ? 'bg-emerald-50 text-emerald-700'
-                                                            : 'bg-slate-100 text-slate-600',
+                                                            : record.estado ===
+                                                              'aguardando_assinaturas'
+                                                                ? 'bg-blue-50 text-blue-700'
+                                                                : 'bg-slate-100 text-slate-600',
                                                     ].join(
                                                         ' '
                                                     )}
                                                 >
-                                                    {record.estado ===
-                                                    'finalizado'
-                                                        ? 'Finalizado'
-                                                        : 'Rascunho'}
+                                                    {
+                                                        record.estado ===
+                                                        'finalizado'
+                                                            ? 'Finalizado'
+                                                            : record.estado ===
+                                                              'aguardando_assinaturas'
+                                                                ? 'Aguardando assinaturas'
+                                                                : 'Rascunho'
+                                                    }
                                                 </span>
                                             </td>
 
@@ -1120,7 +1132,10 @@ function DetailModal({
                                 record.estado ===
                                 'finalizado'
                                     ? 'Finalizado'
-                                    : 'Rascunho'
+                                    : record.estado ===
+                                      'aguardando_assinaturas'
+                                        ? 'Aguardando assinaturas'
+                                        : 'Rascunho'
                             }
                         />
 

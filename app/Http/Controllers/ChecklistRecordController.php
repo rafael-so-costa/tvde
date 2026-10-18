@@ -43,6 +43,7 @@ class ChecklistRecordController extends Controller
                 'nullable',
                 Rule::in([
                     'rascunho',
+                    'aguardando_assinaturas',
                     'finalizado',
                 ]),
             ],
@@ -110,6 +111,7 @@ class ChecklistRecordController extends Controller
                     'id',
                     'tenant_id',
                     'nome_completo',
+                    'email',
                     'ativo',
                     'status_cadastro',
                 ]);
@@ -456,142 +458,268 @@ class ChecklistRecordController extends Controller
         FinalizeChecklistRecordRequest $request,
         string $id
     ): JsonResponse {
-        $tenantId =
+        $tenantId=
             $this->tenantId();
 
-        $assinaturaEmpresa =
+        $assinaturaEmpresa=
             $this->decodeSignature(
-                $request->string(
-                    'assinatura_empresa'
-                )->toString()
+                $request
+                    ->string(
+                        'assinatura_empresa'
+                    )
+                    ->toString()
             );
 
-        $assinaturaMotorista =
+        $assinaturaMotorista=
             $this->decodeSignature(
-                $request->string(
-                    'assinatura_motorista'
-                )->toString()
+                $request
+                    ->string(
+                        'assinatura_motorista'
+                    )
+                    ->toString()
             );
 
-        $storedPaths = [];
+        $empresaNome=
+            trim(
+                $request
+                    ->string(
+                        'signatario_empresa_nome'
+                    )
+                    ->toString()
+            );
 
-        try {
-            $checklist =
+        if($empresaNome===''){
+            $empresaNome=
+                trim(
+                    (string)
+                    (
+                        $request
+                            ->user()
+                            ?->name
+                        ?: 'Responsável da empresa'
+                    )
+                );
+        }
+
+        $motoristaNome=
+            trim(
+                $request
+                    ->string(
+                        'signatario_motorista_nome'
+                    )
+                    ->toString()
+            );
+
+        $storedPaths=[];
+
+        try{
+            $checklist=
                 DB::transaction(
-                    function () use (
+                    function() use(
                         $id,
                         $tenantId,
                         $assinaturaEmpresa,
                         $assinaturaMotorista,
+                        $empresaNome,
+                        $motoristaNome,
+                        $request,
                         &$storedPaths
-                    ) {
-                        $checklist =
+                    ){
+                        $checklist=
                             ChecklistRecord::query()
-                            ->where(
-                                'tenant_id',
-                                $tenantId
-                            )
-                            ->whereKey($id)
-                            ->lockForUpdate()
-                            ->firstOrFail();
+                                ->where(
+                                    'tenant_id',
+                                    $tenantId
+                                )
+                                ->whereKey(
+                                    $id
+                                )
+                                ->lockForUpdate()
+                                ->firstOrFail();
 
-                        if (
-                            $checklist->estado ===
+                        if(
+                            $checklist->estado===
                             'finalizado'
-                        ) {
+                        ){
                             abort(
                                 422,
                                 'O checklist já está finalizado.'
                             );
                         }
 
-                        $financial =
+                        $motoristaNomeFinal=
+                            $motoristaNome!==''
+                                ?$motoristaNome
+                                :trim(
+                                    (string)
+                                    (
+                                        $checklist
+                                            ->motorista_nome_snapshot
+                                        ?: 'Motorista'
+                                    )
+                                );
+
+                        $financial=
                             $this->applyFinancialRules(
                                 $checklist->tipo,
                                 [
-                                    'itens_faltantes' =>
-                                    $checklist->itens_faltantes ??
+                                    'itens_faltantes'=>
+                                        $checklist
+                                            ->itens_faltantes ??
                                         [],
 
-                                    'novos_danos' =>
-                                    $checklist->novos_danos ??
+                                    'novos_danos'=>
+                                        $checklist
+                                            ->novos_danos ??
                                         [],
                                 ]
                             );
 
-                        $checklist->penalizacao_total =
-                            $financial['penalizacao_total'];
+                        $checklist
+                            ->penalizacao_total=
+                            $financial[
+                                'penalizacao_total'
+                            ];
 
-                        if (
-                            $checklist->tipo ===
+                        if(
+                            $checklist->tipo===
                             'recolha'
-                        ) {
-                            $checklist->itens_faltantes =
-                                $financial['itens_faltantes'];
+                        ){
+                            $checklist
+                                ->itens_faltantes=
+                                $financial[
+                                    'itens_faltantes'
+                                ];
 
-                            $checklist->novos_danos =
-                                $financial['novos_danos'];
+                            $checklist
+                                ->novos_danos=
+                                $financial[
+                                    'novos_danos'
+                                ];
                         }
 
-                        $basePath =
-                            'checklist-signatures/' .
-                            $tenantId .
-                            '/' .
+                        $basePath=
+                            'checklist-signatures/'.
+                            $tenantId.
+                            '/'.
                             $checklist->id;
 
-
-
-
-                        $empresaPath =
-                            $basePath .
+                        $empresaPath=
+                            $basePath.
                             '/empresa.png';
 
-                        $motoristaPath =
-                            $basePath .
+                        $motoristaPath=
+                            $basePath.
                             '/motorista.png';
 
-                        if (
-                            !Storage::disk('local')
-                                ->put(
-                                    $empresaPath,
-                                    $assinaturaEmpresa
-                                )
-                        ) {
+                        if(
+                            !Storage::disk(
+                                'local'
+                            )->put(
+                                $empresaPath,
+                                $assinaturaEmpresa
+                            )
+                        ){
                             throw new RuntimeException(
                                 'Não foi possível guardar a assinatura da empresa.'
                             );
                         }
 
-                        $storedPaths[] =
+                        $storedPaths[]=
                             $empresaPath;
 
-                        if (
-                            !Storage::disk('local')
-                                ->put(
-                                    $motoristaPath,
-                                    $assinaturaMotorista
-                                )
-                        ) {
+                        if(
+                            !Storage::disk(
+                                'local'
+                            )->put(
+                                $motoristaPath,
+                                $assinaturaMotorista
+                            )
+                        ){
                             throw new RuntimeException(
                                 'Não foi possível guardar a assinatura do motorista.'
                             );
                         }
 
-                        $storedPaths[] =
+                        $storedPaths[]=
                             $motoristaPath;
 
                         $checklist
-                            ->assinatura_empresa_path =
+                            ->assinatura_empresa_path=
                             $empresaPath;
 
                         $checklist
-                            ->assinatura_motorista_path =
+                            ->assinatura_motorista_path=
                             $motoristaPath;
 
-                        $checklist->estado =
+                        /*
+                         * Auditoria das assinaturas.
+                         * Aproveitamos o JSON existente para
+                         * evitar uma migration apenas para
+                         * metadados de rastreabilidade.
+                         */
+                        $security=
+                            $checklist
+                                ->metadados_seguranca ??
+                            [];
+
+                        $security[
+                            'assinaturas'
+                        ]=[
+                            'empresa'=>[
+                                'modo'=>
+                                    'presencial',
+
+                                'nome'=>
+                                    $empresaNome,
+
+                                'assinado_em'=>
+                                    now()
+                                        ->toISOString(),
+                            ],
+
+                            'motorista'=>[
+                                'modo'=>
+                                    'presencial',
+
+                                'nome'=>
+                                    $motoristaNomeFinal,
+
+                                'assinado_em'=>
+                                    now()
+                                        ->toISOString(),
+                            ],
+                        ];
+
+                        $security[
+                            'finalizacao'
+                        ]=[
+                            'user_id'=>
+                                $request
+                                    ->user()
+                                    ->id,
+
+                            'ip'=>
+                                $request
+                                    ->ip(),
+
+                            'user_agent'=>
+                                $request
+                                    ->userAgent(),
+
+                            'data'=>
+                                now()
+                                    ->toISOString(),
+                        ];
+
+                        $checklist
+                            ->metadados_seguranca=
+                            $security;
+
+                        $checklist->estado=
                             'finalizado';
 
-                        $checklist->finalizado_em =
+                        $checklist->finalizado_em=
                             now();
 
                         $checklist->save();
@@ -599,48 +727,153 @@ class ChecklistRecordController extends Controller
                         return $checklist;
                     }
                 );
-        } catch (Throwable $exception) {
-            foreach (
+        }
+        catch(Throwable $exception){
+            foreach(
                 $storedPaths as $path
-            ) {
-                Storage::disk('local')
-                    ->delete($path);
+            ){
+                Storage::disk(
+                    'local'
+                )->delete(
+                    $path
+                );
             }
 
             throw $exception;
         }
 
-        try {
-            $pdfResult =
+        /*
+         * O PDF faz parte da finalização.
+         *
+         * Se não existir documento PDF válido,
+         * revertemos a finalização. Dessa forma
+         * nunca teremos um checklist "finalizado"
+         * sem documento correspondente.
+         */
+        try{
+            $pdfResult=
                 $this
                     ->checklistPdfService
                     ->generate(
                         $checklist
                     );
 
-            $checklist =
+            $checklist=
                 $pdfResult[
                     'checklist'
                 ];
-        } catch (Throwable $pdfException) {
+
+            $documento=
+                $pdfResult[
+                    'documento'
+                ];
+
+            $entregaDocumento=
+                $pdfResult[
+                    'entrega_documento'
+                ];
+        }
+        catch(Throwable $pdfException){
             report(
                 $pdfException
             );
 
-            $checklist
-                ->setAttribute(
-                    'pdf_generation_failed',
-                    true
+            DB::transaction(
+                function() use(
+                    $id,
+                    $tenantId
+                ){
+                    $rollback=
+                        ChecklistRecord::query()
+                            ->where(
+                                'tenant_id',
+                                $tenantId
+                            )
+                            ->whereKey(
+                                $id
+                            )
+                            ->lockForUpdate()
+                            ->firstOrFail();
+
+                    $rollback->estado=
+                        'rascunho';
+
+                    $rollback->finalizado_em=
+                        null;
+
+                    $rollback
+                        ->assinatura_empresa_path=
+                        null;
+
+                    $rollback
+                        ->assinatura_motorista_path=
+                        null;
+
+                    $rollback->pdf_url=
+                        null;
+
+                    $rollback->hash_documento=
+                        null;
+
+                    $rollback->save();
+                }
+            );
+
+            foreach(
+                $storedPaths as $path
+            ){
+                Storage::disk(
+                    'local'
+                )->delete(
+                    $path
                 );
+            }
+
+            throw new RuntimeException(
+                'Não foi possível finalizar o checklist porque o PDF documental não pôde ser gerado.',
+                0,
+                $pdfException
+            );
         }
+
         return response()->json([
-            'message' =>
-            'Checklist finalizado com sucesso.',
-            'data' =>
-            $checklist,
+            'message'=>
+                'Checklist finalizado e PDF gerado com sucesso.',
+
+            'data'=>
+                $checklist,
+
+            'documento'=>[
+                'codigo'=>
+                    $documento
+                        ?->codigo,
+
+                'numero_global'=>
+                    $documento
+                        ?->numero_global,
+
+                'codigo_entrega'=>
+                    $entregaDocumento
+                        ?->codigo,
+
+                'pdf_disponivel'=>
+                    filled(
+                        $checklist
+                            ->pdf_url
+                    ),
+
+                'pdf_endpoint'=>
+                    '/api/checklists/'.
+                    $checklist->id.
+                    '/pdf',
+
+                'download_endpoint'=>
+                    '/api/checklists/'.
+                    $checklist->id.
+                    '/pdf/download',
+            ],
         ]);
     }
-
     public function destroy(
         string $id
     ): Response|JsonResponse {

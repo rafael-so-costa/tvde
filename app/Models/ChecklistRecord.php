@@ -116,6 +116,14 @@ class ChecklistRecord extends Model
         );
     }
 
+    public function assinaturas(): HasMany
+    {
+        return $this->hasMany(
+            ChecklistAssinatura::class,
+            'checklist_record_id'
+        );
+    }
+
     public function mediaFiles(): HasMany
     {
         return $this->hasMany(

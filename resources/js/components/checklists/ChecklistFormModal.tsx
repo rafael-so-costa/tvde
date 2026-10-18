@@ -120,10 +120,50 @@ export default function ChecklistFormModal({
 
     const [newDamages, setNewDamages] = useState<DamageRecord[]>([]);
 
-    const [signatureCompany, setSignatureCompany] = useState("");
+    const [
+        signatureCompany,
+        setSignatureCompany,
+    ]=useState("");
 
-    const [signatureDriver, setSignatureDriver] = useState("");
+    const [
+        signatureDriver,
+        setSignatureDriver,
+    ]=useState("");
 
+    const [
+        signatureCompanyMode,
+        setSignatureCompanyMode,
+    ]=useState<
+        "presencial"|
+        "remota"
+    >(
+        "presencial",
+    );
+
+    const [
+        signatureDriverMode,
+        setSignatureDriverMode,
+    ]=useState<
+        "presencial"|
+        "remota"
+    >(
+        "presencial",
+    );
+
+    const [
+        signatureCompanyName,
+        setSignatureCompanyName,
+    ]=useState("");
+
+    const [
+        signatureCompanyEmail,
+        setSignatureCompanyEmail,
+    ]=useState("");
+
+    const [
+        signatureDriverEmail,
+        setSignatureDriverEmail,
+    ]=useState("");
     const [
         workingChecklistId,
         setWorkingChecklistId,
@@ -167,6 +207,35 @@ export default function ChecklistFormModal({
         operationalVeiculos ??
         veiculos;
 
+    const selectedSignatureDriver=
+        availableMotoristas.find(
+            motorista=>
+                motorista.id===
+                form.motorista_id,
+        ) ??
+        null;
+
+    // SYNC_CHECKLIST_DRIVER_EMAIL
+    useEffect(
+        ()=>{
+            if(!open){
+                return;
+            }
+
+            setSignatureDriverEmail(
+                selectedSignatureDriver
+                    ?.email ??
+                "",
+            );
+        },
+        [
+            open,
+            selectedSignatureDriver
+                ?.id,
+            selectedSignatureDriver
+                ?.email,
+        ],
+    );
     const finalizedDeliveries = useMemo(() => {
         return records.filter(
             (item) =>
@@ -194,6 +263,7 @@ export default function ChecklistFormModal({
 
         setError("");
         setSignatureCompany("");
+        setSignatureCompanyName("");
         setSignatureDriver("");
         setWorkingChecklistId(
             record?.id ?? null,
@@ -493,43 +563,105 @@ export default function ChecklistFormModal({
         };
     }
 
-    function validateForm(finalize: boolean): string | null {
-        if (tipo === "recolha" && !form.entrega_vinculada_id) {
+    function validateForm(
+        finalize:boolean,
+    ):string|null{
+        if(
+            tipo==="recolha" &&
+            !form.entrega_vinculada_id
+        ){
             return "Selecione a entrega correspondente.";
         }
 
-        if (!form.motorista_id) {
+        if(!form.motorista_id){
             return "Selecione o motorista.";
         }
 
-        if (!form.veiculo_id) {
+        if(!form.veiculo_id){
             return "Selecione o veículo.";
         }
 
-        if (!form.data_operacao) {
+        if(!form.data_operacao){
             return "Informe a data da operação.";
         }
 
-        if (form.quilometragem === "" || Number(form.quilometragem) < 0) {
+        if(
+            form.quilometragem==="" ||
+            Number(
+                form.quilometragem,
+            )<0
+        ){
             return "Informe uma quilometragem válida.";
         }
 
-        if (
-            tipo === "recolha" &&
-            selectedDelivery?.quilometragem !== null &&
-            selectedDelivery?.quilometragem !== undefined &&
-            Number(form.quilometragem) < Number(selectedDelivery.quilometragem)
-        ) {
+        if(
+            tipo==="recolha" &&
+            selectedDelivery
+                ?.quilometragem!==null &&
+            selectedDelivery
+                ?.quilometragem!==undefined &&
+            Number(
+                form.quilometragem,
+            )<
+            Number(
+                selectedDelivery
+                    .quilometragem,
+            )
+        ){
             return "A quilometragem da recolha não pode ser inferior à quilometragem da entrega.";
         }
 
-        if (finalize && (!signatureCompany || !signatureDriver)) {
-            return "As assinaturas da empresa e do motorista são obrigatórias para finalizar.";
+        if(!finalize){
+            return null;
+        }
+
+        if(
+            !signatureCompanyName
+                .trim()
+        ){
+            return "Informe quem assina pela empresa.";
+        }
+
+        if(
+            signatureCompanyMode===
+                "presencial" &&
+            !signatureCompany
+        ){
+            return "Preencha a assinatura presencial da empresa.";
+        }
+
+        if(
+            signatureCompanyMode===
+                "remota" &&
+            !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+                signatureCompanyEmail
+                    .trim(),
+            )
+        ){
+            return "Informe um e-mail válido para a assinatura remota da empresa.";
+        }
+
+        if(
+            signatureDriverMode===
+                "presencial" &&
+            !signatureDriver
+        ){
+            return "Preencha a assinatura presencial do motorista.";
+        }
+
+        if(
+            signatureDriverMode===
+                "remota" &&
+            !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+                signatureDriverEmail
+                    .trim(),
+            )
+        ){
+            return "O motorista precisa ter um e-mail válido para assinatura remota.";
         }
 
         return null;
     }
-
     async function ensureChecklistForMedia(): Promise<string> {
         const validation=
             validateForm(
@@ -627,68 +759,166 @@ export default function ChecklistFormModal({
             );
         }
     }
-    async function save(finalize: boolean) {
-        const validation = validateForm(finalize);
+    async function save(
+        finalize:boolean,
+    ){
+        const validation=
+            validateForm(
+                finalize,
+            );
 
-        if (validation) {
-            setError(validation);
+        if(validation){
+            setError(
+                validation,
+            );
 
             return;
         }
 
-        setSubmitting(true);
-        setError("");
+        setSubmitting(
+            true,
+        );
 
-        try {
-            let id = record?.id ?? workingChecklistId;
-            let savedRecord: ChecklistRecord | undefined;
+        setError(
+            "",
+        );
 
-            if (id) {
-                const {
-                    tipo: _tipo,
-                    entrega_vinculada_id: _entrega,
+        try{
+            let id=
+                record?.id ??
+                workingChecklistId;
+
+            let savedRecord:
+                ChecklistRecord|
+                undefined;
+
+            if(id){
+                const{
+                    tipo:_tipo,
+                    entrega_vinculada_id:_entrega,
                     ...updatePayload
-                } = payload();
+                }=
+                    payload();
 
-                const response = await api.patch(
-                    `/api/checklists/${id}`,
-                    updatePayload,
-                );
+                const response=
+                    await api.patch(
+                        `/api/checklists/${id}`,
+                        updatePayload,
+                    );
 
-                savedRecord = response.data.data as ChecklistRecord;
-            } else {
-                const response = await api.post("/api/checklists", payload());
-                savedRecord = response.data.data as ChecklistRecord;
-                id = savedRecord.id;
+                savedRecord=
+                    response
+                        .data
+                        .data as ChecklistRecord;
+            }
+            else{
+                const response=
+                    await api.post(
+                        "/api/checklists",
+                        payload(),
+                    );
+
+                savedRecord=
+                    response
+                        .data
+                        .data as ChecklistRecord;
+
+                id=
+                    savedRecord.id;
             }
 
-            if (id) {
+            if(id){
                 setWorkingChecklistId(
                     id,
                 );
             }
 
-            if (finalize && id) {
-                const response = await api.post(
-                    `/api/checklists/${id}/finalizar`,
-                    {
-                        assinatura_empresa: signatureCompany,
-                        assinatura_motorista: signatureDriver,
-                    },
-                );
+            if(
+                finalize &&
+                id
+            ){
+                const driverName=
+                    selectedSignatureDriver
+                        ?.nome_completo ??
+                    record
+                        ?.motorista_nome_snapshot ??
+                    "Motorista";
 
-                savedRecord = response.data.data as ChecklistRecord;
+                const response=
+                    await api.post(
+                        `/api/checklists/${id}/assinaturas/preparar`,
+                        {
+                            empresa:{
+                                modo:
+                                    signatureCompanyMode,
+
+                                nome:
+                                    signatureCompanyName
+                                        .trim(),
+
+                                email:
+                                    signatureCompanyMode===
+                                    "remota"
+                                        ?signatureCompanyEmail
+                                            .trim()
+                                        :null,
+
+                                assinatura:
+                                    signatureCompanyMode===
+                                    "presencial"
+                                        ?signatureCompany
+                                        :null,
+                            },
+
+                            motorista:{
+                                modo:
+                                    signatureDriverMode,
+
+                                nome:
+                                    driverName,
+
+                                email:
+                                    signatureDriverMode===
+                                    "remota"
+                                        ?signatureDriverEmail
+                                            .trim()
+                                        :null,
+
+                                assinatura:
+                                    signatureDriverMode===
+                                    "presencial"
+                                        ?signatureDriver
+                                        :null,
+                            },
+                        },
+                    );
+
+                savedRecord=
+                    response
+                        .data
+                        .data
+                        .checklist as ChecklistRecord;
             }
 
-            await onSuccess(savedRecord);
+            await onSuccess(
+                savedRecord,
+            );
+
             onClose();
-        } catch (exception) {
-            setError(apiError(exception));
-        } finally {
-            setSubmitting(false);
+        }
+        catch(exception){
+            setError(
+                apiError(
+                    exception,
+                ),
+            );
+        }
+        finally{
+            setSubmitting(
+                false,
+            );
         }
     }
-
     async function handleSubmit(event: FormEvent) {
         event.preventDefault();
 
@@ -700,7 +930,11 @@ export default function ChecklistFormModal({
 
     const labelClass = "block text-sm font-medium text-slate-700 mb-1.5";
 
-    const disabled = record?.estado === "finalizado";
+    const disabled=
+        record?.estado===
+            "finalizado" ||
+        record?.estado===
+            "aguardando_assinaturas";
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5">
@@ -1246,27 +1480,232 @@ export default function ChecklistFormModal({
                             />
                         </section>
 
-                        {!disabled && (
+                        {record?.estado==="aguardando_assinaturas"&&(
+                            <section className="rounded-2xl border border-blue-200 bg-blue-50 p-5">
+                                <h3 className="font-semibold text-blue-900">
+                                    Aguardando assinaturas
+                                </h3>
+
+                                <p className="mt-2 text-sm text-blue-700">
+                                    Este checklist já foi enviado para assinatura. O documento será finalizado e o PDF será gerado automaticamente assim que todas as assinaturas obrigatórias forem concluídas.
+                                </p>
+                            </section>
+                        )}
+
+                        {!disabled&&(
                             <section>
                                 <h3 className="font-semibold text-slate-900 mb-2">
                                     Assinaturas
                                 </h3>
 
-                                <p className="text-sm text-slate-500 mb-5">
-                                    Necessárias apenas para finalizar o
-                                    checklist.
+                                <p className="mb-5 text-sm text-slate-500">
+                                    Defina como cada participante irá assinar. Assinaturas remotas recebem link e código OTP por e-mail.
                                 </p>
 
-                                <div className="grid lg:grid-cols-2 gap-6">
-                                    <SignaturePad
-                                        label="Assinatura da empresa"
-                                        onChange={setSignatureCompany}
-                                    />
+                                <div className="grid gap-6 lg:grid-cols-2">
+                                    <div className="rounded-2xl border border-slate-200 bg-white p-5">
+                                        <div>
+                                            <h4 className="font-semibold text-slate-900">
+                                                Empresa / Gestor
+                                            </h4>
 
-                                    <SignaturePad
-                                        label="Assinatura do motorista"
-                                        onChange={setSignatureDriver}
-                                    />
+                                            <p className="mt-1 text-xs text-slate-500">
+                                                Responsável pela entrega ou recolha do veículo.
+                                            </p>
+                                        </div>
+
+                                        <div className="mt-5 space-y-4">
+                                            <label className="block">
+                                                <span className={labelClass}>
+                                                    Forma de assinatura *
+                                                </span>
+
+                                                <select
+                                                    value={
+                                                        signatureCompanyMode
+                                                    }
+                                                    onChange={
+                                                        event=>{
+                                                            setSignatureCompanyMode(
+                                                                event
+                                                                    .target
+                                                                    .value as
+                                                                    "presencial"|
+                                                                    "remota",
+                                                            );
+
+                                                            setSignatureCompany(
+                                                                "",
+                                                            );
+                                                        }
+                                                    }
+                                                    className={inputClass}
+                                                >
+                                                    <option value="presencial">
+                                                        Presencial
+                                                    </option>
+
+                                                    <option value="remota">
+                                                        Remota
+                                                    </option>
+                                                </select>
+                                            </label>
+
+                                            <label className="block">
+                                                <span className={labelClass}>
+                                                    Quem assina pela empresa *
+                                                </span>
+
+                                                <input
+                                                    value={
+                                                        signatureCompanyName
+                                                    }
+                                                    onChange={
+                                                        event=>
+                                                            setSignatureCompanyName(
+                                                                event
+                                                                    .target
+                                                                    .value,
+                                                            )
+                                                    }
+                                                    placeholder="Nome do responsável / gestor"
+                                                    className={inputClass}
+                                                />
+                                            </label>
+
+                                            {signatureCompanyMode==="presencial"?(
+                                                <SignaturePad
+                                                    label="Assinatura da empresa"
+                                                    onChange={
+                                                        setSignatureCompany
+                                                    }
+                                                />
+                                            ):(
+                                                <>
+                                                    <label className="block">
+                                                        <span className={labelClass}>
+                                                            E-mail do signatário *
+                                                        </span>
+
+                                                        <input
+                                                            type="email"
+                                                            value={
+                                                                signatureCompanyEmail
+                                                            }
+                                                            onChange={
+                                                                event=>
+                                                                    setSignatureCompanyEmail(
+                                                                        event
+                                                                            .target
+                                                                            .value,
+                                                                    )
+                                                            }
+                                                            placeholder="responsavel@empresa.pt"
+                                                            className={inputClass}
+                                                        />
+                                                    </label>
+
+                                                    <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-700">
+                                                        Será enviado um link individual e um código OTP de 6 dígitos para este e-mail.
+                                                    </div>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="rounded-2xl border border-slate-200 bg-white p-5">
+                                        <div>
+                                            <h4 className="font-semibold text-slate-900">
+                                                Motorista
+                                            </h4>
+
+                                            <p className="mt-1 text-xs text-slate-500">
+                                                {
+                                                    selectedSignatureDriver
+                                                        ?.nome_completo ??
+                                                    record
+                                                        ?.motorista_nome_snapshot ??
+                                                    "Selecione um motorista"
+                                                }
+                                            </p>
+                                        </div>
+
+                                        <div className="mt-5 space-y-4">
+                                            <label className="block">
+                                                <span className={labelClass}>
+                                                    Forma de assinatura *
+                                                </span>
+
+                                                <select
+                                                    value={
+                                                        signatureDriverMode
+                                                    }
+                                                    onChange={
+                                                        event=>{
+                                                            setSignatureDriverMode(
+                                                                event
+                                                                    .target
+                                                                    .value as
+                                                                    "presencial"|
+                                                                    "remota",
+                                                            );
+
+                                                            setSignatureDriver(
+                                                                "",
+                                                            );
+                                                        }
+                                                    }
+                                                    className={inputClass}
+                                                >
+                                                    <option value="presencial">
+                                                        Presencial
+                                                    </option>
+
+                                                    <option value="remota">
+                                                        Remota
+                                                    </option>
+                                                </select>
+                                            </label>
+
+                                            {signatureDriverMode==="presencial"?(
+                                                <SignaturePad
+                                                    label="Assinatura do motorista"
+                                                    onChange={
+                                                        setSignatureDriver
+                                                    }
+                                                />
+                                            ):(
+                                                <>
+                                                    <label className="block">
+                                                        <span className={labelClass}>
+                                                            E-mail do motorista *
+                                                        </span>
+
+                                                        <input
+                                                            type="email"
+                                                            value={
+                                                                signatureDriverEmail
+                                                            }
+                                                            onChange={
+                                                                event=>
+                                                                    setSignatureDriverEmail(
+                                                                        event
+                                                                            .target
+                                                                            .value,
+                                                                    )
+                                                            }
+                                                            placeholder="motorista@email.pt"
+                                                            className={inputClass}
+                                                        />
+                                                    </label>
+
+                                                    <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-700">
+                                                        O motorista receberá um link individual e um código OTP para concluir a assinatura.
+                                                    </div>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
                             </section>
                         )}
@@ -1303,7 +1742,12 @@ export default function ChecklistFormModal({
                                 {submitting && (
                                     <LoaderCircle className="w-4 h-4 animate-spin" />
                                 )}
-                                Finalizar checklist
+                                {
+                                    signatureCompanyMode==="remota" ||
+                                    signatureDriverMode==="remota"
+                                        ?"Enviar para assinatura"
+                                        :"Finalizar checklist"
+                                }
                             </button>
                         </footer>
                     )}
