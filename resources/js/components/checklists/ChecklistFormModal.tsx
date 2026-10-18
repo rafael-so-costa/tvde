@@ -135,6 +135,38 @@ export default function ChecklistFormModal({
 
     const [submitting, setSubmitting] = useState(false);
 
+    const [
+        operationalMotoristas,
+        setOperationalMotoristas,
+    ]=useState<Motorista[]|null>(
+        null,
+    );
+
+    const [
+        operationalVeiculos,
+        setOperationalVeiculos,
+    ]=useState<Veiculo[]|null>(
+        null,
+    );
+
+    const [
+        optionsLoading,
+        setOptionsLoading,
+    ]=useState(false);
+
+    const [
+        optionsError,
+        setOptionsError,
+    ]=useState("");
+
+    const availableMotoristas=
+        operationalMotoristas ??
+        motoristas;
+
+    const availableVeiculos=
+        operationalVeiculos ??
+        veiculos;
+
     const finalizedDeliveries = useMemo(() => {
         return records.filter(
             (item) =>
@@ -223,6 +255,95 @@ export default function ChecklistFormModal({
         }));
     }, [selectedDelivery, tipo, record]);
 
+    /*
+     * Carregar opções operacionais diretamente no modal.
+     * Isso evita depender do estado/cache da página pai,
+     * sobretudo em dispositivos móveis.
+     */
+    useEffect(()=>{
+        if(!open){
+            return;
+        }
+
+        let active=true;
+
+        setOptionsLoading(
+            true,
+        );
+
+        setOptionsError(
+            "",
+        );
+
+        api.get(
+            "/api/checklists/options",
+        )
+            .then(
+                response=>{
+                    if(!active){
+                        return;
+                    }
+
+                    const data=
+                        response
+                            .data
+                            .data ??
+                        {};
+
+                    setOperationalMotoristas(
+                        Array.isArray(
+                            data.motoristas,
+                        )
+                            ?data.motoristas
+                            :[],
+                    );
+
+                    setOperationalVeiculos(
+                        Array.isArray(
+                            data.veiculos,
+                        )
+                            ?data.veiculos
+                            :[],
+                    );
+                },
+            )
+            .catch(
+                exception=>{
+                    if(!active){
+                        return;
+                    }
+
+                    setOperationalMotoristas(
+                        null,
+                    );
+
+                    setOperationalVeiculos(
+                        null,
+                    );
+
+                    setOptionsError(
+                        apiError(
+                            exception,
+                        ),
+                    );
+                },
+            )
+            .finally(
+                ()=>{
+                    if(active){
+                        setOptionsLoading(
+                            false,
+                        );
+                    }
+                },
+            );
+
+        return()=>{
+            active=false;
+        };
+    },[
+        open,
+    ]);
     const penalty = useMemo(() => {
         if (tipo !== "recolha") {
             return 0;
@@ -684,6 +805,41 @@ export default function ChecklistFormModal({
                             </section>
                         )}
 
+                        {optionsLoading&&(
+                            <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-3 text-sm text-indigo-700 flex items-center gap-2">
+                                <LoaderCircle className="w-4 h-4 animate-spin"/>
+                                A carregar motoristas e veículos...
+                            </div>
+                        )}
+
+                        {optionsError&&(
+                            <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                                <div className="font-semibold">
+                                    Não foi possível carregar motoristas e veículos.
+                                </div>
+
+                                <div className="mt-1">
+                                    {optionsError}
+                                </div>
+                            </div>
+                        )}
+
+                        {!optionsLoading&&
+                            !optionsError&&
+                            availableMotoristas.length===0&&(
+                                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                                    Nenhum motorista foi encontrado para esta organização.
+                                </div>
+                            )}
+
+                        {!optionsLoading&&
+                            !optionsError&&
+                            availableVeiculos.length===0&&(
+                                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                                    Nenhum veículo foi encontrado para esta organização.
+                                </div>
+                            )}
+
                         <section>
                             <h3 className="font-semibold text-slate-900 mb-4">
                                 Operação
@@ -711,7 +867,7 @@ export default function ChecklistFormModal({
                                             Selecionar motorista
                                         </option>
 
-                                        {motoristas.map((motorista) => (
+                                        {availableMotoristas.map((motorista) => (
                                             <option
                                                 key={motorista.id}
                                                 value={motorista.id}
@@ -743,7 +899,7 @@ export default function ChecklistFormModal({
                                             Selecionar veículo
                                         </option>
 
-                                        {veiculos.map((veiculo) => (
+                                        {availableVeiculos.map((veiculo) => (
                                             <option
                                                 key={veiculo.id}
                                                 value={veiculo.id}
