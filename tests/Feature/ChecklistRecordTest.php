@@ -1792,18 +1792,50 @@ test(
                 ->codigo_otp
         )->not->toBeNull();
 
+        $sentMail=null;
+
         \Illuminate\Support\Facades\Mail::assertSent(
             \App\Mail\ChecklistRemoteSignatureRequestMail::class,
-            1
+            function($mail) use(
+                &$sentMail
+            ){
+                $sentMail=$mail;
+
+                return true;
+            }
         );
 
-        $token =
+        expect(
+            $sentMail
+        )->not->toBeNull();
+
+        $token=
             $assinatura
                 ->token_verificacao;
 
-        $otp =
+        $otp=
+            $sentMail->otp;
+
+        expect(
+            $otp
+        )->toMatch(
+            '/^\d{6}$/'
+        );
+
+        expect(
             $assinatura
-                ->codigo_otp;
+                ->codigo_otp
+        )->not->toBe(
+            $otp
+        );
+
+        expect(
+            \Illuminate\Support\Facades\Hash::check(
+                $otp,
+                $assinatura
+                    ->codigo_otp
+            )
+        )->toBeTrue();
 
         $this
             ->getJson(

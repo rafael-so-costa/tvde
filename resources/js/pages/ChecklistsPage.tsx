@@ -24,6 +24,7 @@ import {
     LoaderCircle,
     Pencil,
     Plus,
+    RefreshCw,
     RotateCcw,
     Search,
     Trash2,
@@ -39,6 +40,9 @@ import {
 import {
     useTenant,
 } from '../contexts/TenantContext';
+import {
+    useCurrentPermissions,
+} from '../hooks/useCurrentPermissions';
 import ChecklistFormModal from '../components/checklists/ChecklistFormModal';
 import type {
     ChecklistEstado,
@@ -109,6 +113,16 @@ export default function ChecklistsPage() {
     const {
         tenant,
     } = useTenant();
+
+    const {
+        can,
+    }=useCurrentPermissions();
+
+    const canConfigureChecklist=
+        can(
+            'checklist',
+            'configurar'
+        );
 
     const queryClient =
         useQueryClient();
@@ -309,6 +323,31 @@ export default function ChecklistsPage() {
                 },
         });
 
+    const regeneratePdfMutation=
+        useMutation({
+            mutationFn:
+                async(
+                    record:
+                        ChecklistRecord
+                )=>{
+                    await api.post(
+                        `/api/checklists/${record.id}/pdf/gerar`
+                    );
+
+                    return record;
+                },
+
+            onSuccess:
+                async(
+                    record
+                )=>{
+                    await refresh();
+
+                    await openAuthenticatedFile(
+                        `/api/checklists/${record.id}/pdf`
+                    );
+                },
+        });
     async function refresh() {
         await queryClient.invalidateQueries(
             {
@@ -877,7 +916,49 @@ export default function ChecklistsPage() {
                                                             >
                                                                 <Download className="w-4 h-4" />
                                                             </button>
-                                                        </>
+                                                            {canConfigureChecklist && (
+                                                                <button
+                                                                    type="button"
+                                                                    title="Regenerar PDF"
+                                                                    disabled={
+                                                                        regeneratePdfMutation
+                                                                            .isPending
+                                                                    }
+                                                                    onClick={async()=>{
+                                                                        const confirmed=
+                                                                            window.confirm(
+                                                                                'Regenerar o PDF deste checklist? O documento anterior será substituído e receberá um novo hash SHA-256.'
+                                                                            );
+
+                                                                        if(!confirmed){
+                                                                            return;
+                                                                        }
+
+                                                                        try{
+                                                                            await regeneratePdfMutation
+                                                                                .mutateAsync(
+                                                                                    record
+                                                                                );
+                                                                        }catch(error){
+                                                                            window.alert(
+                                                                                apiError(
+                                                                                    error
+                                                                                )
+                                                                            );
+                                                                        }
+                                                                    }}
+                                                                    className="w-9 h-9 rounded-lg border border-amber-200 text-amber-700 flex items-center justify-center hover:bg-amber-50 disabled:opacity-50"
+                                                                >
+                                                                    <RefreshCw
+                                                                        className={`w-4 h-4 ${
+                                                                            regeneratePdfMutation
+                                                                                .isPending
+                                                                                ?'animate-spin'
+                                                                                :''
+                                                                        }`}
+                                                                    />
+                                                                </button>
+                                                            )}                                                        </>
                                                     )}
 
                                                     {record.estado ===

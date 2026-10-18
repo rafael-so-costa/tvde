@@ -6,6 +6,7 @@ use App\Mail\ChecklistRemoteSignatureRequestMail;
 use App\Models\ChecklistAssinatura;
 use App\Models\ChecklistRecord;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -36,13 +37,16 @@ class ChecklistSignatureService
 
         $stored=[];
 
+        $remoteOtps=[];
+
         try{
             DB::transaction(
                 function() use(
                     $checklist,
                     $data,
                     $userId,
-                    &$stored
+                    &$stored,
+                    &$remoteOtps
                 ){
                     $locked=
                         ChecklistRecord::query()
@@ -181,12 +185,22 @@ class ChecklistSignatureService
                                 (string)
                                 Str::uuid();
 
-                            $assinatura
-                                ->codigo_otp=
+                            $plainOtp=
                                 (string)
                                 random_int(
                                     100000,
                                     999999
+                                );
+
+                            $remoteOtps[
+                                $papel
+                            ]=
+                                $plainOtp;
+
+                            $assinatura
+                                ->codigo_otp=
+                                Hash::make(
+                                    $plainOtp
                                 );
 
                             $assinatura
@@ -253,8 +267,20 @@ class ChecklistSignatureService
                     'remota'
                 ) as $assinatura
         ){
+            $plainOtp=
+                $remoteOtps[
+                    $assinatura->papel
+                ] ?? null;
+
+            if(!$plainOtp){
+                throw new RuntimeException(
+                    'Não foi possível recuperar o OTP para envio.'
+                );
+            }
+
             $this->sendRemote(
-                $assinatura
+                $assinatura,
+                $plainOtp
             );
         }
 
@@ -474,11 +500,13 @@ class ChecklistSignatureService
                         }
 
                         if(
-                            !hash_equals(
+                            !$assinatura
+                                ->codigo_otp ||
+                            !Hash::check(
+                                $otp,
                                 (string)
                                 $assinatura
-                                    ->codigo_otp,
-                                $otp
+                                    ->codigo_otp
                             )
                         ){
                             throw ValidationException::withMessages([
@@ -765,7 +793,8 @@ class ChecklistSignatureService
     }
 
     private function sendRemote(
-        ChecklistAssinatura $assinatura
+        ChecklistAssinatura $assinatura,
+        string $otp
     ):void{
         if(
             !filter_var(
@@ -815,9 +844,7 @@ class ChecklistSignatureService
                     $url,
 
                 otp:
-                    (string)
-                    $assinatura
-                        ->codigo_otp,
+                    $otp,
 
                 expiresAt:
                     $assinatura
