@@ -5,7 +5,9 @@ import {
     useEffect,
     useState,
 } from 'react';
-import api from '../lib/api';
+import api, {
+    AUTH_EXPIRED_EVENT,
+} from '../lib/api';
 import type {
     AuthUser,
     LoginPayload,
@@ -72,6 +74,24 @@ export function AuthProvider({
         await api.post('/logout');
         setUser(null);
     }
+
+    useEffect(()=>{
+        const handleExpiredSession=()=>{
+            setUser(null);
+        };
+
+        window.addEventListener(
+            AUTH_EXPIRED_EVENT,
+            handleExpiredSession,
+        );
+
+        return()=>{
+            window.removeEventListener(
+                AUTH_EXPIRED_EVENT,
+                handleExpiredSession,
+            );
+        };
+    },[]);
 
     useEffect(() => {
         refresh()
