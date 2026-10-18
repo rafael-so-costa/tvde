@@ -110,14 +110,15 @@ class ChecklistPdfService
                     'tipo',
                     'foto'
                 )
-                ->take(
-                    16
-                )
                 ->map(
                     fn($media)=>[
                         'titulo'=>
                             $media->titulo
                             ?: $media
+                                ->arquivo_nome,
+
+                        'arquivo_nome'=>
+                            $media
                                 ->arquivo_nome,
 
                         'parte'=>
@@ -126,6 +127,14 @@ class ChecklistPdfService
                                     ->metadados,
                                 'parte_nome'
                             ),
+
+                        'contexto'=>
+                            $media
+                                ->contexto,
+
+                        'capturado_em'=>
+                            $media
+                                ->capturado_em,
 
                         'hash'=>
                             $media
@@ -166,6 +175,10 @@ class ChecklistPdfService
                             ?: $media
                                 ->arquivo_nome,
 
+                        'arquivo_nome'=>
+                            $media
+                                ->arquivo_nome,
+
                         'hash'=>
                             $media
                                 ->hash_arquivo,
@@ -173,6 +186,18 @@ class ChecklistPdfService
                         'contexto'=>
                             $media
                                 ->contexto,
+
+                        'capturado_em'=>
+                            $media
+                                ->capturado_em,
+
+                        'arquivo_mime'=>
+                            $media
+                                ->arquivo_mime,
+
+                        'arquivo_tamanho'=>
+                            $media
+                                ->arquivo_tamanho,
                     ]
                 )
                 ->values()
