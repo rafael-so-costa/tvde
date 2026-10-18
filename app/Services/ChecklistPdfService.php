@@ -446,7 +446,7 @@ class ChecklistPdfService
                 $checklist->id
             )
             ->with([
-                'tenant:id,nome',
+                'tenant:id,nome,nif,email,telefone',
 
                 'motorista:id,nome_completo,nif,email,telemovel',
 
@@ -458,7 +458,9 @@ class ChecklistPdfService
 
                 'entregaVinculada',
 
-                'contrato:id,tipo',
+                'contrato:id,tipo,empresa_id',
+
+                'contrato.empresa:id,nome_empresa,nif,email,telemovel,nome_gerente,endereco_rua,endereco_numero,endereco_complemento,endereco_cep,endereco_cidade',
             ])
             ->firstOrFail();
     }

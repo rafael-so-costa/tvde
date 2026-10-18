@@ -18,7 +18,9 @@ import {
     AlertCircle,
     Car,
     ClipboardCheck,
+    Download,
     Eye,
+    FileText,
     LoaderCircle,
     Pencil,
     Plus,
@@ -29,6 +31,11 @@ import {
     X,
 } from 'lucide-react';
 import api from '../lib/api';
+import {
+    downloadAuthenticatedFile,
+    openAuthenticatedFile,
+} from '../lib/authenticatedFile';
+
 import {
     useTenant,
 } from '../contexts/TenantContext';
@@ -828,6 +835,50 @@ export default function ChecklistsPage() {
                                                     >
                                                         <Eye className="w-4 h-4" />
                                                     </button>
+
+                                                    {record.estado ===
+                                                        'finalizado' && (
+                                                        <>
+                                                            <button
+                                                                type="button"
+                                                                title="Ver PDF"
+                                                                onClick={async()=>{
+                                                                    try{
+                                                                        await openAuthenticatedFile(
+                                                                            `/api/checklists/${record.id}/pdf`
+                                                                        );
+                                                                    }catch(error){
+                                                                        window.alert(
+                                                                            apiError(error)
+                                                                        );
+                                                                    }
+                                                                }}
+                                                                className="w-9 h-9 rounded-lg border border-indigo-200 text-indigo-600 flex items-center justify-center hover:bg-indigo-50"
+                                                            >
+                                                                <FileText className="w-4 h-4" />
+                                                            </button>
+
+                                                            <button
+                                                                type="button"
+                                                                title="Baixar PDF"
+                                                                onClick={async()=>{
+                                                                    try{
+                                                                        await downloadAuthenticatedFile(
+                                                                            `/api/checklists/${record.id}/pdf/download`,
+                                                                            `checklist-${record.tipo}-${record.matricula_snapshot??record.id}.pdf`
+                                                                        );
+                                                                    }catch(error){
+                                                                        window.alert(
+                                                                            apiError(error)
+                                                                        );
+                                                                    }
+                                                                }}
+                                                                className="w-9 h-9 rounded-lg border border-slate-200 text-slate-600 flex items-center justify-center hover:bg-slate-50 hover:text-indigo-600"
+                                                            >
+                                                                <Download className="w-4 h-4" />
+                                                            </button>
+                                                        </>
+                                                    )}
 
                                                     {record.estado ===
                                                         'rascunho' && (

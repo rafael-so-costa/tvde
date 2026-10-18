@@ -5,14 +5,22 @@
 <title>Checklist {{ $documento->codigo }}</title>
 
 <style>
-@page{margin:16mm 16mm 18mm}
+@page{margin:14mm 15mm 18mm}
 *{box-sizing:border-box}
-body{font-family:"DejaVu Sans",sans-serif;color:#1e293b;font-size:9.5pt;line-height:1.45}
-.header{border-bottom:2px solid #4f46e5;padding-bottom:12px;margin-bottom:18px}
-.brand{font-size:18pt;font-weight:700;color:#0f172a}
+body{font-family:"DejaVu Sans",sans-serif;color:#172033;font-size:9pt;line-height:1.5}
+.header{margin-bottom:18px}
+.header-top{width:100%;border-collapse:collapse}
+.header-top td{vertical-align:top}
+.brand{font-size:21pt;font-weight:700;color:#111827;letter-spacing:-.5px}
 .brand span{color:#4f46e5}
-.title{font-size:15pt;font-weight:700;margin-top:8px}
-.code{font-size:11pt;color:#4f46e5;font-weight:700}
+.doc-label{font-size:7.5pt;text-transform:uppercase;letter-spacing:.8px;color:#64748b;font-weight:700}
+.title{font-size:17pt;font-weight:700;color:#111827;margin-top:3px}
+.code-box{text-align:right}
+.code{display:inline-block;background:#eef2ff;color:#4338ca;border:1px solid #c7d2fe;border-radius:6px;padding:7px 11px;font-size:11pt;font-weight:700}
+.header-rule{height:3px;background:#4f46e5;margin-top:12px}
+.company-card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:7px;padding:10px 12px;margin-top:12px}
+.company-name{font-size:11pt;font-weight:700;color:#0f172a}
+.company-meta{font-size:7.8pt;color:#64748b;margin-top:3px;line-height:1.55}
 .grid{width:100%;border-collapse:collapse;margin-bottom:14px}
 .grid td,.grid th{border:1px solid #e2e8f0;padding:7px;vertical-align:top}
 .grid th{background:#f8fafc;text-align:left;font-size:8pt;color:#64748b}
@@ -49,6 +57,139 @@ body{font-family:"DejaVu Sans",sans-serif;color:#1e293b;font-size:9.5pt;line-hei
         );
     };
 
+    $empresa=data_get(
+        $checklist,
+        'contrato.empresa'
+    );
+
+    $tenant=$checklist->tenant;
+
+    $empresaNome=
+        data_get(
+            $empresa,
+            'nome_empresa'
+        )
+        ?:data_get(
+            $tenant,
+            'nome'
+        )
+        ?:'Empresa';
+
+    $empresaNif=
+        data_get(
+            $empresa,
+            'nif'
+        )
+        ?:data_get(
+            $tenant,
+            'nif'
+        );
+
+    $empresaEmail=
+        data_get(
+            $empresa,
+            'email'
+        )
+        ?:data_get(
+            $tenant,
+            'email'
+        );
+
+    $empresaTelefone=
+        data_get(
+            $empresa,
+            'telemovel'
+        )
+        ?:data_get(
+            $tenant,
+            'telefone'
+        );
+
+    $empresaGerente=
+        data_get(
+            $empresa,
+            'nome_gerente'
+        );
+
+    $empresaContactos=
+        array_values(
+            array_filter([
+                $empresaNif
+                    ?'NIF '.$empresaNif
+                    :null,
+
+                $empresaEmail
+                    ?:null,
+
+                $empresaTelefone
+                    ?:null,
+            ])
+        );
+
+    $empresaMorada=null;
+
+    if($empresa){
+        $linhaMorada1=
+            trim(
+                trim(
+                    (string)data_get(
+                        $empresa,
+                        'endereco_rua',
+                        ''
+                    )
+                ).
+                ' '.
+                trim(
+                    (string)data_get(
+                        $empresa,
+                        'endereco_numero',
+                        ''
+                    )
+                )
+            );
+
+        $linhaMorada2=
+            trim(
+                (string)data_get(
+                    $empresa,
+                    'endereco_complemento',
+                    ''
+                )
+            );
+
+        $linhaMorada3=
+            trim(
+                trim(
+                    (string)data_get(
+                        $empresa,
+                        'endereco_cep',
+                        ''
+                    )
+                ).
+                ' '.
+                trim(
+                    (string)data_get(
+                        $empresa,
+                        'endereco_cidade',
+                        ''
+                    )
+                )
+            );
+
+        $empresaMorada=
+            implode(
+                ', ',
+                array_filter([
+                    $linhaMorada1,
+                    $linhaMorada2,
+                    $linhaMorada3,
+                ])
+            );
+
+        if($empresaMorada===''){
+            $empresaMorada=null;
+        }
+    }
     $assinaturaEmpresaModo=
         data_get(
             $checklist->metadados_seguranca,
@@ -65,32 +206,61 @@ body{font-family:"DejaVu Sans",sans-serif;color:#1e293b;font-size:9.5pt;line-hei
 @endphp
 
 <header class="header">
-    <div class="brand">
-        Frota<span>PRO</span>
+    <table class="header-top">
+        <tr>
+            <td style="width:65%">
+                <div class="brand">Frota<span>PRO</span></div>
+                <div class="doc-label">Documento operacional</div>
+                <div class="title">
+                    Checklist de {{ $checklist->tipo==='entrega' ? 'Entrega' : 'Recolha' }}
+                </div>
+            </td>
+
+            <td class="code-box">
+                <div class="doc-label" style="margin-bottom:5px">
+                    Código documental
+                </div>
+
+                <div class="code">
+                    {{ $documento->codigo }}
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <div class="header-rule"></div>
+
+    <div class="company-card">
+        <div class="doc-label">
+            Empresa responsável
+        </div>
+
+        <div class="company-name">
+            {{ $empresaNome }}
+        </div>
+
+        <div class="company-meta">
+            @if(count($empresaContactos)>0)
+                {{ implode(' · ',$empresaContactos) }}
+            @endif
+
+            @if($empresaMorada)
+                <br>
+                {{ $empresaMorada }}
+            @endif
+
+            @if($empresaGerente)
+                <br>
+                Responsável:
+                {{ $empresaGerente }}
+            @endif
+        </div>
     </div>
 
-    <div class="title">
-        Checklist de
-        {{ $checklist->tipo==='entrega' ? 'Entrega' : 'Recolha' }}
-    </div>
-
-    <div class="code">
-        Código documental:
-        {{ $documento->codigo }}
-    </div>
-
-    <div class="small">
-        Nº global:
-        {{ $documento->numero_global }}
-    </div>
-
-    @if(
-        $checklist->tipo==='recolha' &&
-        $entregaDocumento
-    )
-        <div style="margin-top:4px">
-            Relacionado com a entrega:
-            <strong>
+    @if($checklist->tipo==='recolha' && $entregaDocumento)
+        <div style="margin-top:8px;font-size:8pt;color:#64748b">
+            Documento de entrega relacionado:
+            <strong style="color:#334155">
                 {{ $entregaDocumento->codigo }}
             </strong>
         </div>
@@ -779,13 +949,6 @@ body{font-family:"DejaVu Sans",sans-serif;color:#1e293b;font-size:9.5pt;line-hei
             </td>
         </tr>
 
-        <tr>
-            <th>Número global</th>
-
-            <td>
-                {{ $documento->numero_global }}
-            </td>
-        </tr>
 
         @if($checklist->contrato_id)
             <tr>
