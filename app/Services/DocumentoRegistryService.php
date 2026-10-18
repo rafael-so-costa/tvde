@@ -125,12 +125,27 @@ class DocumentoRegistryService
                     :'Checklist de entrega',
                 'entidade_tipo'=>'checklist',
                 'entidade_id'=>$model->id,
+                'arquivo_nome'=>$model->pdf_url
+                    ?basename($model->pdf_url)
+                    :null,
+                'arquivo_path'=>$model->pdf_url,
+                'arquivo_mime'=>$model->pdf_url
+                    ?'application/pdf'
+                    :null,
+                'hash_arquivo'=>$model->hash_documento,
                 'status'=>$model->estado,
                 'created_by'=>$model->realizado_por,
                 'finalizado_em'=>$model->finalizado_em,
                 'metadados'=>[
                     'contrato_id'=>$model->contrato_id,
                     'matricula'=>$model->matricula_snapshot,
+                    'entrega_vinculada_id'=>$model->entrega_vinculada_id,
+                    'entrega_documento_codigo'=>$model->entrega_vinculada_id
+                        ?Documento::query()
+                            ->where('entidade_tipo','checklist')
+                            ->where('entidade_id',$model->entrega_vinculada_id)
+                            ->value('codigo')
+                        :null,
                 ],
             ];
         }

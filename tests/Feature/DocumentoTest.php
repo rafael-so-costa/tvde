@@ -633,3 +633,133 @@ test(
         )->toBe(1);
     }
 );
+
+test(
+    'consulta por numero global respeita tenant e retorna mensagem segura',
+    function () {
+        $tenantA =
+            documentoTenant(
+                'Frota Consulta A',
+                'documentos-consulta-global-a'
+            );
+
+        $tenantB =
+            documentoTenant(
+                'Frota Consulta B',
+                'documentos-consulta-global-b'
+            );
+
+        $user =
+            documentoUser(
+                $tenantA,
+                'documentos.numero.global@frotapro.test'
+            );
+
+        $own =
+            documentoRecord(
+                $tenantA,
+                401,
+                'gerado',
+                'contratos',
+                'aluguer',
+                'Contrato número global'
+            );
+
+        documentoRecord(
+            $tenantB,
+            402,
+            'anexado',
+            'motoristas',
+            'registo_criminal',
+            'Documento de outro tenant'
+        );
+
+        documentoLogin(
+            $this,
+            $user
+        );
+
+        $this
+            ->withHeaders(
+                documentoHeaders()
+            )
+            ->getJson(
+                '/api/documentos/401'
+            )
+            ->assertOk()
+            ->assertJsonPath(
+                'data.id',
+                $own->id
+            )
+            ->assertJsonPath(
+                'data.numero_global',
+                401
+            )
+            ->assertJsonPath(
+                'data.codigo',
+                'G000401'
+            );
+
+        $this
+            ->withHeaders(
+                documentoHeaders()
+            )
+            ->getJson(
+                '/api/documentos?'.
+                http_build_query([
+                    'q' => '401',
+                ])
+            )
+            ->assertOk()
+            ->assertJsonPath(
+                'total',
+                1
+            )
+            ->assertJsonPath(
+                'data.0.id',
+                $own->id
+            );
+
+        $message =
+            'Documento não encontrado ou não pertence à organização atual.';
+
+        $this
+            ->withHeaders(
+                documentoHeaders()
+            )
+            ->getJson(
+                '/api/documentos/402'
+            )
+            ->assertNotFound()
+            ->assertJsonPath(
+                'message',
+                $message
+            );
+
+        $this
+            ->withHeaders(
+                documentoHeaders()
+            )
+            ->getJson(
+                '/api/documentos/999999'
+            )
+            ->assertNotFound()
+            ->assertJsonPath(
+                'message',
+                $message
+            );
+
+        $this
+            ->withHeaders(
+                documentoHeaders()
+            )
+            ->getJson(
+                '/api/documentos/402/arquivo'
+            )
+            ->assertNotFound()
+            ->assertJsonPath(
+                'message',
+                $message
+            );
+    }
+);

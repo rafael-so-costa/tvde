@@ -10,7 +10,6 @@ import {
     Building2,
     Car,
     CircleUserRound,
-    ClipboardCheck,
     Clock3,
     FileText,
     History,
@@ -150,12 +149,7 @@ const navigation = [
         icon: FileText,
         permission: "documentos",
     },
-    {
-        to: "/checklists",
-        label: "Checklists",
-        icon: ClipboardCheck,
-        permission: "checklist",
-    },
+
     {
         to: "/configuracoes",
         label: "Configurações",

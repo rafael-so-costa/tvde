@@ -27,6 +27,8 @@ import api from "../lib/api";
 import {
     useTenant,
 } from "../contexts/TenantContext";
+
+import ContratosSubnav from "../components/contratos/ContratosSubnav";
 import {
     useContractTypes,
 } from "../hooks/useContractTypes";
@@ -260,6 +262,7 @@ export default function ContratosConfiguracaoPage() {
     if (!tenant) {
         return (
             <div className="mx-auto max-w-7xl">
+            <ContratosSubnav />
                 <div className="flex gap-4 rounded-2xl border border-amber-200 bg-amber-50 p-6">
                     <AlertCircle className="h-6 w-6 shrink-0 text-amber-600" />
 
@@ -339,6 +342,7 @@ export default function ContratosConfiguracaoPage() {
 
     return (
         <div className="mx-auto max-w-7xl">
+            <ContratosSubnav />
             <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <p className="mb-2 text-sm font-medium text-indigo-600">
@@ -365,7 +369,7 @@ export default function ContratosConfiguracaoPage() {
                         type="button"
                         onClick={() =>
                             navigate(
-                                "/templates",
+                                "/contratos/recursos",
                             )
                         }
                         className="inline-flex h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"

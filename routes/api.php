@@ -1237,6 +1237,8 @@ require __DIR__.'/documentos.php';
 require __DIR__.'/portal_checklists.php';
 require __DIR__.'/contratos_config.php';
 require __DIR__.'/checklists_workflow.php';
+require __DIR__.'/checklist_media.php';
+require __DIR__.'/checklist_pdf.php';
 require __DIR__.'/backoffice_content.php';
 require __DIR__.'/public_analytics.php';
 require __DIR__.'/modelos_documento_saas.php';

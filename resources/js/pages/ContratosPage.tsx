@@ -33,6 +33,7 @@ import {
 import {
     useCurrentPermissions,
 } from "../hooks/useCurrentPermissions";
+import ContratosSubnav from "../components/contratos/ContratosSubnav";
 import ContratoDetailModal from "../components/contratos/ContratoDetailModal";
 import ContratoFormModal from "../components/contratos/ContratoFormModal";
 import ContractWizard from "../components/contratos/wizard/ContractWizard";
@@ -1102,6 +1103,7 @@ export default function ContratosPage() {
     if (!tenant) {
         return (
             <div className="max-w-7xl mx-auto">
+            <ContratosSubnav />
                 <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 flex gap-4">
                     <AlertCircle className="w-6 h-6 text-amber-600 shrink-0" />
 
@@ -1193,6 +1195,7 @@ export default function ContratosPage() {
 
     return (
         <div className="max-w-7xl mx-auto">
+            <ContratosSubnav />
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
                 <div>
                     <p className="text-sm font-medium text-indigo-600 mb-2">

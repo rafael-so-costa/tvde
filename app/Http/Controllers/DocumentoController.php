@@ -336,19 +336,23 @@ class DocumentoController extends Controller
                 null
             )
         ) {
-            $term =
-                '%'.
+            $raw =
                 trim(
                     $filters[
                         'q'
                     ]
-                ).
+                );
+
+            $term =
+                '%'.
+                $raw.
                 '%';
 
             $query->where(
                 function (
                     $query
                 ) use (
+                    $raw,
                     $term
                 ) {
                     $query
@@ -405,10 +409,20 @@ class DocumentoController extends Controller
                                 $term
                             )
                         );
+
+                    if (
+                        ctype_digit(
+                            $raw
+                        )
+                    ) {
+                        $query->orWhere(
+                            'numero_global',
+                            (int) $raw
+                        );
+                    }
                 }
             );
         }
-
         if (
             ! empty(
                 $filters[
@@ -445,30 +459,56 @@ class DocumentoController extends Controller
     private function find(
         string $identifier
     ): Documento {
-        return $this->baseQuery()
-            ->where(
-                function (
-                    $query
-                ) use (
-                    $identifier
-                ) {
-                    $query
-                        ->whereKey(
-                            $identifier
-                        )
-                        ->orWhere(
-                            'codigo',
-                            mb_strtoupper(
-                                trim(
-                                    $identifier
-                                )
-                            )
-                        );
-                }
-            )
-            ->firstOrFail();
-    }
+        $normalized =
+            trim(
+                $identifier
+            );
 
+        $query =
+            $this
+                ->baseQuery()
+                ->where(
+                    function (
+                        $query
+                    ) use (
+                        $normalized
+                    ) {
+                        $query
+                            ->whereKey(
+                                $normalized
+                            )
+                            ->orWhere(
+                                'codigo',
+                                mb_strtoupper(
+                                    $normalized
+                                )
+                            );
+
+                        if (
+                            ctype_digit(
+                                $normalized
+                            )
+                        ) {
+                            $query->orWhere(
+                                'numero_global',
+                                (int) $normalized
+                            );
+                        }
+                    }
+                );
+
+        $documento =
+            $query->first();
+
+        if (! $documento) {
+            abort(
+                404,
+                'Documento não encontrado ou não pertence à organização atual.'
+            );
+        }
+
+        return $documento;
+    }
     private function ensureFile(
         Documento $documento
     ): void {

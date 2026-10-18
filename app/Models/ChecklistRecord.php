@@ -124,6 +124,19 @@ class ChecklistRecord extends Model
         )->orderBy('created_at');
     }
 
+    public function documento(): HasOne
+    {
+        return $this
+            ->hasOne(
+                Documento::class,
+                'entidade_id',
+                'id'
+            )
+            ->where(
+                'entidade_tipo',
+                'checklist'
+            );
+    }
     public function aluguerEntrega(): HasOne
     {
         return $this->hasOne(

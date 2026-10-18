@@ -124,6 +124,9 @@ const DashboardPage = lazy(
 const DocumentosPage = lazy(
     () => import("./pages/DocumentosPage"),
 );
+const BackofficeDocumentosPage = lazy(
+    () => import("./pages/BackofficeDocumentosPage"),
+);
 const EmpresasPage = lazy(
     () => import("./pages/EmpresasPage"),
 );
@@ -296,6 +299,11 @@ export default function App() {
                         <Route
                             path="analytics"
                             element={<BackofficeAnalyticsPage />}
+                        />
+
+                        <Route
+                            path="documentos"
+                            element={<BackofficeDocumentosPage />}
                         />
 
                         <Route
@@ -577,8 +585,18 @@ export default function App() {
                             <Route path="veiculos" element={<VeiculosPage />} />
 
                             <Route
-                                path="checklists"
+                                path="contratos/checklists"
                                 element={<ChecklistsPage />}
+                            />
+
+                            <Route
+                                path="checklists"
+                                element={
+                                    <Navigate
+                                        to="/contratos/checklists"
+                                        replace
+                                    />
+                                }
                             />
 
                             <Route
@@ -617,8 +635,18 @@ export default function App() {
                             />
 
                             <Route
-                                path="templates"
+                                path="contratos/recursos"
                                 element={<TemplatesPage />}
+                            />
+
+                            <Route
+                                path="templates"
+                                element={
+                                    <Navigate
+                                        to="/contratos/recursos"
+                                        replace
+                                    />
+                                }
                             />
                         </Route>
                     </Route>

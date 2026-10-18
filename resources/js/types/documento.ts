@@ -6,6 +6,11 @@ export interface DocumentoEntidadeResumo {
     id: string;
 }
 
+export interface DocumentoTenant extends DocumentoEntidadeResumo {
+    nome: string;
+    slug?: string | null;
+}
+
 export interface DocumentoEmpresa extends DocumentoEntidadeResumo {
     nome_empresa: string;
 }
@@ -63,6 +68,7 @@ export interface Documento {
     created_at: string;
     updated_at: string;
 
+    tenant?: DocumentoTenant | null;
     empresa?: DocumentoEmpresa | null;
     motorista?: DocumentoPessoa | null;
     proprietario?: DocumentoPessoa | null;
@@ -87,6 +93,7 @@ export interface DocumentoSummary {
     com_arquivo: number;
     finalizados: number;
     ultimos_30_dias: number;
+    tenants?: number;
 }
 
 export interface DocumentoMetaOption {
@@ -96,6 +103,7 @@ export interface DocumentoMetaOption {
 }
 
 export interface DocumentoMeta {
+    tenants?: DocumentoMetaOption[];
     origens: DocumentoMetaOption[];
     categorias: DocumentoMetaOption[];
     tipos: DocumentoMetaOption[];

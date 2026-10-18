@@ -1,3 +1,4 @@
+import ContratosSubnav from "../components/contratos/ContratosSubnav";
 import axios from "axios";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
@@ -258,6 +259,7 @@ export default function TemplatesPage() {
     if (!tenant) {
         return (
             <div className="mx-auto max-w-7xl">
+            <ContratosSubnav />
                 <div className="flex gap-4 rounded-2xl border border-amber-200 bg-amber-50 p-6">
                     <AlertCircle className="h-6 w-6 shrink-0 text-amber-600" />
 
@@ -349,6 +351,7 @@ export default function TemplatesPage() {
 
     return (
         <div className="mx-auto max-w-7xl">
+            <ContratosSubnav />
             <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <button

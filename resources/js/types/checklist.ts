@@ -287,135 +287,98 @@ export const CHECKLIST_ITEMS: ChecklistItemDefinition[] = [
 ];
 
 export const VEHICLE_PARTS: VehiclePartDefinition[] = [
-    {
-        id: 'para_choque_dianteiro',
-        name: 'Para-choque Dianteiro',
-        damageValue: 300,
-    },
-    {
-        id: 'capo',
-        name: 'Capô',
-        damageValue: 400,
-    },
-    {
-        id: 'para_lama_de',
-        name: 'Para-lama Dianteiro Esquerdo',
-        damageValue: 250,
-    },
-    {
-        id: 'para_lama_dd',
-        name: 'Para-lama Dianteiro Direito',
-        damageValue: 250,
-    },
-    {
-        id: 'porta_de',
-        name: 'Porta Dianteira Esquerda',
-        damageValue: 350,
-    },
-    {
-        id: 'porta_dd',
-        name: 'Porta Dianteira Direita',
-        damageValue: 350,
-    },
-    {
-        id: 'porta_te',
-        name: 'Porta Traseira Esquerda',
-        damageValue: 350,
-    },
-    {
-        id: 'porta_td',
-        name: 'Porta Traseira Direita',
-        damageValue: 350,
-    },
-    {
-        id: 'para_lama_te',
-        name: 'Para-lama Traseiro Esquerdo',
-        damageValue: 250,
-    },
-    {
-        id: 'para_lama_td',
-        name: 'Para-lama Traseiro Direito',
-        damageValue: 250,
-    },
-    {
-        id: 'para_choque_traseiro',
-        name: 'Para-choque Traseiro',
-        damageValue: 300,
-    },
-    {
-        id: 'porta_malas',
-        name: 'Porta-Malas',
-        damageValue: 400,
-    },
-    {
-        id: 'teto',
-        name: 'Teto',
-        damageValue: 500,
-    },
-    {
-        id: 'para_brisa_d',
-        name: 'Para-brisa Dianteiro',
-        damageValue: 350,
-    },
-    {
-        id: 'para_brisa_t',
-        name: 'Para-brisa Traseiro',
-        damageValue: 300,
-    },
-    {
-        id: 'retrovisor_e',
-        name: 'Retrovisor Esquerdo',
-        damageValue: 120,
-    },
-    {
-        id: 'retrovisor_d',
-        name: 'Retrovisor Direito',
-        damageValue: 120,
-    },
-    {
-        id: 'farol_de',
-        name: 'Farol Dianteiro Esquerdo',
-        damageValue: 200,
-    },
-    {
-        id: 'farol_dd',
-        name: 'Farol Dianteiro Direito',
-        damageValue: 200,
-    },
-    {
-        id: 'lanterna_te',
-        name: 'Lanterna Traseira Esquerda',
-        damageValue: 150,
-    },
-    {
-        id: 'lanterna_td',
-        name: 'Lanterna Traseira Direita',
-        damageValue: 150,
-    },
-    {
-        id: 'jante_de',
-        name: 'Jante Dianteira Esquerda',
-        damageValue: 180,
-    },
-    {
-        id: 'jante_dd',
-        name: 'Jante Dianteira Direita',
-        damageValue: 180,
-    },
-    {
-        id: 'jante_te',
-        name: 'Jante Traseira Esquerda',
-        damageValue: 180,
-    },
-    {
-        id: 'jante_td',
-        name: 'Jante Traseira Direita',
-        damageValue: 180,
-    },
-];
+    { id:"para_choque_dianteiro", name:"Para-choque Dianteiro", damageValue:300 },
+    { id:"capo", name:"Capô", damageValue:400 },
 
+    { id:"para_lama_de", name:"Para-lama Dianteiro Esquerdo", damageValue:250 },
+    { id:"para_lama_dd", name:"Para-lama Dianteiro Direito", damageValue:250 },
+
+    { id:"porta_de", name:"Porta Dianteira Esquerda", damageValue:350 },
+    { id:"porta_dd", name:"Porta Dianteira Direita", damageValue:350 },
+    { id:"porta_te", name:"Porta Traseira Esquerda", damageValue:350 },
+    { id:"porta_td", name:"Porta Traseira Direita", damageValue:350 },
+
+    { id:"vidro_de", name:"Vidro Dianteiro Esquerdo", damageValue:180 },
+    { id:"vidro_dd", name:"Vidro Dianteiro Direito", damageValue:180 },
+    { id:"vidro_te", name:"Vidro Traseiro Esquerdo", damageValue:180 },
+    { id:"vidro_td", name:"Vidro Traseiro Direito", damageValue:180 },
+
+    { id:"vidro_fixo_te", name:"Vidro Fixo Traseiro Esquerdo", damageValue:150 },
+    { id:"vidro_fixo_td", name:"Vidro Fixo Traseiro Direito", damageValue:150 },
+
+    { id:"macaneta_de", name:"Maçaneta Dianteira Esquerda", damageValue:80 },
+    { id:"macaneta_dd", name:"Maçaneta Dianteira Direita", damageValue:80 },
+    { id:"macaneta_te", name:"Maçaneta Traseira Esquerda", damageValue:80 },
+    { id:"macaneta_td", name:"Maçaneta Traseira Direita", damageValue:80 },
+
+    { id:"saia_e", name:"Saia Lateral Esquerda", damageValue:250 },
+    { id:"saia_d", name:"Saia Lateral Direita", damageValue:250 },
+
+    { id:"para_lama_te", name:"Para-lama Traseiro Esquerdo", damageValue:250 },
+    { id:"para_lama_td", name:"Para-lama Traseiro Direito", damageValue:250 },
+
+    { id:"para_choque_traseiro", name:"Para-choque Traseiro", damageValue:300 },
+    { id:"porta_malas", name:"Porta-Malas", damageValue:400 },
+
+    { id:"teto", name:"Teto", damageValue:500 },
+    { id:"para_brisa_d", name:"Para-brisa Dianteiro", damageValue:350 },
+    { id:"para_brisa_t", name:"Para-brisa Traseiro", damageValue:300 },
+
+    { id:"retrovisor_e", name:"Retrovisor Esquerdo", damageValue:120 },
+    { id:"retrovisor_d", name:"Retrovisor Direito", damageValue:120 },
+
+    { id:"farol_de", name:"Farol Dianteiro Esquerdo", damageValue:200 },
+    { id:"farol_dd", name:"Farol Dianteiro Direito", damageValue:200 },
+
+    { id:"lanterna_te", name:"Lanterna Traseira Esquerda", damageValue:150 },
+    { id:"lanterna_td", name:"Lanterna Traseira Direita", damageValue:150 },
+
+    { id:"jante_de", name:"Jante Dianteira Esquerda", damageValue:180 },
+    { id:"jante_dd", name:"Jante Dianteira Direita", damageValue:180 },
+    { id:"jante_te", name:"Jante Traseira Esquerda", damageValue:180 },
+    { id:"jante_td", name:"Jante Traseira Direita", damageValue:180 },
+
+    { id:"pneu_de", name:"Pneu Dianteiro Esquerdo", damageValue:120 },
+    { id:"pneu_dd", name:"Pneu Dianteiro Direito", damageValue:120 },
+    { id:"pneu_te", name:"Pneu Traseiro Esquerdo", damageValue:120 },
+    { id:"pneu_td", name:"Pneu Traseiro Direito", damageValue:120 }
+];
 export const CATEGORY_LABELS = {
     documentacao: 'Documentação',
     equipamento: 'Equipamento obrigatório',
     acessorio: 'Acessórios',
 };
+
+export interface ChecklistMediaRecord {
+    id:string;
+    tenant_id:string;
+    checklist_record_id:string;
+
+    tipo:
+        | "foto"
+        | "video";
+
+    contexto:string;
+    titulo:string|null;
+
+    arquivo_nome:string;
+    arquivo_path:string;
+    arquivo_mime:string;
+    arquivo_tamanho:number;
+    hash_arquivo:string;
+
+    capturado_em:string|null;
+
+    metadados:{
+        parte_id?:string|null;
+        parte_nome?:string|null;
+        vista?:string|null;
+        dano_tipo?:string|null;
+        [key:string]:unknown;
+    }|null;
+
+    uploaded_by:string|null;
+
+    created_at:string;
+    updated_at:string;
+}

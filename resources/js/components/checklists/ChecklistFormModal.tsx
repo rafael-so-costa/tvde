@@ -27,6 +27,10 @@ import type {
     FuelLevel,
 } from "../../types/checklist";
 import SignaturePad from "./SignaturePad";
+import ChecklistComparison from "./ChecklistComparison";
+import VehicleInspectionDiagram from "./inspection/VehicleInspectionDiagram";
+import ChecklistMediaCapture from "./media/ChecklistMediaCapture";
+import ChecklistMediaGallery from "./media/ChecklistMediaGallery";
 
 interface Props {
     open: boolean;
@@ -120,6 +124,13 @@ export default function ChecklistFormModal({
 
     const [signatureDriver, setSignatureDriver] = useState("");
 
+    const [
+        workingChecklistId,
+        setWorkingChecklistId,
+    ]=useState<string|null>(
+        record?.id ?? null,
+    );
+
     const [error, setError] = useState("");
 
     const [submitting, setSubmitting] = useState(false);
@@ -152,6 +163,9 @@ export default function ChecklistFormModal({
         setError("");
         setSignatureCompany("");
         setSignatureDriver("");
+        setWorkingChecklistId(
+            record?.id ?? null,
+        );
 
         if (record) {
             setForm({
@@ -256,21 +270,60 @@ export default function ChecklistFormModal({
         }));
     }
 
-    function addDamage(target: "delivery" | "return") {
-        const damage: DamageRecord = {
-            part: VEHICLE_PARTS[0].name,
-            types: ["riscado"],
-            status: "riscado",
-            value: VEHICLE_PARTS[0].damageValue,
-        };
+    function addDamage(
+        target:"delivery"|"return",
+        partName?:string,
+    ){
+        const part=
+            partName
+                ?VEHICLE_PARTS.find(
+                    item=>
+                        item.name===
+                        partName,
+                )
+                :VEHICLE_PARTS[0];
 
-        if (target === "delivery") {
-            setDamages((current) => [...current, damage]);
-        } else {
-            setNewDamages((current) => [...current, damage]);
+        if(!part){
+            return;
         }
-    }
 
+        const setter=
+            target==="delivery"
+                ?setDamages
+                :setNewDamages;
+
+        setter(
+            current=>{
+                if(
+                    current.some(
+                        damage=>
+                            damage.part===
+                            part.name,
+                    )
+                ){
+                    return current;
+                }
+
+                return[
+                    ...current,
+                    {
+                        part:
+                            part.name,
+
+                        types:[
+                            "riscado",
+                        ],
+
+                        status:
+                            "riscado",
+
+                        value:
+                            part.damageValue,
+                    },
+                ];
+            },
+        );
+    }
     function updateDamage(
         target: "delivery" | "return",
         index: number,
@@ -356,6 +409,103 @@ export default function ChecklistFormModal({
         return null;
     }
 
+    async function ensureChecklistForMedia(): Promise<string> {
+        const validation=
+            validateForm(
+                false,
+            );
+
+        if (validation) {
+            setError(
+                validation,
+            );
+
+            throw new Error(
+                validation,
+            );
+        }
+
+        setSubmitting(
+            true,
+        );
+
+        setError(
+            "",
+        );
+
+        try {
+            let id=
+                record?.id ??
+                workingChecklistId;
+
+            let saved:
+                ChecklistRecord;
+
+            if (id) {
+                const {
+                    tipo:_tipo,
+                    entrega_vinculada_id:_entrega,
+                    ...updatePayload
+                }=
+                    payload();
+
+                const response=
+                    await api.patch(
+                        `/api/checklists/${id}`,
+                        updatePayload,
+                    );
+
+                saved=
+                    response
+                        .data
+                        .data as ChecklistRecord;
+            }
+            else {
+                const response=
+                    await api.post(
+                        "/api/checklists",
+                        payload(),
+                    );
+
+                saved=
+                    response
+                        .data
+                        .data as ChecklistRecord;
+
+                id=
+                    saved.id;
+            }
+
+            setWorkingChecklistId(
+                saved.id,
+            );
+
+            await onSuccess(
+                saved,
+            );
+
+            return saved.id;
+        }
+        catch(exception) {
+            const message=
+                apiError(
+                    exception,
+                );
+
+            setError(
+                message,
+            );
+
+            throw new Error(
+                message,
+            );
+        }
+        finally {
+            setSubmitting(
+                false,
+            );
+        }
+    }
     async function save(finalize: boolean) {
         const validation = validateForm(finalize);
 
@@ -369,10 +519,10 @@ export default function ChecklistFormModal({
         setError("");
 
         try {
-            let id = record?.id ?? null;
+            let id = record?.id ?? workingChecklistId;
             let savedRecord: ChecklistRecord | undefined;
 
-            if (record) {
+            if (id) {
                 const {
                     tipo: _tipo,
                     entrega_vinculada_id: _entrega,
@@ -380,7 +530,7 @@ export default function ChecklistFormModal({
                 } = payload();
 
                 const response = await api.patch(
-                    `/api/checklists/${record.id}`,
+                    `/api/checklists/${id}`,
                     updatePayload,
                 );
 
@@ -389,6 +539,12 @@ export default function ChecklistFormModal({
                 const response = await api.post("/api/checklists", payload());
                 savedRecord = response.data.data as ChecklistRecord;
                 id = savedRecord.id;
+            }
+
+            if (id) {
+                setWorkingChecklistId(
+                    id,
+                );
             }
 
             if (finalize && id) {
@@ -770,23 +926,117 @@ export default function ChecklistFormModal({
                         )}
 
                         <DamageSection
+                            checklistId={
+                                workingChecklistId ??
+                                record?.id ??
+                                null
+                            }
+                            ensureChecklistId={
+                                ensureChecklistForMedia
+                            }
                             title={
-                                tipo === "entrega"
-                                    ? "Danos existentes"
-                                    : "Novos danos"
+                                tipo==="entrega"
+                                    ?"Danos existentes"
+                                    :"Novos danos"
                             }
                             description={
-                                tipo === "entrega"
-                                    ? "Registe os danos existentes antes da entrega do veículo."
-                                    : "Registe apenas danos que não constavam na entrega."
+                                tipo==="entrega"
+                                    ?"Selecione no veículo as zonas que apresentam danos."
+                                    :"Selecione apenas danos novos identificados na recolha."
                             }
-                            damages={tipo === "entrega" ? damages : newDamages}
-                            disabled={disabled}
-                            target={tipo === "entrega" ? "delivery" : "return"}
-                            onAdd={addDamage}
-                            onUpdate={updateDamage}
-                            onRemove={removeDamage}
+                            damages={
+                                tipo==="entrega"
+                                    ?damages
+                                    :newDamages
+                            }
+                            referenceDamages={
+                                tipo==="recolha"
+                                    ?selectedDelivery?.danos ?? []
+                                    :[]
+                            }
+                            disabled={
+                                disabled
+                            }
+                            target={
+                                tipo==="entrega"
+                                    ?"delivery"
+                                    :"return"
+                            }
+                            onAdd={
+                                addDamage
+                            }
+                            onUpdate={
+                                updateDamage
+                            }
+                            onRemove={
+                                removeDamage
+                            }
                         />
+                        <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                                <div>
+                                    <h3 className="font-semibold text-slate-900">
+                                        Vídeo geral do veículo
+                                    </h3>
+
+                                    <p className="mt-1 max-w-2xl text-sm text-slate-500">
+                                        Faça uma volta completa em torno do veículo mostrando frente, duas laterais, traseira, rodas e estado geral da carroçaria.
+                                    </p>
+                                </div>
+
+                                {!disabled && (
+                                    <ChecklistMediaCapture
+                                        checklistId={
+                                            workingChecklistId ??
+                                            record?.id ??
+                                            null
+                                        }
+                                        ensureChecklistId={
+                                            ensureChecklistForMedia
+                                        }
+                                        mode="video"
+                                        contexto="vistoria_360"
+                                        titulo={
+                                            tipo === "entrega"
+                                                ? "Vistoria 360º — entrega"
+                                                : "Vistoria 360º — recolha"
+                                        }
+                                        metadata={{
+                                            vista:"360",
+                                        }}
+                                        disabled={
+                                            disabled ||
+                                            submitting
+                                        }
+                                        label="Gravar vídeo 360º"
+                                    />
+                                )}
+                            </div>
+
+                            <ChecklistMediaGallery
+                                checklistId={
+                                    workingChecklistId ??
+                                    record?.id ??
+                                    null
+                                }
+                                contexto="vistoria_360"
+                                disabled={disabled}
+                            />
+                        </section>
+
+                        {tipo === "recolha" && selectedDelivery && (
+                            <ChecklistComparison
+                                delivery={selectedDelivery}
+                                currentKilometragem={
+                                    form.quilometragem === ""
+                                        ? null
+                                        : Number(form.quilometragem)
+                                }
+                                currentFuel={form.nivel_combustivel}
+                                newDamages={newDamages}
+                                missingItems={missingItems}
+                            />
+                        )}
 
                         {tipo === "recolha" && (
                             <section>
@@ -1026,149 +1276,440 @@ function ItemsSection({
 }
 
 function DamageSection({
+    checklistId,
+    ensureChecklistId,
     title,
     description,
     damages,
+    referenceDamages,
     disabled,
     target,
     onAdd,
     onUpdate,
     onRemove,
-}: {
-    title: string;
-    description: string;
-    damages: DamageRecord[];
-    disabled: boolean;
-    target: "delivery" | "return";
-    onAdd: (target: "delivery" | "return") => void;
-    onUpdate: (
-        target: "delivery" | "return",
-        index: number,
-        patch: Partial<DamageRecord>,
-    ) => void;
-    onRemove: (target: "delivery" | "return", index: number) => void;
-}) {
-    return (
-        <section>
-            <div className="flex items-start justify-between gap-4 mb-4">
-                <div>
-                    <h3 className="font-semibold text-slate-900">{title}</h3>
+}:{
+    checklistId:string|null;
+    ensureChecklistId:()=>Promise<string>;
+    title:string;
+    description:string;
+    damages:DamageRecord[];
+    referenceDamages:DamageRecord[];
+    disabled:boolean;
+    target:"delivery"|"return";
 
-                    <p className="mt-1 text-sm text-slate-500">{description}</p>
+    onAdd:(
+        target:"delivery"|"return",
+        partName?:string,
+    )=>void;
+
+    onUpdate:(
+        target:"delivery"|"return",
+        index:number,
+        patch:Partial<DamageRecord>,
+    )=>void;
+
+    onRemove:(
+        target:"delivery"|"return",
+        index:number,
+    )=>void;
+}){
+    const[
+        selectedPartId,
+        setSelectedPartId,
+    ]=useState<string|null>(
+        null,
+    );
+
+    const selectedPart=
+        VEHICLE_PARTS.find(
+            part=>
+                part.id===
+                selectedPartId,
+        ) ??
+        null;
+
+    const damageIndex=
+        selectedPart
+            ?damages.findIndex(
+                damage=>
+                    damage.part===
+                    selectedPart.name,
+            )
+            :-1;
+
+    const selectedDamage=
+        damageIndex>=0
+            ?damages[
+                damageIndex
+            ]
+            :null;
+
+    function selectPart(
+        part:typeof VEHICLE_PARTS[number],
+    ){
+        setSelectedPartId(
+            part.id,
+        );
+
+        onAdd(
+            target,
+            part.name,
+        );
+    }
+
+    return(
+        <section className="space-y-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                    <h3 className="font-semibold text-slate-900">
+                        {title}
+                    </h3>
+
+                    <p className="mt-1 text-sm text-slate-500">
+                        {description}
+                    </p>
                 </div>
 
-                {!disabled && (
+                {!disabled&&(
                     <button
                         type="button"
-                        onClick={() => onAdd(target)}
-                        className="shrink-0 h-10 px-4 rounded-xl border border-slate-200 flex items-center gap-2 text-sm font-semibold"
+                        onClick={()=>
+                            onAdd(
+                                target,
+                            )
+                        }
+                        className="h-10 shrink-0 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                     >
-                        <Plus className="w-4 h-4" />
-                        Adicionar
+                        <Plus className="h-4 w-4 inline mr-2"/>
+                        Adicionar manualmente
                     </button>
                 )}
             </div>
 
-            {damages.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-5 text-sm text-slate-500">
-                    Nenhum dano registado.
-                </div>
-            ) : (
-                <div className="space-y-3">
-                    {damages.map((damage, index) => (
-                        <div
-                            key={index}
-                            className="rounded-xl border border-slate-200 p-4 grid lg:grid-cols-[2fr_1fr_1fr_auto] gap-3 items-end"
-                        >
-                            <div>
-                                <label className="block mb-1.5 text-xs font-medium text-slate-500">
-                                    Parte do veículo
-                                </label>
+            <VehicleInspectionDiagram
+                damages={
+                    damages
+                }
+                referenceDamages={
+                    referenceDamages
+                }
+                disabled={
+                    disabled
+                }
+                onSelectPart={
+                    selectPart
+                }
+            />
 
-                                <select
-                                    value={damage.part}
-                                    disabled={disabled}
-                                    onChange={(event) => {
-                                        const part = VEHICLE_PARTS.find(
-                                            (item) =>
-                                                item.name ===
-                                                event.target.value,
-                                        );
+            {selectedPart&&(
+                <div className="rounded-2xl border border-indigo-200 bg-indigo-50/60 p-5 shadow-sm">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                        <div>
+                            <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-indigo-600">
+                                Zona selecionada
+                            </div>
 
-                                        onUpdate(target, index, {
-                                            part: event.target.value,
-                                            value: part?.damageValue ?? 0,
-                                        });
+                            <div className="mt-1 text-lg font-semibold text-slate-950">
+                                {
+                                    selectedPart.name
+                                }
+                            </div>
+
+                            <div className="mt-1 text-sm text-slate-600">
+                                Registe uma fotografia nova ou escolha uma imagem já existente.
+                            </div>
+                        </div>
+
+                        {!disabled&&(
+                            <div className="flex flex-wrap gap-2">
+                                <ChecklistMediaCapture
+                                    checklistId={
+                                        checklistId
+                                    }
+                                    ensureChecklistId={
+                                        ensureChecklistId
+                                    }
+                                    source="camera"
+                                    contexto="dano"
+                                    titulo={
+                                        selectedPart.name
+                                    }
+                                    metadata={{
+                                        parte_id:
+                                            selectedPart.id,
+
+                                        parte_nome:
+                                            selectedPart.name,
+
+                                        dano_tipo:
+                                            selectedDamage
+                                                ?.types?.[0] ??
+                                            "riscado",
                                     }}
-                                    className="w-full h-10 rounded-lg border border-slate-200 px-2 text-sm"
-                                >
-                                    {VEHICLE_PARTS.map((part) => (
-                                        <option key={part.id} value={part.name}>
-                                            {part.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
+                                />
 
-                            <div>
-                                <label className="block mb-1.5 text-xs font-medium text-slate-500">
-                                    Tipo
-                                </label>
-
-                                <select
-                                    value={damage.types?.[0] ?? "riscado"}
-                                    disabled={disabled}
-                                    onChange={(event) =>
-                                        onUpdate(target, index, {
-                                            types: [
-                                                event.target
-                                                    .value as DamageType,
-                                            ],
-                                            status: event.target
-                                                .value as DamageType,
-                                        })
+                                <ChecklistMediaCapture
+                                    checklistId={
+                                        checklistId
                                     }
-                                    className="w-full h-10 rounded-lg border border-slate-200 px-2 text-sm"
-                                >
-                                    <option value="riscado">Riscado</option>
-
-                                    <option value="amassado">Amassado</option>
-
-                                    <option value="quebrado">Quebrado</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="block mb-1.5 text-xs font-medium text-slate-500">
-                                    Valor
-                                </label>
-
-                                <input
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    value={damage.value ?? 0}
-                                    disabled={disabled}
-                                    onChange={(event) =>
-                                        onUpdate(target, index, {
-                                            value: Number(event.target.value),
-                                        })
+                                    ensureChecklistId={
+                                        ensureChecklistId
                                     }
-                                    className="w-full h-10 rounded-lg border border-slate-200 px-2 text-sm"
+                                    source="file"
+                                    contexto="dano"
+                                    titulo={
+                                        selectedPart.name
+                                    }
+                                    metadata={{
+                                        parte_id:
+                                            selectedPart.id,
+
+                                        parte_nome:
+                                            selectedPart.name,
+
+                                        dano_tipo:
+                                            selectedDamage
+                                                ?.types?.[0] ??
+                                            "riscado",
+                                    }}
                                 />
                             </div>
+                        )}
+                    </div>
 
-                            {!disabled && (
-                                <button
-                                    type="button"
-                                    onClick={() => onRemove(target, index)}
-                                    className="w-10 h-10 rounded-lg border border-red-200 bg-red-50 text-red-600 flex items-center justify-center"
+                    <ChecklistMediaGallery
+                        checklistId={
+                            checklistId
+                        }
+                        partId={
+                            selectedPart.id
+                        }
+                    />
+                </div>
+            )}
+
+            {damages.length>0&&(
+                <div className="space-y-3">
+                    {damages.map(
+                        (
+                            damage,
+                            index,
+                        )=>{
+                            const part=
+                                VEHICLE_PARTS.find(
+                                    item=>
+                                        item.name===
+                                        damage.part,
+                                );
+
+                            const active=
+                                part?.id===
+                                selectedPartId;
+
+                            return(
+                                <article
+                                    key={`${damage.part}-${index}`}
+                                    className={[
+                                        "rounded-xl border p-4 transition",
+                                        active
+                                            ?"border-indigo-300 bg-indigo-50/50"
+                                            :"border-slate-200 bg-white",
+                                    ].join(" ")}
                                 >
-                                    <Trash2 className="w-4 h-4" />
-                                </button>
-                            )}
-                        </div>
-                    ))}
+                                    <div className="grid gap-3 lg:grid-cols-[2fr_1fr_1fr_auto] lg:items-end">
+                                        <div>
+                                            <label className="mb-1.5 block text-xs font-medium text-slate-500">
+                                                Parte do veículo
+                                            </label>
+
+                                            <select
+                                                value={
+                                                    damage.part
+                                                }
+                                                disabled={
+                                                    disabled
+                                                }
+                                                onChange={
+                                                    event=>{
+                                                        const changedPart=
+                                                            VEHICLE_PARTS.find(
+                                                                item=>
+                                                                    item.name===
+                                                                    event
+                                                                        .target
+                                                                        .value,
+                                                            );
+
+                                                        onUpdate(
+                                                            target,
+                                                            index,
+                                                            {
+                                                                part:
+                                                                    event
+                                                                        .target
+                                                                        .value,
+
+                                                                value:
+                                                                    changedPart
+                                                                        ?.damageValue ??
+                                                                    0,
+                                                            },
+                                                        );
+
+                                                        if(
+                                                            changedPart
+                                                        ){
+                                                            setSelectedPartId(
+                                                                changedPart.id,
+                                                            );
+                                                        }
+                                                    }
+                                                }
+                                                className="h-10 w-full rounded-lg border border-slate-200 bg-white px-2 text-sm"
+                                            >
+                                                {VEHICLE_PARTS.map(
+                                                    item=>(
+                                                        <option
+                                                            key={
+                                                                item.id
+                                                            }
+                                                            value={
+                                                                item.name
+                                                            }
+                                                        >
+                                                            {
+                                                                item.name
+                                                            }
+                                                        </option>
+                                                    ),
+                                                )}
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label className="mb-1.5 block text-xs font-medium text-slate-500">
+                                                Tipo de dano
+                                            </label>
+
+                                            <select
+                                                value={
+                                                    damage
+                                                        .types?.[0] ??
+                                                    "riscado"
+                                                }
+                                                disabled={
+                                                    disabled
+                                                }
+                                                onChange={
+                                                    event=>
+                                                        onUpdate(
+                                                            target,
+                                                            index,
+                                                            {
+                                                                types:[
+                                                                    event
+                                                                        .target
+                                                                        .value as DamageType,
+                                                                ],
+
+                                                                status:
+                                                                    event
+                                                                        .target
+                                                                        .value as DamageType,
+                                                            },
+                                                        )
+                                                }
+                                                className="h-10 w-full rounded-lg border border-slate-200 bg-white px-2 text-sm"
+                                            >
+                                                <option value="riscado">
+                                                    Riscado
+                                                </option>
+
+                                                <option value="amassado">
+                                                    Amassado
+                                                </option>
+
+                                                <option value="quebrado">
+                                                    Quebrado
+                                                </option>
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label className="mb-1.5 block text-xs font-medium text-slate-500">
+                                                Valor
+                                            </label>
+
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                step="0.01"
+                                                value={
+                                                    damage.value ??
+                                                    0
+                                                }
+                                                disabled={
+                                                    disabled
+                                                }
+                                                onChange={
+                                                    event=>
+                                                        onUpdate(
+                                                            target,
+                                                            index,
+                                                            {
+                                                                value:
+                                                                    Number(
+                                                                        event
+                                                                            .target
+                                                                            .value,
+                                                                    ),
+                                                            },
+                                                        )
+                                                }
+                                                className="h-10 w-full rounded-lg border border-slate-200 bg-white px-2 text-sm"
+                                            />
+                                        </div>
+
+                                        {!disabled&&(
+                                            <button
+                                                type="button"
+                                                title="Remover dano"
+                                                onClick={()=>
+                                                    onRemove(
+                                                        target,
+                                                        index,
+                                                    )
+                                                }
+                                                className="flex h-10 w-10 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100"
+                                            >
+                                                <Trash2 className="h-4 w-4"/>
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {part&&(
+                                        <button
+                                            type="button"
+                                            onClick={()=>
+                                                setSelectedPartId(
+                                                    part.id,
+                                                )
+                                            }
+                                            className="mt-3 text-xs font-semibold text-indigo-600 hover:text-indigo-800"
+                                        >
+                                            Ver / adicionar fotografias desta zona
+                                        </button>
+                                    )}
+                                </article>
+                            );
+                        },
+                    )}
+                </div>
+            )}
+
+            {damages.length===0&&(
+                <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-500">
+                    Nenhum dano registado. Clique diretamente numa zona do veículo para começar.
                 </div>
             )}
         </section>

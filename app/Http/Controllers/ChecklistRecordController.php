@@ -18,12 +18,14 @@ use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 use Throwable;
 use App\Services\ChecklistPenaltyService;
+use App\Services\ChecklistPdfService;
 
 class ChecklistRecordController extends Controller
 {
     public function __construct(
         private TenantContext $tenantContext,
-        private ChecklistPenaltyService $penaltyService
+        private ChecklistPenaltyService $penaltyService,
+        private ChecklistPdfService $checklistPdfService
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -560,6 +562,29 @@ class ChecklistRecordController extends Controller
             throw $exception;
         }
 
+        try {
+            $pdfResult =
+                $this
+                    ->checklistPdfService
+                    ->generate(
+                        $checklist
+                    );
+
+            $checklist =
+                $pdfResult[
+                    'checklist'
+                ];
+        } catch (Throwable $pdfException) {
+            report(
+                $pdfException
+            );
+
+            $checklist
+                ->setAttribute(
+                    'pdf_generation_failed',
+                    true
+                );
+        }
         return response()->json([
             'message' =>
             'Checklist finalizado com sucesso.',

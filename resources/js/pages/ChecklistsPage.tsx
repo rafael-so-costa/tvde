@@ -1,3 +1,4 @@
+import ContratosSubnav from "../components/contratos/ContratosSubnav";
 import axios from 'axios';
 import {
     useEffect,
@@ -427,6 +428,7 @@ export default function ChecklistsPage() {
 
     return (
         <div className="max-w-7xl mx-auto">
+            <ContratosSubnav />
             <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4 mb-8">
                 <div>
                     <p className="text-sm font-medium text-indigo-600 mb-2">
@@ -438,7 +440,7 @@ export default function ChecklistsPage() {
                     </h1>
 
                     <p className="mt-2 text-slate-500">
-                        Entregas, recolhas e histórico operacional dos veículos.
+                        Inspeções de entrega, recolha e histórico operacional vinculados aos contratos.
                     </p>
                 </div>
 

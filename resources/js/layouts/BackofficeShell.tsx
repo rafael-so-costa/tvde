@@ -9,6 +9,7 @@ import {
     CreditCard,
     Database,
     DatabaseZap,
+    FileArchive,
     FileClock,
     FileText,
     LayoutDashboard,
@@ -144,6 +145,11 @@ export default function BackofficeShell() {
                     <NavLink to="/backoffice/clientes" className={navClass}>
                         <UsersRound className="h-5 w-5 shrink-0" />
                         Clientes
+                    </NavLink>
+
+                    <NavLink to="/backoffice/documentos" className={navClass}>
+                        <FileArchive className="h-5 w-5 shrink-0" />
+                        Documentos globais
                     </NavLink>
 
                     <NavLink to="/backoffice/mensagens" className={navClass}>
