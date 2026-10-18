@@ -246,52 +246,41 @@ export default function ChecklistsPage() {
                 },
         });
 
-    const motoristasQuery =
+    const optionsQuery =
         useQuery({
             queryKey: [
-                'motoristas',
+                'checklist-options',
                 tenant?.id,
             ],
+
             enabled:
                 Boolean(
                     tenant?.id
                 ),
+
+            staleTime: 0,
+
+            refetchOnMount:
+                'always',
+
+            refetchOnWindowFocus:
+                true,
+
             queryFn:
                 async () => {
                     const response =
                         await api.get(
-                            '/api/motoristas'
+                            '/api/checklists/options'
                         );
 
                     return response
                         .data
-                        .data as Motorista[];
+                        .data as {
+                            motoristas: Motorista[];
+                            veiculos: Veiculo[];
+                        };
                 },
         });
-
-    const veiculosQuery =
-        useQuery({
-            queryKey: [
-                'veiculos',
-                tenant?.id,
-            ],
-            enabled:
-                Boolean(
-                    tenant?.id
-                ),
-            queryFn:
-                async () => {
-                    const response =
-                        await api.get(
-                            '/api/veiculos'
-                        );
-
-                    return response
-                        .data
-                        .data as Veiculo[];
-                },
-        });
-
     const deleteMutation =
         useMutation({
             mutationFn:
@@ -923,11 +912,11 @@ export default function ChecklistsPage() {
                     allRecords
                 }
                 motoristas={
-                    motoristasQuery.data ??
+                    optionsQuery.data?.motoristas ??
                     []
                 }
                 veiculos={
-                    veiculosQuery.data ??
+                    optionsQuery.data?.veiculos ??
                     []
                 }
                 onClose={() => {

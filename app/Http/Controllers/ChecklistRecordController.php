@@ -92,6 +92,54 @@ class ChecklistRecordController extends Controller
         ]);
     }
 
+    public function options(): JsonResponse
+    {
+        $tenantId=
+            $this->tenantId();
+
+        $motoristas=
+            Motorista::query()
+                ->where(
+                    'tenant_id',
+                    $tenantId
+                )
+                ->orderBy(
+                    'nome_completo'
+                )
+                ->get([
+                    'id',
+                    'tenant_id',
+                    'nome_completo',
+                    'ativo',
+                    'status_cadastro',
+                ]);
+
+        $veiculos=
+            Veiculo::query()
+                ->where(
+                    'tenant_id',
+                    $tenantId
+                )
+                ->orderBy(
+                    'matricula'
+                )
+                ->get([
+                    'id',
+                    'tenant_id',
+                    'matricula',
+                    'marca',
+                    'modelo',
+                    'ativo',
+                    'status_cadastro',
+                ]);
+
+        return response()->json([
+            'data'=>[
+                'motoristas'=>$motoristas,
+                'veiculos'=>$veiculos,
+            ],
+        ]);
+    }
     public function store(
         StoreChecklistRecordRequest $request
     ): JsonResponse {

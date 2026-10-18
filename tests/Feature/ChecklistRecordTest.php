@@ -1596,3 +1596,71 @@ test(
         );
     }
 );
+
+test(
+    'opções operacionais do checklist retornam motoristas e veículos do tenant',
+    function () {
+        $tenant =
+            checklistTenant(
+                'Tenant Checklist Opções',
+                'tenant-checklist-opcoes'
+            );
+
+        $user =
+            checklistUsuario(
+                $tenant,
+                'checklist.opcoes@frotapro.test'
+            );
+
+        $entidades =
+            checklistEntidades(
+                $tenant,
+                'OP'
+            );
+
+        $outroTenant =
+            checklistTenant(
+                'Outro Tenant Opções',
+                'outro-tenant-opcoes'
+            );
+
+        checklistEntidades(
+            $outroTenant,
+            'OT'
+        );
+
+        checklistLogin(
+            $this,
+            $user
+        );
+
+        $this
+            ->withHeaders(
+                checklistHeaders()
+            )
+            ->getJson(
+                '/api/checklists/options'
+            )
+            ->assertOk()
+            ->assertJsonCount(
+                1,
+                'data.motoristas'
+            )
+            ->assertJsonCount(
+                1,
+                'data.veiculos'
+            )
+            ->assertJsonPath(
+                'data.motoristas.0.id',
+                $entidades[
+                    'motorista'
+                ]->id
+            )
+            ->assertJsonPath(
+                'data.veiculos.0.id',
+                $entidades[
+                    'veiculo'
+                ]->id
+            );
+    }
+);

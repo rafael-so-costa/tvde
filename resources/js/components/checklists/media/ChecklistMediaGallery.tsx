@@ -19,12 +19,15 @@ import type {
 
 interface Props {
     checklistId?:string|null;
-    partId:string;
+    partId?:string;
+    contexto?:string;
+    disabled?:boolean;
 }
 
 export default function ChecklistMediaGallery({
     checklistId,
     partId,
+    contexto,
 }:Props){
     const query=
         useQuery({
@@ -59,7 +62,7 @@ export default function ChecklistMediaGallery({
         return(
             <div className="mt-3 flex items-center gap-2 text-xs text-slate-400">
                 <LoaderCircle className="h-4 w-4 animate-spin"/>
-                A carregar fotografias...
+                A carregar evidências...
             </div>
         );
     }
@@ -69,11 +72,26 @@ export default function ChecklistMediaGallery({
             query.data ??
             []
         ).filter(
-            item=>
-                item.contexto==="dano" &&
-                item.metadados
-                    ?.parte_id===
-                    partId,
+            item=>{
+                if(
+                    contexto &&
+                    item.contexto!==
+                    contexto
+                ){
+                    return false;
+                }
+
+                if(
+                    partId &&
+                    item.metadados
+                        ?.parte_id!==
+                    partId
+                ){
+                    return false;
+                }
+
+                return true;
+            },
         );
 
     if(
@@ -84,10 +102,10 @@ export default function ChecklistMediaGallery({
     }
 
     return(
-        <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {items.map(
                 item=>(
-                    <MediaImage
+                    <MediaItem
                         key={
                             item.id
                         }
@@ -104,7 +122,7 @@ export default function ChecklistMediaGallery({
     );
 }
 
-function MediaImage({
+function MediaItem({
     checklistId,
     item,
 }:{
@@ -121,12 +139,14 @@ function MediaImage({
     useEffect(
         ()=>{
             let active=true;
-            let objectUrl:string|null=null;
+            let objectUrl:
+                string|null=null;
 
             api.get(
                 `/api/checklists/${checklistId}/media/${item.id}/arquivo`,
                 {
-                    responseType:"blob",
+                    responseType:
+                        "blob",
                 },
             )
                 .then(
@@ -170,9 +190,21 @@ function MediaImage({
     );
 
     return(
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-            <div className="aspect-[4/3] bg-slate-100">
-                {url ? (
+        <article className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+            <div className="aspect-video bg-slate-100">
+                {!url ? (
+                    <div className="flex h-full items-center justify-center">
+                        <LoaderCircle className="h-5 w-5 animate-spin text-slate-300"/>
+                    </div>
+                ) : item.tipo==="video" ? (
+                    <video
+                        src={url}
+                        controls
+                        playsInline
+                        preload="metadata"
+                        className="h-full w-full bg-black object-contain"
+                    />
+                ) : (
                     <img
                         src={url}
                         alt={
@@ -181,19 +213,25 @@ function MediaImage({
                         }
                         className="h-full w-full object-cover"
                     />
-                ) : (
-                    <div className="flex h-full items-center justify-center">
-                        <LoaderCircle className="h-5 w-5 animate-spin text-slate-300"/>
-                    </div>
                 )}
             </div>
 
-            <div className="truncate px-2 py-2 text-[11px] text-slate-500">
-                {
-                    item.titulo ??
-                    item.arquivo_nome
-                }
+            <div className="p-3">
+                <div className="truncate text-xs font-semibold text-slate-700">
+                    {
+                        item.titulo ??
+                        item.arquivo_nome
+                    }
+                </div>
+
+                <div className="mt-1 text-[10px] uppercase tracking-wide text-slate-400">
+                    {
+                        item.tipo==="video"
+                            ?"Vídeo"
+                            :"Fotografia"
+                    }
+                </div>
             </div>
-        </div>
+        </article>
     );
 }

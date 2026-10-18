@@ -2,6 +2,7 @@ import {
     Camera,
     LoaderCircle,
     Paperclip,
+    Video,
 } from "lucide-react";
 
 import {
@@ -18,11 +19,17 @@ import api from "../../../lib/api";
 
 interface Props {
     checklistId?:string|null;
-    ensureChecklistId?:()=>Promise<string>;
 
-    source:
-        | "camera"
-        | "file";
+    ensureChecklistId?:
+        ()=>Promise<string>;
+
+    mode?:
+        |"photo"
+        |"video";
+
+    source?:
+        |"camera"
+        |"file";
 
     contexto:string;
     titulo:string;
@@ -33,16 +40,19 @@ interface Props {
     >;
 
     disabled?:boolean;
+    label?:string;
 }
 
 export default function ChecklistMediaCapture({
     checklistId,
     ensureChecklistId,
+    mode="photo",
     source,
     contexto,
     titulo,
     metadata={},
     disabled=false,
+    label,
 }:Props){
     const inputRef=
         useRef<HTMLInputElement>(
@@ -70,6 +80,17 @@ export default function ChecklistMediaCapture({
     ]=useState<string|null>(
         null,
     );
+
+    const isVideo=
+        mode==="video";
+
+    const effectiveSource=
+        source ??
+        (
+            isVideo
+                ?"camera"
+                :"file"
+        );
 
     async function upload(
         file?:File,
@@ -100,21 +121,21 @@ export default function ChecklistMediaCapture({
 
             if(!id){
                 throw new Error(
-                    "Não foi possível preparar o checklist para receber a fotografia.",
+                    "Não foi possível preparar o checklist para guardar a evidência.",
                 );
             }
 
             const data=
                 new FormData();
 
+            /*
+             * Não enviamos "tipo".
+             * O backend identifica foto/vídeo
+             * pelo MIME real do ficheiro.
+             */
             data.append(
                 "arquivo",
                 file,
-            );
-
-            data.append(
-                "tipo",
-                "foto",
             );
 
             data.append(
@@ -129,7 +150,8 @@ export default function ChecklistMediaCapture({
 
             data.append(
                 "capturado_em",
-                new Date().toISOString(),
+                new Date()
+                    .toISOString(),
             );
 
             Object.entries(
@@ -163,17 +185,20 @@ export default function ChecklistMediaCapture({
                 },
             );
 
-            await queryClient.invalidateQueries({
-                queryKey:[
-                    "checklist-media",
-                    id,
-                ],
-            });
+            await queryClient
+                .invalidateQueries({
+                    queryKey:[
+                        "checklist-media",
+                        id,
+                    ],
+                });
 
             setMessage(
-                source==="camera"
-                    ?"Fotografia registada."
-                    :"Fotografia anexada.",
+                isVideo
+                    ?"Vídeo guardado no checklist."
+                    :effectiveSource==="camera"
+                        ?"Fotografia registada."
+                        :"Fotografia anexada.",
             );
         }
         catch(exception){
@@ -183,7 +208,8 @@ export default function ChecklistMediaCapture({
                 )
             ){
                 const errors=
-                    exception.response
+                    exception
+                        .response
                         ?.data
                         ?.errors;
 
@@ -191,9 +217,10 @@ export default function ChecklistMediaCapture({
                     errors &&
                     typeof errors===
                         "object"
-                        ?Object.values(
-                            errors,
-                        )
+                        ?Object
+                            .values(
+                                errors,
+                            )
                             .flat()
                             .find(
                                 value=>
@@ -210,14 +237,18 @@ export default function ChecklistMediaCapture({
                             .response
                             ?.data
                             ?.message ??
-                        "Não foi possível guardar a fotografia.",
+                        (
+                            isVideo
+                                ?"Não foi possível guardar o vídeo."
+                                :"Não foi possível guardar a fotografia."
+                        ),
                 );
             }
             else{
                 setError(
                     exception instanceof Error
                         ?exception.message
-                        :"Não foi possível guardar a fotografia.",
+                        :"Não foi possível guardar a evidência.",
                 );
             }
         }
@@ -232,14 +263,25 @@ export default function ChecklistMediaCapture({
         }
     }
 
+    const defaultLabel=
+        isVideo
+            ?"Gravar vídeo"
+            :effectiveSource==="camera"
+                ?"Tirar foto"
+                :"Anexar foto";
+
     return(
         <div>
             <input
                 ref={inputRef}
                 type="file"
-                accept="image/jpeg,image/png,image/webp"
+                accept={
+                    isVideo
+                        ?"video/*"
+                        :"image/*"
+                }
                 capture={
-                    source==="camera"
+                    effectiveSource==="camera"
                         ?"environment"
                         :undefined
                 }
@@ -271,23 +313,24 @@ export default function ChecklistMediaCapture({
                 }
                 className={[
                     "inline-flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition disabled:opacity-50",
-                    source==="camera"
+                    effectiveSource==="camera"
                         ?"bg-indigo-600 text-white hover:bg-indigo-700"
                         :"border border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
                 ].join(" ")}
             >
                 {uploading ? (
                     <LoaderCircle className="h-4 w-4 animate-spin"/>
-                ) : source==="camera" ? (
+                ) : isVideo ? (
+                    <Video className="h-4 w-4"/>
+                ) : effectiveSource==="camera" ? (
                     <Camera className="h-4 w-4"/>
                 ) : (
                     <Paperclip className="h-4 w-4"/>
                 )}
 
                 {
-                    source==="camera"
-                        ?"Tirar foto"
-                        :"Anexar foto"
+                    label ??
+                    defaultLabel
                 }
             </button>
 

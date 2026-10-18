@@ -1145,7 +1145,11 @@ Route::get(
                 [ChecklistRecordController::class, 'index']
             );
 
-            Route::get(
+                        Route::get(
+                '/checklists/options',
+                [ChecklistRecordController::class, 'options']
+            );
+Route::get(
                 '/checklists/{id}',
                 [ChecklistRecordController::class, 'show']
             )->whereUuid('id');
