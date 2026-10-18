@@ -1,6 +1,6 @@
 import { FormEvent, useState } from "react";
 import { resolvePortalDestination } from "../lib/portal";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import {
     CheckCircle2,
     LoaderCircle,
@@ -208,17 +208,26 @@ export default function LoginPage() {
                             </div>
                         </div>
 
-                        <label className="flex items-center gap-3 text-sm text-slate-600 cursor-pointer">
-                            <input
-                                type="checkbox"
-                                checked={remember}
-                                onChange={(event) =>
-                                    setRemember(event.target.checked)
-                                }
-                                className="w-4 h-4 rounded border-slate-300 text-indigo-600"
-                            />
-                            Manter sessão iniciada
-                        </label>
+                        <div className="flex items-center justify-between gap-4">
+                            <label className="flex cursor-pointer items-center gap-3 text-sm text-slate-600">
+                                <input
+                                    type="checkbox"
+                                    checked={remember}
+                                    onChange={(event) =>
+                                        setRemember(event.target.checked)
+                                    }
+                                    className="h-4 w-4 rounded border-slate-300 text-indigo-600"
+                                />
+                                Manter sessão iniciada
+                            </label>
+
+                            <Link
+                                to="/esqueci-senha"
+                                className="shrink-0 text-sm font-semibold text-indigo-600 transition hover:text-indigo-700"
+                            >
+                                Esqueci a palavra-passe
+                            </Link>
+                        </div>
 
                         {error && (
                             <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">

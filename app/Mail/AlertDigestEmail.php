@@ -19,7 +19,7 @@ class AlertDigestEmail extends Mailable
         $this->actionUrl=
             rtrim(
                 (string)config(
-                    'app.url'
+                    'mail.public_url'
                 ),
                 '/'
             ).

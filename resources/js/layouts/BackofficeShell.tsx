@@ -16,6 +16,7 @@ import {
     Layers3,
     LifeBuoy,
     LogOut,
+    Mail,
     Megaphone,
     Menu,
     MessageSquareText,
@@ -180,6 +181,11 @@ export default function BackofficeShell() {
                     <NavLink to="/backoffice/notificacoes" className={navClass}>
                         <BellRing className="h-5 w-5 shrink-0" />
                         Notificações
+                    </NavLink>
+
+                    <NavLink to="/backoffice/emails" className={navClass}>
+                        <Mail className="h-5 w-5 shrink-0" />
+                        E-mails
                     </NavLink>
 
                     <NavLink to="/backoffice/planos" className={navClass}>

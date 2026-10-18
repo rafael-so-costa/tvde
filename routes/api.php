@@ -4,6 +4,7 @@ use App\Http\Controllers\AlertController;
 use App\Http\Controllers\AluguerController;
 use App\Http\Controllers\AuditoriaController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BackofficeEmailController;
 use App\Http\Controllers\BackofficeBillingController;
 use App\Http\Controllers\BackofficeBillingPaymentController;
 use App\Http\Controllers\BackofficeChatController;
@@ -64,6 +65,7 @@ use App\Http\Controllers\NotificationPreferenceController;
 use App\Http\Controllers\PecaController;
 use App\Http\Controllers\PerfilTemplateController;
 use App\Http\Controllers\PortalIdentityController;
+use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\ProprietarioAccountController;
 use App\Http\Controllers\ProprietarioController;
 use App\Http\Controllers\ProprietarioDashboardController;
@@ -99,6 +101,21 @@ Route::post('/funcionario-convites/{token}/aceitar', [FuncionarioInvitationContr
     ->where('token', '[A-Za-z0-9]{64}')
     ->middleware('throttle:5,1');
 
+Route::post(
+    '/password/forgot',
+    [
+        PasswordResetController::class,
+        'forgot',
+    ]
+)->middleware('throttle:5,1');
+
+Route::post(
+    '/password/reset',
+    [
+        PasswordResetController::class,
+        'reset',
+    ]
+)->middleware('throttle:10,1');
 Route::get(
     '/payments/ifthenpay/callback',
     IfthenpayCallbackController::class
@@ -121,6 +138,48 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('super_admin')
         ->prefix('backoffice')
         ->group(function () {
+
+            Route::prefix('emails')->group(function () {
+                Route::get(
+                    '/summary',
+                    [
+                        BackofficeEmailController::class,
+                        'summary',
+                    ]
+                );
+
+                Route::get(
+                    '/logs',
+                    [
+                        BackofficeEmailController::class,
+                        'logs',
+                    ]
+                );
+
+                Route::get(
+                    '/configuration',
+                    [
+                        BackofficeEmailController::class,
+                        'configuration',
+                    ]
+                );
+
+                Route::put(
+                    '/configuration',
+                    [
+                        BackofficeEmailController::class,
+                        'updateConfiguration',
+                    ]
+                );
+
+                Route::post(
+                    '/test',
+                    [
+                        BackofficeEmailController::class,
+                        'test',
+                    ]
+                );
+            });
 
             Route::get(
                 '/seo',

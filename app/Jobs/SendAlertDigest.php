@@ -5,9 +5,9 @@ namespace App\Jobs;
 use App\Mail\AlertDigestEmail;
 use App\Models\AlertDigestRun;
 use App\Services\AlertDigestService;
+use App\Services\EmailDispatchService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Support\Facades\Mail;
 use Throwable;
 
 class SendAlertDigest implements ShouldQueue
@@ -22,9 +22,9 @@ class SendAlertDigest implements ShouldQueue
         public string $runId
     ){}
 
-    public function backoff(): array
+    public function backoff():array
     {
-        return [
+        return[
             60,
             300,
         ];
@@ -32,7 +32,12 @@ class SendAlertDigest implements ShouldQueue
 
     public function handle(
         AlertDigestService $service
-    ): void {
+    ):void{
+        $emailDispatch=
+            app(
+                EmailDispatchService::class
+            );
+
         $run=
             AlertDigestRun::query()
                 ->with(
@@ -60,9 +65,15 @@ class SendAlertDigest implements ShouldQueue
         if(
             !$run->user ||
             !$run->user->ativo ||
-            blank($run->user->email)
+            blank(
+                $run
+                    ->user
+                    ->email
+            )
         ){
-            $run->status='cancelled';
+            $run->status=
+                'cancelled';
+
             $run->save();
 
             return;
@@ -74,49 +85,97 @@ class SendAlertDigest implements ShouldQueue
                     $run
                 );
 
-        if($recipients->isEmpty()){
-            $run->status='cancelled';
+        if(
+            $recipients
+                ->isEmpty()
+        ){
+            $run->status=
+                'cancelled';
+
             $run->alert_count=0;
+
             $run->save();
 
             return;
         }
 
-        $run->status='processing';
+        $run->status=
+            'processing';
 
         $run->attempts=
             (int)$run->attempts+1;
 
         $run->failed_at=null;
         $run->error=null;
+
         $run->alert_count=
-            $recipients->count();
+            $recipients
+                ->count();
 
         $run->save();
 
         try{
             $alerts=
                 $recipients
-                    ->pluck('alert')
+                    ->pluck(
+                        'alert'
+                    )
                     ->values();
 
-            Mail::to(
-                $run->user->email
-            )->send(
+            $mail=
                 new AlertDigestEmail(
                     $run,
                     $alerts
-                )
+                );
+
+            $subject=
+                '[FrotaPro] Resumo diário — '.
+                $alerts->count().
+                (
+                    $alerts->count()===1
+                        ?' alerta'
+                        :' alertas'
+                );
+
+            $emailDispatch->send(
+                to:
+                    $run
+                        ->user
+                        ->email,
+
+                mailable:
+                    $mail,
+
+                subject:
+                    $subject,
+
+                category:
+                    'alert_digest',
+
+                tenantId:
+                    $run
+                        ->tenant_id,
+
+                relatedType:
+                    'alert_digest_run',
+
+                relatedId:
+                    $run->id
             );
 
             $run->status='sent';
             $run->sent_at=now();
             $run->failed_at=null;
             $run->error=null;
+
             $run->save();
-        }catch(Throwable $exception){
-            $run->status='failed';
-            $run->failed_at=now();
+        }
+        catch(Throwable $exception){
+            $run->status=
+                'failed';
+
+            $run->failed_at=
+                now();
 
             $run->error=
                 mb_substr(

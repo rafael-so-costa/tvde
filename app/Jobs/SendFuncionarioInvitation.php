@@ -4,10 +4,10 @@ namespace App\Jobs;
 
 use App\Mail\FuncionarioInvitationMail;
 use App\Models\FuncionarioInvitation;
+use App\Services\EmailDispatchService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Crypt;
-use Illuminate\Support\Facades\Mail;
 use Throwable;
 
 class SendFuncionarioInvitation implements ShouldQueue
@@ -20,8 +20,13 @@ class SendFuncionarioInvitation implements ShouldQueue
         public string $invitationId
     ){}
 
-    public function handle(): void
+    public function handle():void
     {
+        $emailDispatch=
+            app(
+                EmailDispatchService::class
+            );
+
         $invitation=
             FuncionarioInvitation::query()
                 ->with([
@@ -59,26 +64,53 @@ class SendFuncionarioInvitation implements ShouldQueue
             $url=
                 rtrim(
                     (string)
-                    config('app.url'),
+                    config(
+                        'app.url'
+                    ),
                     '/'
                 ).
                 '/convites/funcionario/'.
                 $token;
 
-            Mail::to(
-                $invitation->email
-            )->send(
-                new FuncionarioInvitationMail(
-                    $invitation,
-                    $url
-                )
+            $emailDispatch->send(
+                to:
+                    $invitation
+                        ->email,
+
+                mailable:
+                    new FuncionarioInvitationMail(
+                        $invitation,
+                        $url
+                    ),
+
+                subject:
+                    'Convite para aceder ao FrotaPRO',
+
+                category:
+                    'employee_invitation',
+
+                tenantId:
+                    $invitation
+                        ->tenant_id,
+
+                relatedType:
+                    'funcionario_invitation',
+
+                relatedId:
+                    $invitation
+                        ->id,
+
+                initiatedByUserId:
+                    $invitation
+                        ->created_by
             );
 
             $invitation->forceFill([
                 'sent_at'=>now(),
                 'last_error'=>null,
             ])->save();
-        }catch(Throwable $exception){
+        }
+        catch(Throwable $exception){
             $invitation->forceFill([
                 'last_error'=>
                     mb_substr(

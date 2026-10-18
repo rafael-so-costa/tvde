@@ -76,7 +76,7 @@ class AlertEmail extends Mailable
 
         return rtrim(
             (string)config(
-                'app.url'
+                'mail.public_url'
             ),
             '/'
         ).

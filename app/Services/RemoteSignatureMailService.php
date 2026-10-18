@@ -4,80 +4,84 @@ namespace App\Services;
 
 use App\Mail\RemoteSignatureRequestMail;
 use App\Models\AssinaturaDigital;
-use Illuminate\Support\Facades\Mail;
 use RuntimeException;
 
 class RemoteSignatureMailService
 {
+    public function __construct(
+        private EmailDispatchService $emailDispatch
+    ){}
+
     public function send(
         AssinaturaDigital $assinatura
-    ): void {
+    ):void{
         $assinatura->loadMissing(
             'contrato.template'
         );
 
-        $contrato =
+        $contrato=
             $assinatura->contrato;
 
-        if (!$contrato) {
+        if(!$contrato){
             throw new RuntimeException(
                 'Contrato da assinatura não encontrado.'
             );
         }
 
-        $email = strtolower(
-            trim(
-                (string)
-                $assinatura
-                    ->signatario_email
-            )
-        );
+        $email=
+            strtolower(
+                trim(
+                    (string)
+                    $assinatura
+                        ->signatario_email
+                )
+            );
 
-        if (
+        if(
             !filter_var(
                 $email,
                 FILTER_VALIDATE_EMAIL
             )
-        ) {
+        ){
             throw new RuntimeException(
                 'O signatário não possui um e-mail válido.'
             );
         }
 
-        $token =
+        $token=
             (string)
             $assinatura
                 ->token_verificacao;
 
-        $otp =
+        $otp=
             (string)
             $assinatura
                 ->codigo_otp;
 
-        if (
-            $token === '' ||
-            $otp === ''
-        ) {
+        if(
+            $token==='' ||
+            $otp===''
+        ){
             throw new RuntimeException(
                 'A solicitação de assinatura não possui token ou OTP ativo.'
             );
         }
 
-        $baseUrl =
+        $baseUrl=
             rtrim(
                 (string)
                 config(
-                    'app.url'
+                    'mail.public_url'
                 ),
                 '/'
             );
 
-        $signatureUrl =
-            $baseUrl .
-            '/assinaturas/remotas/' .
+        $signatureUrl=
+            $baseUrl.
+            '/assinaturas/remotas/'.
             $token;
 
-        $expiresAt =
+        $expiresAt=
             $assinatura
                 ->otp_expira_em
                 ?->timezone(
@@ -87,12 +91,16 @@ class RemoteSignatureMailService
                 )
                 ->format(
                     'd/m/Y H:i'
-                ) ??
-            '';
+                )
+            ?? '';
 
-        Mail::to(
-            $email
-        )->send(
+        $contractName=
+            $contrato
+                ->template
+                ?->nome
+            ?: 'Contrato';
+
+        $mail=
             new RemoteSignatureRequestMail(
                 signerName:
                     $assinatura
@@ -100,10 +108,7 @@ class RemoteSignatureMailService
                         ?: 'Signatário',
 
                 contractName:
-                    $contrato
-                        ->template
-                        ?->nome
-                        ?: 'Contrato',
+                    $contractName,
 
                 signatureUrl:
                     $signatureUrl,
@@ -113,7 +118,34 @@ class RemoteSignatureMailService
 
                 expiresAt:
                     $expiresAt
-            )
-        );
+            );
+
+        $this
+            ->emailDispatch
+            ->send(
+                to:
+                    $email,
+
+                mailable:
+                    $mail,
+
+                subject:
+                    'Assinatura pendente - '.
+                    $contractName,
+
+                category:
+                    'contract_signature',
+
+                tenantId:
+                    $contrato
+                        ->tenant_id,
+
+                relatedType:
+                    'assinatura_digital',
+
+                relatedId:
+                    $assinatura
+                        ->id
+            );
     }
 }

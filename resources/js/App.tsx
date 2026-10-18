@@ -145,6 +145,15 @@ const FuncionariosPage = lazy(
 const LoginPage = lazy(
     () => import("./pages/LoginPage"),
 );
+const ForgotPasswordPage = lazy(
+    () => import("./pages/ForgotPasswordPage"),
+);
+const ResetPasswordPage = lazy(
+    () => import("./pages/ResetPasswordPage"),
+);
+const BackofficeEmailsPage = lazy(
+    () => import("./pages/BackofficeEmailsPage"),
+);
 const ManutencaoPage = lazy(
     () => import("./pages/ManutencaoPage"),
 );
@@ -252,6 +261,16 @@ export default function App() {
             <Route path="/login" element={<LoginPage />} />
 
             <Route
+                path="/esqueci-senha"
+                element={<ForgotPasswordPage />}
+            />
+
+            <Route
+                path="/redefinir-senha"
+                element={<ResetPasswordPage />}
+            />
+
+            <Route
                 path="/assinaturas/remotas/:token"
                 element={<RemoteSignaturePage />}
             />
@@ -296,6 +315,11 @@ export default function App() {
                         <Route
                             path="notificacoes"
                             element={<BackofficeNotificationsPage />}
+                        />
+
+                        <Route
+                            path="emails"
+                            element={<BackofficeEmailsPage />}
                         />
 
                         <Route

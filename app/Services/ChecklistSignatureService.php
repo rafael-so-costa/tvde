@@ -7,7 +7,6 @@ use App\Models\ChecklistAssinatura;
 use App\Models\ChecklistRecord;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -17,7 +16,8 @@ use Throwable;
 class ChecklistSignatureService
 {
     public function __construct(
-        private ChecklistPdfService $pdfService
+        private ChecklistPdfService $pdfService,
+        private EmailDispatchService $emailDispatch
     ) {}
 
     public function prepare(
@@ -812,7 +812,7 @@ class ChecklistSignatureService
             rtrim(
                 (string)
                 config(
-                    'app.url'
+                    'mail.public_url'
                 ),
                 '/'
             );
@@ -823,22 +823,22 @@ class ChecklistSignatureService
             $assinatura
                 ->token_verificacao;
 
-        Mail::to(
+        $checklistName=
             $assinatura
-                ->signatario_email
-        )->send(
+                ->checklist
+                ->tipo===
+                'entrega'
+                    ?'Checklist de entrega'
+                    :'Checklist de recolha';
+
+        $mail=
             new ChecklistRemoteSignatureRequestMail(
                 signerName:
                     $assinatura
                         ->signatario_nome,
 
                 checklistName:
-                    $assinatura
-                        ->checklist
-                        ->tipo===
-                        'entrega'
-                            ?'Checklist de entrega'
-                            :'Checklist de recolha',
+                    $checklistName,
 
                 signatureUrl:
                     $url,
@@ -857,8 +857,35 @@ class ChecklistSignatureService
                         ->format(
                             'd/m/Y H:i'
                         )
-            )
-        );
+            );
+
+        $this
+            ->emailDispatch
+            ->send(
+                to:
+                    $assinatura
+                        ->signatario_email,
+
+                mailable:
+                    $mail,
+
+                subject:
+                    'Assinatura de checklist — FrotaPRO',
+
+                category:
+                    'checklist_signature',
+
+                tenantId:
+                    $assinatura
+                        ->tenant_id,
+
+                relatedType:
+                    'checklist_assinatura',
+
+                relatedId:
+                    $assinatura
+                        ->id
+            );
     }
 
     private function decodeSignature(

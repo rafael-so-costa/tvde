@@ -5,9 +5,9 @@ namespace App\Jobs;
 use App\Mail\AlertEmail;
 use App\Models\AlertDelivery;
 use App\Services\AlertDeliveryService;
+use App\Services\EmailDispatchService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Support\Facades\Mail;
 use Throwable;
 
 class SendAlertDelivery implements ShouldQueue
@@ -22,9 +22,9 @@ class SendAlertDelivery implements ShouldQueue
         public string $deliveryId
     ){}
 
-    public function backoff(): array
+    public function backoff():array
     {
-        return [
+        return[
             60,
             300,
         ];
@@ -32,7 +32,12 @@ class SendAlertDelivery implements ShouldQueue
 
     public function handle(
         AlertDeliveryService $service
-    ): void {
+    ):void{
+        $emailDispatch=
+            app(
+                EmailDispatchService::class
+            );
+
         $delivery=
             AlertDelivery::query()
                 ->with([
@@ -95,31 +100,60 @@ class SendAlertDelivery implements ShouldQueue
         $delivery->save();
 
         try{
-            Mail::to(
-                $recipient->user->email
-            )->send(
+            $mail=
                 new AlertEmail(
                     $alert,
                     $recipient
-                )
+                );
+
+            $emailDispatch->send(
+                to:
+                    $recipient
+                        ->user
+                        ->email,
+
+                mailable:
+                    $mail,
+
+                subject:
+                    '[FrotaPro] '.
+                    $mail
+                        ->severityLabel.
+                    ' — '.
+                    $alert
+                        ->title,
+
+                category:
+                    'alert_immediate',
+
+                tenantId:
+                    $delivery
+                        ->tenant_id,
+
+                relatedType:
+                    'alert',
+
+                relatedId:
+                    $alert->id
             );
 
-            /*
-             * SMTP confirma envio ao transporte,
-             * não entrega final na caixa postal.
-             */
             $delivery->status='sent';
             $delivery->sent_at=now();
             $delivery->failed_at=null;
             $delivery->error=null;
             $delivery->save();
-        }catch(Throwable $exception){
-            $delivery->status='failed';
-            $delivery->failed_at=now();
+        }
+        catch(Throwable $exception){
+            $delivery->status=
+                'failed';
+
+            $delivery->failed_at=
+                now();
 
             $delivery->error=
                 mb_substr(
-                    $exception->getMessage(),
+                    $exception
+                        ->getMessage(),
                     0,
                     10000
                 );

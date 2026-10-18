@@ -36,6 +36,7 @@
         <env name="DB_URL" value=""/>
 
         <env name="MAIL_MAILER" value="array"/>
+        <env name="MAIL_SETTINGS_KEY" value="base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
 

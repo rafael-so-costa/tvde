@@ -2,6 +2,10 @@
 
 return [
 
+    'enabled' => env('MAIL_ENABLED', true),
+    'public_url' => env('MAIL_PUBLIC_URL', env('APP_URL')),
+    'settings_key' => env('MAIL_SETTINGS_KEY'),
+
     /*
     |--------------------------------------------------------------------------
     | Default Mailer
