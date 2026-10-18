@@ -6,26 +6,85 @@ declare global {
     }
 }
 
-function normalizeBasePath(value?: string | null): string {
-    const path=(value ?? "").trim();
+function normalizeBasePath(
+    value?:string|null,
+):string{
+    const path=
+        (
+            value ??
+            ""
+        ).trim();
 
-    if(!path || path==="/"){
+    if(
+        !path ||
+        path==="/"
+    ){
         return "";
     }
 
-    return `/${path.replace(/^\/+|\/+$/g,"")}`;
+    return `/${path.replace(
+        /^\/+|\/+$/g,
+        "",
+    )}`;
 }
 
-export const appBasePath=normalizeBasePath(
-    window.__FROTAPRO__?.basePath,
-);
+function detectBasePath():string{
+    const configured=
+        normalizeBasePath(
+            window
+                .__FROTAPRO__
+                ?.basePath,
+        );
 
-export const appBaseUrl=appBasePath
-    ? `${appBasePath}/`
-    : "/";
+    if(configured){
+        return configured;
+    }
 
-export function appUrl(path=""): string {
-    const clean=path.replace(/^\/+/,"");
+    const pathname=
+        window
+            .location
+            .pathname;
+
+    /*
+     * Produção atual do FrotaPRO:
+     * /sistemas/frotapro
+     *
+     * Esta deteção funciona como fallback caso
+     * WEB_BASE_PATH/config cache não seja injetado
+     * corretamente no HTML.
+     */
+    const productionMarker=
+        "/sistemas/frotapro";
+
+    if(
+        pathname===
+            productionMarker ||
+        pathname.startsWith(
+            `${productionMarker}/`,
+        )
+    ){
+        return productionMarker;
+    }
+
+    return "";
+}
+
+export const appBasePath=
+    detectBasePath();
+
+export const appBaseUrl=
+    appBasePath
+        ?`${appBasePath}/`
+        :"/";
+
+export function appUrl(
+    path="",
+):string{
+    const clean=
+        path.replace(
+            /^\/+/,
+            "",
+        );
 
     if(!clean){
         return appBaseUrl;
