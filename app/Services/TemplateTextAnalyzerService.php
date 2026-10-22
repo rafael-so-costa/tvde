@@ -310,6 +310,20 @@ class TemplateTextAnalyzerService
             'source_type' => 'automatico',
             'source_path' => 'contrato.valor_semanal',
         ],
+        'CONDICOES_COBRANCA' => [
+            'label' => 'Condições de cobrança',
+            'type' => 'text',
+            'required' => true,
+            'source_type' => 'calculado',
+            'source_path' => 'contrato.condicoes_cobranca',
+        ],
+        'PERIODICIDADE_PAGAMENTO_TEXTO' => [
+            'label' => 'Periodicidade de pagamento',
+            'type' => 'text',
+            'required' => true,
+            'source_type' => 'calculado',
+            'source_path' => 'contrato.periodicidade_pagamento_texto',
+        ],
         'PERCENTAGEM_CONTRATO' => [
             'label' => 'Percentagem do contrato',
             'type' => 'number',

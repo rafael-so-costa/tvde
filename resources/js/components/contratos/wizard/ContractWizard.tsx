@@ -39,6 +39,7 @@ import type {
     Veiculo,
 } from "../../../types/veiculo";
 import ContractIdentificationStep from "./ContractIdentificationStep";
+import {validateBillingFields} from "./ContractBillingFields";
 import ContractReviewStep from "./ContractReviewStep";
 import ContractSignatureStep from "./ContractSignatureStep";
 import ContractTemplateStep from "./ContractTemplateStep";
@@ -458,6 +459,14 @@ export default function ContractWizard({
 
     async function submit() {
         if (!selectedType) {
+            return;
+        }
+
+        const identification=validateIdentification(selectedType,form);
+
+        if(identification){
+            setError(identification);
+            setStep(1);
             return;
         }
 
@@ -892,6 +901,13 @@ function validateIdentification(
                 field.campo
             ];
 
+        if(
+            type.cobranca_habilitada &&
+            key==="PERCENTAGEM_CONTRATO"
+        ){
+            continue;
+        }
+
         if (
             value === null ||
             value === undefined ||
@@ -899,6 +915,10 @@ function validateIdentification(
         ) {
             return `Preencha o campo ${field.campo}.`;
         }
+    }
+
+    if(type.cobranca_habilitada){
+        return validateBillingFields(form.campos_preenchidos);
     }
 
     return null;

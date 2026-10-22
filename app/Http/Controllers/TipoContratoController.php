@@ -22,7 +22,7 @@ class TipoContratoController extends Controller
         $query=TipoContrato::query()
             ->where('tenant_id',$this->tenantId())
             ->with([
-                'template:id,nome,tipo_arquivo,ativo',
+                'template:id,nome,tipo_arquivo,ativo,conteudo_original',
                 'checklistProcessTemplate:id,codigo,nome,ativo,versao',
             ])
             ->withCount('contratos')
@@ -39,8 +39,25 @@ class TipoContratoController extends Controller
                 ->where('mostrar_menu',true);
         }
 
+        $types=$query->get()->map(function(TipoContrato $tipo){
+            $enabled=app(
+                \App\Services\FrotaProContractBillingIntegration::class
+            )->supports(
+                $tipo->codigo,
+                $tipo->template?->conteudo_original
+            );
+
+            $tipo->setAttribute('cobranca_habilitada',$enabled);
+
+            if($tipo->template){
+                $tipo->template->makeHidden(['conteudo_original']);
+            }
+
+            return $tipo;
+        });
+
         return response()->json([
-            'data'=>$query->get(),
+            'data'=>$types,
         ]);
     }
 

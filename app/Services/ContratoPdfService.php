@@ -58,6 +58,9 @@ class ContratoPdfService
 
         $empresa = $contrato->empresa;
 
+        app(FrotaProContractBillingIntegration::class)
+            ->assertSnapshot($contrato);
+
                 /*
          * FROTAPRO_DOCUMENT_READINESS_4L8
          *
@@ -322,6 +325,20 @@ $binary = $pdf->output();
                 );
             }
         }
+
+        $billingFields=(array)($contrato->campos_preenchidos??[]);
+
+        $this->put(
+            $values,
+            'CONTRATO_CONDICOES_COBRANCA',
+            $billingFields['CONDICOES_COBRANCA']??null
+        );
+
+        $this->put(
+            $values,
+            'CONTRATO_PERIODICIDADE_PAGAMENTO_TEXTO',
+            $billingFields['PERIODICIDADE_PAGAMENTO_TEXTO']??null
+        );
 
         $this->put($values, 'CONTRATO_ID', $contrato->id);
         $this->put($values, 'TIPO_CONTRATO', $contrato->tipo);

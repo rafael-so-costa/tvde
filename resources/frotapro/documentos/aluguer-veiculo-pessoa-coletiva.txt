@@ -50,7 +50,7 @@ Valor
 
 1. O Locatário obriga-se a entregar uma caução no valor de {{VALOR_CAUCAO}} no ato da entrega do veículo.
 
-2. O valor do aluguer é de {{VALOR_SEMANAL}} por semana.
+2. O valor do aluguer corresponderá a {{CONDICOES_COBRANCA}}, com periodicidade de pagamento {{PERIODICIDADE_PAGAMENTO_TEXTO}}.
 
 3. O primeiro pagamento ocorrerá em {{DATA_PRIMEIRO_PAGAMENTO}}.
 

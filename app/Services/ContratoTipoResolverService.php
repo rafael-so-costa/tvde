@@ -16,6 +16,28 @@ class ContratoTipoResolverService
         $tipoId=$data['tipo_contrato_id']??null;
 
         if(!$tipoId){
+            $templateId=$data['template_id']??null;
+
+            if(is_string($templateId) && $templateId!==''){
+                $candidate=TemplateContrato::query()
+                    ->where('tenant_id',$tenantId)
+                    ->where('ativo',true)
+                    ->find($templateId);
+
+                if(
+                    $candidate &&
+                    str_contains(
+                        (string)$candidate->conteudo_original,
+                        '{{CONDICOES_COBRANCA}}'
+                    )
+                ){
+                    throw ValidationException::withMessages([
+                        'tipo_contrato_id'=>
+                            'Este modelo exige um tipo de Prestação de Serviços ou Aluguer. Utilize o assistente de contratos.',
+                    ]);
+                }
+            }
+
             return [
                 'data'=>$data,
                 'tipo_contrato'=>null,
@@ -63,9 +85,14 @@ class ContratoTipoResolverService
             $data
         );
 
+        $data=app(
+            FrotaProContractBillingIntegration::class
+        )->forRequest($data,$tipo,$template);
+
         $this->validateFields(
             $tipo,
-            $data
+            $data,
+            $template
         );
 
         $data['tipo_contrato_id']=$tipo->id;
@@ -171,7 +198,8 @@ class ContratoTipoResolverService
 
     private function validateFields(
         TipoContrato $tipo,
-        array $data
+        array $data,
+        ?TemplateContrato $template
     ): void {
         $configurations=
             (array)($tipo->campos_configuracao??[]);
@@ -234,6 +262,14 @@ class ContratoTipoResolverService
             );
 
             if($field===''){
+                continue;
+            }
+
+            if(
+                strtoupper($field)==='PERCENTAGEM_CONTRATO' &&
+                app(FrotaProContractBillingIntegration::class)
+                    ->supports($tipo->codigo,$template?->conteudo_original)
+            ){
                 continue;
             }
 

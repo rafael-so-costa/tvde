@@ -1024,6 +1024,16 @@ class ContratoService
                 );
             }
 
+            if(array_key_exists('campos_preenchidos',$data)){
+                $data=app(
+                    FrotaProContractBillingIntegration::class
+                )->forRequest(
+                    $data,
+                    $contrato->tipoContrato,
+                    $contrato->template
+                );
+            }
+
             $contrato->fill($data);
 
             $this->validarCronologia(

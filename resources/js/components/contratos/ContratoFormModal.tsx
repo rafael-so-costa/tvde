@@ -3,6 +3,10 @@ import { ReactNode, useEffect, useMemo, useState } from "react";
 import { AlertCircle, FileSignature, LoaderCircle, X } from "lucide-react";
 import api from "../../lib/api";
 import ContratoDocumentPreview from "./ContratoDocumentPreview";
+import ContractBillingFields, {
+    validateBillingFields,
+} from "./wizard/ContractBillingFields";
+import type { ContractWizardForm } from "../../types/tipo-contrato";
 import SignaturePad from "../checklists/SignaturePad";
 import type { Contrato, ContratoTipo } from "../../types/contrato";
 import type { Empresa } from "../../types/empresa";
@@ -211,12 +215,35 @@ export default function ContratoFormModal({
         [veiculos, form.veiculo_id],
     );
 
+    const effectiveTemplate =
+        selectedTemplate ?? (editing ? contract?.template ?? null : null);
+
+    const financialTemplate=Boolean(
+        effectiveTemplate?.conteudo_original?.includes("{{CONDICOES_COBRANCA}}") &&
+        effectiveTemplate?.conteudo_original?.includes("{{PERIODICIDADE_PAGAMENTO_TEXTO}}")
+    );
+
     const visibleFields = useMemo(
         () =>
-            (selectedTemplate?.campos_detectados ?? []).filter(
-                (field) => !isSignatureField(field),
+            (effectiveTemplate?.campos_detectados ?? []).filter(
+                (field) => {
+                    if(isSignatureField(field)) return false;
+
+                    if(financialTemplate){
+                        const key=normalizePlaceholder(fieldKey(field));
+
+                        if(
+                            key==="CONDICOES_COBRANCA" ||
+                            key==="PERIODICIDADE_PAGAMENTO_TEXTO"
+                        ){
+                            return false;
+                        }
+                    }
+
+                    return true;
+                },
             ),
-        [selectedTemplate],
+        [effectiveTemplate,financialTemplate],
     );
 
     const required = useMemo(
@@ -356,6 +383,18 @@ export default function ContratoFormModal({
     function validate(): string | null {
         if (!editing && !form.template_id) return "Selecione um template.";
         if (!form.tipo) return "Selecione o tipo do contrato.";
+
+        if(financialTemplate && !editing){
+            return "Os novos contratos de Prestação de Serviços e Aluguer devem ser criados no assistente de contratos.";
+        }
+
+        if(financialTemplate && editing){
+            const billingError=validateBillingFields(
+                campos as ContractWizardForm["campos_preenchidos"]
+            );
+
+            if(billingError)return billingError;
+        }
 
         if (form.data_inicio && form.data_fim && form.data_fim < form.data_inicio) {
             return "A data de fim não pode ser anterior à data de início.";
@@ -775,6 +814,28 @@ export default function ContratoFormModal({
                         </div>
                     </section>
 
+                    {financialTemplate && !editing && (
+                        <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                            Este modelo utiliza condições financeiras configuráveis.
+                            Para criar um novo contrato, utilize o assistente de contratos,
+                            selecionando Prestação de Serviços ou Aluguer.
+                        </div>
+                    )}
+
+                    {financialTemplate && editing && (
+                        <div className="mt-8">
+                            <ContractBillingFields
+                                fields={campos as ContractWizardForm["campos_preenchidos"]}
+                                onChange={(key,value)=>
+                                    setCampos(current=>({
+                                        ...current,
+                                        [key]:value,
+                                    }))
+                                }
+                            />
+                        </div>
+                    )}
+
                     {visibleFields.length > 0 && (
                         <section className="mt-8">
                             <h3 className="font-semibold text-slate-900">
@@ -947,7 +1008,7 @@ export default function ContratoFormModal({
                         <button
                             type="button"
                             onClick={()=>setPreviewOpen(true)}
-                            disabled={saving || !form.template_id}
+                            disabled={saving || !form.template_id || financialTemplate}
                             className="inline-flex h-11 items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 text-sm font-semibold text-indigo-700 disabled:opacity-50"
                         >
                             Pré-visualizar documento

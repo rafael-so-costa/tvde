@@ -252,7 +252,7 @@ test(
 
         expect(
             $updated->versao_publicada
-        )->toBe('2.0');
+        )->toBe('2.1');
 
         expect(
             $updated->juridicamente_revisto
@@ -283,7 +283,7 @@ test(
                 )
                 ->where(
                     'versao',
-                    '2.0'
+                    '2.1'
                 )
                 ->where(
                     'juridicamente_revisto',

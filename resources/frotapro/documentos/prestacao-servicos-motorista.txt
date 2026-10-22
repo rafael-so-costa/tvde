@@ -37,9 +37,11 @@ CLÁUSULA TERCEIRA
 
 CLÁUSULA QUARTA
 
-1. A Primeira Contratante pagará ao Segundo Contratante a quantia mensal que este último terá a receber de acordo com o registo das plataformas de Transporte em Veículo Descaracterizado a Partir de Plataforma Eletrónica, deduzindo {{PERCENTAGEM_CONTRATO}}, face a custos e despesas incorridas pela Primeira Contratante, e todos os encargos relativos ao uso e manutenção do veículo automóvel.
+1. A Primeira Contratante pagará ao Segundo Contratante a remuneração apurada de acordo com os registos das plataformas de transporte TVDE, deduzindo, a título de encargos e serviços contratualmente acordados da Primeira Contratante, {{CONDICOES_COBRANCA}}.
 
-2. O Segundo Contratante obriga-se a emitir recibo e entregá-lo à Primeira Contratante.
+2. O apuramento e pagamento da remuneração serão efetuados com periodicidade {{PERIODICIDADE_PAGAMENTO_TEXTO}}, sem prejuízo da emissão dos documentos fiscalmente exigidos.
+
+3. O Segundo Contratante obriga-se a emitir e entregar à Primeira Contratante os recibos legalmente aplicáveis.
 
 CLÁUSULA QUINTA
 

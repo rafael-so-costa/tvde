@@ -23,7 +23,7 @@ final class FrotaProDocumentCatalog
                 'Contrato recomendado para formalizar a prestação de serviços do motorista à empresa do tenant.',
                 10,
                 true,
-                '2.0'
+                '2.1'
             ),
 
             $this->document(
@@ -90,7 +90,8 @@ final class FrotaProDocumentCatalog
                 'aluguer_tvde_pessoa_singular',
                 'Contrato de aluguer quando a locadora/proprietário é uma pessoa singular.',
                 70,
-                true
+                true,
+                '1.1'
             ),
 
             $this->document(
@@ -102,7 +103,8 @@ final class FrotaProDocumentCatalog
                 'aluguer_tvde_pessoa_coletiva',
                 'Contrato de aluguer quando a locadora/proprietário é uma pessoa coletiva.',
                 80,
-                true
+                true,
+                '1.1'
             ),
         ];
     }

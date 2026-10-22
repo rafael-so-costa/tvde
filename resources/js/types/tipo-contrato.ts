@@ -71,6 +71,7 @@ export interface TipoContrato {
     campos_configuracao: TipoContratoCampoConfiguracao[];
     assinaturas_configuracao: TipoContratoAssinaturaConfiguracao[];
     configuracao: Record<string, unknown>;
+    cobranca_habilitada?: boolean;
 
     ativo: boolean;
     mostrar_menu: boolean;

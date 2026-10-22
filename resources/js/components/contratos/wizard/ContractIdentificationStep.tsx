@@ -16,6 +16,7 @@ import type {
     Veiculo,
 } from "../../../types/veiculo";
 import type { ReactNode } from "react";
+import ContractBillingFields from "./ContractBillingFields";
 
 interface Props {
     type: TipoContrato;
@@ -50,6 +51,17 @@ const standardFields = new Set([
     "VALOR_TOTAL",
 ]);
 
+const billingFields=new Set([
+    "PERCENTAGEM_CONTRATO",
+    "TIPO_COBRANCA",
+    "VALOR_FIXO_COBRANCA",
+    "PERCENTAGEM_COBRANCA",
+    "BASE_CALCULO_COBRANCA",
+    "PERIODICIDADE_PAGAMENTO",
+    "CONDICOES_COBRANCA",
+    "PERIODICIDADE_PAGAMENTO_TEXTO",
+]);
+
 function fieldLabel(value: string): string {
     return value
         .toLowerCase()
@@ -77,6 +89,10 @@ function manualFields(
             field.origem === "manual" &&
             !standardFields.has(
                 field.campo.trim().toUpperCase(),
+            ) &&
+            !(
+                type.cobranca_habilitada &&
+                billingFields.has(field.campo.trim().toUpperCase())
             ),
     );
 }
@@ -333,6 +349,13 @@ export default function ContractIdentificationStep({
                     />
                 </div>
             </section>
+
+            {type.cobranca_habilitada && (
+                <ContractBillingFields
+                    fields={form.campos_preenchidos}
+                    onChange={onCustomField}
+                />
+            )}
 
             {fields.length > 0 && (
                 <section className="border-t border-slate-200 pt-7">

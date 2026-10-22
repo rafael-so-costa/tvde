@@ -253,6 +253,12 @@ class TemplateSourceCatalog
 
             'contrato.valor_total' =>
                 'Valor total',
+
+            'contrato.condicoes_cobranca' =>
+                'Condições financeiras contratadas',
+
+            'contrato.periodicidade_pagamento_texto' =>
+                'Periodicidade de pagamento contratada',
         ],
 
         'assinatura' => [
