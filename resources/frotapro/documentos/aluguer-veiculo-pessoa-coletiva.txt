@@ -1,0 +1,171 @@
+CONTRATO DE ALUGUER DE VEÍCULO
+
+ENTRE
+
+{{PROPRIETARIO_NOME_EMPRESA}}, sociedade, com sede em {{PROPRIETARIO_ENDERECO_COMPLETO}}, com o capital social de {{PROPRIETARIO_CAPITAL_SOCIAL}}, matriculada na Conservatória do Registo Comercial sob o número único de pessoa coletiva {{PROPRIETARIO_NIF}}, neste ato representada por {{PROPRIETARIO_NOME_GERENTE}}, na qualidade de gerente, com poderes para o presente ato, adiante designada por Primeira Contratante ou Locadora.
+E
+
+{{MOTORISTA_NOME_COMPLETO}}, portador do {{MOTORISTA_TIPO_DOCUMENTO}} n.º {{MOTORISTA_NUMERO_DOCUMENTO}}, emitido pela República Portuguesa, contribuinte fiscal n.º {{MOTORISTA_NIF}}, residente em {{MOTORISTA_ENDERECO_COMPLETO}}, na qualidade de Locatário, adiante designado por Segundo Contratante.
+
+Em conjunto designados por Partes.
+
+CONSIDERANDO QUE:
+
+A) A Locadora é possuidora e legítima detentora do veículo automóvel:
+
+Matrícula: {{VEICULO_MATRICULA}}
+Data da primeira matrícula: {{VEICULO_DATA_MATRICULA}}
+Marca: {{VEICULO_MARCA}}
+Modelo: {{VEICULO_MODELO}}
+Chassis: {{VEICULO_CHASSI}}
+Cilindrada: {{VEICULO_CILINDRADA}}
+Potência: {{VEICULO_POTENCIA}}
+Combustível/Energia: {{VEICULO_COMBUSTIVEL}}
+Lotação: {{VEICULO_LUGARES}}
+Portas: {{VEICULO_PORTAS}}
+Cor: {{VEICULO_COR}}
+
+B) O Locatário pretende obter o gozo temporário do veículo identificado anteriormente;
+
+C) As Partes pretendem definir os termos em que a Locadora disponibiliza ao Locatário o referido veículo automóvel.
+
+É celebrado o presente contrato de aluguer de veículo automóvel sem condutor, o qual se rege pelas cláusulas seguintes:
+
+CLÁUSULA PRIMEIRA
+Objeto
+
+A Locadora dá de aluguer ao Locatário, que o aceita, o veículo identificado nos Considerandos anteriores.
+
+CLÁUSULA SEGUNDA
+Prazo do aluguer
+
+1. O presente contrato tem início no dia {{DATA_INICIO}} e termina em {{DATA_FIM}}, com duração de {{DURACAO_CONTRATO}}.
+
+2. As Partes poderão acordar por escrito na extensão do prazo de vigência.
+
+3. Caso o Locatário pretenda antecipar o termo do contrato, deverá comunicar por escrito à Locadora, ficando a antecipação dependente da aceitação desta, da devolução do veículo e da regularização dos valores devidos.
+
+CLÁUSULA TERCEIRA
+Valor
+
+1. O Locatário obriga-se a entregar uma caução no valor de {{VALOR_CAUCAO}} no ato da entrega do veículo.
+
+2. O valor do aluguer é de {{VALOR_SEMANAL}} por semana.
+
+3. O primeiro pagamento ocorrerá em {{DATA_PRIMEIRO_PAGAMENTO}}.
+
+CLÁUSULA QUARTA
+Entrega do Veículo
+
+1. Na data da entrega, o Locatário procederá, juntamente com a Locadora, a uma inspeção completa do veículo.
+
+2. A entrega deverá ser documentada através do checklist de entrega do FrotaPRO, incluindo quilometragem, nível de combustível ou energia, equipamentos, documentos, estado exterior e interior, danos preexistentes, fotografias e demais elementos aplicáveis.
+
+3. O veículo apenas será considerado entregue após conclusão e assinatura do respetivo checklist.
+
+CLÁUSULA QUINTA
+Responsabilidade Civil
+
+O Locatário é responsável pelos prejuízos causados pela utilização do veículo enquanto este permanecer na sua posse, sem prejuízo dos casos legalmente excluídos.
+
+CLÁUSULA SEXTA
+Seguro
+
+O veículo deverá manter os seguros legalmente exigidos e os demais seguros contratualmente aplicáveis.
+
+CLÁUSULA SÉTIMA
+Identificação do condutor
+
+O Locatário obriga-se a assegurar que o veículo apenas seja conduzido por pessoa legalmente habilitada e autorizada nos termos aplicáveis.
+
+CLÁUSULA OITAVA
+Utilização do veículo
+
+O veículo não poderá ser utilizado:
+
+a) por pessoas não autorizadas;
+
+b) por pessoa sem título válido de condução;
+
+c) em violação do Código da Estrada;
+
+d) em provas ou competições não autorizadas;
+
+e) para transporte de mercadorias proibidas ou ilegais;
+
+f) fora dos limites territoriais permitidos sem autorização da Locadora;
+
+g) para finalidade incompatível com o presente contrato.
+
+CLÁUSULA NONA
+Encargos
+
+São da responsabilidade do Locatário os encargos decorrentes da utilização do veículo que contratualmente ou legalmente lhe sejam imputáveis, incluindo combustível ou energia, portagens, multas e danos que resultem de utilização indevida.
+
+CLÁUSULA DÉCIMA
+Energia / Combustível
+
+1. O Locatário compromete-se a devolver o veículo no termo do contrato com o mesmo nível de energia com que lhe foi entregue, entendendo-se por energia, conforme o tipo de veículo, combustível e/ou carga elétrica da bateria.
+
+2. Caso o veículo seja devolvido com nível inferior ao inicialmente entregue, o Locatário será responsável pelos custos correspondentes.
+
+3. O Locatário obriga-se a utilizar exclusivamente o tipo de combustível ou sistema de carregamento adequado e recomendado pelo fabricante.
+
+CLÁUSULA DÉCIMA PRIMEIRA
+Utilização e manutenção do veículo
+
+1. O Locatário obriga-se a respeitar as leis e regulamentos relativos à utilização do veículo.
+
+2. Deverá utilizar o veículo de forma normal, diligente e prudente.
+
+3. Não poderá realizar modificações no veículo sem autorização prévia da Locadora.
+
+CLÁUSULA DÉCIMA SEGUNDA
+Responsabilidade pelo veículo
+
+1. Em caso de acidente, furto, roubo, incêndio ou dano relevante, o Locatário deverá informar prontamente a Locadora e cumprir as obrigações legais correspondentes.
+
+2. Sempre que aplicável, deverá ser preenchida a documentação relativa ao sinistro e recolhida evidência fotográfica.
+
+3. O Locatário deverá comunicar qualquer vício, ameaça, perigo ou pretensão de terceiros relativamente ao veículo.
+
+CLÁUSULA DÉCIMA TERCEIRA
+Cessão
+
+A cessão da posição contratual ou da utilização do veículo depende de autorização prévia e escrita da Locadora.
+
+CLÁUSULA DÉCIMA QUARTA
+Devolução do veículo
+
+1. O Locatário obriga-se a devolver o veículo nas condições contratualmente acordadas.
+
+2. A devolução deverá obrigatoriamente ser registada através do checklist de recolha do FrotaPRO.
+
+3. O checklist de recolha deverá comparar automaticamente o estado do veículo com o checklist de entrega, incluindo quilometragem, nível de energia, itens em falta, novos danos, fotografias e penalizações aplicáveis.
+
+4. O veículo apenas será considerado formalmente devolvido após conclusão do checklist de recolha.
+
+CLÁUSULA DÉCIMA QUINTA
+Mora
+
+O incumprimento das obrigações pecuniárias ou da obrigação de restituição do veículo poderá originar os juros, indemnizações e demais consequências previstas na lei e no presente contrato.
+
+CLÁUSULA DÉCIMA SEXTA
+Proteção de dados pessoais
+
+Os dados pessoais recolhidos serão tratados para execução do contrato e cumprimento de obrigações legais, nos termos da legislação aplicável.
+
+CLÁUSULA DÉCIMA SÉTIMA
+Resolução
+
+O contrato poderá ser resolvido nos casos de incumprimento das obrigações assumidas pelas Partes, nos termos legalmente aplicáveis.
+
+Feito e assinado em {{DATA_ASSINATURA}}, em dois exemplares, destinando-se um a cada uma das Partes.
+
+A LOCADORA
+
+{{ASSINATURA_PROPRIETARIO}}
+
+O LOCATÁRIO
+
+{{ASSINATURA_MOTORISTA}}

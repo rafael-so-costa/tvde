@@ -1,0 +1,19 @@
+DENÚNCIA DE CONTRATO DE PRESTAÇÃO DE SERVIÇOS
+
+{{EMPRESA_NOME_EMPRESA}}, com sede em {{EMPRESA_ENDERECO_COMPLETO}}, com o capital social de {{EMPRESA_CAPITAL_SOCIAL}}, matriculada na Conservatória do Registo Comercial sob o número único de pessoa coletiva {{EMPRESA_NIF}}, neste ato representada por {{EMPRESA_NOME_GERENTE}}, na qualidade de gerente, com poderes para o presente ato,
+
+e
+
+{{MOTORISTA_NOME_COMPLETO}}, residente em {{MOTORISTA_ENDERECO_COMPLETO}}, contribuinte fiscal n.º {{MOTORISTA_NIF}},
+
+Partes no Contrato de Prestação de Serviços celebrado em {{DATA_INICIO}}, vêm, pelo presente, comunicar a denúncia do respetivo contrato, a produzir efeitos a partir do dia {{DATA_FIM}}.
+
+{{EMPRESA_ENDERECO_CIDADE}}, {{DATA_ASSINATURA}}
+
+{{EMPRESA_NOME_EMPRESA}}
+
+{{ASSINATURA_EMPRESA}}
+
+{{MOTORISTA_NOME_COMPLETO}}
+
+{{ASSINATURA_MOTORISTA}}

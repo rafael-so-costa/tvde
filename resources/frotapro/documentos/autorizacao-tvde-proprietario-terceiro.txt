@@ -1,0 +1,26 @@
+DECLARAÇÃO DE AUTORIZAÇÃO PARA INSCRIÇÃO DE VEÍCULO EM PLATAFORMA ELETRÓNICA TVDE
+
+{{PROPRIETARIO_NOME_COMPLETO}}, residente em {{PROPRIETARIO_ENDERECO_COMPLETO}}, na qualidade de proprietário do veículo:
+
+Marca: {{VEICULO_MARCA}}
+Modelo: {{VEICULO_MODELO}}
+Matrícula: {{VEICULO_MATRICULA}}
+Data da primeira matrícula: {{VEICULO_DATA_MATRICULA}}
+
+pela presente declaração autoriza a entidade {{EMPRESA_NOME_EMPRESA}}, com sede em {{EMPRESA_ENDERECO_COMPLETO}}, NIPC {{EMPRESA_NIF}}, Operadora TVDE registada e devidamente licenciada junto do Instituto da Mobilidade e dos Transportes, I.P., com a licença {{EMPRESA_CERTIFICADO_TVDE}}, a proceder à inscrição e registo do Veículo em plataforma eletrónica TVDE, nos termos e para os efeitos do artigo 12.º, n.º 1, da Lei n.º 45/2018, de 10 de agosto.
+
+{{MOTORISTA_NOME_COMPLETO}}, com domicílio em {{MOTORISTA_ENDERECO_COMPLETO}}, portador do {{MOTORISTA_TIPO_DOCUMENTO}} n.º {{MOTORISTA_NUMERO_DOCUMENTO}}, válido até {{MOTORISTA_DOCUMENTO_VALID_UNTIL}}, com o endereço de e-mail {{MOTORISTA_EMAIL}}, motorista TVDE registado e devidamente licenciado junto do Instituto da Mobilidade e dos Transportes, I.P., com o certificado de motorista n.º {{MOTORISTA_CERTIFICADO_TVDE}}, declara que tomou conhecimento da presente autorização.
+
+Sem prejuízo da obrigação do Operador TVDE de assegurar o pleno e permanente cumprimento dos requisitos de exercício da atividade previstos na legislação aplicável, o Motorista declara que o Veículo e a respetiva utilização cumprirão os requisitos legais e regulamentares aplicáveis à atividade TVDE.
+
+Em caso de substituição do Veículo ou alteração das informações constantes da presente declaração, as Partes obrigam-se a promover a respetiva atualização.
+
+DATA: {{DATA_ASSINATURA}}
+
+PELO PROPRIETÁRIO DO VEÍCULO
+
+{{ASSINATURA_PROPRIETARIO}}
+
+PELO MOTORISTA
+
+{{ASSINATURA_MOTORISTA}}

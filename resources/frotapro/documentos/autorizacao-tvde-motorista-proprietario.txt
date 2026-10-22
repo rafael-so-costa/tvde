@@ -1,0 +1,34 @@
+DECLARAÇÃO DE AUTORIZAÇÃO PARA INSCRIÇÃO DE VEÍCULO EM PLATAFORMA ELETRÓNICA TVDE
+
+{{MOTORISTA_NOME_COMPLETO}}, com domicílio em {{MOTORISTA_ENDERECO_COMPLETO}}, portador do {{MOTORISTA_TIPO_DOCUMENTO}} n.º {{MOTORISTA_NUMERO_DOCUMENTO}}, válido até {{MOTORISTA_DOCUMENTO_VALID_UNTIL}}, contribuinte fiscal n.º {{MOTORISTA_NIF}}, com o endereço de e-mail {{MOTORISTA_EMAIL}}, motorista de transporte em veículo descaracterizado a partir de plataforma eletrónica (“TVDE”), registado e devidamente licenciado junto do Instituto da Mobilidade e dos Transportes, I.P., com o certificado de motorista n.º {{MOTORISTA_CERTIFICADO_TVDE}}, na qualidade de único proprietário do veículo:
+
+Marca: {{VEICULO_MARCA}}
+Modelo: {{VEICULO_MODELO}}
+Matrícula: {{VEICULO_MATRICULA}}
+Data da primeira matrícula: {{VEICULO_DATA_MATRICULA}}
+
+pela presente declaração autoriza a entidade {{EMPRESA_NOME_EMPRESA}}, com sede em {{EMPRESA_ENDERECO_COMPLETO}}, NIPC {{EMPRESA_NIF}}, Operadora TVDE registada e licenciada junto do Instituto da Mobilidade e dos Transportes, I.P., com a licença {{EMPRESA_CERTIFICADO_TVDE}}, a proceder à inscrição e registo do Veículo em plataforma eletrónica TVDE, nos termos e para os efeitos do artigo 12.º, n.º 1, da Lei n.º 45/2018, de 10 de agosto.
+
+Sem prejuízo da obrigação do Operador TVDE de assegurar o pleno e permanente cumprimento dos requisitos de exercício da atividade previstos na Lei TVDE, incluindo os respeitantes a veículos e motoristas afetos à prestação de serviços TVDE, o Motorista declara e garante que, juntamente com o Veículo, cumpre e cumprirá durante o período da presente declaração todos os requisitos legais e regulamentares aplicáveis.
+
+Declara, nomeadamente:
+
+a) que se trata de veículo automóvel ligeiro de passageiros com matrícula nacional;
+
+b) que possui lotação não superior a nove lugares, incluindo o do motorista;
+
+c) que o Veículo cumpre os requisitos legais aplicáveis quanto à antiguidade;
+
+d) que o Veículo foi ou será apresentado às inspeções técnicas legalmente exigidas;
+
+e) que o Veículo possui os seguros legalmente exigidos para a atividade TVDE;
+
+f) que o Veículo circula nos termos legalmente admitidos para a atividade TVDE;
+
+g) que serão comunicadas alterações relevantes relativas ao Veículo ou aos dados constantes da presente declaração.
+
+DATA: {{DATA_ASSINATURA}}
+
+PELO MOTORISTA / PROPRIETÁRIO
+
+{{ASSINATURA_MOTORISTA}}

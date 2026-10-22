@@ -1444,7 +1444,7 @@ test(
                 )
                 ->assertOk()
                 ->assertJsonCount(
-                    5,
+                    12,
                     'data'
                 );
 
@@ -1485,7 +1485,7 @@ test(
                 )
                 ->assertJsonPath(
                     'data.preset_versao',
-                    1
+                    2
                 )
                 ->assertJsonCount(
                     9,
@@ -1589,7 +1589,7 @@ test(
                     'aluguer_completo_tvde',
 
                 'preset_versao' =>
-                    1,
+                    2,
             ]
         );
     }

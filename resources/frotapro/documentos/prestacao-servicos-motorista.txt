@@ -1,0 +1,84 @@
+CONTRATO DE PRESTAÇÃO DE SERVIÇOS
+
+ENTRE
+
+{{EMPRESA_NOME_EMPRESA}}, sociedade unipessoal, com sede em {{EMPRESA_ENDERECO_COMPLETO}}, com o capital social de {{EMPRESA_CAPITAL_SOCIAL}}, matriculada na Conservatória do Registo Comercial sob o número único de pessoa coletiva {{EMPRESA_NIF}}, neste ato representada por {{EMPRESA_NOME_GERENTE}}, na qualidade de gerente, com poderes para o presente ato, adiante designada por Primeiro Contratante.
+
+E
+
+{{MOTORISTA_NOME_COMPLETO}}, residente em {{MOTORISTA_ENDERECO_COMPLETO}}, portador do {{MOTORISTA_TIPO_DOCUMENTO}} n.º {{MOTORISTA_NUMERO_DOCUMENTO}}, válido até {{MOTORISTA_DOCUMENTO_VALID_UNTIL}}, pelos Serviços da República Portuguesa, contribuinte fiscal n.º {{MOTORISTA_NIF}}, adiante designado por Segundo Contratante.
+
+Em conjunto designados por Partes.
+
+É celebrado, livremente e de boa-fé, o presente contrato de prestação de serviços, o qual se rege pelas cláusulas seguintes:
+
+CLÁUSULA PRIMEIRA
+Objeto
+
+1. O Segundo Contratante, na sua qualidade de condutor, obriga-se a prestar à Primeira Contratante serviços de motorista, de forma independente e autónoma, no âmbito e nos termos do Regime Jurídico do Transporte em Veículo Descaracterizado a Partir de Plataforma Eletrónica.
+
+2. O Segundo Contratante compromete-se a realizar os serviços que lhe forem confiados com a maior seriedade, diligência, rigor e prontidão, com vista à prossecução dos objetivos visados pela Primeira Contratante.
+
+CLÁUSULA SEGUNDA
+
+Os serviços a prestar pelo Segundo Contratante serão realizados sem qualquer subordinação jurídica à Primeira Contratante, a quem apenas interessa o resultado do trabalho daquele, pelo que o Segundo Contratante possuirá plena autonomia e independência técnica na execução do seu trabalho, prestando os serviços objeto do presente contrato segundo a sua experiência e conhecimentos próprios.
+
+CLÁUSULA TERCEIRA
+
+1. O presente contrato tem início no dia {{DATA_INICIO}} e termina a {{DATA_FIM}}, com duração de {{DURACAO_CONTRATO}}.
+
+2. Sem prejuízo do previsto no número anterior, as Partes podem acordar quanto à extensão do prazo de vigência do presente Contrato, acordo esse que deverá em qualquer caso ser formalizado por escrito.
+
+3. O presente contrato poderá ser denunciado por qualquer das Partes a todo o tempo, mediante comunicação escrita enviada à outra Parte Contratante com a antecedência mínima de 30 dias relativamente à data da produção dos respetivos efeitos.
+
+4. O exercício da faculdade prevista no número anterior não confere direito a qualquer indemnização.
+
+5. No caso de uma das Partes não cumprir, total ou parcialmente, o prazo de aviso prévio estabelecido no número anterior, fica obrigada a pagar à outra Parte uma indemnização de valor correspondente ao período de antecedência em falta, sem prejuízo da responsabilidade civil pelos danos eventualmente causados em virtude da inobservância do prazo de aviso prévio.
+
+CLÁUSULA QUARTA
+
+1. A Primeira Contratante pagará ao Segundo Contratante a quantia mensal que este último terá a receber de acordo com o registo das plataformas de Transporte em Veículo Descaracterizado a Partir de Plataforma Eletrónica, deduzindo {{PERCENTAGEM_CONTRATO}}, face a custos e despesas incorridas pela Primeira Contratante, e todos os encargos relativos ao uso e manutenção do veículo automóvel.
+
+2. O Segundo Contratante obriga-se a emitir recibo e entregá-lo à Primeira Contratante.
+
+CLÁUSULA QUINTA
+
+1. O Segundo Contratante obriga-se a manter confidencial, durante e após o termo do presente contrato, toda a informação de que em qualquer momento tenha conhecimento relativamente a qualquer documentação ou informação inerente à atividade e trabalhos desenvolvidos pela Primeira Contratante.
+
+2. O Segundo Contratante obriga-se igualmente, durante e após o termo do presente contrato, a não revelar a terceiros e a manter confidencial toda a informação e conhecimentos adquiridos junto da Primeira Contratante, dos clientes ou potenciais clientes.
+
+3. Por informação confidencial considera-se, designadamente, todas as informações, documentação, conhecimento reservado ou privilegiado sobre atividades comerciais ou de prestação de serviços, conhecimentos técnicos, know-how e identificação dos clientes da Primeira Contratante.
+
+CLÁUSULA SEXTA
+
+A violação de qualquer das obrigações previstas na cláusula anterior por parte do Segundo Contratante constitui fundamento para a resolução imediata do presente contrato, sem necessidade de cumprimento de qualquer aviso prévio, conferindo à Primeira Contratante o direito de reclamar uma indemnização por danos emergentes e lucros cessantes, nos termos gerais.
+
+CLÁUSULA SÉTIMA
+
+O incumprimento, por qualquer das Partes, das obrigações por si assumidas por força do presente contrato confere à outra Parte o direito de o resolver, mediante comunicação escrita dirigida à Parte faltosa.
+
+CLÁUSULA OITAVA
+
+1. Cumpre ao Segundo Contratante, enquanto trabalhador independente, a observância das respetivas obrigações sociais, em sede de Segurança Social, e fiscais, em sede de IRS e de IVA.
+
+2. O Segundo Contratante deverá subscrever seguro de acidentes de trabalho de profissional liberal, nos termos da lei.
+
+3. A Primeira Contratante poderá, a todo o tempo, exigir do Segundo Contratante prova do cumprimento das obrigações estabelecidas nos números anteriores.
+
+CLÁUSULA NONA
+
+O Segundo Contratante expressamente consente que, durante a vigência do presente contrato e com o objetivo de administrar a relação existente, seja dado uso e tratamento informático aos dados pessoais que transmitir à Primeira Contratante.
+
+CLÁUSULA DÉCIMA
+
+Qualquer alteração às presentes cláusulas deverá revestir a forma de aditamento escrito ao contrato e ser assinada por ambas as Partes Contratantes.
+
+Feito e assinado em {{DATA_ASSINATURA}}, em dois exemplares, destinando-se um a cada uma das Partes.
+
+O PRIMEIRO CONTRATANTE
+
+{{ASSINATURA_EMPRESA}}
+
+O SEGUNDO CONTRATANTE
+
+{{ASSINATURA_MOTORISTA}}

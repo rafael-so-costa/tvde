@@ -286,13 +286,10 @@ export default function VehicleInspectionDiagram({
             </div>
 
             <div className="grid gap-4 bg-slate-50/60 p-4 md:grid-cols-2 2xl:grid-cols-3">
-                {views.map(
-                    view=>(
+                {views.map(({key,...viewProps})=>(
                         <VehicleView
-                            key={
-                                view.key
-                            }
-                            {...view}
+                            key={key}
+                            {...viewProps}
                             disabled={
                                 disabled
                             }
@@ -321,7 +318,7 @@ function VehicleView({
     selectedPart,
     stateFor,
     onSelect,
-}:ViewConfig&{
+}:Omit<ViewConfig,"key">&{
     disabled:boolean;
     selectedPart:string|null;
 

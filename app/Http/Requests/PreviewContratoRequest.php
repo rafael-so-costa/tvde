@@ -2,28 +2,53 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Contracts\Validation\ValidationRule;
-use Illuminate\Foundation\Http\FormRequest;
-
-class PreviewContratoRequest extends FormRequest
+class PreviewContratoRequest extends StoreContratoRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
-    public function authorize(): bool
+    // FrotaProWizardPreviewResolver
+    protected function prepareForValidation(): void
     {
-        return false;
+        if(!$this->exists('tipo_contrato_id')){
+            return;
+        }
+
+        $tipoId=$this->input('tipo_contrato_id');
+
+        if(
+            !is_string($tipoId) ||
+            !\Illuminate\Support\Str::isUuid($tipoId)
+        ){
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'tipo_contrato_id'=>'Selecione um tipo de contrato válido.',
+            ]);
+        }
+
+        $tenantId=app(
+            \App\Services\TenantContext::class
+        )->requireId();
+
+        $resolved=app(
+            \App\Services\ContratoTipoResolverService::class
+        )->resolve(
+            $this->all(),
+            $tenantId
+        );
+
+        $template=$resolved['template'] ?? null;
+
+        if(
+            !$template ||
+            blank($template->conteudo_original)
+        ){
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'tipo_contrato_id'=>
+                    'O tipo de contrato não possui um template de texto válido.',
+            ]);
+        }
+
+        $this->merge([
+            'tipo'=>$resolved['data']['tipo'],
+            'template_id'=>$template->id,
+        ]);
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, ValidationRule|array<mixed>|string>
-     */
-    public function rules(): array
-    {
-        return [
-            //
-        ];
-    }
 }

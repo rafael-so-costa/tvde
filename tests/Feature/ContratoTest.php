@@ -2914,3 +2914,345 @@ test(
         )->toBeNull();
     }
 );
+
+// FROTAPRO_4L9_LIFECYCLE_CORRIGIDO
+
+test('4l9 ciclo documental preserva numero na emissao incompleta',function(){
+
+    \Illuminate\Support\Facades\Storage::fake('local');
+
+    $tenant=contratoTenant(
+        'Tenant Ciclo Documental 4L9',
+        'tenant-ciclo-documental-4l9'
+    );
+
+    $user=contratoUsuario(
+        $tenant,
+        'ciclo.documental.4l9@frotapro.test'
+    );
+
+    $template=contratoTemplate(
+        $tenant,
+        '<h1>CONTRATO DE TESTE</h1>'.
+        '<p>Campo A: {{CAMPO_MANUAL_A}}</p>'.
+        '<p>Campo B: [[CAMPO_MANUAL_B]]</p>',
+        'Contrato Ciclo Documental 4L9'
+    );
+
+    $motorista=contratoMotorista(
+        $tenant,
+        'CicloDocumental4L9'
+    );
+
+    $veiculo=contratoVeiculo(
+        $tenant,
+        'XL-49-ZZ',
+        250
+    );
+
+    contratoLogin($this,$user);
+
+    // ====================================================
+    // ETAPA 1 - CRIAR RASCUNHO
+    // ====================================================
+
+    $created=$this
+        ->withHeaders(contratoHeaders())
+        ->postJson(
+            '/api/contratos',
+            [
+                'template_id'=>$template->id,
+                'tipo'=>'aluguer',
+                'motorista_id'=>$motorista->id,
+                'veiculo_id'=>$veiculo->id,
+                'data_inicio'=>'2026-10-21',
+                'campos_preenchidos'=>[],
+            ]
+        )
+        ->assertCreated()
+        ->assertJsonPath(
+            'data.status',
+            'rascunho'
+        );
+
+    $contratoId=$created->json('data.id');
+
+    expect($contratoId)->not->toBeNull();
+
+    // ====================================================
+    // ETAPA 2 - IDENTIFICAR DOCUMENTO EXISTENTE
+    // ====================================================
+
+    /*
+     * AppServiceProvider sincroniza os documentos
+     * quando o Eloquent cria o contrato.
+     *
+     * Portanto o documento e o numero ja existem
+     * antes do primeiro pedido de geracao PDF.
+     */
+
+    $documentoInicial=\App\Models\Documento::query()
+        ->where('entidade_tipo','contrato')
+        ->where('entidade_id',$contratoId)
+        ->firstOrFail();
+
+    $documentoIdInicial=$documentoInicial->id;
+    $codigoInicial=$documentoInicial->codigo;
+
+    expect($codigoInicial)
+        ->toMatch('/^G\d{6}$/');
+
+    expect(
+        \Illuminate\Support\Facades\Schema::hasTable(
+            'document_sequences'
+        )
+    )->toBeTrue();
+
+    $numeroInicial=(int)
+        \Illuminate\Support\Facades\DB::table(
+            'document_sequences'
+        )
+        ->where('chave','documentos')
+        ->value('ultimo_numero');
+
+    expect($numeroInicial)
+        ->toBeGreaterThanOrEqual(1);
+
+    $totalDocumentosInicial=\App\Models\Documento::count();
+
+    $ficheirosIniciais=
+        \Illuminate\Support\Facades\Storage::disk(
+            'local'
+        )->allFiles('contract-pdfs');
+
+    $logsPdfIniciais=
+        \App\Models\LogAuditoriaContrato::query()
+            ->where('contrato_id',$contratoId)
+            ->where('acao','geracao_pdf')
+            ->count();
+
+    $contrato=\App\Models\Contrato::findOrFail(
+        $contratoId
+    );
+
+    expect($contrato->pdf_gerado_url)->toBeNull();
+    expect($contrato->hash_documento)->toBeNull();
+
+    // ====================================================
+    // ETAPA 3 - TENTAR GERAR PDF INCOMPLETO
+    // ====================================================
+
+    $failed=$this
+        ->withHeaders(contratoHeaders())
+        ->postJson(
+            "/api/contratos/{$contratoId}/pdf"
+        )
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(
+            'campos_preenchidos'
+        );
+
+    $erros=$failed->json(
+        'errors.campos_preenchidos'
+    );
+
+    $mensagem=implode(
+        ' ',
+        is_array($erros) ? $erros : []
+    );
+
+    expect($mensagem)
+        ->toContain('CAMPO_MANUAL_A')
+        ->toContain('CAMPO_MANUAL_B');
+
+    // ====================================================
+    // ETAPA 4 - VERIFICAR AUSENCIA DE ALTERACOES
+    // ====================================================
+
+    $contrato->refresh();
+
+    expect($contrato->pdf_gerado_url)->toBeNull();
+    expect($contrato->hash_documento)->toBeNull();
+
+    $documentoDepoisFalha=
+        \App\Models\Documento::query()
+            ->where('entidade_tipo','contrato')
+            ->where('entidade_id',$contratoId)
+            ->firstOrFail();
+
+    expect($documentoDepoisFalha->id)
+        ->toBe($documentoIdInicial);
+
+    expect($documentoDepoisFalha->codigo)
+        ->toBe($codigoInicial);
+
+    expect(\App\Models\Documento::count())
+        ->toBe($totalDocumentosInicial);
+
+    $numeroDepoisFalha=(int)
+        \Illuminate\Support\Facades\DB::table(
+            'document_sequences'
+        )
+        ->where('chave','documentos')
+        ->value('ultimo_numero');
+
+    expect($numeroDepoisFalha)
+        ->toBe($numeroInicial);
+
+    expect(
+        \Illuminate\Support\Facades\Storage::disk(
+            'local'
+        )->allFiles('contract-pdfs')
+    )->toBe($ficheirosIniciais);
+
+    expect(
+        \App\Models\LogAuditoriaContrato::query()
+            ->where('contrato_id',$contratoId)
+            ->where('acao','geracao_pdf')
+            ->count()
+    )->toBe($logsPdfIniciais);
+
+    // ====================================================
+    // ETAPA 5 - CORRIGIR OS CAMPOS MANUAIS
+    // ====================================================
+
+    $this
+        ->withHeaders(contratoHeaders())
+        ->patchJson(
+            "/api/contratos/{$contratoId}",
+            [
+                'campos_preenchidos'=>[
+                    'CAMPO_MANUAL_A'=>
+                        'Valor contratual preenchido',
+                    'CAMPO_MANUAL_B'=>
+                        'Segundo campo preenchido',
+                ],
+            ]
+        )
+        ->assertOk()
+        ->assertJsonPath(
+            'data.status',
+            'rascunho'
+        );
+
+    /*
+     * A atualizacao do rascunho pode sincronizar
+     * novamente os metadados do documento.
+     * Nao deve atribuir outro codigo.
+     */
+
+    $documentoDepoisEdicao=
+        \App\Models\Documento::query()
+            ->where('entidade_tipo','contrato')
+            ->where('entidade_id',$contratoId)
+            ->firstOrFail();
+
+    expect($documentoDepoisEdicao->id)
+        ->toBe($documentoIdInicial);
+
+    expect($documentoDepoisEdicao->codigo)
+        ->toBe($codigoInicial);
+
+    $numeroDepoisEdicao=(int)
+        \Illuminate\Support\Facades\DB::table(
+            'document_sequences'
+        )
+        ->where('chave','documentos')
+        ->value('ultimo_numero');
+
+    expect($numeroDepoisEdicao)
+        ->toBe($numeroInicial);
+
+    // ====================================================
+    // ETAPA 6 - EMITIR O PDF DEFINITIVO
+    // ====================================================
+
+    $issued=$this
+        ->withHeaders(contratoHeaders())
+        ->postJson(
+            "/api/contratos/{$contratoId}/pdf"
+        )
+        ->assertOk()
+        ->assertJsonPath(
+            'data.pdf_disponivel',
+            true
+        )
+        ->assertJsonPath(
+            'data.codigo_documento',
+            $codigoInicial
+        );
+
+    expect($issued->json('data.codigo_documento'))
+        ->toBe($codigoInicial);
+
+    // ====================================================
+    // ETAPA 7 - CONFIRMAR NUMERACAO ESTAVEL
+    // ====================================================
+
+    $documentoFinal=\App\Models\Documento::query()
+        ->where('entidade_tipo','contrato')
+        ->where('entidade_id',$contratoId)
+        ->firstOrFail();
+
+    expect($documentoFinal->id)
+        ->toBe($documentoIdInicial);
+
+    expect($documentoFinal->codigo)
+        ->toBe($codigoInicial);
+
+    expect(\App\Models\Documento::count())
+        ->toBe($totalDocumentosInicial);
+
+    $numeroFinal=(int)
+        \Illuminate\Support\Facades\DB::table(
+            'document_sequences'
+        )
+        ->where('chave','documentos')
+        ->value('ultimo_numero');
+
+    expect($numeroFinal)
+        ->toBe($numeroInicial);
+
+    // ====================================================
+    // ETAPA 8 - VALIDAR O FICHEIRO PDF E O HASH
+    // ====================================================
+
+    $contrato->refresh();
+
+    expect($contrato->pdf_gerado_url)
+        ->not->toBeNull();
+
+    expect($contrato->hash_documento)
+        ->toMatch('/^[a-f0-9]{64}$/');
+
+    \Illuminate\Support\Facades\Storage::disk('local')
+        ->assertExists(
+            $contrato->pdf_gerado_url
+        );
+
+    $binary=
+        \Illuminate\Support\Facades\Storage::disk(
+            'local'
+        )->get($contrato->pdf_gerado_url);
+
+    expect($binary)->toStartWith('%PDF-');
+
+    $texto=(new \Smalot\PdfParser\Parser())
+        ->parseContent($binary)
+        ->getText();
+
+    expect($texto)
+        ->toContain('Valor contratual preenchido')
+        ->toContain('Segundo campo preenchido')
+        ->toContain($codigoInicial);
+
+    expect(hash('sha256',$binary))
+        ->toBe($contrato->hash_documento);
+
+    expect(
+        \App\Models\LogAuditoriaContrato::query()
+            ->where('contrato_id',$contratoId)
+            ->where('acao','geracao_pdf')
+            ->count()
+    )->toBe($logsPdfIniciais+1);
+});

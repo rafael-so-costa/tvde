@@ -1136,3 +1136,275 @@ test(
         )->toBe(0);
     }
 );
+test('preview moderno utiliza template do tipo',function(){
+    $tenant=ctiTenant('Preview Wizard','preview-wizard');
+    $user=ctiAdmin($tenant,'preview.wizard@frotapro.test');
+
+    $template=ctiTemplate(
+        $tenant,
+        'Documento Preview',
+        null,
+        "CONTRATO DE PREVIEW\n\nCLÁUSULA PRIMEIRA\nObjeto contratual."
+    );
+
+    $tipo=ctiTipo(
+        $tenant,
+        'preview_wizard',
+        $template
+    );
+
+    ctiLogin($this,$user);
+
+    $response=$this
+        ->withHeaders(ctiHeaders())
+        ->postJson('/api/contratos/preview',[
+            'tipo_contrato_id'=>$tipo->id,
+        ])
+        ->assertOk();
+
+    expect((string)$response->json('data.html'))
+        ->toContain('CONTRATO DE PREVIEW');
+
+    expect(Contrato::query()->count())->toBe(0);
+});
+
+test('preview moderno bloqueia substituicao de template',function(){
+    $tenant=ctiTenant('Preview Seguro','preview-seguro');
+    $user=ctiAdmin($tenant,'preview.seguro@frotapro.test');
+
+    $original=ctiTemplate($tenant,'Original');
+    $indevido=ctiTemplate($tenant,'Indevido');
+
+    $tipo=ctiTipo(
+        $tenant,
+        'preview_seguro',
+        $original
+    );
+
+    ctiLogin($this,$user);
+
+    $this
+        ->withHeaders(ctiHeaders())
+        ->postJson('/api/contratos/preview',[
+            'tipo_contrato_id'=>$tipo->id,
+            'template_id'=>$indevido->id,
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('template_id');
+
+    expect(Contrato::query()->count())->toBe(0);
+});
+
+test('preview moderno rejeita tipo de outro tenant',function(){
+    $tenant=ctiTenant('Preview Origem','preview-origem');
+    $outro=ctiTenant('Preview Externo','preview-externo');
+
+    $user=ctiAdmin($tenant,'preview.origem@frotapro.test');
+
+    $template=ctiTemplate($outro,'Template Externo');
+    $tipo=ctiTipo($outro,'tipo_externo',$template);
+
+    ctiLogin($this,$user);
+
+    $this
+        ->withHeaders(ctiHeaders())
+        ->postJson('/api/contratos/preview',[
+            'tipo_contrato_id'=>$tipo->id,
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('tipo_contrato_id');
+
+    expect(Contrato::query()->count())->toBe(0);
+});
+
+// FROTAPRO_4L2_TENANT_PDF
+
+test('preview pdf devolve pdf real sem criar contrato ou consumir numero',function(){
+    $tenant=ctiTenant(
+        'Tenant Preview PDF',
+        'tenant-preview-pdf-4l2'
+    );
+
+    $admin=ctiAdmin(
+        $tenant,
+        'pdf.4l2@frotapro.test'
+    );
+
+    $template=ctiTemplate(
+        $tenant,
+        'Contrato PDF',
+        null,
+        "CONTRATO DE PREVIEW\n\nCLÁUSULA PRIMEIRA\n\nObjeto contratual."
+    );
+
+    $tipo=ctiTipo(
+        $tenant,
+        'pdf_preview_4l2',
+        $template
+    );
+
+    ctiLogin($this,$admin);
+
+    $contratosAntes=\App\Models\Contrato::count();
+    $documentosAntes=\App\Models\Documento::count();
+
+    $sequenciaAntes=null;
+
+    if(\Illuminate\Support\Facades\Schema::hasTable('document_sequences')){
+        $sequenciaAntes=\Illuminate\Support\Facades\DB::table(
+            'document_sequences'
+        )->where('chave','documentos')
+         ->value('ultimo_numero');
+    }
+
+    $response=$this
+        ->withHeaders(ctiHeaders())
+        ->postJson(
+            '/api/contratos/preview-pdf',
+            [
+                'tipo_contrato_id'=>$tipo->id,
+            ]
+        )
+        ->assertOk();
+
+    expect(
+        $response->headers->get('Content-Type')
+    )->toContain('application/pdf');
+
+    expect(
+        $response->headers->get('Cache-Control')
+    )->toContain('no-store');
+
+    $binary=$response->baseResponse->getContent();
+
+    expect(is_string($binary))->toBeTrue();
+
+    expect($binary)->toStartWith('%PDF-');
+
+    expect(strlen($binary))
+        ->toBeGreaterThan(1000);
+
+    $parser=new \Smalot\PdfParser\Parser();
+
+    $parsed=$parser->parseContent($binary);
+
+    expect(count($parsed->getPages()))
+        ->toBeGreaterThanOrEqual(1);
+
+    $text=preg_replace(
+        '/\s+/u',
+        ' ',
+        $parsed->getText()
+    );
+
+    expect($text)->toContain('A ATRIBUIR');
+
+    expect(\App\Models\Contrato::count())
+        ->toBe($contratosAntes);
+
+    expect(\App\Models\Documento::count())
+        ->toBe($documentosAntes);
+
+    if(\Illuminate\Support\Facades\Schema::hasTable('document_sequences')){
+        $sequenciaDepois=\Illuminate\Support\Facades\DB::table(
+            'document_sequences'
+        )->where('chave','documentos')
+         ->value('ultimo_numero');
+
+        expect($sequenciaDepois)
+            ->toBe($sequenciaAntes);
+    }
+});
+
+test('preview pdf recusa tipo pertencente a outro tenant',function(){
+    $tenant=ctiTenant(
+        'Tenant PDF Local',
+        'tenant-pdf-local-4l2'
+    );
+
+    $externo=ctiTenant(
+        'Tenant PDF Externo',
+        'tenant-pdf-externo-4l2'
+    );
+
+    $admin=ctiAdmin(
+        $tenant,
+        'pdf.externo.4l2@frotapro.test'
+    );
+
+    $template=ctiTemplate(
+        $externo,
+        'Template Externo'
+    );
+
+    $tipo=ctiTipo(
+        $externo,
+        'pdf_externo_4l2',
+        $template
+    );
+
+    ctiLogin($this,$admin);
+
+    $this
+        ->withHeaders(ctiHeaders())
+        ->postJson(
+            '/api/contratos/preview-pdf',
+            [
+                'tipo_contrato_id'=>$tipo->id,
+            ]
+        )
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(
+            'tipo_contrato_id'
+        );
+
+    expect(\App\Models\Contrato::count())
+        ->toBe(0);
+});
+
+test('preview pdf impede substituicao de template',function(){
+    $tenant=ctiTenant(
+        'Tenant PDF Seguro',
+        'tenant-pdf-seguro-4l2'
+    );
+
+    $admin=ctiAdmin(
+        $tenant,
+        'pdf.seguro.4l2@frotapro.test'
+    );
+
+    $original=ctiTemplate(
+        $tenant,
+        'Documento Original'
+    );
+
+    $indevido=ctiTemplate(
+        $tenant,
+        'Documento Indevido'
+    );
+
+    $tipo=ctiTipo(
+        $tenant,
+        'pdf_seguro_4l2',
+        $original
+    );
+
+    ctiLogin($this,$admin);
+
+    $this
+        ->withHeaders(ctiHeaders())
+        ->postJson(
+            '/api/contratos/preview-pdf',
+            [
+                'tipo_contrato_id'=>$tipo->id,
+                'template_id'=>$indevido->id,
+            ]
+        )
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(
+            'template_id'
+        );
+
+    expect(\App\Models\Contrato::count())
+        ->toBe(0);
+});

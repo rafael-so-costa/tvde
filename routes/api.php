@@ -39,6 +39,7 @@ use App\Http\Controllers\ChecklistProcessTemplateController;
 use App\Http\Controllers\ChecklistRecordController;
 use App\Http\Controllers\CompraController;
 use App\Http\Controllers\ContratoController;
+use App\Http\Controllers\ContratoPreviewController;
 use App\Http\Controllers\CurrentPermissionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeclaracaoController;
@@ -1082,6 +1083,14 @@ Route::get(
         Route::get('/contratos/{id}/pdf/download', [ContratoController::class, 'downloadPdf']);
 
         Route::middleware('permission:contratos,configurar')->group(function () {
+            Route::post(
+                '/contratos/preview',
+                [
+                    ContratoPreviewController::class,
+                    'preview',
+                ]
+            );
+
             Route::post('/contratos', [ContratoController::class, 'store']);
             Route::patch('/contratos/{id}', [ContratoController::class, 'update']);
             Route::patch('/contratos/{id}/encerrar', [ContratoController::class, 'encerrar']);
@@ -1311,3 +1320,5 @@ require __DIR__.'/checklist_process_presets.php';
 require __DIR__.'/productivity.php';
 
 require __DIR__.'/checklist_signatures.php';
+
+require __DIR__.'/contrato_pdf_preview.php';

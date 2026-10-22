@@ -13,6 +13,7 @@ import {
     X,
 } from "lucide-react";
 import api from "../../../lib/api";
+import ContratoDocumentPreview from "../ContratoDocumentPreview";
 import { useContractTypes } from "../../../hooks/useContractTypes";
 import type {
     Contrato,
@@ -126,6 +127,9 @@ export default function ContractWizard({
     const [saving, setSaving] =
         useState(false);
 
+    const [previewOpen,setPreviewOpen] =
+        useState(false);
+
     const types =
         typesQuery.data ?? [];
 
@@ -181,6 +185,7 @@ export default function ContractWizard({
         setSignatures({});
         setError(null);
         setSaving(false);
+        setPreviewOpen(false);
     }, [open]);
 
     useEffect(() => {
@@ -560,6 +565,25 @@ export default function ContractWizard({
                 className="absolute inset-0 bg-slate-950/65 backdrop-blur-sm"
             />
 
+            {previewOpen && selectedType?.template_id && (
+                <ContratoDocumentPreview
+                    title={`Pré-visualização — ${selectedType.nome}`}
+                    onClose={()=>setPreviewOpen(false)}
+                    payload={{
+                        tipo_contrato_id:selectedType.id,
+                        empresa_id:form.empresa_id || null,
+                        proprietario_id:form.proprietario_id || null,
+                        motorista_id:form.motorista_id || null,
+                        veiculo_id:form.veiculo_id || null,
+                        data_inicio:form.data_inicio || null,
+                        data_fim:form.data_fim || null,
+                        valor_diaria:numeric(form.valor_diaria),
+                        valor_caucao:numeric(form.valor_caucao),
+                        valor_total:numeric(form.valor_total),
+                        campos_preenchidos:form.campos_preenchidos,
+                    }}
+                />
+            )}
             <div className="relative flex max-h-[96vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
                 <header className="border-b border-slate-200 px-5 py-5 sm:px-7">
                     <div className="flex items-start justify-between gap-4">
@@ -714,6 +738,17 @@ export default function ContractWizard({
                             ? "Cancelar"
                             : "Voltar"}
                     </button>
+
+                    {step === steps.length-1 && selectedType?.template_id && (
+                        <button
+                            type="button"
+                            onClick={()=>setPreviewOpen(true)}
+                            disabled={saving}
+                            className="inline-flex h-11 items-center rounded-xl border border-indigo-200 bg-indigo-50 px-4 text-sm font-semibold text-indigo-700 disabled:opacity-50"
+                        >
+                            Pré-visualizar documento
+                        </button>
+                    )}
 
                     {step <
                     steps.length - 1 ? (

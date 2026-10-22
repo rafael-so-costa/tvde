@@ -1,0 +1,70 @@
+CONTRATO DE COMODATO
+
+ENTRE:
+
+1.º {{PROPRIETARIO_NOME_COMPLETO}}, domiciliado em {{PROPRIETARIO_ENDERECO_COMPLETO}}, contribuinte fiscal n.º {{PROPRIETARIO_NIF}}, como comodante, doravante designado por 1.º Contratante.
+
+E
+
+2.º {{EMPRESA_NOME_EMPRESA}}, com sede em {{EMPRESA_ENDERECO_COMPLETO}}, contribuinte fiscal n.º {{EMPRESA_NIF}}, titular da licença TVDE {{EMPRESA_CERTIFICADO_TVDE}}, como comodatário, doravante designado por 2.º Contratante,
+é celebrado e reciprocamente aceite o presente contrato de comodato, o qual se rege pelas cláusulas seguintes e, relativamente às omissões, pela legislação aplicável:
+
+CLÁUSULA 1.ª
+Objeto
+
+O 1.º Contratante é proprietário e legítimo possuidor da seguinte viatura:
+
+Marca: {{VEICULO_MARCA}}
+Modelo: {{VEICULO_MODELO}}
+Matrícula: {{VEICULO_MATRICULA}}
+Data da primeira matrícula: {{VEICULO_DATA_MATRICULA}}
+
+doravante designada por “Veículo”.
+
+CLÁUSULA 2.ª
+Finalidade
+
+Pelo presente contrato, o 1.º Contratante cede gratuitamente ao 2.º Contratante a viatura referida na cláusula anterior para proceder à inscrição e registo do Veículo em plataforma eletrónica TVDE, nos termos e para os efeitos do artigo 12.º, n.º 1, da Lei n.º 45/2018, de 10 de agosto.
+
+CLÁUSULA 3.ª
+Obrigações do comodante
+
+O comodante obriga-se a manter válido o seguro do Veículo.
+
+CLÁUSULA 4.ª
+Obrigações do comodatário
+
+O comodatário obriga-se a guardar e conservar a viatura em bom estado e a manter válidos os seguros referentes à atividade TVDE.
+
+CLÁUSULA 5.ª
+Prazo
+
+O prazo do presente contrato é de cinco anos a contar da data de assinatura do mesmo, não sendo em caso algum prorrogável.
+
+CLÁUSULA 6.ª
+Término
+
+1. O presente contrato caduca automaticamente no decurso do prazo referido na cláusula anterior, independentemente de qualquer comunicação nesse sentido.
+
+2. Excecionalmente, o presente contrato cessa com a comunicação do 1.º Contratante ao 2.º Contratante, feita por carta registada com aviso de receção e com uma antecedência mínima de sete dias relativamente à data de devolução.
+
+CLÁUSULA 7.ª
+Condições de devolução
+
+Findo o contrato, o 2.º Contratante restituirá ao 1.º Contratante a viatura no estado em que a recebeu, ressalvado o desgaste normal decorrente da utilização.
+
+CLÁUSULA 8.ª
+
+As Partes procurarão resolver por via negocial e de boa-fé as questões que possam surgir da execução ou da interpretação do presente contrato.
+
+LOCAL: {{EMPRESA_ENDERECO_CIDADE}}
+
+DATA: {{DATA_ASSINATURA}}
+
+O 1.º CONTRATANTE
+
+{{ASSINATURA_PROPRIETARIO}}
+
+O 2.º CONTRATANTE
+
+{{ASSINATURA_EMPRESA}}

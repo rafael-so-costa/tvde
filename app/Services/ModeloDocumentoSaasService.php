@@ -20,6 +20,14 @@ class ModeloDocumentoSaasService
         private TemplateSourceCatalog $sourceCatalog
     ) {}
 
+    public function analyzeContent(
+        string $content
+    ): array {
+        return $this->analyze(
+            $content
+        );
+    }
+
     public function categories(): array
     {
         return ModeloDocumentoSaasCategoria::query()

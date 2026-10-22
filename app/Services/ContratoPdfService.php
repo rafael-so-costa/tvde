@@ -58,6 +58,27 @@ class ContratoPdfService
 
         $empresa = $contrato->empresa;
 
+                /*
+         * FROTAPRO_DOCUMENT_READINESS_4L8
+         *
+         * Esta validacao ocorre antes de sync().
+         * Um documento incompleto nao pode reservar
+         * numero global nem ser emitido.
+         *
+         * Rascunhos e previews continuam permitidos.
+         */
+        $preflightValues=$this->values(
+            $contrato,
+            $empresa
+        );
+
+        app(
+            \App\Services\FrotaProDocumentReadinessGuard::class
+        )->assertReady(
+            (string)$contrato->template->conteudo_original,
+            $preflightValues
+        );
+
         $documento = $this
             ->documentoRegistryService
             ->sync(
@@ -71,26 +92,38 @@ class ContratoPdfService
             );
         }
 
-        $values = $this->values($contrato, $empresa);
-        $documentHtml = $this->renderContent(
-            (string) $contrato->template->conteudo_original,
-            $values
-        );
+        $html =
+            $this->renderHtml(
+                $contrato,
+                $empresa,
+                false
+            );
 
-        $pdf = Pdf::loadView('pdf.contrato', [
-            'contrato' => $contrato,
-            'empresa' => $empresa,
-            'documentHtml' => $documentHtml,
-            'generatedAt' => now(),
-        ])
+        $pdf = Pdf::loadHTML(
+            $html
+        )
             ->setPaper('a4', 'portrait')
             ->setOptions([
                 'isRemoteEnabled' => false,
                 'isPhpEnabled' => false,
-                'defaultFont' => 'DejaVu Sans',
+                'defaultFont' => 'DejaVu Serif',
             ]);
 
-        $binary = $pdf->output();
+                // FrotaProNumeroDefinitivoObrigatorio
+        if(
+            \Illuminate\Support\Facades\Schema::hasTable('documentos') &&
+            \Illuminate\Support\Facades\Schema::hasTable('document_sequences') &&
+            blank($contrato->documento?->codigo)
+        ){
+            throw new \RuntimeException(
+                'O contrato não possui número sequencial definitivo. Verifique o registo documental.'
+            );
+        }
+
+        app(\App\Services\FrotaProPdfPageDecorator::class)
+            ->apply($pdf, $contrato, $empresa);
+
+$binary = $pdf->output();
 
         if (
             $binary === '' ||
@@ -206,9 +239,69 @@ class ContratoPdfService
             ->findOrFail($contrato->id);
     }
 
+    public function renderHtml(
+        Contrato $contrato,
+        ?Empresa $empresa = null,
+        bool $preview = false
+    ): string {
+        $empresa ??=
+            $contrato->empresa;
+
+        if (
+            !$contrato->template ||
+            blank(
+                $contrato
+                    ->template
+                    ->conteudo_original
+            )
+        ) {
+            throw ValidationException::withMessages([
+                'contrato' =>
+                    'O contrato não possui um template válido para renderização.',
+            ]);
+        }
+
+        $values =
+            $this->values(
+                $contrato,
+                $empresa,
+                $preview
+            );
+
+        $documentHtml =
+            $this->renderContent(
+                (string)
+                $contrato
+                    ->template
+                    ->conteudo_original,
+                $values
+            );
+
+        return view(
+            'pdf.contrato',
+            [
+                'contrato' =>
+                    $contrato,
+
+                'empresa' =>
+                    $empresa,
+
+                'documentHtml' =>
+                    $documentHtml,
+
+                'generatedAt' =>
+                    now(),
+
+                'preview' =>
+                    $preview,
+            ]
+        )->render();
+    }
+
     private function values(
         Contrato $contrato,
-        ?Empresa $empresa
+        ?Empresa $empresa,
+        bool $preview = false
     ): array {
         $values = [];
 
@@ -459,25 +552,63 @@ class ContratoPdfService
 
         foreach ($contrato->assinaturas as $assinatura) {
             if (
-                $assinatura->status !== 'assinado' ||
-                blank($assinatura->placeholder) ||
-                blank($assinatura->assinatura_url)
+                blank(
+                    $assinatura->placeholder
+                )
             ) {
                 continue;
             }
 
-            $image = $this->signatureImage(
-                (string) $assinatura->assinatura_url
-            );
+            $image = null;
 
-            if (! $image) {
+            if (
+                $assinatura->status ===
+                    'assinado' &&
+                filled(
+                    $assinatura
+                        ->assinatura_url
+                )
+            ) {
+                $image =
+                    $this->signatureImage(
+                        (string)
+                        $assinatura
+                            ->assinatura_url
+                    );
+            }
+
+            if ($image) {
+                $this->put(
+                    $values,
+                    (string)
+                    $assinatura
+                        ->placeholder,
+                    '<img src="'.
+                        e($image).
+                        '" class="signature" alt="Assinatura">',
+                    true
+                );
+
+                continue;
+            }
+
+            if (!$preview) {
                 continue;
             }
 
             $this->put(
                 $values,
-                (string) $assinatura->placeholder,
-                '<img src="'.e($image).'" class="signature" alt="Assinatura">',
+                (string)
+                $assinatura
+                    ->placeholder,
+                '<span class="signature-pending">'.
+                    (
+                        $assinatura->status ===
+                            'pendente'
+                        ? 'Assinatura remota pendente'
+                        : 'Assinatura a recolher'
+                    ).
+                    '</span>',
                 true
             );
         }
@@ -802,11 +933,166 @@ class ContratoPdfService
 
         $html = $looksLikeHtml
             ? $prepared
-            : nl2br(e($prepared));
+            : $this->plainTextToHtml(
+                $prepared
+            );
 
         return str_replace(
             array_keys($markers),
             array_values($markers),
+            $html
+        );
+    }
+
+    private function plainTextToHtml(
+        string $content
+    ): string {
+        $lines =
+            preg_split(
+                '/\R/u',
+                $content
+            ) ?: [];
+
+        $html = [];
+        $firstContent = true;
+        $afterClause = false;
+
+        foreach (
+            $lines as $line
+        ) {
+            $line =
+                trim(
+                    $line
+                );
+
+            if ($line === '') {
+                continue;
+            }
+
+            $escaped =
+                e($line);
+
+            if (
+                $firstContent &&
+                mb_strlen(
+                    $line
+                ) <= 140
+            ) {
+                $html[] =
+                    '<div class="doc-title">'.
+                    $escaped.
+                    '</div>';
+
+                $firstContent = false;
+                $afterClause = false;
+
+                continue;
+            }
+
+            $firstContent = false;
+
+            if (
+                preg_match(
+                    '/^CL[ÁA]USULA\b/iu',
+                    $line
+                )
+            ) {
+                $html[] =
+                    '<div class="clause-title">'.
+                    $escaped.
+                    '</div>';
+
+                $afterClause = true;
+
+                continue;
+            }
+
+            if (
+                $afterClause &&
+                mb_strlen(
+                    $line
+                ) <= 80 &&
+                !preg_match(
+                    '/^\d+[\.\)]\s/u',
+                    $line
+                )
+            ) {
+                $html[] =
+                    '<div class="clause-subtitle">'.
+                    $escaped.
+                    '</div>';
+
+                $afterClause = false;
+
+                continue;
+            }
+
+            $afterClause = false;
+
+            if (
+                preg_match(
+                    '/^(ENTRE|E|CONSIDERANDO QUE:?|EM CONJUNTO DESIGNADOS.*)$/iu',
+                    $line
+                )
+            ) {
+                $html[] =
+                    '<div class="doc-section-label">'.
+                    $escaped.
+                    '</div>';
+
+                continue;
+            }
+
+            if (
+                preg_match(
+                    '/^[a-z]\)\s+/iu',
+                    $line
+                )
+            ) {
+                $html[] =
+                    '<p class="bullet">'.
+                    $escaped.
+                    '</p>';
+
+                continue;
+            }
+
+            if (
+                preg_match(
+                    '/^(Marca|Modelo|Matr[íi]cula|Data da primeira matr[íi]cula|Chassis|Cilindrada|Pot[êe]ncia|Combust[íi]vel|Energia|Lota[çc][ãa]o|Portas|Cor)\s*:/iu',
+                    $line
+                )
+            ) {
+                $html[] =
+                    '<p class="field-line">'.
+                    $escaped.
+                    '</p>';
+
+                continue;
+            }
+
+            if (
+                preg_match(
+                    '/^(O|A|PELO|PELA)\s+(PRIMEIRO|SEGUNDO|1\.º|2\.º|CONTRATANTE|LOCADORA|LOCAT[ÁA]RIO|MOTORISTA|PROPRIET[ÁA]RIO)/iu',
+                    $line
+                )
+            ) {
+                $html[] =
+                    '<div class="signature-label">'.
+                    $escaped.
+                    '</div>';
+
+                continue;
+            }
+
+            $html[] =
+                '<p class="doc-paragraph">'.
+                $escaped.
+                '</p>';
+        }
+
+        return implode(
+            "\n",
             $html
         );
     }
