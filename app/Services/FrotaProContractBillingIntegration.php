@@ -14,6 +14,8 @@ final class FrotaProContractBillingIntegration
         'prestacao_servico',
         'prestacao_de_servicos',
         'prestacao_servicos_motorista',
+        'contrato_de_prestacao_de_servicos',
+        'contrato_de_aluguer',
         'aluguer_tvde_pessoa_singular',
         'aluguer_tvde_pessoa_coletiva',
         'aluguer_veiculo_pessoa_singular',
