@@ -102,6 +102,7 @@ function b4n6Create(
         [
             'tipo_contrato_id'=>$type->id,
             'data_inicio'=>'2026-10-22',
+            'data_fim'=>'2027-10-22',
             'campos_preenchidos'=>$fields,
         ],
         $user,
