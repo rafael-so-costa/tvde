@@ -22,6 +22,7 @@ final class FrotaProContractBillingTerms
         'trimestral'=>'Trimestral',
         'semestral'=>'Semestral',
         'anual'=>'Anual',
+        'unico' => 'Pagamento único',
     ];
 
     public function normalize(array $fields):array

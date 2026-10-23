@@ -242,6 +242,31 @@ $binary = $pdf->output();
             ->findOrFail($contrato->id);
     }
 
+    public function assertReadyForPdf(
+        Contrato $contrato,
+        ?Empresa $empresa = null
+    ): void {
+        if(
+            !$contrato->template ||
+            blank($contrato->template->conteudo_original)
+        ){
+            throw ValidationException::withMessages([
+                'contrato'=>
+                    'O contrato não possui um modelo documental válido.',
+            ]);
+        }
+
+        app(
+            FrotaProDocumentReadinessGuard::class
+        )->assertReady(
+            (string)$contrato->template->conteudo_original,
+            $this->values(
+                $contrato,
+                $empresa??$contrato->empresa,
+                true
+            )
+        );
+    }
     public function renderHtml(
         Contrato $contrato,
         ?Empresa $empresa = null,

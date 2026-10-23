@@ -87,6 +87,14 @@ class ContratoService
                 $data['template_id'] ?? null
             );
 
+            app(
+                \App\Services\FrotaProContractRequiredDates::class
+            )->assertValid(
+                $data,
+                $template,
+                $tipoContrato
+            );
+
             $motorista = $this->motorista(
                 $tenantId,
                 $data['motorista_id'] ?? null

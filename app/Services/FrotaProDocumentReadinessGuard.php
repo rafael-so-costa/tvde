@@ -45,7 +45,8 @@ final class FrotaProDocumentReadinessGuard
             '/\{\{\s*([^{}]+?)\s*\}\}'.
             '|\[\[\s*([^\[\]]+?)\s*\]\]'.
             '|<<\s*([^<>]+?)\s*>>'.
-            '|__([A-Z][A-Z0-9_ ]+)__/u';
+            '|__([A-Z][A-Z0-9_ ]+)__'.
+            '|\(([A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+)\)/u';
 
         $matches=[];
 
@@ -68,7 +69,7 @@ final class FrotaProDocumentReadinessGuard
         foreach($matches as $match){
             $token='';
 
-            for($i=1;$i<=4;$i++){
+            for($i=1;$i<=5;$i++){
                 $candidate=trim(
                     (string)($match[$i] ?? '')
                 );

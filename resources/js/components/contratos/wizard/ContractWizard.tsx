@@ -748,10 +748,19 @@ export default function ContractWizard({
                             : "Voltar"}
                     </button>
 
-                    {step === steps.length-1 && selectedType?.template_id && (
+                    {step === steps.length-1 && selectedType && (
                         <button
                             type="button"
-                            onClick={()=>setPreviewOpen(true)}
+                            onClick={()=>{
+                                if(!selectedType.template_id){
+                                    setError(
+                                        "Este tipo de contrato não possui um modelo documental associado. Configure um template válido antes de pré-visualizar o PDF."
+                                    );
+                                    return;
+                                }
+                                setError(null);
+                                setPreviewOpen(true);
+                            }}
                             disabled={saving}
                             className="inline-flex h-11 items-center rounded-xl border border-indigo-200 bg-indigo-50 px-4 text-sm font-semibold text-indigo-700 disabled:opacity-50"
                         >
@@ -855,6 +864,28 @@ function validateIdentification(
         return "Selecione a empresa signatária.";
     }
 
+    const requiresDateRange = [
+        "contrato_de_prestacao_de_servicos",
+        "aluguer_tvde_pessoa_singular",
+        "aluguer_tvde_pessoa_coletiva",
+    ].includes(type.codigo);
+
+    if(requiresDateRange && !form.data_inicio){
+        return "Informe a data de início do contrato.";
+    }
+
+    if(requiresDateRange && !form.data_fim){
+        return "Informe a data de fim do contrato.";
+    }
+
+    if(
+        requiresDateRange &&
+        form.data_inicio &&
+        form.data_fim &&
+        form.data_inicio === form.data_fim
+    ){
+        return "A duração do contrato deve ser superior a zero dias.";
+    }
     if (
         form.data_inicio &&
         form.data_fim &&

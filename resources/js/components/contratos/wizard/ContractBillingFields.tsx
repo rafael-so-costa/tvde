@@ -12,6 +12,7 @@ const periods=[
     ["trimestral","Trimestral"],
     ["semestral","Semestral"],
     ["anual","Anual"],
+    ["unico","Pagamento único"],
 ] as const;
 
 const modes=["fixa","variavel","mista"];

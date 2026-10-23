@@ -169,6 +169,12 @@ class ContratoPreviewService
             null
         );
 
+        if(request()->routeIs('contratos.preview-pdf')){
+            $this->documentRenderer->assertReadyForPdf(
+                $contrato,
+                $empresa
+            );
+        }
         $html=
             $this->documentRenderer
                 ->renderHtml(
