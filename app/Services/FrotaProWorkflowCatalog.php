@@ -761,7 +761,7 @@ final class FrotaProWorkflowCatalog
                 'prestacao_servicos',
                 9,
                 'Validar contrato de prestação de serviços',
-                'prestacao_servico',
+                'contrato_de_prestacao_de_servicos',
                 'assinado'
             ),
 
