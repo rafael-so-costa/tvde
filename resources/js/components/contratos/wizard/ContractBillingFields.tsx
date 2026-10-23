@@ -162,7 +162,7 @@ export default function ContractBillingFields({
                                 type="text"
                                 maxLength={160}
                                 placeholder="Ex.: faturação bruta das plataformas"
-                                value={read(fields,"BASE_CALCULO_COBRANCA")}
+                                value={String(fields["BASE_CALCULO_COBRANCA"]??"")}
                                 onChange={e=>onChange("BASE_CALCULO_COBRANCA",e.target.value)}
                             />
                         </label>
