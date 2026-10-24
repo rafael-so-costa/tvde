@@ -9,6 +9,10 @@ use Illuminate\Validation\ValidationException;
 
 class ContratoTipoResolverService
 {
+    public function __construct(
+        private TipoContratoReadinessService $readiness
+    ) {}
+
     public function resolve(
         array $data,
         string $tenantId
@@ -58,6 +62,12 @@ class ContratoTipoResolverService
                     'Tipo de contrato inválido ou inativo para esta organização.',
             ]);
         }
+
+        /*
+         * Protege tambem configuracoes legadas existentes
+         * antes da introducao da validacao de ativacao.
+         */
+        $this->readiness->assertCanCreateContract($tipo);
 
         if(
             array_key_exists('template_id',$data) &&

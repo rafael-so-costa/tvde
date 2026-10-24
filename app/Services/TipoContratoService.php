@@ -9,6 +9,10 @@ use Illuminate\Validation\ValidationException;
 
 class TipoContratoService
 {
+    public function __construct(
+        private TipoContratoReadinessService $readiness
+    ) {}
+
     public function create(
         array $data,
         string $tenantId,
@@ -24,6 +28,9 @@ class TipoContratoService
             $tipo->tenant_id=$tenantId;
             $tipo->created_by=$actor->id;
             $tipo->updated_by=$actor->id;
+
+            $this->readiness->assertCanActivate($tipo);
+
             $tipo->save();
 
             return $this->load($tipo);
@@ -50,6 +57,9 @@ class TipoContratoService
 
             $tipo->fill($data);
             $tipo->updated_by=$actor->id;
+
+            $this->readiness->assertCanActivate($tipo);
+
             $tipo->save();
 
             return $this->load($tipo);

@@ -43,11 +43,42 @@ function b4n6Fixture(string $suffix,string $code):array
     $template->ativo=true;
     $template->save();
 
+    /*
+     * Workflow isolado para testes de faturacao.
+     * Cada fixture recebe uma instancia propria.
+     */
+    $workflow=new \App\Models\ChecklistProcessTemplate([
+        'codigo'=>'b4n6_financeiro_'.
+            str_replace(
+                '-',
+                '',
+                (string)\Illuminate\Support\Str::uuid()
+            ),
+        'nome'=>'Workflow financeiro de teste',
+        'ativo'=>true,
+        'versao'=>1,
+    ]);
+
+    $workflow->tenant_id=$tenant->id;
+    $workflow->save();
+
+    $workflowItem=new \App\Models\ChecklistProcessTemplateItem([
+        'codigo'=>'gerar_documento',
+        'ordem'=>1,
+        'titulo'=>'Gerar documento financeiro',
+        'tipo'=>'gerar_documento',
+        'obrigatorio'=>true,
+        'configuracao'=>[],
+    ]);
+
+    $workflowItem->template_id=$workflow->id;
+    $workflowItem->save();
     $type=new TipoContrato([
         'nome'=>'Tipo Financeiro '.$suffix,
         'slug'=>'tipo-b4n6-'.strtolower($suffix),
         'codigo'=>$code,
         'template_id'=>$template->id,
+        'checklist_process_template_id'=>$workflow->id,
         'entidades'=>[],
         'campos_configuracao'=>[],
         'assinaturas_configuracao'=>[],

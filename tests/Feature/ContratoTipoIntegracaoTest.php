@@ -186,6 +186,30 @@ function ctiTipo(
     ?ChecklistProcessTemplate $workflow=null,
     array $options=[]
 ): TipoContrato {
+    /*
+     * Um tipo ativo utilizado nestes testes deve possuir
+     * um modelo e um workflow validos.
+     *
+     * Os testes especificos 4N29 verificam separadamente
+     * configuracoes incompletas e tipos legados.
+     */
+    if(($options['ativo']??true) && $template===null){
+        $template=ctiTemplate(
+            $tenant,
+            "Template de teste {$codigo}",
+            null,
+            'Contrato de teste.'
+        );
+    }
+
+    if(($options['ativo']??true) && $workflow===null){
+        $workflow=ctiWorkflow(
+            $tenant,
+            "workflow_teste_{$codigo}",
+            "etapa_teste_{$codigo}"
+        );
+    }
+
     $tipo=
         new TipoContrato([
             'nome'=>

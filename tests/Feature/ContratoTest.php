@@ -4072,3 +4072,41 @@ test('4n28 prestacao servicos cria fluxo e conclui assinaturas e pdf',function()
             ->count()
     )->toBe(2);
 });
+
+test('4n29 tipo ativo legado incompleto nao pode emitir contrato',function(){
+    $tenant=contratoTenant('Homologacao Operacao','h29-operacao');
+    $user=contratoUsuario($tenant,'h29-operacao@frotapro.test');
+
+    $type=new \App\Models\TipoContrato([
+        'nome'=>'Aluguer incompleto legado',
+        'slug'=>'aluguer-legado-incompleto',
+        'codigo'=>'aluguer_legado_incompleto',
+        'ativo'=>true,
+        'mostrar_menu'=>true,
+    ]);
+
+    $type->tenant_id=$tenant->id;
+    $type->save();
+
+    contratoLogin($this,$user);
+
+    $this->withHeaders(contratoHeaders())
+        ->postJson('/api/contratos',[
+            'tipo_contrato_id'=>$type->id,
+            'data_inicio'=>'2026-11-01',
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['tipo_contrato_id']);
+
+    expect(
+        \App\Models\Contrato::query()
+            ->where('tenant_id',$tenant->id)
+            ->count()
+    )->toBe(0);
+
+    expect(
+        \App\Models\Documento::query()
+            ->where('tenant_id',$tenant->id)
+            ->count()
+    )->toBe(0);
+});

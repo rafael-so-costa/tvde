@@ -689,3 +689,150 @@ test(
             ]);
     }
 );
+
+test('4n29 tipo incompleto pode existir apenas como rascunho inativo',function(){
+    $tenant=tipoContratoTenant('Homologacao Inativo','h29-inativo');
+    $user=tipoContratoUser($tenant,'h29-inativo@frotapro.test');
+    tipoContratoLogin($this,$user);
+
+    $response=$this->withHeaders(tipoContratoHeaders())
+        ->postJson('/api/tipos-contrato',[
+            'nome'=>'Contrato ainda em configuracao',
+            'slug'=>'contrato-a-configurar',
+            'codigo'=>'contrato_a_configurar',
+            'ativo'=>false,
+            'mostrar_menu'=>false,
+        ])
+        ->assertCreated()
+        ->assertJsonPath('data.ativo',false);
+
+    $this->withHeaders(tipoContratoHeaders())
+        ->getJson('/api/tipos-contrato?menu=1')
+        ->assertOk()
+        ->assertJsonMissing(['id'=>$response->json('data.id')]);
+});
+
+test('4n29 tipo nao pode ser ativado sem modelo e workflow',function(){
+    $tenant=tipoContratoTenant('Homologacao Ativacao','h29-ativacao');
+    $user=tipoContratoUser($tenant,'h29-ativacao@frotapro.test');
+    tipoContratoLogin($this,$user);
+
+    $this->withHeaders(tipoContratoHeaders())
+        ->postJson('/api/tipos-contrato',[
+            'nome'=>'Contrato de aluguer incompleto',
+            'slug'=>'aluguer-incompleto',
+            'codigo'=>'aluguer_incompleto',
+            'ativo'=>true,
+            'mostrar_menu'=>true,
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors([
+            'template_id',
+            'checklist_process_template_id',
+        ]);
+
+    expect(
+        \App\Models\TipoContrato::query()
+            ->where('tenant_id',$tenant->id)
+            ->count()
+    )->toBe(0);
+});
+
+test('4n29 nao reativa tipo incompleto sem modelo e workflow',function(){
+    $tenant=tipoContratoTenant('Homologacao Reativacao','h29-reativacao');
+    $user=tipoContratoUser($tenant,'h29-reativacao@frotapro.test');
+
+    $type=new \App\Models\TipoContrato([
+        'nome'=>'Tipo legado sem template',
+        'slug'=>'legado-sem-template',
+        'codigo'=>'legado_sem_template',
+        'ativo'=>false,
+        'mostrar_menu'=>false,
+    ]);
+
+    $type->tenant_id=$tenant->id;
+    $type->save();
+
+    tipoContratoLogin($this,$user);
+
+    $this->withHeaders(tipoContratoHeaders())
+        ->patchJson('/api/tipos-contrato/'.$type->id,[
+            'ativo'=>true,
+            'mostrar_menu'=>true,
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors([
+            'template_id',
+            'checklist_process_template_id',
+        ]);
+
+    expect($type->fresh()->ativo)->toBeFalse();
+});
+
+test('4n29 nao remove template de tipo ativo',function(){
+    $tenant=tipoContratoTenant('Homologacao Template','h29-template');
+    $user=tipoContratoUser($tenant,'h29-template@frotapro.test');
+
+    $template=tipoContratoTemplate($tenant);
+    $workflow=tipoContratoWorkflow($tenant,'h29-template-fluxo');
+
+    $type=new \App\Models\TipoContrato([
+        'nome'=>'Tipo valido',
+        'slug'=>'tipo-valido',
+        'codigo'=>'tipo_valido',
+        'template_id'=>$template->id,
+        'checklist_process_template_id'=>$workflow->id,
+        'ativo'=>true,
+        'mostrar_menu'=>true,
+    ]);
+
+    $type->tenant_id=$tenant->id;
+    $type->save();
+
+    tipoContratoLogin($this,$user);
+
+    $this->withHeaders(tipoContratoHeaders())
+        ->patchJson('/api/tipos-contrato/'.$type->id,[
+            'template_id'=>null,
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['template_id']);
+
+    expect($type->fresh()->template_id)->toBe($template->id);
+});
+
+test('4n29 nao remove workflow de tipo ativo',function(){
+    $tenant=tipoContratoTenant('Homologacao Workflow','h29-workflow');
+    $user=tipoContratoUser($tenant,'h29-workflow@frotapro.test');
+
+    $template=tipoContratoTemplate($tenant);
+    $workflow=tipoContratoWorkflow($tenant,'h29-workflow-fluxo');
+
+    $type=new \App\Models\TipoContrato([
+        'nome'=>'Tipo valido',
+        'slug'=>'tipo-valido',
+        'codigo'=>'tipo_valido',
+        'template_id'=>$template->id,
+        'checklist_process_template_id'=>$workflow->id,
+        'ativo'=>true,
+        'mostrar_menu'=>true,
+    ]);
+
+    $type->tenant_id=$tenant->id;
+    $type->save();
+
+    tipoContratoLogin($this,$user);
+
+    $this->withHeaders(tipoContratoHeaders())
+        ->patchJson('/api/tipos-contrato/'.$type->id,[
+            'checklist_process_template_id'=>null,
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors([
+            'checklist_process_template_id',
+        ]);
+
+    expect(
+        $type->fresh()->checklist_process_template_id
+    )->toBe($workflow->id);
+});
