@@ -441,35 +441,40 @@ export default function ContratoDetailModal({
     }
 
     async function generatePdf() {
-        setGeneratingPdf(
-            true,
-        );
-
-        setError(
-            null,
-        );
+        setGeneratingPdf(true);
+        setError(null);
 
         try {
-            await api.post(
-                `/api/contratos/${id}/pdf`,
-            );
+            const isRetifiedTest =
+                contrato?.status === "rascunho" &&
+                contrato.campos_preenchidos?.FROTAPRO_RETIFICACAO_PENDENTE === "v2" &&
+                !contrato.pdf_gerado_url;
+
+            if (isRetifiedTest) {
+                const file = await fetchAuthenticatedFile(
+                    `/api/contratos/${id}/pdf/simulacao`,
+                );
+
+                setPdfPreviewUrl((current) => {
+                    if (current) {
+                        URL.revokeObjectURL(current);
+                    }
+
+                    return file.url;
+                });
+
+                return;
+            }
+
+            await api.post(`/api/contratos/${id}/pdf`);
 
             await refresh();
-        } catch (
-            requestError
-        ) {
-            setError(
-                apiError(
-                    requestError,
-                ),
-            );
+        } catch (requestError) {
+            setError(apiError(requestError));
         } finally {
-            setGeneratingPdf(
-                false,
-            );
+            setGeneratingPdf(false);
         }
     }
-
     async function previewPdf() {
         setPreviewingPdf(
             true,
@@ -1282,6 +1287,9 @@ function SummaryTab({
                             {contrato
                                 .pdf_gerado_url
                                 ? `PDF disponível para a versão ${contrato.versao_atual}.`
+                                : contrato.status === "rascunho" &&
+                                  contrato.campos_preenchidos?.FROTAPRO_RETIFICACAO_PENDENTE === "v2"
+                                ? "Documento retificado: a simulação pode ser consultada. O PDF definitivo exige novas assinaturas."
                                 : "Gere o documento final a partir do modelo e dos dados do contrato."}
                         </p>
 
@@ -1323,6 +1331,9 @@ function SummaryTab({
                             {contrato
                                 .pdf_gerado_url
                                 ? "Regenerar PDF"
+                                : contrato.status === "rascunho" &&
+                                  contrato.campos_preenchidos?.FROTAPRO_RETIFICACAO_PENDENTE === "v2"
+                                ? "Ver PDF de teste"
                                 : "Gerar PDF"}
                         </button>
 

@@ -188,6 +188,97 @@ class ContratoController extends Controller
         ]);
     }
 
+    public function previewRetificado(
+        Request $request,
+        string $id
+    ): BinaryFileResponse {
+        /*
+         * Consulta apenas um PDF de auditoria
+         * existente, pertencente ao contrato
+         * do tenant autenticado.
+         *
+         * Nao emite PDF definitivo.
+         * Nao altera contratos nem assinaturas.
+         */
+
+        $contrato=$this->leituraQuery($request)
+            ->with('documento')
+            ->findOrFail($id);
+
+        $fields=(array)$contrato->campos_preenchidos;
+
+        if(
+            $contrato->status!=='rascunho' ||
+            (int)$contrato->versao_atual<2 ||
+            ($fields['FROTAPRO_RETIFICACAO_PENDENTE']??null)!=='v2' ||
+            filled($contrato->pdf_gerado_url)
+        ){
+            abort(404,'Nao existe simulacao disponivel.');
+        }
+
+        $code=(string)($contrato->documento?->codigo??'');
+
+        if(!preg_match('/^G[0-9]{6,}$/i',$code)){
+            abort(404,'Codigo documental invalido.');
+        }
+
+        $folder='preview-audit/retificacoes';
+
+        $prefix=
+            strtolower($code).
+            '-v'.(int)$contrato->versao_atual.
+            '-assinaturas-v1-simulacao-';
+
+        $pattern=
+            '~^'.
+            preg_quote($folder.'/'.$prefix,'~').
+            '[0-9]{8}-[0-9]{6}\.pdf$~';
+
+        $disk=Storage::disk('local');
+
+        $matches=array_values(
+            array_filter(
+                $disk->files($folder),
+                static fn(string $path):bool=>
+                    preg_match($pattern,$path)===1
+            )
+        );
+
+        rsort($matches,SORT_STRING);
+
+        if($matches===[]){
+            abort(
+                404,
+                'O PDF de teste ainda nao foi preparado.'
+            );
+        }
+
+        $path=$disk->path($matches[0]);
+
+        if(
+            !is_file($path) ||
+            file_get_contents($path,false,null,0,5)!=='%PDF-'
+        ){
+            abort(
+                404,
+                'O PDF de teste nao esta disponivel.'
+            );
+        }
+
+        return response()->file(
+            $path,
+            [
+                'Content-Type'=>'application/pdf',
+                'Content-Disposition'=>
+                    'inline; filename="'.
+                    strtolower($code).
+                    '-documento-de-teste.pdf"',
+                'Cache-Control'=>'private, no-store',
+                'Pragma'=>'no-cache',
+                'X-Content-Type-Options'=>'nosniff',
+            ]
+        );
+    }
     public function generatePdf(
         Request $request,
         string $id

@@ -1098,6 +1098,10 @@ Route::get(
             Route::get('/contratos/{id}/checklist-processo', [ChecklistProcessRunController::class, 'showForContrato']);
             Route::patch('/contratos/{id}/checklist-processo/items/{itemId}/concluir', [ChecklistProcessRunController::class, 'completeItem']);
             Route::post('/contratos/{id}/assinaturas/{assinaturaId}/reenviar', [ContratoController::class, 'resendRemoteSignature']);
+            Route::get(
+                '/contratos/{id}/pdf/simulacao',
+                [ContratoController::class, 'previewRetificado']
+            );
             Route::post('/contratos/{id}/pdf', [ContratoController::class, 'generatePdf']);
         });
 
