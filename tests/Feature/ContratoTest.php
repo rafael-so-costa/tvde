@@ -3862,3 +3862,213 @@ test('4n27 assinatura v2 valida pode ser confirmada',function(){
     expect($signature->verificado)->toBeTrue();
     expect($contract->status)->toBe('assinado');
 });
+
+test('4n28 prestacao servicos cria fluxo e conclui assinaturas e pdf',function(){
+    \Illuminate\Support\Facades\Storage::fake('local');
+    \Illuminate\Support\Facades\Mail::fake();
+
+    $tenant=contratoTenant('Tenant Homologacao 4N28','tenant-homologacao-4n28');
+    $user=contratoUsuario($tenant,'gestor.homologacao.4n28@frotapro.test');
+    $motorista=contratoMotorista($tenant,'Homologacao4N28');
+
+    $empresa=new \App\Models\Empresa([
+        'nome_empresa'=>'Empresa de Testes FrotaPRO',
+        'nif'=>'509999999',
+        'email'=>'empresa.homologacao@frotapro.test',
+        'ativo'=>true,
+    ]);
+
+    $empresa->tenant_id=$tenant->id;
+    $empresa->save();
+
+    /*
+     * Modelo reduzido para testar integracao.
+     * A homologacao integral do texto V2.1 sera separada.
+     */
+    $template=contratoTemplate(
+        $tenant,
+        '<h1>Prestacao de Servicos</h1>'.
+        '<p>Motorista {{NOME_MOTORISTA}}</p>'.
+        '<p>Inicio {{DATA_INICIO}}</p>'.
+        '<p>{{ASSINATURA_EMPRESA}}</p>'.
+        '<p>{{ASSINATURA_MOTORISTA}}</p>',
+        'Template minimo para integracao 4N28'
+    );
+
+    /*
+     * Workflow verdadeiro do catalogo FrotaPRO.
+     */
+    $workflowSpec=collect(app(
+        \App\Services\FrotaProWorkflowCatalog::class
+    )->all())->firstWhere('codigo','prestacao_servicos_motorista');
+
+    expect($workflowSpec)->not->toBeNull();
+    expect($workflowSpec['items'])->toHaveCount(6);
+
+    $workflow=new \App\Models\ChecklistProcessTemplate([
+        'codigo'=>'homologacao_prestacao_servicos_4n28',
+        'nome'=>$workflowSpec['nome'],
+        'ativo'=>true,
+        'versao'=>$workflowSpec['versao'],
+    ]);
+
+    $workflow->tenant_id=$tenant->id;
+    $workflow->save();
+
+    foreach($workflowSpec['items'] as $step){
+        $item=new \App\Models\ChecklistProcessTemplateItem([
+            'codigo'=>$step['codigo'],
+            'ordem'=>$step['ordem'],
+            'titulo'=>$step['titulo'],
+            'tipo'=>$step['tipo'],
+            'obrigatorio'=>$step['obrigatorio']??true,
+            'configuracao'=>$step['configuracao']??[],
+        ]);
+
+        $item->template_id=$workflow->id;
+        $item->save();
+    }
+
+    $type=new \App\Models\TipoContrato([
+        'nome'=>'Prestacao de Servicos - Homologacao',
+        'slug'=>'prestacao-servicos-homologacao-4n28',
+        'codigo'=>'prestacao_servicos_homologacao_4n28',
+        'template_id'=>$template->id,
+        'checklist_process_template_id'=>$workflow->id,
+        'entidades'=>[
+            'empresa'=>true,
+            'motorista'=>true,
+        ],
+        'campos_configuracao'=>[],
+        'assinaturas_configuracao'=>[
+            [
+                'placeholder'=>'ASSINATURA_EMPRESA',
+                'obrigatoria'=>true,
+                'modos'=>['presencial','remota'],
+            ],
+            [
+                'placeholder'=>'ASSINATURA_MOTORISTA',
+                'obrigatoria'=>true,
+                'modos'=>['presencial','remota'],
+            ],
+        ],
+        'ativo'=>true,
+        'mostrar_menu'=>true,
+    ]);
+
+    $type->tenant_id=$tenant->id;
+    $type->save();
+
+    contratoLogin($this,$user);
+
+    $signature='data:image/png;base64,'.
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJ'.
+        'AAAADUlEQVQIHWP4z8DwHwAFgAI/ScL/nwAAAABJRU5ErkJggg==';
+
+    /*
+     * Criacao pela API real, nao por insercao direta.
+     */
+    $response=$this->withHeaders(contratoHeaders())
+        ->postJson('/api/contratos',[
+            'tipo_contrato_id'=>$type->id,
+            'empresa_id'=>$empresa->id,
+            'motorista_id'=>$motorista->id,
+            'data_inicio'=>'2026-11-01',
+            'campos_preenchidos'=>[
+                'NOME_MOTORISTA'=>$motorista->nome_completo,
+            ],
+            'assinaturas'=>[
+                [
+                    'placeholder'=>'ASSINATURA_EMPRESA',
+                    'modo'=>'presencial',
+                    'assinatura_url'=>$signature,
+                ],
+                [
+                    'placeholder'=>'ASSINATURA_MOTORISTA',
+                    'modo'=>'presencial',
+                    'assinatura_url'=>$signature,
+                ],
+            ],
+        ])
+        ->assertCreated()
+        ->assertJsonPath('data.status','assinado')
+        ->assertJsonPath('data.tipo',$type->codigo);
+
+    $id=$response->json('data.id');
+    $contract=\App\Models\Contrato::findOrFail($id);
+
+    expect($contract->tipo_contrato_id)->toBe($type->id);
+    expect($contract->template_id)->toBe($template->id);
+    expect((int)$contract->versao_atual)->toBe(1);
+
+    /*
+     * Verificar instancia de seis etapas.
+     */
+    $run=\App\Models\ChecklistProcessRun::query()
+        ->where('tenant_id',$tenant->id)
+        ->where('entidade_tipo','contrato')
+        ->where('entidade_id',$id)
+        ->with('items')
+        ->firstOrFail();
+
+    expect($run->items)->toHaveCount(6);
+    expect($run->template_id)->toBe($workflow->id);
+
+    expect(
+        $run->items
+            ->where('tipo','assinatura')
+            ->where('status','concluido')
+            ->count()
+    )->toBe(2);
+
+    expect(
+        $run->items
+            ->firstWhere('codigo','gerar_documento')
+            ->status
+    )->toBe('pendente');
+
+    /*
+     * Emissao definitiva no storage simulado.
+     */
+    $this->withHeaders(contratoHeaders())
+        ->postJson("/api/contratos/{$id}/pdf")
+        ->assertOk()
+        ->assertJsonPath('data.pdf_disponivel',true);
+
+    $contract->refresh();
+
+    expect($contract->hash_documento)
+        ->toMatch('/^[a-f0-9]{64}$/');
+
+    \Illuminate\Support\Facades\Storage::disk('local')
+        ->assertExists($contract->pdf_gerado_url);
+
+    $document=\App\Models\Documento::query()
+        ->where('entidade_tipo','contrato')
+        ->where('entidade_id',$id)
+        ->firstOrFail();
+
+    expect($document->codigo)
+        ->toMatch('/^G[0-9]{6}$/');
+
+    /*
+     * Geracao de documento concluida.
+     * Restantes validacoes nao sao dispensadas.
+     */
+    $run->refresh()->load('items');
+
+    expect($run->items)->toHaveCount(6);
+
+    expect(
+        $run->items
+            ->firstWhere('codigo','gerar_documento')
+            ->status
+    )->toBe('concluido');
+
+    expect(
+        $run->items
+            ->where('tipo','assinatura')
+            ->where('status','concluido')
+            ->count()
+    )->toBe(2);
+});
