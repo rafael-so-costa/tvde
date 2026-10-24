@@ -44,6 +44,27 @@ function fp4n31FilledValues(array $tokens): array
         ];
     }
 
+    /*
+     * Dados sintéticos validos para os testes
+     * de preenchimento e formato.
+     */
+    foreach([
+        'EMPRESA_NIF'=>'500000000',
+        'MOTORISTA_NIF'=>'200000004',
+        'EMPRESA_CAPITAL_SOCIAL'=>'2.500,00 €',
+        'MOTORISTA_DOCUMENTO_VALID_UNTIL'=>'31/12/2030',
+        'DATA_INICIO'=>'01/11/2026',
+        'DATA_FIM'=>'01/11/2027',
+        'PERCENTAGEM_CONTRATO'=>'15%',
+    ] as $key=>$value){
+        if(in_array($key,$tokens,true)){
+            $values[$key]=[
+                'value'=>$value,
+                'html'=>false,
+            ];
+        }
+    }
+
     return $values;
 }
 

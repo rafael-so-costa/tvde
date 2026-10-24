@@ -16,7 +16,7 @@ function fp4n31OrigemFixture(
 ): Contrato {
     $company=new Empresa(array_replace([
         'nome_empresa'=>'Empresa Fonte Lda',
-        'nif'=>'501234567',
+        'nif'=>'501234560',
         'nome_gerente'=>'Gerente da Empresa',
         'capital_social'=>'2500.00',
         'endereco_rua'=>'Rua da Empresa',
@@ -27,7 +27,7 @@ function fp4n31OrigemFixture(
 
     $driver=new Motorista(array_replace([
         'nome_completo'=>'Motorista de Origem',
-        'nif'=>'234567890',
+        'nif'=>'234567899',
         'tipo_documento'=>'Cartao de Cidadao',
         'numero_documento'=>'CC1234567',
         'documento_valid_until'=>'2030-06-30',
@@ -121,7 +121,7 @@ test(
 
         expect(
             $values['EMPRESA_NIF']['value']
-        )->toBe('501234567');
+        )->toBe('501234560');
 
         expect(
             $values['EMPRESA_CAPITAL_SOCIAL']['value']
@@ -170,7 +170,7 @@ test(
 
         expect(
             $values['MOTORISTA_NIF']['value']
-        )->toBe('234567890');
+        )->toBe('234567899');
 
         expect(
             $values['DATA_INICIO']['value']

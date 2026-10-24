@@ -16,7 +16,7 @@ test('documento completo passa na validacao',function(){
                 'html'=>false,
             ],
             'MOTORISTA_NIF'=>[
-                'value'=>'200000000',
+                'value'=>'200000004',
                 'html'=>false,
             ],
         ]

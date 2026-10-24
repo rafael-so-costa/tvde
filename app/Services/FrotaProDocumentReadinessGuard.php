@@ -151,6 +151,27 @@ final class FrotaProDocumentReadinessGuard
                 'campos_preenchidos'=>$message.'.',
             ]);
         }
+        /*
+         * Formatos e coerencia sao verificados
+         * apos o controlo dos campos em falta.
+         */
+        $invalid=app(FrotaProDocumentSemanticValidator::class)
+            ->invalid($matches,$values);
+
+        if($invalid!==[]){
+            $details=[];
+
+            foreach($invalid as $field=>$reason){
+                $details[]=$field.' ('.$reason.')';
+            }
+
+            throw ValidationException::withMessages([
+                'campos_preenchidos'=>
+                    'O documento possui valores inválidos: '.
+                    implode('; ',array_slice($details,0,12)).
+                    '.',
+            ]);
+        }
     }
 
     public function assertFinancialFields(array $fields): void
@@ -193,6 +214,7 @@ final class FrotaProDocumentReadinessGuard
                     'As condicoes financeiras contem texto de teste.',
             ]);
         }
+
     }
     private function normalize(string $name):string
     {
