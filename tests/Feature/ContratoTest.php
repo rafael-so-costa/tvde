@@ -3485,3 +3485,380 @@ test('4n26 uma assinatura antiga e outra atual nao permitem emissao',function(){
     expect($contract->pdf_gerado_url)->toBeNull();
     expect($contract->hash_documento)->toBeNull();
 });
+
+/*
+ * FROTAPRO 4N27
+ * Assinatura remota, OTP, expiracao e versoes.
+ *
+ * SQLite in-memory, Storage::fake e Mail::fake.
+ * Sem emails reais e sem escrita na base operacional.
+ */
+
+function frotaPro4N27Image(): string
+{
+    return 'data:image/png;base64,'.
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJ'.
+        'AAAADUlEQVQIHWP4z8DwHwAFgAI/ScL/nwAAAABJRU5ErkJggg==';
+}
+
+function frotaPro4N27Fixture($test): array
+{
+    Mail::fake();
+    Storage::fake('local');
+
+    /*
+     * A limitacao de pedidos nao faz parte
+     * destes testes funcionais de assinatura.
+     */
+    $test->withoutMiddleware(
+        \Illuminate\Routing\Middleware\ThrottleRequests::class
+    );
+
+    $tenant=contratoTenant(
+        'Tenant Assinatura 4N27',
+        'tenant-assinatura-4n27'
+    );
+
+    $user=contratoUsuario(
+        $tenant,
+        'gestor.4n27@frotapro.test'
+    );
+
+    $template=contratoTemplate(
+        $tenant,
+        '<p>Contrato de teste</p>'.
+        '<p>Assinatura: {{ASSINATURA_MOTORISTA}}</p>',
+        'Template Remoto 4N27'
+    );
+
+    $motorista=contratoMotorista(
+        $tenant,
+        'Remoto4N27'
+    );
+
+    $veiculo=contratoVeiculo(
+        $tenant,
+        'RN-27-AA',
+        300
+    );
+
+    contratoLogin($test,$user);
+
+    $response=$test->withHeaders(
+        contratoHeaders()
+    )->postJson('/api/contratos',[
+        'template_id'=>$template->id,
+        'tipo'=>'aluguer',
+        'motorista_id'=>$motorista->id,
+        'veiculo_id'=>$veiculo->id,
+        'data_inicio'=>'2026-11-01',
+        'data_fim'=>'2027-11-01',
+        'assinaturas'=>[
+            [
+                'placeholder'=>'ASSINATURA_MOTORISTA',
+                'modo'=>'remota',
+            ],
+        ],
+    ])->assertCreated()
+      ->assertJsonPath('data.status','enviado');
+
+    $contract=Contrato::findOrFail(
+        $response->json('data.id')
+    );
+
+    $signature=AssinaturaDigital::query()
+        ->where('contrato_id',$contract->id)
+        ->firstOrFail();
+
+    expect($signature->status)->toBe('pendente');
+    expect($signature->verificado)->toBeFalse();
+    expect($signature->codigo_otp)->toMatch('/^\d{6}$/');
+    expect($signature->token_verificacao)->not->toBeNull();
+
+    return [$tenant,$user,$contract,$signature];
+}
+
+test('4n27 otp correto confirma assinatura remota',function(){
+    [$tenant,$user,$contract,$signature]=
+        frotaPro4N27Fixture($this);
+
+    $token=$signature->token_verificacao;
+    $otp=$signature->codigo_otp;
+
+    $this->getJson(
+        "/api/assinaturas/remotas/{$token}"
+    )->assertOk();
+
+    $this->postJson(
+        "/api/assinaturas/remotas/{$token}/confirmar",
+        [
+            'codigo_otp'=>$otp,
+            'aceite'=>true,
+            'assinatura'=>frotaPro4N27Image(),
+        ]
+    )->assertOk()
+      ->assertJsonPath('data.contrato_status','assinado');
+
+    $signature->refresh();
+    $contract->refresh();
+
+    expect($signature->status)->toBe('assinado');
+    expect($signature->verificado)->toBeTrue();
+    expect($signature->codigo_otp)->toBeNull();
+    expect($signature->token_verificacao)->toBeNull();
+    expect($contract->status)->toBe('assinado');
+    expect($contract->data_assinatura)->not->toBeNull();
+
+    Storage::disk('local')->assertExists(
+        $signature->assinatura_url
+    );
+
+    $this->assertDatabaseHas(
+        'logs_auditoria_contratos',
+        [
+            'contrato_id'=>$contract->id,
+            'acao'=>'assinatura_remota',
+        ]
+    );
+});
+
+test('4n27 otp incorreto nao confirma assinatura',function(){
+    [$tenant,$user,$contract,$signature]=
+        frotaPro4N27Fixture($this);
+
+    $token=$signature->token_verificacao;
+
+    $incorrect=$signature->codigo_otp==='000000'
+        ? '999999'
+        : '000000';
+
+    $this->postJson(
+        "/api/assinaturas/remotas/{$token}/confirmar",
+        [
+            'codigo_otp'=>$incorrect,
+            'aceite'=>true,
+            'assinatura'=>frotaPro4N27Image(),
+        ]
+    )->assertUnprocessable()
+      ->assertJsonValidationErrors(['codigo_otp']);
+
+    expect($signature->fresh()->status)->toBe('pendente');
+    expect($signature->fresh()->verificado)->toBeFalse();
+    expect($contract->fresh()->status)->toBe('enviado');
+
+    expect(
+        Storage::disk('local')->allFiles('contract-signatures')
+    )->toBe([]);
+});
+
+test('4n27 otp expirado nao confirma assinatura',function(){
+    [$tenant,$user,$contract,$signature]=
+        frotaPro4N27Fixture($this);
+
+    $signature->otp_expira_em=now()->subMinute();
+    $signature->save();
+
+    $this->postJson(
+        "/api/assinaturas/remotas/{$signature->token_verificacao}/confirmar",
+        [
+            'codigo_otp'=>$signature->codigo_otp,
+            'aceite'=>true,
+            'assinatura'=>frotaPro4N27Image(),
+        ]
+    )->assertUnprocessable()
+      ->assertJsonValidationErrors(['codigo_otp']);
+
+    expect($signature->fresh()->status)->toBe('pendente');
+    expect($contract->fresh()->status)->toBe('enviado');
+
+    expect(
+        Storage::disk('local')->allFiles('contract-signatures')
+    )->toBe([]);
+});
+
+test('4n27 token utilizado nao pode ser reutilizado',function(){
+    [$tenant,$user,$contract,$signature]=
+        frotaPro4N27Fixture($this);
+
+    $token=$signature->token_verificacao;
+    $otp=$signature->codigo_otp;
+
+    $payload=[
+        'codigo_otp'=>$otp,
+        'aceite'=>true,
+        'assinatura'=>frotaPro4N27Image(),
+    ];
+
+    $this->postJson(
+        "/api/assinaturas/remotas/{$token}/confirmar",
+        $payload
+    )->assertOk();
+
+    $path=$signature->fresh()->assinatura_url;
+    $hash=hash(
+        'sha256',
+        Storage::disk('local')->get($path)
+    );
+
+    $this->postJson(
+        "/api/assinaturas/remotas/{$token}/confirmar",
+        $payload
+    )->assertNotFound();
+
+    expect($signature->fresh()->status)->toBe('assinado');
+
+    expect(hash(
+        'sha256',
+        Storage::disk('local')->get($path)
+    ))->toBe($hash);
+});
+
+test('4n27 reenvio invalida token anterior',function(){
+    [$tenant,$user,$contract,$signature]=
+        frotaPro4N27Fixture($this);
+
+    $oldToken=$signature->token_verificacao;
+    $oldOtp=$signature->codigo_otp;
+
+    $this->withHeaders(contratoHeaders())
+        ->postJson(
+            "/api/contratos/{$contract->id}/assinaturas/{$signature->id}/reenviar"
+        )
+        ->assertOk();
+
+    $signature->refresh();
+
+    expect($signature->token_verificacao)->not->toBe($oldToken);
+    expect($signature->codigo_otp)->not->toBe($oldOtp);
+
+    $this->getJson(
+        "/api/assinaturas/remotas/{$oldToken}"
+    )->assertNotFound();
+
+    $this->postJson(
+        "/api/assinaturas/remotas/{$oldToken}/confirmar",
+        [
+            'codigo_otp'=>$oldOtp,
+            'aceite'=>true,
+            'assinatura'=>frotaPro4N27Image(),
+        ]
+    )->assertNotFound();
+
+    expect($contract->fresh()->status)->toBe('enviado');
+    expect($signature->fresh()->status)->toBe('pendente');
+});
+
+test('4n27 pedido v1 nao pode assinar contrato v2',function(){
+    [$tenant,$user,$contract,$signature]=
+        frotaPro4N27Fixture($this);
+
+    $token=$signature->token_verificacao;
+    $otp=$signature->codigo_otp;
+
+    /*
+     * Simular retificacao feita enquanto
+     * existe um pedido de assinatura pendente.
+     * O estado 'enviado' e mantido para
+     * testar defesa independente do status.
+     */
+    $signature->contrato_versao=1;
+    $signature->save();
+
+    $contract->versao_atual=2;
+    $contract->save();
+
+    /*
+     * Um pedido antigo nao deve disponibilizar
+     * nem permitir assinar uma versao posterior.
+     */
+    $this->getJson(
+        "/api/assinaturas/remotas/{$token}"
+    )->assertNotFound();
+
+    $this->postJson(
+        "/api/assinaturas/remotas/{$token}/confirmar",
+        [
+            'codigo_otp'=>$otp,
+            'aceite'=>true,
+            'assinatura'=>frotaPro4N27Image(),
+        ]
+    )->assertUnprocessable()
+      ->assertJsonValidationErrors(['assinatura']);
+
+    expect($signature->fresh()->status)->toBe('pendente');
+    expect($signature->fresh()->verificado)->toBeFalse();
+    expect($contract->fresh()->status)->toBe('enviado');
+    expect($contract->fresh()->data_assinatura)->toBeNull();
+
+    expect(
+        Storage::disk('local')->allFiles('contract-signatures')
+    )->toBe([]);
+});
+
+test('4n27 novas assinaturas registam versao um',function(){
+    [$tenant,$user,$contract,$signature]=
+        frotaPro4N27Fixture($this);
+
+    expect((int)$contract->versao_atual)->toBe(1);
+    expect((int)$signature->contrato_versao)->toBe(1);
+});
+
+test('4n27 reenvio nao reativa pedido de versao antiga',function(){
+    [$tenant,$user,$contract,$signature]=
+        frotaPro4N27Fixture($this);
+
+    $oldToken=$signature->token_verificacao;
+    $oldOtp=$signature->codigo_otp;
+
+    $contract->versao_atual=2;
+    $contract->save();
+
+    $this->withHeaders(contratoHeaders())
+        ->postJson(
+            "/api/contratos/{$contract->id}/assinaturas/{$signature->id}/reenviar"
+        )
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['assinatura']);
+
+    $signature->refresh();
+
+    expect($signature->token_verificacao)->toBe($oldToken);
+    expect($signature->codigo_otp)->toBe($oldOtp);
+    expect($signature->status)->toBe('pendente');
+    expect($signature->verificado)->toBeFalse();
+});
+
+test('4n27 assinatura v2 valida pode ser confirmada',function(){
+    [$tenant,$user,$contract,$signature]=
+        frotaPro4N27Fixture($this);
+
+    $contract->versao_atual=2;
+    $contract->save();
+
+    $signature->contrato_versao=2;
+    $signature->save();
+
+    $token=$signature->token_verificacao;
+    $otp=$signature->codigo_otp;
+
+    $this->getJson(
+        "/api/assinaturas/remotas/{$token}"
+    )->assertOk();
+
+    $this->postJson(
+        "/api/assinaturas/remotas/{$token}/confirmar",
+        [
+            'codigo_otp'=>$otp,
+            'aceite'=>true,
+            'assinatura'=>frotaPro4N27Image(),
+        ]
+    )->assertOk()
+      ->assertJsonPath('data.contrato_status','assinado');
+
+    $signature->refresh();
+    $contract->refresh();
+
+    expect((int)$signature->contrato_versao)->toBe(2);
+    expect($signature->verificado)->toBeTrue();
+    expect($contract->status)->toBe('assinado');
+});

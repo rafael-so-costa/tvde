@@ -368,6 +368,13 @@ class ContratoService
             abort(404);
         }
 
+        if(!$this->assinaturaPertenceVersaoAtual(
+            $assinatura,
+            $contrato
+        )){
+            abort(404);
+        }
+
         $empresa = Empresa::query()
             ->where(
                 'tenant_id',
@@ -709,6 +716,16 @@ class ContratoService
                             )
                             ->lockForUpdate()
                             ->firstOrFail();
+
+                    if(!$this->assinaturaPertenceVersaoAtual(
+                        $assinatura,
+                        $contrato
+                    )){
+                        throw ValidationException::withMessages([
+                            'assinatura'=>
+                                'Esta solicitacao pertence a uma versao anterior do contrato.',
+                        ]);
+                    }
 
                     if (
                         $contrato->status !==
@@ -1293,6 +1310,16 @@ class ContratoService
                             ->lockForUpdate()
                             ->firstOrFail();
 
+                    if(!$this->assinaturaPertenceVersaoAtual(
+                        $assinatura,
+                        $contrato
+                    )){
+                        throw ValidationException::withMessages([
+                            'assinatura'=>
+                                'Nao e permitido reenviar uma assinatura de versao anterior.',
+                        ]);
+                    }
+
                     if (
                         $assinatura
                             ->status !==
@@ -1628,6 +1655,22 @@ class ContratoService
         $log->save();
     }
 
+    private function assinaturaPertenceVersaoAtual(
+        AssinaturaDigital $assinatura,
+        Contrato $contrato
+    ): bool {
+        /*
+         * Compatibilidade com assinaturas legadas:
+         * versao nula so e aceite em contratos V1.
+         */
+        if($assinatura->contrato_versao===null){
+            return (int)$contrato->versao_atual===1;
+        }
+
+        return
+            (int)$assinatura->contrato_versao===
+            (int)$contrato->versao_atual;
+    }
     private function guardarAssinatura(
         Contrato $contrato,
         array $dados,
@@ -1641,6 +1684,7 @@ class ContratoService
 
         $assinatura->contrato_id = $contrato->id;
         $assinatura->tenant_id = $contrato->tenant_id;
+        $assinatura->contrato_versao = (int)$contrato->versao_atual;
 
         $assinatura->signatario_tipo =
             $dados['signatario_tipo'];
