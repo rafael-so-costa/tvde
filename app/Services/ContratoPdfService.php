@@ -473,10 +473,33 @@ $binary = $pdf->output();
         bool $preview = false
     ): array {
         $values = [];
+        // FROTAPRO_4N31_AUTHORITATIVE_INIT
+        $authoritativeKeys=$this->authoritativeEntityKeys();
+
 
         foreach (
             $contrato->campos_preenchidos ?? [] as $key => $value
         ) {
+            /*
+             * Campos automaticos pertencem ao cadastro
+             * ou ao proprio contrato, nao ao formulario.
+             */
+            $normalizedKey=$this->normalize((string)$key);
+
+            if(
+                isset($authoritativeKeys[$normalizedKey]) &&
+                !in_array(
+                    $normalizedKey,
+                    [
+                        'PERCENTAGEM_CONTRATO',
+                        'CONDICOES_COBRANCA',
+                        'PERIODICIDADE_PAGAMENTO_TEXTO',
+                    ],
+                    true
+                )
+            ){
+                continue;
+            }
             if(
                 (int)$contrato->versao_atual>1 &&
                 str_starts_with(
@@ -630,7 +653,7 @@ $binary = $pdf->output();
             $this->put(
                 $values,
                 'MOTORISTA_ENDERECO_COMPLETO',
-                $this->fullAddress(
+                $this->requiredAddress(
                     $contrato->motorista
                 )
             );
@@ -736,7 +759,7 @@ $binary = $pdf->output();
             $this->put(
                 $values,
                 'EMPRESA_ENDERECO_COMPLETO',
-                $this->fullAddress(
+                $this->requiredAddress(
                     $empresa
                 )
             );
@@ -816,7 +839,8 @@ $binary = $pdf->output();
 
         return $this->applyTemplateMappings(
             $values,
-            $contrato
+            $contrato,
+            $authoritativeKeys
         );
     }
 
@@ -868,9 +892,77 @@ $binary = $pdf->output();
         ];
     }
 
+    /*
+     * Os campos de entidades e do contrato sao
+     * preenchidos exclusivamente pelos seus registos.
+     */
+    private function authoritativeEntityKeys(): array
+    {
+        $keys=[];
+
+        $groups=app(TemplateSourceCatalog::class)->grouped();
+
+        foreach([
+            'empresa',
+            'motorista',
+            'proprietario',
+            'veiculo',
+            'contrato',
+        ] as $entity){
+            foreach(($groups[$entity]??[]) as $source){
+                $path=$source['value']??null;
+
+                if(
+                    !is_string($path) ||
+                    !str_starts_with($path,$entity.'.')
+                ){
+                    continue;
+                }
+
+                $field=substr(
+                    $path,
+                    strlen($entity)+1
+                );
+
+                $keys[
+                    $this->normalize($entity.'_'.$field)
+                ]=true;
+
+                if($entity==='contrato'){
+                    $keys[
+                        $this->normalize($field)
+                    ]=true;
+                }else{
+                    $keys[
+                        $this->normalize($field.'_'.$entity)
+                    ]=true;
+                }
+            }
+        }
+
+        foreach([
+            'NOME_EMPRESA',
+            'NOME_MOTORISTA',
+            'NOME_PROPRIETARIO',
+            'MATRICULA_VEICULO',
+            'MODELO_VEICULO',
+            'STATUS_CONTRATO',
+            'DURACAO_CONTRATO',
+            'CONTRATO_DURACAO',
+            'CONTRATO_VALOR_DIARIA',
+            'CONTRATO_VALOR_SEMANAL',
+            'CONTRATO_VALOR_CAUCAO',
+            'CONTRATO_VALOR_TOTAL',
+        ] as $alias){
+            $keys[$alias]=true;
+        }
+
+        return $keys;
+    }
     private function applyTemplateMappings(
         array $values,
-        Contrato $contrato
+        Contrato $contrato,
+        array $authoritativeKeys
     ): array {
         $mappings =
             (array) (
@@ -932,6 +1024,7 @@ $binary = $pdf->output();
             if (
                 $sourceKey === '' ||
                 $targetKey === '' ||
+                isset($authoritativeKeys[$targetKey]) ||
                 ! array_key_exists(
                     $sourceKey,
                     $values
@@ -947,6 +1040,28 @@ $binary = $pdf->output();
         return $values;
     }
 
+    /*
+     * Morada contratual estruturada:
+     * rua, codigo postal e cidade obrigatorios.
+     */
+    private function requiredAddress(object $model): string
+    {
+        foreach([
+            'endereco_rua',
+            'endereco_cep',
+            'endereco_cidade',
+        ] as $field){
+            $value=trim(
+                (string)($model->getAttribute($field)??'')
+            );
+
+            if($value===''){
+                return '';
+            }
+        }
+
+        return $this->fullAddress($model);
+    }
     private function fullAddress(
         object $model
     ): string {
