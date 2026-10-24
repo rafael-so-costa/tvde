@@ -164,6 +164,8 @@ class ContratoService
                 }
             }
 
+            app(\App\Services\FrotaProDocumentReadinessGuard::class)
+                ->assertFinancialFields((array)$campos);
             $data['campos_preenchidos'] =
                 $campos;
 

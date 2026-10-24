@@ -153,6 +153,47 @@ final class FrotaProDocumentReadinessGuard
         }
     }
 
+    public function assertFinancialFields(array $fields): void
+    {
+        $type=mb_strtolower(trim((string)(
+            $fields['TIPO_COBRANCA']??''
+        )));
+
+        if(!in_array($type,['variavel','variável','mista'],true)){
+            return;
+        }
+
+        $base=trim((string)(
+            $fields['BASE_CALCULO_COBRANCA']??''
+        ));
+
+        if(
+            $base==='' ||
+            preg_match(
+                '/^(?:ok|teste|test|xxx+|exemplo|a definir|a confirmar|por preencher|n\/?a|[-_.]+)\.?$/iu',
+                $base
+            )
+        ){
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'campos_preenchidos.BASE_CALCULO_COBRANCA'=>
+                    'Indique uma base de calculo concreta.',
+            ]);
+        }
+
+        $conditions=trim((string)(
+            $fields['CONDICOES_COBRANCA']??''
+        ));
+
+        if(preg_match(
+            '/\bsobre\s+(?:ok|teste|test|xxx+|exemplo)\b/iu',
+            $conditions
+        )){
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'campos_preenchidos.CONDICOES_COBRANCA'=>
+                    'As condicoes financeiras contem texto de teste.',
+            ]);
+        }
+    }
     private function normalize(string $name):string
     {
         $name=mb_strtoupper(

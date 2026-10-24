@@ -44,6 +44,8 @@ class ContratoPdfService
             ])
             ->findOrFail($contratoId);
 
+        $this->assertNotPendingRetification($contrato);
+
         if (! $contrato->template) {
             throw ValidationException::withMessages([
                 'contrato' => 'O contrato não possui template associado.',
@@ -56,6 +58,10 @@ class ContratoPdfService
             ]);
         }
 
+        app(\App\Services\FrotaProDocumentReadinessGuard::class)
+            ->assertFinancialFields(
+                (array)($contrato->campos_preenchidos??[])
+            );
         $empresa = $contrato->empresa;
 
         app(FrotaProContractBillingIntegration::class)
@@ -267,11 +273,29 @@ $binary = $pdf->output();
             )
         );
     }
+    private function assertNotPendingRetification(
+        Contrato $contrato
+    ): void {
+        $fields=(array)($contrato->campos_preenchidos??[]);
+
+        if(filled($fields['FROTAPRO_RETIFICACAO_PENDENTE']??null)){
+            throw ValidationException::withMessages([
+                'contrato'=>
+                    'Este contrato foi retificado e exige novas assinaturas antes da emissão do PDF.',
+            ]);
+        }
+    }
     public function renderHtml(
         Contrato $contrato,
         ?Empresa $empresa = null,
         bool $preview = false
     ): string {
+        $this->assertNotPendingRetification($contrato);
+
+        app(\App\Services\FrotaProDocumentReadinessGuard::class)
+            ->assertFinancialFields(
+                (array)($contrato->campos_preenchidos??[])
+            );
         $empresa ??=
             $contrato->empresa;
 
@@ -305,6 +329,19 @@ $binary = $pdf->output();
                 $values
             );
 
+        $documentHtml=preg_replace(
+            '/\bcom\s+periodicidade\s+pagamento\s+único\b/iu',
+            'de uma só vez',
+            $documentHtml
+        )??$documentHtml;
+
+        if($contrato->status!=='assinado'){
+            $documentHtml=preg_replace(
+                '/\bFeito\s+e\s+assinado\s+em\s+\d{2}\/\d{2}\/\d{4}\b/iu',
+                'Preparado para assinatura em '.now()->format('d/m/Y'),
+                $documentHtml
+            )??$documentHtml;
+        }
         return view(
             'pdf.contrato',
             [
@@ -336,6 +373,15 @@ $binary = $pdf->output();
         foreach (
             $contrato->campos_preenchidos ?? [] as $key => $value
         ) {
+            if(
+                (int)$contrato->versao_atual>1 &&
+                str_starts_with(
+                    $this->normalize((string)$key),
+                    'ASSINATURA_'
+                )
+            ){
+                continue;
+            }
             if (
                 is_scalar($value) ||
                 $value instanceof DateTimeInterface
@@ -593,6 +639,15 @@ $binary = $pdf->output();
         }
 
         foreach ($contrato->assinaturas as $assinatura) {
+            $signatureVersion=$assinatura->contrato_versao;
+
+            if(
+                $signatureVersion===null
+                    ? (int)$contrato->versao_atual!==1
+                    : (int)$signatureVersion!==(int)$contrato->versao_atual
+            ){
+                continue;
+            }
             if (
                 blank(
                     $assinatura->placeholder

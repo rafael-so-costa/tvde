@@ -147,3 +147,45 @@ test('emissao verifica campos antes de reservar numero',function(){
     expect($source)
         ->toContain('FROTAPRO_DOCUMENT_READINESS_4L8');
 });
+
+test('4n24 rejeita base financeira ficticia',function(){
+    $guard=app(\App\Services\FrotaProDocumentReadinessGuard::class);
+
+    foreach(['variavel','mista'] as $type){
+        expect(fn()=>$guard->assertFinancialFields([
+            'TIPO_COBRANCA'=>$type,
+            'BASE_CALCULO_COBRANCA'=>'ok',
+            'CONDICOES_COBRANCA'=>'uma percentagem de 1% sobre ok',
+        ]))->toThrow(
+            \Illuminate\Validation\ValidationException::class
+        );
+    }
+});
+
+test('4n24 aceita base financeira definida',function(){
+    app(\App\Services\FrotaProDocumentReadinessGuard::class)
+        ->assertFinancialFields([
+            'TIPO_COBRANCA'=>'variavel',
+            'BASE_CALCULO_COBRANCA'=>
+                'faturação bruta das viagens TVDE',
+            'CONDICOES_COBRANCA'=>
+                'uma percentagem de 1% sobre a faturação bruta das viagens TVDE',
+        ]);
+
+    expect(true)->toBeTrue();
+});
+
+test('4n24 rejeita condicoes financeiras com texto ficticio',function(){
+    expect(fn()=>
+        app(\App\Services\FrotaProDocumentReadinessGuard::class)
+            ->assertFinancialFields([
+                'TIPO_COBRANCA'=>'variavel',
+                'BASE_CALCULO_COBRANCA'=>
+                    'faturação bruta das viagens TVDE',
+                'CONDICOES_COBRANCA'=>
+                    'uma percentagem de 1% sobre ok',
+            ])
+    )->toThrow(
+        \Illuminate\Validation\ValidationException::class
+    );
+});
