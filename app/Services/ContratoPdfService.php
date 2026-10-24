@@ -62,6 +62,7 @@ class ContratoPdfService
             ->assertFinancialFields(
                 (array)($contrato->campos_preenchidos??[])
             );
+        $this->assertCurrentVersionSignatures($contrato);
         $empresa = $contrato->empresa;
 
         app(FrotaProContractBillingIntegration::class)
@@ -184,6 +185,17 @@ $binary = $pdf->output();
                     ]);
                 }
 
+                /*
+                 * Revalidar dentro da transacao.
+                 * A assinatura nao pode mudar entre
+                 * a renderizacao e a gravacao.
+                 */
+                $locked->load([
+                    'template',
+                    'assinaturas',
+                ]);
+
+                $this->assertCurrentVersionSignatures($locked);
                 $locked->pdf_gerado_url = $path;
                 $locked->hash_documento = $hash;
                 $locked->save();
@@ -283,6 +295,98 @@ $binary = $pdf->output();
                 'contrato'=>
                     'Este contrato foi retificado e exige novas assinaturas antes da emissão do PDF.',
             ]);
+        }
+    }
+    private function assertCurrentVersionSignatures(
+        Contrato $contrato
+    ): void {
+        $version=(int)$contrato->versao_atual;
+
+        /*
+         * Preservar compatibilidade com os
+         * documentos legados da versao 1.
+         */
+        if($version<=1){
+            return;
+        }
+
+        /*
+         * Determinar os signatarios exigidos
+         * pelo modelo documental atual.
+         */
+        $template=(string)(
+            $contrato->template?->conteudo_original ?? ''
+        );
+
+        $matches=[];
+
+        preg_match_all(
+            '/\bASSINATURA_(?:MOTORISTA|EMPRESA|PROPRIETARIO|TESTEMUNHA)\b/iu',
+            $template,
+            $matches
+        );
+
+        $required=array_values(array_unique(
+            array_map(
+                static fn(string $name):string=>
+                    mb_strtoupper($name,'UTF-8'),
+                $matches[0] ?? []
+            )
+        ));
+
+        if($required===[]){
+            return;
+        }
+
+        if(
+            $contrato->status!=='assinado' ||
+            $contrato->data_assinatura===null
+        ){
+            throw ValidationException::withMessages([
+                'contrato'=>
+                    'O contrato exige assinaturas validas da versao atual antes da emissao definitiva.',
+            ]);
+        }
+
+        $signatures=$contrato->relationLoaded(
+            'assinaturas'
+        )
+            ? $contrato->assinaturas
+            : $contrato->assinaturas()->get();
+
+        foreach($required as $placeholder){
+            $valid=$signatures->contains(
+                static function($signature)use(
+                    $placeholder,
+                    $version
+                ):bool{
+                    return
+                        mb_strtoupper(
+                            (string)$signature->placeholder,
+                            'UTF-8'
+                        )===$placeholder
+                        &&
+                        $signature->contrato_versao!==null
+                        &&
+                        (int)$signature->contrato_versao===$version
+                        &&
+                        $signature->status==='assinado'
+                        &&
+                        (bool)$signature->verificado
+                        &&
+                        filled($signature->assinatura_url);
+                }
+            );
+
+            if(!$valid){
+                throw ValidationException::withMessages([
+                    'contrato'=>
+                        'A assinatura '.$placeholder.
+                        ' nao foi confirmada na versao '.
+                        $version.
+                        '. As assinaturas anteriores nao podem autorizar a emissao definitiva.',
+                ]);
+            }
         }
     }
     public function renderHtml(

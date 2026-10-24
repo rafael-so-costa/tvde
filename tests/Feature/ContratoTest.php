@@ -3256,3 +3256,232 @@ test('4l9 ciclo documental preserva numero na emissao incompleta',function(){
             ->count()
     )->toBe($logsPdfIniciais+1);
 });
+
+/*
+ * FROTAPRO 4N26
+ * Assinaturas por versao e emissao definitiva.
+ *
+ * Os testes usam SQLite isolado e Storage::fake.
+ * Nenhum contrato da base operacional e alterado.
+ */
+
+function frotaPro4N26Fixture(
+    ?int $signatureVersion,
+    bool $pendingRetification=false
+): array {
+    $tenant=contratoTenant(
+        'Tenant 4N26',
+        'tenant-seguranca-4n26'
+    );
+
+    $user=contratoUsuario(
+        $tenant,
+        'validacao.4n26@frotapro.test'
+    );
+
+    $template=contratoTemplate(
+        $tenant,
+        '<h1>Contrato de validacao 4N26</h1>'.
+        '<p>Inicio: {{DATA_INICIO}}</p>'.
+        '<p>Fim: {{DATA_FIM}}</p>'.
+        '<p>Motorista: {{ASSINATURA_MOTORISTA}}</p>'.
+        '<p>Empresa: {{ASSINATURA_EMPRESA}}</p>'
+    );
+
+    $fields=$pendingRetification
+        ? ['FROTAPRO_RETIFICACAO_PENDENTE'=>'v2']
+        : [];
+
+    /*
+     * Simula campos de assinatura que ficaram
+     * guardados historicamente no contrato.
+     * Nunca devem substituir a validacao da versao.
+     */
+    $image='data:image/png;base64,'.
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJ'.
+        'AAAADUlEQVQIHWP4z8DwHwAFgAI/ScL/nwAAAABJRU5ErkJggg==';
+
+    $fields['ASSINATURA_MOTORISTA']=$image;
+    $fields['ASSINATURA_EMPRESA']=$image;
+
+    $contract=new Contrato([
+        'template_id'=>$template->id,
+        'tipo'=>'aluguer',
+        'data_inicio'=>'2026-11-01',
+        'data_fim'=>'2027-11-01',
+        'campos_preenchidos'=>$fields,
+    ]);
+
+    $contract->tenant_id=$tenant->id;
+    $contract->versao_atual=2;
+
+    $contract->status=$pendingRetification
+        ? 'rascunho'
+        : 'assinado';
+
+    $contract->data_assinatura=$pendingRetification
+        ? null
+        : now();
+
+    $contract->save();
+
+    foreach([
+        'ASSINATURA_MOTORISTA'=>'motorista',
+        'ASSINATURA_EMPRESA'=>'empresa',
+    ] as $placeholder=>$type){
+        $signature=new AssinaturaDigital([
+            'signatario_tipo'=>$type,
+            'signatario_nome'=>'Signatario Teste',
+            'signatario_email'=>'assinatura.4n26@frotapro.test',
+            'placeholder'=>$placeholder,
+            'assinatura_url'=>$image,
+            'status'=>'assinado',
+        ]);
+
+        $signature->tenant_id=$tenant->id;
+        $signature->contrato_id=$contract->id;
+        $signature->contrato_versao=$signatureVersion;
+        $signature->verificado=true;
+        $signature->assinado_em=now();
+
+        $signature->save();
+    }
+
+    return [$tenant,$user,$contract];
+}
+
+test('4n26 retificacao pendente impede emissao definitiva',function(){
+    Storage::fake('local');
+
+    [$tenant,$user,$contract]=frotaPro4N26Fixture(
+        1,
+        true
+    );
+
+    contratoLogin($this,$user);
+
+    $before=Documento::count();
+
+    $this->withHeaders(contratoHeaders())
+        ->postJson("/api/contratos/{$contract->id}/pdf")
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['contrato']);
+
+    expect(Documento::count())->toBe($before);
+
+    $contract->refresh();
+
+    expect($contract->pdf_gerado_url)->toBeNull();
+    expect($contract->hash_documento)->toBeNull();
+    expect($contract->status)->toBe('rascunho');
+});
+
+test('4n26 versao anterior nao permite emissao definitiva',function(){
+    Storage::fake('local');
+
+    /*
+     * Retiramos propositadamente o marcador de
+     * retificacao para testar a seguranca real
+     * da vinculacao das assinaturas a V2.
+     */
+    [$tenant,$user,$contract]=frotaPro4N26Fixture(1,false);
+
+    contratoLogin($this,$user);
+
+    $before=Documento::count();
+
+    $this->withHeaders(contratoHeaders())
+        ->postJson("/api/contratos/{$contract->id}/pdf")
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['contrato']);
+
+    expect(Documento::count())->toBe($before);
+
+    $contract->refresh();
+
+    expect($contract->pdf_gerado_url)->toBeNull();
+    expect($contract->hash_documento)->toBeNull();
+});
+
+test('4n26 assinaturas atuais permitem emissao definitiva',function(){
+    Storage::fake('local');
+
+    [$tenant,$user,$contract]=frotaPro4N26Fixture(2,false);
+
+    contratoLogin($this,$user);
+
+    $this->withHeaders(contratoHeaders())
+        ->postJson("/api/contratos/{$contract->id}/pdf")
+        ->assertOk()
+        ->assertJsonPath('data.pdf_disponivel',true);
+
+    $contract->refresh();
+
+    expect($contract->pdf_gerado_url)->not->toBeNull();
+    expect($contract->hash_documento)->toMatch(
+        '/^[a-f0-9]{64}$/'
+    );
+
+    Storage::disk('local')->assertExists(
+        $contract->pdf_gerado_url
+    );
+});
+
+test('4n26 outra empresa nao emite pdf do contrato',function(){
+    Storage::fake('local');
+
+    [$tenant,$user,$contract]=frotaPro4N26Fixture(2,false);
+
+    $otherTenant=contratoTenant(
+        'Outro Tenant 4N26',
+        'outro-tenant-4n26'
+    );
+
+    $otherUser=contratoUsuario(
+        $otherTenant,
+        'outro.tenant.4n26@frotapro.test'
+    );
+
+    contratoLogin($this,$otherUser);
+
+    $this->withHeaders(contratoHeaders())
+        ->postJson("/api/contratos/{$contract->id}/pdf")
+        ->assertNotFound();
+
+    expect($contract->fresh()->pdf_gerado_url)->toBeNull();
+});
+
+test('4n26 uma assinatura antiga e outra atual nao permitem emissao',function(){
+    Storage::fake('local');
+
+    [$tenant,$user,$contract]=frotaPro4N26Fixture(
+        2,
+        false
+    );
+
+    AssinaturaDigital::query()
+        ->where('contrato_id',$contract->id)
+        ->where(
+            'placeholder',
+            'ASSINATURA_EMPRESA'
+        )
+        ->update([
+            'contrato_versao'=>1,
+        ]);
+
+    contratoLogin($this,$user);
+
+    $before=Documento::count();
+
+    $this->withHeaders(contratoHeaders())
+        ->postJson("/api/contratos/{$contract->id}/pdf")
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['contrato']);
+
+    expect(Documento::count())->toBe($before);
+
+    $contract->refresh();
+
+    expect($contract->pdf_gerado_url)->toBeNull();
+    expect($contract->hash_documento)->toBeNull();
+});
