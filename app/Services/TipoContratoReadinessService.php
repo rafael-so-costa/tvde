@@ -11,6 +11,26 @@ use Illuminate\Validation\ValidationException;
 
 final class TipoContratoReadinessService
 {
+    public function restrictMenuQuery(
+        \Illuminate\Database\Eloquent\Builder $query,
+        string $tenantId
+    ): \Illuminate\Database\Eloquent\Builder {
+        return $query
+            ->whereHas('template',function($template) use($tenantId){
+                $template
+                    ->where('tenant_id',$tenantId)
+                    ->where('ativo',true)
+                    ->whereNotNull('conteudo_original')
+                    ->whereRaw("TRIM(conteudo_original) <> ''");
+            })
+            ->whereHas('checklistProcessTemplate',function($workflow) use($tenantId){
+                $workflow
+                    ->where('tenant_id',$tenantId)
+                    ->where('ativo',true)
+                    ->whereHas('items');
+            });
+    }
+
     public function problems(TipoContrato $tipo): array
     {
         $errors=[];

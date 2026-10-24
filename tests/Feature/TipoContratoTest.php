@@ -538,6 +538,19 @@ test(
             'visualizar'
         );
 
+        $menuTemplate=tipoContratoTemplate(
+            $tenant,
+            'Template Menu 4N30'
+        );
+
+        $menuTemplate->ativo=true;
+        $menuTemplate->save();
+
+        $menuWorkflow=tipoContratoWorkflow(
+            $tenant,
+            'workflow_menu_4n30'
+        );
+
         foreach([
             [
                 'nome'=>'Segundo',
@@ -572,6 +585,14 @@ test(
                 'ordem'=>1,
             ],
         ] as $data){
+            if(
+                ($data['ativo']??false) &&
+                ($data['mostrar_menu']??false)
+            ){
+                $data['template_id']=$menuTemplate->id;
+                $data['checklist_process_template_id']=$menuWorkflow->id;
+            }
+
             $tipo=new TipoContrato(
                 $data
             );
@@ -835,4 +856,210 @@ test('4n29 nao remove workflow de tipo ativo',function(){
     expect(
         $type->fresh()->checklist_process_template_id
     )->toBe($workflow->id);
+});
+
+/*
+ * 4N.30 - O tipo so pode estar operacional enquanto
+ * todas as suas dependencias permanecerem validas.
+ */
+function frotaPro4N30Fixture(
+    \App\Models\Tenant $tenant,
+    string $code
+): array {
+    $template=tipoContratoTemplate(
+        $tenant,
+        'Modelo '.$code
+    );
+
+    $template->ativo=true;
+    $template->save();
+
+    $workflow=tipoContratoWorkflow(
+        $tenant,
+        'workflow_'.$code
+    );
+
+    $type=new \App\Models\TipoContrato([
+        'nome'=>'Tipo '.$code,
+        'slug'=>str_replace('_','-',$code),
+        'codigo'=>$code,
+        'template_id'=>$template->id,
+        'checklist_process_template_id'=>$workflow->id,
+        'ativo'=>true,
+        'mostrar_menu'=>true,
+    ]);
+
+    $type->tenant_id=$tenant->id;
+    $type->save();
+
+    return [$type,$template,$workflow];
+}
+
+test('4n30 modelo desativado impede novo contrato',function(){
+    \Illuminate\Support\Facades\Mail::fake();
+    \Illuminate\Support\Facades\Storage::fake('local');
+
+    $tenant=tipoContratoTenant('4N30 Modelo','4n30-modelo');
+    $user=tipoContratoUser($tenant,'4n30.modelo@frotapro.test');
+
+    [$type,$template,$workflow]=frotaPro4N30Fixture(
+        $tenant,'tipo_modelo_desativado'
+    );
+
+    $template->ativo=false;
+    $template->save();
+
+    tipoContratoLogin($this,$user);
+
+    $this->withHeaders(tipoContratoHeaders())
+        ->postJson('/api/contratos',[
+            'tipo_contrato_id'=>$type->id,
+            'data_inicio'=>'2026-11-01',
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['tipo_contrato_id']);
+
+    expect(
+        \App\Models\Contrato::query()
+            ->where('tenant_id',$tenant->id)
+            ->count()
+    )->toBe(0);
+});
+
+test('4n30 workflow desativado impede novo contrato',function(){
+    \Illuminate\Support\Facades\Mail::fake();
+    \Illuminate\Support\Facades\Storage::fake('local');
+
+    $tenant=tipoContratoTenant('4N30 Workflow','4n30-workflow');
+    $user=tipoContratoUser($tenant,'4n30.workflow@frotapro.test');
+
+    [$type,$template,$workflow]=frotaPro4N30Fixture(
+        $tenant,'tipo_workflow_desativado'
+    );
+
+    $workflow->ativo=false;
+    $workflow->save();
+
+    tipoContratoLogin($this,$user);
+
+    $this->withHeaders(tipoContratoHeaders())
+        ->postJson('/api/contratos',[
+            'tipo_contrato_id'=>$type->id,
+            'data_inicio'=>'2026-11-01',
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['tipo_contrato_id']);
+
+    expect(
+        \App\Models\Contrato::query()
+            ->where('tenant_id',$tenant->id)
+            ->count()
+    )->toBe(0);
+});
+
+test('4n30 workflow sem etapas impede novo contrato',function(){
+    \Illuminate\Support\Facades\Mail::fake();
+    \Illuminate\Support\Facades\Storage::fake('local');
+
+    $tenant=tipoContratoTenant('4N30 Etapas','4n30-etapas');
+    $user=tipoContratoUser($tenant,'4n30.etapas@frotapro.test');
+
+    [$type,$template,$workflow]=frotaPro4N30Fixture(
+        $tenant,'tipo_workflow_vazio'
+    );
+
+    $workflow->items()->delete();
+
+    tipoContratoLogin($this,$user);
+
+    $this->withHeaders(tipoContratoHeaders())
+        ->postJson('/api/contratos',[
+            'tipo_contrato_id'=>$type->id,
+            'data_inicio'=>'2026-11-01',
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['tipo_contrato_id']);
+
+    expect(
+        \App\Models\Contrato::query()
+            ->where('tenant_id',$tenant->id)
+            ->count()
+    )->toBe(0);
+});
+
+test('4n30 menu omite tipo legado incompleto',function(){
+    $tenant=tipoContratoTenant('4N30 Menu','4n30-menu');
+    $user=tipoContratoUser($tenant,'4n30.menu@frotapro.test');
+
+    [$valid]=frotaPro4N30Fixture(
+        $tenant,'tipo_valido_menu'
+    );
+
+    $invalid=new \App\Models\TipoContrato([
+        'nome'=>'Tipo legado incompleto',
+        'slug'=>'tipo-legado-incompleto',
+        'codigo'=>'tipo_legado_incompleto',
+        'ativo'=>true,
+        'mostrar_menu'=>true,
+    ]);
+
+    $invalid->tenant_id=$tenant->id;
+    $invalid->save();
+
+    tipoContratoLogin($this,$user);
+
+    $this->withHeaders(tipoContratoHeaders())
+        ->getJson('/api/tipos-contrato?menu=1')
+        ->assertOk()
+        ->assertJsonCount(1,'data')
+        ->assertJsonPath('data.0.id',$valid->id);
+
+    /*
+     * O tipo continua consultavel na configuracao.
+     */
+    $this->withHeaders(tipoContratoHeaders())
+        ->getJson('/api/tipos-contrato?incluir_inativos=1')
+        ->assertOk()
+        ->assertJsonFragment(['id'=>$invalid->id]);
+});
+
+test('4n30 menu omite tipo com modelo desativado',function(){
+    $tenant=tipoContratoTenant('4N30 Menu Modelo','4n30-menu-modelo');
+    $user=tipoContratoUser($tenant,'4n30.menu.modelo@frotapro.test');
+
+    [$type,$template]=frotaPro4N30Fixture(
+        $tenant,'tipo_menu_modelo'
+    );
+
+    $template->ativo=false;
+    $template->save();
+
+    tipoContratoLogin($this,$user);
+
+    $this->withHeaders(tipoContratoHeaders())
+        ->getJson('/api/tipos-contrato?menu=1')
+        ->assertOk()
+        ->assertJsonCount(0,'data');
+
+    expect($type->fresh()->ativo)->toBeTrue();
+});
+
+test('4n30 menu omite tipo com workflow sem etapas',function(){
+    $tenant=tipoContratoTenant('4N30 Menu Etapas','4n30-menu-etapas');
+    $user=tipoContratoUser($tenant,'4n30.menu.etapas@frotapro.test');
+
+    [$type,$template,$workflow]=frotaPro4N30Fixture(
+        $tenant,'tipo_menu_sem_etapas'
+    );
+
+    $workflow->items()->delete();
+
+    tipoContratoLogin($this,$user);
+
+    $this->withHeaders(tipoContratoHeaders())
+        ->getJson('/api/tipos-contrato?menu=1')
+        ->assertOk()
+        ->assertJsonCount(0,'data');
+
+    expect($type->fresh()->ativo)->toBeTrue();
 });

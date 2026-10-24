@@ -7,6 +7,7 @@ use App\Http\Requests\UpdateTipoContratoRequest;
 use App\Models\TipoContrato;
 use App\Services\TenantContext;
 use App\Services\TipoContratoService;
+use App\Services\TipoContratoReadinessService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -14,7 +15,8 @@ class TipoContratoController extends Controller
 {
     public function __construct(
         private TenantContext $tenantContext,
-        private TipoContratoService $service
+        private TipoContratoService $service,
+        private TipoContratoReadinessService $readiness
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -34,9 +36,12 @@ class TipoContratoController extends Controller
         }
 
         if($request->boolean('menu')){
-            $query
-                ->where('ativo',true)
-                ->where('mostrar_menu',true);
+            $this->readiness->restrictMenuQuery(
+                $query
+                    ->where('ativo',true)
+                    ->where('mostrar_menu',true),
+                $this->tenantId()
+            );
         }
 
         $types=$query->get()->map(function(TipoContrato $tipo){
