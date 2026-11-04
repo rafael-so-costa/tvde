@@ -34,7 +34,7 @@ return new class extends Migration
             $table->string('apolice',150)->nullable();
             $table->string('numero_processo',150)->nullable();
 
-            $table->json('itens_danificados')->default('[]');
+            $table->json('itens_danificados')->default(new \Illuminate\Database\Query\Expression("('[]')"));
             $table->text('descricao')->nullable();
 
             $table->boolean('teve_testemunha')->default(false);

@@ -6,6 +6,7 @@ use App\Http\Requests\EncerrarContratoRequest;
 use App\Http\Requests\StoreContratoRequest;
 use App\Http\Requests\UpdateContratoRequest;
 use App\Models\Contrato;
+use App\Models\LogAuditoriaContrato;
 use App\Models\Motorista;
 use App\Models\Proprietario;
 use App\Services\ContratoPdfService;
@@ -387,6 +388,158 @@ class ContratoController extends Controller
         );
     }
 
+    /*
+     * Listar emissoes sem expor caminhos internos.
+     * A autorizacao reutiliza o mesmo escopo
+     * aplicado a leitura normal de contratos.
+     */
+    public function pdfHistorico(
+        Request $request,
+        string $id
+    ): JsonResponse {
+        $contrato=$this->leituraQuery($request)
+            ->findOrFail($id);
+
+        $logs=LogAuditoriaContrato::query()
+            ->where('tenant_id',$this->tenantId())
+            ->where('contrato_id',$contrato->id)
+            ->where('acao','geracao_pdf')
+            ->orderBy('created_at')
+            ->orderBy('id')
+            ->get();
+
+        $items=$logs->map(
+            static function(LogAuditoriaContrato $log)
+                use($contrato):array {
+                $details=(array)($log->detalhes??[]);
+
+                return [
+                    'id'=>$log->id,
+                    'versao'=>
+                        isset($details['versao'])
+                        ?(int)$details['versao']
+                        :null,
+                    'hash'=>$details['hash']??null,
+                    'atual'=>
+                        filled($details['pdf_path']??null) &&
+                        (string)$details['pdf_path']===
+                            (string)$contrato->pdf_gerado_url &&
+                        (string)($details['hash']??'')===
+                            (string)$contrato->hash_documento,
+                    'motivo_revisao'=>
+                        $details['motivo_revisao']??null,
+                    'criado_em'=>$log->created_at,
+                    'evidencia_completa'=>
+                        filled($details['pdf_path']??null) &&
+                        filled($details['hash']??null),
+                ];
+            }
+        )->values()->all();
+
+        return response()->json([
+            'data'=>$items,
+        ]);
+    }
+
+    /*
+     * Recuperar uma emissao identificada pelo log.
+     * Nao aceitar caminhos enviados pelo cliente.
+     * Validar tenant, contrato, estrutura do caminho,
+     * versao e SHA-256 antes de devolver o ficheiro.
+     */
+    public function pdfHistoricoEmissao(
+        Request $request,
+        string $id,
+        string $emissaoId
+    ): BinaryFileResponse {
+        $contrato=$this->leituraQuery($request)
+            ->with(['documento','tipoContrato'])
+            ->findOrFail($id);
+
+        $log=LogAuditoriaContrato::query()
+            ->where('tenant_id',$this->tenantId())
+            ->where('contrato_id',$contrato->id)
+            ->where('acao','geracao_pdf')
+            ->findOrFail($emissaoId);
+
+        $details=(array)($log->detalhes??[]);
+        $path=(string)($details['pdf_path']??'');
+        $hash=(string)($details['hash']??'');
+        $version=$details['versao']??null;
+
+        $prefix=
+            'contract-pdfs/'.
+            $this->tenantId().'/'.
+            $contrato->id.'/';
+
+        if(
+            !str_starts_with($path,$prefix) ||
+            !preg_match('/^[a-f0-9]{64}$/D',$hash)
+        ){
+            abort(404,'Emissão histórica sem evidência válida.');
+        }
+
+        $filename=substr($path,strlen($prefix));
+
+        if(!preg_match(
+            '/^v([1-9][0-9]*)-[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}\.pdf$/D',
+            $filename,
+            $matches
+        )){
+            abort(404,'Caminho histórico inválido.');
+        }
+
+        if(
+            !is_int($version) &&
+            !(
+                is_string($version) &&
+                ctype_digit($version)
+            )
+        ){
+            abort(404,'Versão histórica inválida.');
+        }
+
+        if((int)$matches[1] !== (int)$version){
+            abort(404,'Versão e ficheiro não correspondem.');
+        }
+
+        $disk=Storage::disk('local');
+
+        if(!$disk->exists($path)){
+            abort(404,'PDF histórico não encontrado.');
+        }
+
+        $absolutePath=$disk->path($path);
+        $actualHash=hash_file('sha256',$absolutePath);
+
+        if(
+            $actualHash===false ||
+            !hash_equals($hash,$actualHash)
+        ){
+            abort(
+                409,
+                'A integridade do PDF histórico não foi confirmada.'
+            );
+        }
+
+        $name=preg_replace(
+            '/\.pdf$/',
+            '-v'.(int)$version.'-'.
+                substr((string)$log->id,0,8).
+                '.pdf',
+            $this->pdfFilename($contrato)
+        );
+
+        return response()->file(
+            $absolutePath,
+            [
+                'Content-Type'=>'application/pdf',
+                'Content-Disposition'=>
+                    'inline; filename="'.$name.'"',
+                'X-Content-Type-Options'=>'nosniff',
+            ]
+        );
+    }
     public function resendRemoteSignature(
         Request $request,
         string $id,
@@ -482,6 +635,74 @@ class ContratoController extends Controller
             );
         }
 
+        /*
+         * FROTAPRO_4N33_7_2
+         *
+         * O PDF atual so pode ser entregue
+         * quando o hash do ficheiro corresponde
+         * ao SHA-256 guardado no contrato.
+         *
+         * Protege tanto a visualizacao inline
+         * como o download, porque ambos
+         * utilizam este metodo.
+         */
+        $expectedHash=strtolower(
+            trim(
+                (string)$contrato->hash_documento
+            )
+        );
+
+        if(!preg_match(
+            '/^[a-f0-9]{64}$/D',
+            $expectedHash
+        )){
+            abort(
+                409,
+                'O PDF não possui um hash SHA-256 válido para confirmar a sua integridade.'
+            );
+        }
+
+        $disk=Storage::disk('local');
+
+        $absolutePath=$disk->path(
+            (string)$contrato->pdf_gerado_url
+        );
+
+        /*
+         * Verificar novamente o ficheiro antes
+         * de calcular o hash.
+         */
+        if(
+            !is_file($absolutePath) ||
+            !is_readable($absolutePath)
+        ){
+            abort(
+                404,
+                'O PDF do contrato não está disponível para leitura.'
+            );
+        }
+
+        /*
+         * hash_file processa o ficheiro sem
+         * carregar todo o PDF em memoria.
+         */
+        $actualHash=hash_file(
+            'sha256',
+            $absolutePath
+        );
+
+        if(
+            $actualHash===false ||
+            !hash_equals(
+                $expectedHash,
+                $actualHash
+            )
+        ){
+            abort(
+                409,
+                'A integridade do PDF do contrato não foi confirmada.'
+            );
+        }
         return $contrato;
     }
 

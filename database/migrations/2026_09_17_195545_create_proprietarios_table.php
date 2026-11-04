@@ -51,7 +51,7 @@ return new class extends Migration
             $table->text('endereco_cep')->nullable();
 
             $table->text('foto_perfil_url')->nullable();
-            $table->json('fotos_galeria')->default('[]');
+            $table->json('fotos_galeria')->default(new \Illuminate\Database\Query\Expression("('[]')"));
 
             $table->text('cartao_frota')->nullable();
 

@@ -49,7 +49,7 @@ return new class extends Migration
 
                 $table->json(
                     'configuracao_snapshot'
-                )->default('{}');
+                )->default(new \Illuminate\Database\Query\Expression("('{}')"));
 
                 $table->string('status', 30)
                     ->default('pendente');

@@ -45,12 +45,12 @@ return new class extends Migration
                 2
             )->default(0);
 
-            $table->json('itens')->default('{}');
-            $table->json('campos_especiais')->default('{}');
-            $table->json('danos')->default('[]');
-            $table->json('itens_faltantes')->default('{}');
-            $table->json('novos_danos')->default('[]');
-            $table->json('media')->default('{}');
+            $table->json('itens')->default(new \Illuminate\Database\Query\Expression("('{}')"));
+            $table->json('campos_especiais')->default(new \Illuminate\Database\Query\Expression("('{}')"));
+            $table->json('danos')->default(new \Illuminate\Database\Query\Expression("('[]')"));
+            $table->json('itens_faltantes')->default(new \Illuminate\Database\Query\Expression("('{}')"));
+            $table->json('novos_danos')->default(new \Illuminate\Database\Query\Expression("('[]')"));
+            $table->json('media')->default(new \Illuminate\Database\Query\Expression("('{}')"));
             $table->json('metadados_seguranca')->nullable();
 
             $table->text('assinatura_empresa_path')->nullable();

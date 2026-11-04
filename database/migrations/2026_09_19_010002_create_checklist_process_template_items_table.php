@@ -33,7 +33,7 @@ return new class extends Migration
                     ->default(true);
 
                 $table->json('configuracao')
-                    ->default('{}');
+                    ->default(new \Illuminate\Database\Query\Expression("('{}')"));
 
                 $table->timestamps();
 

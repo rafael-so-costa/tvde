@@ -42,7 +42,7 @@ return new class extends Migration
             $table->date('extintor_valid_until')->nullable();
 
             $table->text('foto_principal_url')->nullable();
-            $table->json('fotos_galeria')->default('[]');
+            $table->json('fotos_galeria')->default(new \Illuminate\Database\Query\Expression("('[]')"));
 
             $table->decimal('valor_caucao', 15, 2)->nullable();
             $table->decimal('valor_aluguel', 15, 2)->nullable();

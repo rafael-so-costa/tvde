@@ -1081,6 +1081,8 @@ Route::get(
         Route::get('/contratos/{id}', [ContratoController::class, 'show']);
         Route::get('/contratos/{id}/pdf', [ContratoController::class, 'pdf']);
         Route::get('/contratos/{id}/pdf/download', [ContratoController::class, 'downloadPdf']);
+        Route::get('/contratos/{id}/pdf/historico', [ContratoController::class, 'pdfHistorico']);
+        Route::get('/contratos/{id}/pdf/historico/{emissaoId}', [ContratoController::class, 'pdfHistoricoEmissao']);
 
         Route::middleware('permission:contratos,configurar')->group(function () {
             Route::post(

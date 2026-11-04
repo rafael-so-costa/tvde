@@ -48,7 +48,7 @@ return new class extends Migration
             $table->string('iban', 50)->nullable();
 
             $table->text('foto_perfil_url')->nullable();
-            $table->json('fotos_galeria')->default('[]');
+            $table->json('fotos_galeria')->default(new \Illuminate\Database\Query\Expression("('[]')"));
 
             $table->text('bolt_email')->nullable();
             $table->text('bolt_telemovel')->nullable();
@@ -63,7 +63,7 @@ return new class extends Migration
             $table->text('contato_urgencia_nome')->nullable();
             $table->text('contato_urgencia_telemovel')->nullable();
 
-            $table->json('documentos_upload')->default('[]');
+            $table->json('documentos_upload')->default(new \Illuminate\Database\Query\Expression("('[]')"));
 
             $table->boolean('ativo')->default(true);
             $table->string('status_cadastro', 20)->default('pendente');

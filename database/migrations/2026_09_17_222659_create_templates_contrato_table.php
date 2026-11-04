@@ -30,10 +30,10 @@ return new class extends Migration
             $table->text('conteudo_original')->nullable();
 
             $table->json('campos_detectados')
-                ->default('[]');
+                ->default(new \Illuminate\Database\Query\Expression("('[]')"));
 
             $table->json('campos_mapeados')
-                ->default('{}');
+                ->default(new \Illuminate\Database\Query\Expression("('{}')"));
 
             $table->timestamps();
 

@@ -47,7 +47,7 @@ return new class extends Migration
             $table->timestamp('data_finalizacao')->nullable();
 
             $table->integer('rascunho_passo')->default(1);
-            $table->json('rascunho_dados')->default('{}');
+            $table->json('rascunho_dados')->default(new \Illuminate\Database\Query\Expression("('{}')"));
 
             $table->text('observacoes')->nullable();
             $table->uuid('created_by')->nullable();
@@ -56,7 +56,7 @@ return new class extends Migration
             $table->integer('devolucao_dias_atraso')->default(0);
             $table->decimal('devolucao_valor_dia', 15, 2)->default(0);
             $table->decimal('devolucao_multa_atraso', 15, 2)->default(0);
-            $table->json('devolucao_multas_adicionais')->default('[]');
+            $table->json('devolucao_multas_adicionais')->default(new \Illuminate\Database\Query\Expression("('[]')"));
             $table->decimal(
                 'devolucao_penalizacoes_checklist',
                 15,

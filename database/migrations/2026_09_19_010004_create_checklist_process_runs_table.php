@@ -49,7 +49,7 @@ return new class extends Migration
                     ->default('pendente');
 
                 $table->json('contexto')
-                    ->default('{}');
+                    ->default(new \Illuminate\Database\Query\Expression("('{}')"));
 
                 $table->timestamp('iniciado_em')
                     ->nullable();

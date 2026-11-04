@@ -22,7 +22,7 @@ return new class extends Migration
                 ->default(1);
 
             $table->json('dados_campos')
-                ->default('{}');
+                ->default(new \Illuminate\Database\Query\Expression("('{}')"));
 
             $table->foreignUuid('criado_por')
                 ->nullable()

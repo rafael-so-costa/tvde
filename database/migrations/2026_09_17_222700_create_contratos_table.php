@@ -75,7 +75,7 @@ return new class extends Migration
                 ->default(0);
 
             $table->json('campos_preenchidos')
-                ->default('{}');
+                ->default(new \Illuminate\Database\Query\Expression("('{}')"));
 
             $table->integer('versao_atual')
                 ->default(1);

@@ -30,10 +30,10 @@ return new class extends Migration
                 ->constrained('checklist_process_templates')
                 ->nullOnDelete();
 
-            $table->json('entidades')->default('{}');
-            $table->json('campos_configuracao')->default('[]');
-            $table->json('assinaturas_configuracao')->default('[]');
-            $table->json('configuracao')->default('{}');
+            $table->json('entidades')->default(new \Illuminate\Database\Query\Expression("('{}')"));
+            $table->json('campos_configuracao')->default(new \Illuminate\Database\Query\Expression("('[]')"));
+            $table->json('assinaturas_configuracao')->default(new \Illuminate\Database\Query\Expression("('[]')"));
+            $table->json('configuracao')->default(new \Illuminate\Database\Query\Expression("('{}')"));
 
             $table->boolean('ativo')->default(true);
             $table->boolean('mostrar_menu')->default(true);

@@ -4110,3 +4110,2114 @@ test('4n29 tipo ativo legado incompleto nao pode emitir contrato',function(){
             ->count()
     )->toBe(0);
 });
+
+/*
+ * FROTAPRO_4N33_PDF_IMMUTABILITY
+ *
+ * Testes de caracterizacao de reemissao.
+ * Nao alteram os servicos de producao.
+ */
+
+function fp4n33CriarPdf($test,string $suffix): array
+{
+    Storage::fake('local');
+
+    $tenant=contratoTenant(
+        'Tenant Imutabilidade '.$suffix,
+        'tenant-imutabilidade-'.strtolower($suffix)
+    );
+
+    $user=contratoUsuario(
+        $tenant,
+        'imutabilidade.'.strtolower($suffix).'@frotapro.test'
+    );
+
+    $template=contratoTemplate(
+        $tenant,
+        'PROVAORIGINAL4N33 Motorista: {{NOME_MOTORISTA}}'
+    );
+
+    $motorista=contratoMotorista(
+        $tenant,
+        'Imutabilidade'.$suffix
+    );
+
+    $veiculo=contratoVeiculo(
+        $tenant,
+        'IM-33-'.$suffix,
+        350
+    );
+
+    contratoLogin($test,$user);
+
+    $response=$test
+        ->withHeaders(contratoHeaders())
+        ->postJson('/api/contratos',[
+            'template_id'=>$template->id,
+            'tipo'=>'aluguer',
+            'motorista_id'=>$motorista->id,
+            'veiculo_id'=>$veiculo->id,
+            'data_inicio'=>'2026-09-20',
+            'campos_preenchidos'=>[
+                'NOME_MOTORISTA'=>$motorista->nome_completo,
+            ],
+        ])
+        ->assertCreated();
+
+    $id=$response->json('data.id');
+
+    $test
+        ->withHeaders(contratoHeaders())
+        ->postJson("/api/contratos/{$id}/pdf")
+        ->assertOk();
+
+    return [
+        'id'=>$id,
+        'tenant'=>$tenant,
+        'user'=>$user,
+        'template'=>$template,
+        'motorista'=>$motorista,
+        'contrato'=>Contrato::findOrFail($id),
+    ];
+}
+
+test(
+    '4n33 pdf reemitido conserva ficheiro e hash originais',
+    function(){
+        $fixture=fp4n33CriarPdf($this,'AA');
+
+        $id=$fixture['id'];
+        $original=$fixture['contrato'];
+
+        $originalPath=$original->pdf_gerado_url;
+        $originalHash=$original->hash_documento;
+
+        expect($originalPath)->not->toBeNull();
+        expect($originalHash)->toMatch('/^[a-f0-9]{64}$/');
+
+        Storage::disk('local')->assertExists($originalPath);
+
+        $originalBytes=Storage::disk('local')
+            ->get($originalPath);
+
+        expect(hash('sha256',$originalBytes))
+            ->toBe($originalHash);
+
+        $documento=Documento::query()
+            ->where('entidade_tipo','contrato')
+            ->where('entidade_id',$id)
+            ->firstOrFail();
+
+        $codigoInicial=$documento->codigo;
+        $documentoId=$documento->id;
+        $totalDocumentos=Documento::count();
+
+        $this
+            ->withHeaders(contratoHeaders())
+            ->postJson("/api/contratos/{$id}/pdf")
+            ->assertOk();
+
+        $after=Contrato::findOrFail($id);
+
+        $documento->refresh();
+
+        expect($documento->id)->toBe($documentoId);
+        expect($documento->codigo)->toBe($codigoInicial);
+        expect(Documento::count())->toBe($totalDocumentos);
+
+        /*
+         * Uma reemissao nao pode destruir
+         * o ficheiro original ja emitido.
+         */
+        Storage::disk('local')->assertExists(
+            $originalPath
+        );
+
+        $preserved=Storage::disk('local')
+            ->get($originalPath);
+
+        expect(hash('sha256',$preserved))
+            ->toBe($originalHash);
+
+        Storage::disk('local')->assertExists(
+            $after->pdf_gerado_url
+        );
+
+        expect(
+            hash('sha256',
+                Storage::disk('local')->get(
+                    $after->pdf_gerado_url
+                )
+            )
+        )->toBe($after->hash_documento);
+    }
+);
+
+test(
+    '4n33 pdf reemitido nao incorpora alteracao posterior do template',
+    function(){
+        $fixture=fp4n33CriarPdf($this,'BB');
+
+        $id=$fixture['id'];
+        $template=$fixture['template'];
+
+        $originalPath=$fixture['contrato']
+            ->pdf_gerado_url;
+
+        Storage::disk('local')->assertExists(
+            $originalPath
+        );
+
+        $originalText=(new \Smalot\PdfParser\Parser())
+            ->parseContent(
+                Storage::disk('local')->get($originalPath)
+            )
+            ->getText();
+
+        expect($originalText)
+            ->toContain('PROVAORIGINAL4N33');
+
+        /*
+         * O template e uma entidade mutavel.
+         * A alteracao simula uma revisao posterior
+         * do modelo utilizado pelo contrato.
+         */
+        $template->conteudo_original=
+            'PROVAALTERADA4N33 Motorista: {{NOME_MOTORISTA}}';
+
+        $template->save();
+
+        $this
+            ->withHeaders(contratoHeaders())
+            ->postJson("/api/contratos/{$id}/pdf")
+            ->assertOk();
+
+        $after=Contrato::findOrFail($id);
+
+        $currentText=(new \Smalot\PdfParser\Parser())
+            ->parseContent(
+                Storage::disk('local')->get(
+                    $after->pdf_gerado_url
+                )
+            )
+            ->getText();
+
+        /*
+         * Sem uma nova versao contratual,
+         * a reemissao nao deve alterar o
+         * conteudo juridico ja emitido.
+         */
+        expect($currentText)
+            ->toContain('PROVAORIGINAL4N33');
+
+        expect($currentText)
+            ->not->toContain('PROVAALTERADA4N33');
+    }
+);
+test(
+    '4n33 pdf adulterado impede reutilizacao',
+    function(){
+        $fixture=fp4n33CriarPdf($this,'CC');
+
+        $id=$fixture['id'];
+        $original=$fixture['contrato'];
+
+        $path=$original->pdf_gerado_url;
+        $hash=$original->hash_documento;
+
+        Storage::disk('local')->put(
+            $path,
+            '%PDF-DADOS-ADULTERADOS-4N33'
+        );
+
+        $this
+            ->withHeaders(contratoHeaders())
+            ->postJson("/api/contratos/{$id}/pdf")
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('contrato');
+
+        $after=Contrato::findOrFail($id);
+
+        expect($after->pdf_gerado_url)->toBe($path);
+        expect($after->hash_documento)->toBe($hash);
+    }
+);
+
+test(
+    '4n33 nova versao preserva pdf original',
+    function(){
+        $fixture=fp4n33CriarPdf($this,'DD');
+
+        $id=$fixture['id'];
+        $original=$fixture['contrato'];
+
+        $oldPath=$original->pdf_gerado_url;
+        $oldHash=$original->hash_documento;
+        $oldVersion=(int)$original->versao_atual;
+
+        $documento=Documento::query()
+            ->where('entidade_tipo','contrato')
+            ->where('entidade_id',$id)
+            ->firstOrFail();
+
+        $codigo=$documento->codigo;
+
+        $this
+            ->withHeaders(contratoHeaders())
+            ->patchJson("/api/contratos/{$id}",[
+                'campos_preenchidos'=>[
+                    'NOME_MOTORISTA'=>
+                        $fixture['motorista']->nome_completo,
+                    'OBSERVACAO_TESTE'=>
+                        'Revisao documental 4N33',
+                ],
+            ])
+            ->assertOk();
+
+        $draft=Contrato::findOrFail($id);
+
+        expect((int)$draft->versao_atual)
+            ->toBe($oldVersion+1);
+
+        $this
+            ->withHeaders(contratoHeaders())
+            ->postJson("/api/contratos/{$id}/pdf")
+            ->assertOk();
+
+        $after=Contrato::findOrFail($id);
+
+        expect($after->pdf_gerado_url)
+            ->not->toBe($oldPath);
+
+        Storage::disk('local')->assertExists($oldPath);
+        Storage::disk('local')->assertExists(
+            $after->pdf_gerado_url
+        );
+
+        expect(
+            hash(
+                'sha256',
+                Storage::disk('local')->get($oldPath)
+            )
+        )->toBe($oldHash);
+
+        $documento->refresh();
+
+        expect($documento->codigo)->toBe($codigo);
+    }
+);
+
+test(
+    '4n33 assinatura remota posterior exige revisao pdf rastreavel',
+    function(){
+        Storage::fake('local');
+        Mail::fake();
+
+        $tenant=contratoTenant(
+            'Tenant Revisao Assinatura 4N33',
+            'tenant-revisao-assinatura-4n33'
+        );
+
+        $user=contratoUsuario(
+            $tenant,
+            'revisao.assinatura.4n33@frotapro.test'
+        );
+
+        $template=contratoTemplate(
+            $tenant,
+            '<p>CONTRATO4N33 {{NOME_MOTORISTA}}</p>'.
+            '<p>{{ASSINATURA_MOTORISTA}}</p>'
+        );
+
+        $motorista=contratoMotorista(
+            $tenant,
+            'RevisaoRemota'
+        );
+
+        $veiculo=contratoVeiculo(
+            $tenant,
+            'AR-33-ZZ',
+            350
+        );
+
+        contratoLogin($this,$user);
+
+        /*
+         * ETAPA 1:
+         * Criar contrato com assinatura remota pendente.
+         */
+        $created=$this
+            ->withHeaders(contratoHeaders())
+            ->postJson('/api/contratos',[
+                'template_id'=>$template->id,
+                'tipo'=>'aluguer',
+                'motorista_id'=>$motorista->id,
+                'veiculo_id'=>$veiculo->id,
+                'data_inicio'=>'2026-10-01',
+                'campos_preenchidos'=>[
+                    'NOME_MOTORISTA'=>$motorista->nome_completo,
+                ],
+                'assinaturas'=>[
+                    [
+                        'placeholder'=>'ASSINATURA_MOTORISTA',
+                        'modo'=>'remota',
+                    ],
+                ],
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.status','enviado');
+
+        $id=$created->json('data.id');
+
+        $assinatura=AssinaturaDigital::query()
+            ->where('contrato_id',$id)
+            ->firstOrFail();
+
+        $token=(string)$assinatura->token_verificacao;
+        $otp=(string)$assinatura->codigo_otp;
+
+        expect($token)->not->toBe('');
+        expect($otp)->toMatch('/^\d{6}$/');
+
+        /*
+         * ETAPA 2:
+         * Emissao inicial antes da assinatura.
+         */
+        $this
+            ->withHeaders(contratoHeaders())
+            ->postJson("/api/contratos/{$id}/pdf")
+            ->assertOk();
+
+        $initial=Contrato::findOrFail($id);
+
+        $initialPath=$initial->pdf_gerado_url;
+        $initialHash=$initial->hash_documento;
+        $initialVersion=(int)$initial->versao_atual;
+
+        Storage::disk('local')->assertExists($initialPath);
+
+        expect(
+            hash(
+                'sha256',
+                Storage::disk('local')->get($initialPath)
+            )
+        )->toBe($initialHash);
+
+        $documento=Documento::query()
+            ->where('entidade_tipo','contrato')
+            ->where('entidade_id',$id)
+            ->firstOrFail();
+
+        $documentoId=$documento->id;
+        $codigo=$documento->codigo;
+        $totalDocumentos=Documento::count();
+
+        $numeroInicial=(int)
+            \Illuminate\Support\Facades\DB::table(
+                'document_sequences'
+            )
+            ->where('chave','documentos')
+            ->value('ultimo_numero');
+
+        $logsAntes=LogAuditoriaContrato::query()
+            ->where('contrato_id',$id)
+            ->where('acao','geracao_pdf')
+            ->count();
+
+        /*
+         * ETAPA 3:
+         * Confirmar assinatura remota pelo servico real.
+         */
+        $png='data:image/png;base64,'.
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJ'.
+            'AAAADUlEQVQIHWP4z8DwHwAFgAI/ScL/nwAAAABJRU5ErkJggg==';
+
+        app(\App\Services\ContratoService::class)
+            ->confirmRemoteSignature(
+                $token,
+                $otp,
+                $png
+            );
+
+        $signed=Contrato::findOrFail($id);
+
+        expect($signed->status)->toBe('assinado');
+
+        expect((int)$signed->versao_atual)
+            ->toBe($initialVersion);
+
+        /*
+         * ETAPA 4:
+         * A emissao pos-assinatura deve produzir
+         * um PDF com revisao rastreavel.
+         */
+        $this
+            ->withHeaders(contratoHeaders())
+            ->postJson("/api/contratos/{$id}/pdf")
+            ->assertOk();
+
+        $updated=Contrato::findOrFail($id);
+
+        expect($updated->pdf_gerado_url)
+            ->not->toBe($initialPath);
+
+        expect($updated->hash_documento)
+            ->not->toBe($initialHash);
+
+        Storage::disk('local')->assertExists($initialPath);
+
+        Storage::disk('local')->assertExists(
+            $updated->pdf_gerado_url
+        );
+
+        expect(
+            hash(
+                'sha256',
+                Storage::disk('local')->get($initialPath)
+            )
+        )->toBe($initialHash);
+
+        expect(
+            hash(
+                'sha256',
+                Storage::disk('local')->get(
+                    $updated->pdf_gerado_url
+                )
+            )
+        )->toBe($updated->hash_documento);
+
+        /*
+         * ETAPA 5:
+         * Preservar a identidade documental global.
+         */
+        $documento->refresh();
+
+        expect($documento->id)->toBe($documentoId);
+        expect($documento->codigo)->toBe($codigo);
+        expect(Documento::count())->toBe($totalDocumentos);
+
+        $numeroFinal=(int)
+            \Illuminate\Support\Facades\DB::table(
+                'document_sequences'
+            )
+            ->where('chave','documentos')
+            ->value('ultimo_numero');
+
+        expect($numeroFinal)->toBe($numeroInicial);
+
+        /*
+         * ETAPA 6:
+         * Exigir evidencia da revisao.
+         */
+        $logs=LogAuditoriaContrato::query()
+            ->where('contrato_id',$id)
+            ->where('acao','geracao_pdf')
+            ->orderBy('created_at')
+            ->orderBy('id')
+            ->get();
+
+        expect($logs->count())->toBe($logsAntes+1);
+
+        $latest=$logs->first(
+            static fn($entry):bool=>
+                (string)(((array)$entry->detalhes)['pdf_path']??'')
+                ===(string)$updated->pdf_gerado_url
+        );
+
+        expect($latest)->not->toBeNull();
+
+        $details=(array)$latest->detalhes;
+
+        expect($details)
+            ->toHaveKey('pdf_path')
+            ->toHaveKey('pdf_anterior_path')
+            ->toHaveKey('pdf_anterior_hash')
+            ->toHaveKey('motivo_revisao');
+
+        expect($details['pdf_path'])
+            ->toBe($updated->pdf_gerado_url);
+
+        expect($details['pdf_anterior_path'])
+            ->toBe($initialPath);
+
+        expect($details['pdf_anterior_hash'])
+            ->toBe($initialHash);
+
+        expect($details['motivo_revisao'])
+            ->toBe('assinatura_remota');
+
+        /*
+         * ETAPA 7:
+         * Repetir a chamada nao cria nova revisao.
+         */
+        $this
+            ->withHeaders(contratoHeaders())
+            ->postJson("/api/contratos/{$id}/pdf")
+            ->assertOk();
+
+        $again=Contrato::findOrFail($id);
+
+        expect($again->pdf_gerado_url)
+            ->toBe($updated->pdf_gerado_url);
+
+        expect($again->hash_documento)
+            ->toBe($updated->hash_documento);
+
+        expect(
+            LogAuditoriaContrato::query()
+                ->where('contrato_id',$id)
+                ->where('acao','geracao_pdf')
+                ->count()
+        )->toBe($logsAntes+1);
+    }
+);
+
+function fp4n33EmissionLog(string $contractId): LogAuditoriaContrato
+{
+    return LogAuditoriaContrato::query()
+        ->where('contrato_id',$contractId)
+        ->where('acao','geracao_pdf')
+        ->firstOrFail();
+}
+
+test(
+    '4n33 auditoria sem log impede reutilizacao',
+    function(){
+        $fixture=fp4n33CriarPdf($this,'EE');
+
+        $id=$fixture['id'];
+        $original=$fixture['contrato'];
+
+        $path=$original->pdf_gerado_url;
+        $hash=$original->hash_documento;
+
+        $log=fp4n33EmissionLog($id);
+
+        /*
+         * Simular ausencia do registo historico.
+         * O ficheiro e o hash continuam intactos.
+         */
+        $log->delete();
+
+        $this
+            ->withHeaders(contratoHeaders())
+            ->postJson("/api/contratos/{$id}/pdf")
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('contrato');
+
+        $after=Contrato::findOrFail($id);
+
+        expect($after->pdf_gerado_url)->toBe($path);
+        expect($after->hash_documento)->toBe($hash);
+
+        Storage::disk('local')->assertExists($path);
+    }
+);
+
+test(
+    '4n33 auditoria legado sem snapshot impede reutilizacao nao verificada',
+    function(){
+        $fixture=fp4n33CriarPdf($this,'FF');
+
+        $id=$fixture['id'];
+        $original=$fixture['contrato'];
+
+        $path=$original->pdf_gerado_url;
+        $hash=$original->hash_documento;
+
+        $log=fp4n33EmissionLog($id);
+
+        /*
+         * Simular registo historico anterior
+         * aos metadados de estado e assinaturas.
+         */
+        $log->detalhes=[
+            'versao'=>(int)$original->versao_atual,
+            'hash'=>$hash,
+        ];
+
+        $log->save();
+
+        $this
+            ->withHeaders(contratoHeaders())
+            ->postJson("/api/contratos/{$id}/pdf")
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('contrato');
+
+        $after=Contrato::findOrFail($id);
+
+        expect($after->pdf_gerado_url)->toBe($path);
+        expect($after->hash_documento)->toBe($hash);
+
+        Storage::disk('local')->assertExists($path);
+    }
+);
+
+test(
+    '4n33 auditoria caminho divergente impede reutilizacao',
+    function(){
+        $fixture=fp4n33CriarPdf($this,'GG');
+
+        $id=$fixture['id'];
+        $original=$fixture['contrato'];
+
+        $path=$original->pdf_gerado_url;
+        $hash=$original->hash_documento;
+
+        $log=fp4n33EmissionLog($id);
+
+        $details=(array)$log->detalhes;
+
+        /*
+         * Simular divergencia entre o caminho
+         * registado na auditoria e o PDF atual.
+         */
+        $details['pdf_path']=
+            'contract-pdfs/arquivo-incompativel.pdf';
+
+        $log->detalhes=$details;
+        $log->save();
+
+        $this
+            ->withHeaders(contratoHeaders())
+            ->postJson("/api/contratos/{$id}/pdf")
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('contrato');
+
+        $after=Contrato::findOrFail($id);
+
+        expect($after->pdf_gerado_url)->toBe($path);
+        expect($after->hash_documento)->toBe($hash);
+
+        Storage::disk('local')->assertExists($path);
+    }
+);
+
+/*
+ * FROTAPRO_4N33_6
+ *
+ * Consulta de versoes historicas e documentos legados.
+ */
+
+function fp4n33HistoricoDuasEmissoes(
+    $test,
+    string $suffix
+): array {
+    $fixture=fp4n33CriarPdf($test,$suffix);
+
+    $id=$fixture['id'];
+    $old=$fixture['contrato'];
+
+    $oldPath=$old->pdf_gerado_url;
+    $oldHash=$old->hash_documento;
+
+    $test
+        ->withHeaders(contratoHeaders())
+        ->patchJson("/api/contratos/{$id}",[
+            'campos_preenchidos'=>[
+                'NOME_MOTORISTA'=>
+                    $fixture['motorista']->nome_completo,
+                'OBSERVACAO_TESTE'=>
+                    'Nova versao historica '.$suffix,
+            ],
+        ])
+        ->assertOk();
+
+    $test
+        ->withHeaders(contratoHeaders())
+        ->postJson("/api/contratos/{$id}/pdf")
+        ->assertOk();
+
+    $current=Contrato::findOrFail($id);
+
+    Storage::disk('local')->assertExists($oldPath);
+    Storage::disk('local')->assertExists(
+        $current->pdf_gerado_url
+    );
+
+    $logs=LogAuditoriaContrato::query()
+        ->where('contrato_id',$id)
+        ->where('acao','geracao_pdf')
+        ->get();
+
+    $oldLog=$logs->first(
+        static fn($entry):bool=>
+            (string)(
+                ((array)$entry->detalhes)['pdf_path']??''
+            )===(string)$oldPath
+    );
+
+    $newLog=$logs->first(
+        static fn($entry):bool=>
+            (string)(
+                ((array)$entry->detalhes)['pdf_path']??''
+            )===(string)$current->pdf_gerado_url
+    );
+
+    expect($oldLog)->not->toBeNull();
+    expect($newLog)->not->toBeNull();
+
+    return [
+        'fixture'=>$fixture,
+        'id'=>$id,
+        'old_path'=>$oldPath,
+        'old_hash'=>$oldHash,
+        'old_log'=>$oldLog,
+        'new_log'=>$newLog,
+        'current'=>$current,
+    ];
+}
+
+test(
+    '4n33 historico lista duas emissoes do mesmo contrato',
+    function(){
+        $history=fp4n33HistoricoDuasEmissoes(
+            $this,
+            'HH'
+        );
+
+        $id=$history['id'];
+
+        /*
+         * A listagem deve incluir as duas emissoes
+         * sem devolver caminhos privados do storage.
+         */
+        $response=$this
+            ->withHeaders(contratoHeaders())
+            ->getJson(
+                "/api/contratos/{$id}/pdf/historico"
+            )
+            ->assertOk()
+            ->assertJsonCount(2,'data');
+
+        $entries=collect($response->json('data'));
+
+        $ids=$entries->pluck('id')->all();
+
+        expect($ids)
+            ->toContain($history['old_log']->id)
+            ->toContain($history['new_log']->id);
+
+        foreach($entries as $entry){
+            expect($entry)
+                ->toHaveKey('id')
+                ->toHaveKey('versao')
+                ->toHaveKey('hash')
+                ->toHaveKey('atual')
+                ->not->toHaveKey('pdf_path');
+        }
+    }
+);
+
+test(
+    '4n33 historico recupera pdf anterior com hash original',
+    function(){
+        $history=fp4n33HistoricoDuasEmissoes(
+            $this,
+            'II'
+        );
+
+        $id=$history['id'];
+        $emissaoId=$history['old_log']->id;
+
+        $response=$this
+            ->withHeaders(contratoHeaders())
+            ->get(
+                "/api/contratos/{$id}/pdf/historico/{$emissaoId}"
+            )
+            ->assertOk()
+            ->assertHeader(
+                'content-type',
+                'application/pdf'
+            );
+
+        /*
+         * Manter a mesma forma de resposta
+         * utilizada pelos PDFs atuais do contrato.
+         */
+        expect($response->baseResponse)
+            ->toBeInstanceOf(
+                \Symfony\Component\HttpFoundation\BinaryFileResponse::class
+            );
+
+        $file=$response->baseResponse->getFile();
+
+        $binary=file_get_contents(
+            $file->getPathname()
+        );
+
+        expect($binary)->toStartWith('%PDF-');
+
+        expect(hash('sha256',$binary))
+            ->toBe($history['old_hash']);
+
+        expect(
+            $history['current']->pdf_gerado_url
+        )->not->toBe($history['old_path']);
+    }
+);
+
+test(
+    '4n33 leitura de pdf legado continua disponivel sem reemissao',
+    function(){
+        $fixture=fp4n33CriarPdf($this,'JJ');
+
+        $id=$fixture['id'];
+        $original=$fixture['contrato'];
+
+        $path=$original->pdf_gerado_url;
+        $hash=$original->hash_documento;
+
+        $log=LogAuditoriaContrato::query()
+            ->where('contrato_id',$id)
+            ->where('acao','geracao_pdf')
+            ->firstOrFail();
+
+        /*
+         * Registo anterior ao reforco da auditoria.
+         */
+        $log->detalhes=[
+            'versao'=>(int)$original->versao_atual,
+            'hash'=>$hash,
+        ];
+
+        $log->save();
+
+        /*
+         * Consultar o PDF legado e permitido.
+         */
+        $this
+            ->withHeaders(contratoHeaders())
+            ->get("/api/contratos/{$id}/pdf")
+            ->assertOk()
+            ->assertHeader(
+                'content-type',
+                'application/pdf'
+            );
+
+        /*
+         * Reemitir sem evidencia suficiente
+         * continua bloqueado.
+         */
+        $this
+            ->withHeaders(contratoHeaders())
+            ->postJson("/api/contratos/{$id}/pdf")
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('contrato');
+
+        $after=Contrato::findOrFail($id);
+
+        expect($after->pdf_gerado_url)->toBe($path);
+        expect($after->hash_documento)->toBe($hash);
+
+        Storage::disk('local')->assertExists($path);
+    }
+);
+
+/*
+ * FROTAPRO_4N33_6_6
+ *
+ * Cada caso de autorizacao tem uma instancia
+ * de teste independente, com base de dados
+ * SQLite reinicializada pelo RefreshDatabase.
+ *
+ * A criacao da fixture utiliza o fluxo real
+ * ja testado. O acesso protegido e executado
+ * uma vez por identidade simulada.
+ */
+
+function fp4n33PrepararAcessoHistorico(
+    $test,
+    string $tipo
+): array {
+    $history=fp4n33HistoricoDuasEmissoes(
+        $test,
+        'MM'
+    );
+
+    $tenant=$history['fixture']['tenant'];
+
+    if($tipo==='outro'){
+        $targetTenant=contratoTenant(
+            'Tenant Externo Historico 4N33',
+            'tenant-externo-historico-4n33'
+        );
+
+        $user=contratoUsuario(
+            $targetTenant,
+            'externo.historico.4n33@frotapro.test'
+        );
+    }
+    elseif($tipo==='motorista'){
+        $targetTenant=$tenant;
+
+        $user=contratoUsuarioComRole(
+            $tenant,
+            'motorista.sem.vinculo.4n33@frotapro.test',
+            'motorista'
+        );
+    }
+    elseif($tipo==='visualizador'){
+        $targetTenant=$tenant;
+
+        $user=contratoUsuario(
+            $tenant,
+            'visualizador.historico.4n33@frotapro.test',
+            'visualizar'
+        );
+    }
+    else{
+        throw new \InvalidArgumentException(
+            'Perfil de teste desconhecido.'
+        );
+    }
+
+    \Laravel\Sanctum\Sanctum::actingAs(
+        $user,
+        ['*']
+    );
+
+    $test->withSession([
+        'tenant_id'=>$targetTenant->id,
+        'password_hash_web'=>$user->getAuthPassword(),
+        'password_hash_sanctum'=>$user->getAuthPassword(),
+    ]);
+
+    return $history;
+}
+
+test(
+    '4n33 historico impede consulta alheia',
+    function(
+        string $perfil,
+        string $recurso
+    ){
+        $history=fp4n33PrepararAcessoHistorico(
+            $this,
+            $perfil
+        );
+
+        $id=$history['id'];
+
+        $url=
+            "/api/contratos/{$id}/pdf/historico";
+
+        if($recurso==='ficheiro'){
+            $emissaoId=$history['old_log']->id;
+            $url.="/{$emissaoId}";
+        }
+
+        /*
+         * Uma unica consulta protegida por caso.
+         * A identidade nao muda durante o pedido.
+         */
+        $this
+            ->withHeaders(contratoHeaders())
+            ->get($url)
+            ->assertNotFound();
+    }
+)->with([
+    'tenant externo - lista'=>[
+        'outro','lista',
+    ],
+    'tenant externo - PDF'=>[
+        'outro','ficheiro',
+    ],
+    'motorista sem vinculo - lista'=>[
+        'motorista','lista',
+    ],
+    'motorista sem vinculo - PDF'=>[
+        'motorista','ficheiro',
+    ],
+]);
+
+test(
+    '4n33 historico permite consulta autorizada',
+    function(string $recurso){
+        $history=fp4n33PrepararAcessoHistorico(
+            $this,
+            'visualizador'
+        );
+
+        $id=$history['id'];
+
+        $url=
+            "/api/contratos/{$id}/pdf/historico";
+
+        if($recurso==='lista'){
+            $this
+                ->withHeaders(contratoHeaders())
+                ->getJson($url)
+                ->assertOk()
+                ->assertJsonCount(2,'data');
+
+            return;
+        }
+
+        $emissaoId=$history['old_log']->id;
+
+        $response=$this
+            ->withHeaders(contratoHeaders())
+            ->get("{$url}/{$emissaoId}")
+            ->assertOk()
+            ->assertHeader(
+                'content-type',
+                'application/pdf'
+            );
+
+        $file=$response->baseResponse->getFile();
+
+        $actualHash=hash_file(
+            'sha256',
+            $file->getPathname()
+        );
+
+        expect($actualHash)
+            ->toBe($history['old_hash']);
+    }
+)->with([
+    'lista'=>['lista'],
+    'ficheiro'=>['ficheiro'],
+]);
+
+test(
+    '4n33 historico visualizador nao pode emitir PDF',
+    function(){
+        $history=fp4n33PrepararAcessoHistorico(
+            $this,
+            'visualizador'
+        );
+
+        $id=$history['id'];
+
+        $this
+            ->withHeaders(contratoHeaders())
+            ->postJson("/api/contratos/{$id}/pdf")
+            ->assertForbidden();
+    }
+);
+
+test(
+    '4n33 historico sessao real suporta leituras consecutivas',
+    function(){
+        /*
+         * Aqui nao ha simulacao de segunda identidade.
+         * A fixture autenticou o utilizador original
+         * atraves do endpoint real /login.
+         */
+        $history=fp4n33HistoricoDuasEmissoes(
+            $this,
+            'NN'
+        );
+
+        $id=$history['id'];
+
+        $this
+            ->withHeaders(contratoHeaders())
+            ->getJson(
+                "/api/contratos/{$id}/pdf/historico"
+            )
+            ->assertOk()
+            ->assertJsonCount(2,'data');
+
+        $emissaoId=$history['old_log']->id;
+
+        $response=$this
+            ->withHeaders(contratoHeaders())
+            ->get(
+                "/api/contratos/{$id}/pdf/historico/{$emissaoId}"
+            )
+            ->assertOk()
+            ->assertHeader(
+                'content-type',
+                'application/pdf'
+            );
+
+        $actualHash=hash_file(
+            'sha256',
+            $response->baseResponse
+                ->getFile()
+                ->getPathname()
+        );
+
+        expect($actualHash)
+            ->toBe($history['old_hash']);
+    }
+);
+
+/*
+ * FROTAPRO_4N33_7
+ *
+ * Acesso privado a PDFs com verificacao de
+ * integridade e identidade da emissao.
+ */
+
+test(
+    '4n33 integridade pdf atual inline recusa adulteracao',
+    function(){
+        $fixture=fp4n33CriarPdf($this,'OO');
+
+        $id=$fixture['id'];
+        $original=$fixture['contrato'];
+
+        $path=$original->pdf_gerado_url;
+        $hash=$original->hash_documento;
+
+        Storage::disk('local')->put(
+            $path,
+            '%PDF-4N33-FICHEIRO-ADULTERADO-INLINE'
+        );
+
+        $this
+            ->withHeaders(contratoHeaders())
+            ->get("/api/contratos/{$id}/pdf")
+            ->assertStatus(409);
+
+        $after=Contrato::findOrFail($id);
+
+        expect($after->pdf_gerado_url)->toBe($path);
+        expect($after->hash_documento)->toBe($hash);
+    }
+);
+
+test(
+    '4n33 integridade pdf atual download recusa adulteracao',
+    function(){
+        $fixture=fp4n33CriarPdf($this,'PP');
+
+        $id=$fixture['id'];
+        $original=$fixture['contrato'];
+
+        $path=$original->pdf_gerado_url;
+        $hash=$original->hash_documento;
+
+        Storage::disk('local')->put(
+            $path,
+            '%PDF-4N33-FICHEIRO-ADULTERADO-DOWNLOAD'
+        );
+
+        $this
+            ->withHeaders(contratoHeaders())
+            ->get("/api/contratos/{$id}/pdf/download")
+            ->assertStatus(409);
+
+        $after=Contrato::findOrFail($id);
+
+        expect($after->pdf_gerado_url)->toBe($path);
+        expect($after->hash_documento)->toBe($hash);
+    }
+);
+
+test(
+    '4n33 integridade pdf historico adulterado devolve conflito',
+    function(){
+        $history=fp4n33HistoricoDuasEmissoes(
+            $this,
+            'QQ'
+        );
+
+        $id=$history['id'];
+        $emissaoId=$history['old_log']->id;
+        $oldPath=$history['old_path'];
+        $oldHash=$history['old_hash'];
+
+        Storage::disk('local')->put(
+            $oldPath,
+            '%PDF-4N33-HISTORICO-ADULTERADO'
+        );
+
+        $this
+            ->withHeaders(contratoHeaders())
+            ->get(
+                "/api/contratos/{$id}/pdf/historico/{$emissaoId}"
+            )
+            ->assertStatus(409);
+
+        $current=Contrato::findOrFail($id);
+
+        expect($current->pdf_gerado_url)
+            ->toBe($history['current']->pdf_gerado_url);
+
+        expect(
+            hash(
+                'sha256',
+                Storage::disk('local')->get($oldPath)
+            )
+        )->not->toBe($oldHash);
+    }
+);
+
+test(
+    '4n33 integridade pdf historico desaparecido devolve 404',
+    function(){
+        $history=fp4n33HistoricoDuasEmissoes(
+            $this,
+            'RR'
+        );
+
+        $id=$history['id'];
+        $emissaoId=$history['old_log']->id;
+        $oldPath=$history['old_path'];
+
+        Storage::disk('local')->delete($oldPath);
+
+        Storage::disk('local')->assertMissing($oldPath);
+
+        $this
+            ->withHeaders(contratoHeaders())
+            ->get(
+                "/api/contratos/{$id}/pdf/historico/{$emissaoId}"
+            )
+            ->assertNotFound();
+
+        Storage::disk('local')->assertExists(
+            $history['current']->pdf_gerado_url
+        );
+    }
+);
+
+test(
+    '4n33 integridade emissao de outro contrato nao e recuperavel',
+    function(){
+        $history=fp4n33HistoricoDuasEmissoes(
+            $this,
+            'SS'
+        );
+
+        $tenant=$history['fixture']['tenant'];
+
+        /*
+         * Segundo contrato no mesmo tenant.
+         * O utilizador tem permissao para
+         * visualizar os dois contratos, mas
+         * a emissao pertence apenas ao primeiro.
+         */
+        $other=new Contrato([
+            'tipo'=>'aluguer',
+        ]);
+
+        $other->tenant_id=$tenant->id;
+        $other->save();
+
+        $emissaoId=$history['old_log']->id;
+
+        $this
+            ->withHeaders(contratoHeaders())
+            ->get(
+                "/api/contratos/{$other->id}/pdf/historico/{$emissaoId}"
+            )
+            ->assertNotFound();
+
+        $this->assertDatabaseHas(
+            'logs_auditoria_contratos',
+            [
+                'id'=>$emissaoId,
+                'contrato_id'=>$history['id'],
+                'tenant_id'=>$tenant->id,
+            ]
+        );
+    }
+);
+
+/*
+ * FROTAPRO_4N33_8_3
+ *
+ * Testes negativos da identidade documental
+ * entre a primeira emissao e a confirmacao
+ * posterior de uma assinatura remota.
+ */
+
+function fp4n33PrepararRevisaoRemota(
+    $test,
+    string $suffix,
+    bool $withMapping=false
+): array {
+    Storage::fake('local');
+    Mail::fake();
+
+    $tenant=contratoTenant(
+        'Tenant Snapshot '.$suffix,
+        'tenant-snapshot-'.strtolower($suffix)
+    );
+
+    $user=contratoUsuario(
+        $tenant,
+        'snapshot.'.strtolower($suffix).'@frotapro.test'
+    );
+
+    $motorista=contratoMotorista(
+        $tenant,
+        'Snapshot'.$suffix
+    );
+
+    $veiculo=contratoVeiculo(
+        $tenant,
+        'AR-4N-'.$suffix,
+        350
+    );
+
+    $html=
+        '<p>CONTRATO_SNAPSHOT_4N33</p>'.
+        '<p>{{NOME_MOTORISTA}}</p>'.
+        '<p>{{MATRICULA_VEICULO}}</p>'.
+        ($withMapping
+            ?'<p>{{DADO_MAPEADO_4N33}}</p>'
+            :'').
+        '<p>{{ASSINATURA_MOTORISTA}}</p>';
+
+    $template=contratoTemplate(
+        $tenant,
+        $html
+    );
+
+    if($withMapping){
+        $template->campos_mapeados=[
+            'DADO_MAPEADO_4N33'=>[
+                'tipo'=>'automatico',
+                'campo'=>'motorista.nome_completo',
+            ],
+        ];
+
+        $template->save();
+    }
+
+    contratoLogin($test,$user);
+
+    $created=$test
+        ->withHeaders(contratoHeaders())
+        ->postJson('/api/contratos',[
+            'template_id'=>$template->id,
+            'tipo'=>'aluguer',
+            'motorista_id'=>$motorista->id,
+            'veiculo_id'=>$veiculo->id,
+            'data_inicio'=>'2026-10-01',
+            'campos_preenchidos'=>[
+                'NOME_MOTORISTA'=>$motorista->nome_completo,
+            ],
+            'assinaturas'=>[
+                [
+                    'placeholder'=>'ASSINATURA_MOTORISTA',
+                    'modo'=>'remota',
+                ],
+            ],
+        ])
+        ->assertCreated()
+        ->assertJsonPath('data.status','enviado');
+
+    $id=$created->json('data.id');
+
+    $signature=AssinaturaDigital::query()
+        ->where('contrato_id',$id)
+        ->firstOrFail();
+
+    $token=(string)$signature->token_verificacao;
+    $otp=(string)$signature->codigo_otp;
+
+    expect($token)->not->toBe('');
+    expect($otp)->toMatch('/^\d{6}$/');
+
+    $test
+        ->withHeaders(contratoHeaders())
+        ->postJson("/api/contratos/{$id}/pdf")
+        ->assertOk();
+
+    $initial=Contrato::findOrFail($id);
+
+    $path=(string)$initial->pdf_gerado_url;
+    $hash=(string)$initial->hash_documento;
+
+    expect($path)->not->toBe('');
+    expect($hash)->toMatch('/^[a-f0-9]{64}$/');
+
+    Storage::disk('local')->assertExists($path);
+
+    $documento=Documento::query()
+        ->where('entidade_tipo','contrato')
+        ->where('entidade_id',$id)
+        ->firstOrFail();
+
+    return [
+        'id'=>$id,
+        'tenant'=>$tenant,
+        'user'=>$user,
+        'motorista'=>$motorista,
+        'veiculo'=>$veiculo,
+        'template'=>$template,
+        'token'=>$token,
+        'otp'=>$otp,
+        'path'=>$path,
+        'hash'=>$hash,
+        'versao'=>(int)$initial->versao_atual,
+        'documento_id'=>$documento->id,
+        'documento_codigo'=>$documento->codigo,
+        'logs'=>LogAuditoriaContrato::query()
+            ->where('contrato_id',$id)
+            ->where('acao','geracao_pdf')
+            ->count(),
+    ];
+}
+
+function fp4n33ConfirmarRevisaoRemota(
+    array $fixture
+): void {
+    $png='data:image/png;base64,'.
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJ'.
+        'AAAADUlEQVQIHWP4z8DwHwAFgAI/ScL/nwAAAABJRU5ErkJggg==';
+
+    app(\App\Services\ContratoService::class)
+        ->confirmRemoteSignature(
+            $fixture['token'],
+            $fixture['otp'],
+            $png
+        );
+
+    $signed=Contrato::findOrFail(
+        $fixture['id']
+    );
+
+    expect($signed->status)->toBe('assinado');
+
+    expect((int)$signed->versao_atual)
+        ->toBe($fixture['versao']);
+}
+
+function fp4n33RevisaoBloqueada(
+    $test,
+    array $fixture
+): void {
+    $id=$fixture['id'];
+
+    $test
+        ->withHeaders(contratoHeaders())
+        ->postJson("/api/contratos/{$id}/pdf")
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('contrato');
+
+    $after=Contrato::findOrFail($id);
+
+    expect($after->pdf_gerado_url)
+        ->toBe($fixture['path']);
+
+    expect($after->hash_documento)
+        ->toBe($fixture['hash']);
+
+    expect((int)$after->versao_atual)
+        ->toBe($fixture['versao']);
+
+    Storage::disk('local')->assertExists(
+        $fixture['path']
+    );
+
+    expect(hash(
+        'sha256',
+        Storage::disk('local')->get(
+            $fixture['path']
+        )
+    ))->toBe($fixture['hash']);
+
+    expect(
+        LogAuditoriaContrato::query()
+            ->where('contrato_id',$id)
+            ->where('acao','geracao_pdf')
+            ->count()
+    )->toBe($fixture['logs']);
+
+    $documento=Documento::query()
+        ->where('entidade_tipo','contrato')
+        ->where('entidade_id',$id)
+        ->firstOrFail();
+
+    expect($documento->id)
+        ->toBe($fixture['documento_id']);
+
+    expect($documento->codigo)
+        ->toBe($fixture['documento_codigo']);
+}
+
+function fp4n33RenderizarEstadoAtual(
+    array $fixture
+): string {
+    $contrato=Contrato::query()
+        ->with([
+            'template',
+            'empresa',
+            'motorista',
+            'veiculo',
+            'assinaturas',
+        ])
+        ->findOrFail($fixture['id']);
+
+    return app(
+        \App\Services\ContratoPdfService::class
+    )->renderHtml($contrato);
+}
+
+test(
+    '4n33 revisao remota recusa alteracao do nome do motorista',
+    function(){
+        $fixture=fp4n33PrepararRevisaoRemota(
+            $this,
+            'NM'
+        );
+
+        $motorista=$fixture['motorista'];
+
+        $novoNome=
+            'Motorista Alterado Depois da Emissao';
+
+        $motorista->nome_completo=$novoNome;
+        $motorista->save();
+
+        /*
+         * Comprovar que o valor realmente
+         * utilizado na renderizacao mudou.
+         */
+        expect(
+            fp4n33RenderizarEstadoAtual($fixture)
+        )->toContain($novoNome);
+
+        fp4n33ConfirmarRevisaoRemota($fixture);
+
+        fp4n33RevisaoBloqueada(
+            $this,
+            $fixture
+        );
+    }
+);
+
+test(
+    '4n33 revisao remota recusa alteracao da matricula',
+    function(){
+        $fixture=fp4n33PrepararRevisaoRemota(
+            $this,
+            'VH'
+        );
+
+        $veiculo=$fixture['veiculo'];
+
+        $novaMatricula='AR-4N-99';
+
+        $veiculo->matricula=$novaMatricula;
+        $veiculo->save();
+
+        expect(
+            fp4n33RenderizarEstadoAtual($fixture)
+        )->toContain($novaMatricula);
+
+        fp4n33ConfirmarRevisaoRemota($fixture);
+
+        fp4n33RevisaoBloqueada(
+            $this,
+            $fixture
+        );
+    }
+);
+
+test(
+    '4n33 revisao remota recusa alteracao de mapeamento',
+    function(){
+        $fixture=fp4n33PrepararRevisaoRemota(
+            $this,
+            'MP',
+            true
+        );
+
+        $initialHtml=fp4n33RenderizarEstadoAtual(
+            $fixture
+        );
+
+        expect($initialHtml)
+            ->toContain(
+                $fixture['motorista']->nome_completo
+            );
+
+        $template=$fixture['template'];
+
+        $templateHash=hash(
+            'sha256',
+            (string)$template->conteudo_original
+        );
+
+        /*
+         * O HTML do template fica exatamente
+         * igual. Apenas a origem de um campo
+         * mapeado e modificada.
+         */
+        $template->campos_mapeados=[
+            'DADO_MAPEADO_4N33'=>[
+                'tipo'=>'automatico',
+                'campo'=>'veiculo.matricula',
+            ],
+        ];
+
+        $template->save();
+        $template->refresh();
+
+        expect(hash(
+            'sha256',
+            (string)$template->conteudo_original
+        ))->toBe($templateHash);
+
+        $updatedHtml=fp4n33RenderizarEstadoAtual(
+            $fixture
+        );
+
+        expect($updatedHtml)
+            ->toContain(
+                $fixture['veiculo']->matricula
+            );
+
+        expect($updatedHtml)
+            ->not->toBe($initialHtml);
+
+        fp4n33ConfirmarRevisaoRemota($fixture);
+
+        fp4n33RevisaoBloqueada(
+            $this,
+            $fixture
+        );
+    }
+);
+
+test(
+    '4n33 revisao remota recusa imagem de assinatura adulterada',
+    function(){
+        $fixture=fp4n33PrepararRevisaoRemota(
+            $this,
+            'SG'
+        );
+
+        fp4n33ConfirmarRevisaoRemota($fixture);
+
+        $signature=AssinaturaDigital::query()
+            ->where(
+                'contrato_id',
+                $fixture['id']
+            )
+            ->firstOrFail();
+
+        $signaturePath=(string)
+            $signature->assinatura_url;
+
+        $signatureHash=(string)
+            $signature->hash_documento;
+
+        Storage::disk('local')->assertExists(
+            $signaturePath
+        );
+
+        $originalBytes=Storage::disk('local')
+            ->get($signaturePath);
+
+        /*
+         * Substituir por outro PNG valido,
+         * preservando o caminho e os
+         * metadados registados na assinatura.
+         */
+        $differentPng=base64_decode(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB'.
+            'CAYAAAAfFcSJAAAADUlEQVR4nGP4z8Dw'.
+            'HwAFAAH/iZk9HQAAAABJRU5ErkJggg==',
+            true
+        );
+
+        expect($differentPng)->not->toBeFalse();
+        expect($differentPng)->not->toBe($originalBytes);
+
+        Storage::disk('local')->put(
+            $signaturePath,
+            $differentPng
+        );
+
+        $signature->refresh();
+
+        expect((string)$signature->hash_documento)
+            ->toBe($signatureHash);
+
+        expect((string)$signature->assinatura_url)
+            ->toBe($signaturePath);
+
+        fp4n33RevisaoBloqueada(
+            $this,
+            $fixture
+        );
+    }
+);
+
+/*
+ * FROTAPRO_4N33_8_4
+ *
+ * A assinatura remota pode ser confirmada
+ * antes de existir qualquer PDF emitido.
+ */
+
+function fp4n33PrimeiraEmissaoRemota(
+    $test,
+    string $suffix
+): array {
+    Storage::fake('local');
+    Mail::fake();
+
+    $tenant=contratoTenant(
+        'Tenant Primeira Emissao '.$suffix,
+        'tenant-primeira-emissao-'.strtolower($suffix)
+    );
+
+    $user=contratoUsuario(
+        $tenant,
+        'primeira.emissao.'.strtolower($suffix).'@frotapro.test'
+    );
+
+    $template=contratoTemplate(
+        $tenant,
+        '<p>PRIMEIRA_EMISSAO_4N33</p>'.
+        '<p>{{NOME_MOTORISTA}}</p>'.
+        '<p>{{ASSINATURA_MOTORISTA}}</p>'
+    );
+
+    $motorista=contratoMotorista(
+        $tenant,
+        'PrimeiraEmissao'.$suffix
+    );
+
+    $veiculo=contratoVeiculo(
+        $tenant,
+        'PE-4N-'.$suffix,
+        350
+    );
+
+    contratoLogin($test,$user);
+
+    $created=$test
+        ->withHeaders(contratoHeaders())
+        ->postJson('/api/contratos',[
+            'template_id'=>$template->id,
+            'tipo'=>'aluguer',
+            'motorista_id'=>$motorista->id,
+            'veiculo_id'=>$veiculo->id,
+            'data_inicio'=>'2026-10-01',
+            'campos_preenchidos'=>[
+                'NOME_MOTORISTA'=>$motorista->nome_completo,
+            ],
+            'assinaturas'=>[
+                [
+                    'placeholder'=>'ASSINATURA_MOTORISTA',
+                    'modo'=>'remota',
+                ],
+            ],
+        ])
+        ->assertCreated()
+        ->assertJsonPath('data.status','enviado');
+
+    $id=$created->json('data.id');
+
+    $before=Contrato::findOrFail($id);
+
+    expect(blank($before->pdf_gerado_url))
+        ->toBeTrue();
+
+    $signature=AssinaturaDigital::query()
+        ->where('contrato_id',$id)
+        ->firstOrFail();
+
+    $token=(string)$signature->token_verificacao;
+    $otp=(string)$signature->codigo_otp;
+
+    expect($token)->not->toBe('');
+    expect($otp)->toMatch('/^\d{6}$/');
+
+    $png='data:image/png;base64,'.
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJ'.
+        'AAAADUlEQVQIHWP4z8DwHwAFgAI/ScL/nwAAAABJRU5ErkJggg==';
+
+    /*
+     * Confirmacao real, sem emitir PDF antes.
+     */
+    app(\App\Services\ContratoService::class)
+        ->confirmRemoteSignature(
+            $token,
+            $otp,
+            $png
+        );
+
+    $signed=Contrato::findOrFail($id);
+
+    expect($signed->status)->toBe('assinado');
+
+    expect(blank($signed->pdf_gerado_url))
+        ->toBeTrue();
+
+    $signature->refresh();
+
+    expect($signature->verificado)->toBeTrue();
+    expect($signature->status)->toBe('assinado');
+
+    Storage::disk('local')->assertExists(
+        $signature->assinatura_url
+    );
+
+    return [
+        'id'=>$id,
+        'tenant'=>$tenant,
+        'signature'=>$signature,
+        'signature_path'=>
+            (string)$signature->assinatura_url,
+        'signature_hash'=>
+            (string)$signature->hash_documento,
+    ];
+}
+
+test(
+    '4n33 primeira emissao remota legitima funciona',
+    function(){
+        $fixture=fp4n33PrimeiraEmissaoRemota(
+            $this,
+            'OK'
+        );
+
+        $id=$fixture['id'];
+
+        $this
+            ->withHeaders(contratoHeaders())
+            ->postJson("/api/contratos/{$id}/pdf")
+            ->assertOk();
+
+        $contrato=Contrato::findOrFail($id);
+
+        expect(filled($contrato->pdf_gerado_url))
+            ->toBeTrue();
+
+        expect($contrato->hash_documento)
+            ->toMatch('/^[a-f0-9]{64}$/');
+
+        Storage::disk('local')->assertExists(
+            $contrato->pdf_gerado_url
+        );
+
+        $actualHash=hash(
+            'sha256',
+            Storage::disk('local')->get(
+                $contrato->pdf_gerado_url
+            )
+        );
+
+        expect($actualHash)
+            ->toBe($contrato->hash_documento);
+
+        expect(
+            LogAuditoriaContrato::query()
+                ->where('contrato_id',$id)
+                ->where('acao','geracao_pdf')
+                ->count()
+        )->toBe(1);
+    }
+);
+
+test(
+    '4n33 primeira emissao remota adulterada e bloqueada',
+    function(){
+        $fixture=fp4n33PrimeiraEmissaoRemota(
+            $this,
+            'BAD'
+        );
+
+        $id=$fixture['id'];
+        $signaturePath=$fixture['signature_path'];
+
+        $originalBytes=Storage::disk('local')
+            ->get($signaturePath);
+
+        /*
+         * Alterar o PNG depois da confirmacao
+         * real, mas antes da primeira emissao.
+         */
+        $differentPng=base64_decode(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB'.
+            'CAYAAAAfFcSJAAAADUlEQVR4nGP4z8Dw'.
+            'HwAFAAH/iZk9HQAAAABJRU5ErkJggg==',
+            true
+        );
+
+        expect($differentPng)->not->toBeFalse();
+        expect($differentPng)->not->toBe($originalBytes);
+
+        Storage::disk('local')->put(
+            $signaturePath,
+            $differentPng
+        );
+
+        $fixture['signature']->refresh();
+
+        expect(
+            (string)$fixture['signature']->hash_documento
+        )->toBe($fixture['signature_hash']);
+
+        /*
+         * A primeira emissao nao pode incorporar
+         * uma assinatura cujo conteudo mudou.
+         */
+        $this
+            ->withHeaders(contratoHeaders())
+            ->postJson("/api/contratos/{$id}/pdf")
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('contrato');
+
+        $after=Contrato::findOrFail($id);
+
+        expect(blank($after->pdf_gerado_url))
+            ->toBeTrue();
+
+        expect(blank($after->hash_documento))
+            ->toBeTrue();
+
+        expect(
+            LogAuditoriaContrato::query()
+                ->where('contrato_id',$id)
+                ->where('acao','geracao_pdf')
+                ->count()
+        )->toBe(0);
+
+        expect(
+            Storage::disk('local')->allFiles(
+                'contract-pdfs/'.
+                $fixture['tenant']->id.'/'.
+                $id
+            )
+        )->toBe([]);
+    }
+);
+
+test(
+    '4n33 seguranca evidencia ausente bloqueia emissao',
+    function(){
+        $fixture=fp4n33PrimeiraEmissaoRemota(
+            $this,
+            'EA'
+        );
+
+        $id=$fixture['id'];
+
+        $removed=LogAuditoriaContrato::query()
+            ->where('tenant_id',$fixture['tenant']->id)
+            ->where('contrato_id',$id)
+            ->where('acao','assinatura_remota')
+            ->delete();
+
+        expect($removed)->toBe(1);
+
+        $this
+            ->withHeaders(contratoHeaders())
+            ->postJson("/api/contratos/{$id}/pdf")
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('contrato');
+
+        $contrato=Contrato::findOrFail($id);
+
+        expect(blank($contrato->pdf_gerado_url))
+            ->toBeTrue();
+
+        expect(
+            LogAuditoriaContrato::query()
+                ->where('contrato_id',$id)
+                ->where('acao','geracao_pdf')
+                ->count()
+        )->toBe(0);
+    }
+);
+
+test(
+    '4n33 seguranca evidencia exige todas assinaturas remotas',
+    function(){
+        $fixture=fp4n33PrimeiraEmissaoRemota(
+            $this,
+            'MULTI'
+        );
+
+        $id=$fixture['id'];
+        $first=$fixture['signature'];
+
+        /*
+         * Simular uma segunda assinatura
+         * confirmada, com ficheiro e hash validos,
+         * mas sem a auditoria correspondente.
+         *
+         * A primeira continua auditada.
+         */
+        $second=$first->replicate();
+
+        $second->placeholder=
+            'ASSINATURA_PROPRIETARIO';
+
+        $second->assinatura_url=null;
+        $second->hash_documento=null;
+        $second->save();
+
+        $bytes=Storage::disk('local')->get(
+            $fixture['signature_path']
+        );
+
+        $path=
+            'contract-signatures/'.
+            $fixture['tenant']->id.'/'.
+            $id.'/'.
+            $second->id.'.png';
+
+        Storage::disk('local')->put(
+            $path,
+            $bytes
+        );
+
+        $second->assinatura_url=$path;
+
+        $second->hash_documento=hash(
+            'sha256',
+            implode('|',[
+                $id,
+                (string)$second->id,
+                hash('sha256',$bytes),
+            ])
+        );
+
+        $second->save();
+
+        /*
+         * O validador deve rejeitar a segunda
+         * assinatura mesmo que a primeira
+         * esteja correta.
+         */
+        $service=app(
+            \App\Services\ContratoPdfService::class
+        );
+
+        $method=new \ReflectionMethod(
+            \App\Services\ContratoPdfService::class,
+            'assertRemoteSignatureImagesIntact'
+        );
+
+        $caught=false;
+
+        try{
+            $method->invoke(
+                $service,
+                Contrato::findOrFail($id)
+            );
+        }catch(
+            \Illuminate\Validation\ValidationException $e
+        ){
+            $caught=true;
+
+            expect($e->errors())
+                ->toHaveKey('contrato');
+        }
+
+        expect($caught)->toBeTrue();
+
+        Storage::disk('local')->assertExists(
+            $fixture['signature_path']
+        );
+
+        Storage::disk('local')->assertExists(
+            $path
+        );
+    }
+);

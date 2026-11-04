@@ -89,6 +89,40 @@ class ContratoPdfService
             $preflightValues
         );
 
+        /*
+         * Reutilizar somente o PDF valido da
+         * mesma versao e do mesmo estado documental.
+         */
+        $revision=null;
+
+        if($this->reuseExistingPdf($contrato,$revision)){
+            return $contrato;
+        }
+
+        /*
+         * Verificar assinaturas remotas confirmadas
+         * antes de reservar numero documental
+         * ou guardar qualquer PDF.
+         */
+        if(
+            $this->hasCurrentRemoteSignatureEvidence(
+                $contrato
+            )
+        ){
+            $this->assertRemoteSignatureImagesIntact(
+                $contrato
+            );
+        }
+        $documentFingerprintBefore=
+            $this->documentFingerprint($contrato);
+        $signatureDigestBefore=
+            $this->signatureDigest($contrato);
+
+        $templateHashBefore=hash(
+            'sha256',
+            (string)$contrato->template->conteudo_original
+        );
+
         $documento = $this
             ->documentoRegistryService
             ->sync(
@@ -158,7 +192,7 @@ $binary = $pdf->output();
             );
         }
 
-        $oldPath = $contrato->pdf_gerado_url;
+
         $hash = hash('sha256', $binary);
 
         try {
@@ -168,7 +202,11 @@ $binary = $pdf->output();
                 $actor,
                 $ip,
                 $path,
-                $hash
+                $hash,
+                $signatureDigestBefore,
+                $templateHashBefore,
+                $documentFingerprintBefore,
+                $revision
             ) {
                 $locked = Contrato::query()
                     ->where('tenant_id', $tenantId)
@@ -196,6 +234,50 @@ $binary = $pdf->output();
                 ]);
 
                 $this->assertCurrentVersionSignatures($locked);
+                /*
+                 * Outra geracao nao pode substituir
+                 * o ficheiro entretanto registado.
+                 */
+                if(
+                    (string)$locked->pdf_gerado_url!==
+                    (string)$contrato->pdf_gerado_url ||
+                    (string)$locked->hash_documento!==
+                    (string)$contrato->hash_documento ||
+                    $locked->status!==$contrato->status ||
+                    $this->signatureDigest($locked)!==
+                    $signatureDigestBefore ||
+                    hash(
+                        'sha256',
+                        (string)$locked->template?->conteudo_original
+                    )!==$templateHashBefore ||
+                    $this->documentFingerprint($locked)!==
+                        $documentFingerprintBefore
+                ){
+                    throw ValidationException::withMessages([
+                        'contrato'=>
+                            'O contrato, as assinaturas ou o PDF foram alterados durante a geração.',
+                    ]);
+                }
+
+                /*
+                 * Reconfirmar a imagem remota
+                 * apos o bloqueio do contrato.
+                 */
+                /*
+                 * A validacao deve continuar
+                 * verdadeira depois do bloqueio
+                 * do contrato para atualizacao.
+                 */
+                if(
+                    $revision!==null ||
+                    $this->hasCurrentRemoteSignatureEvidence(
+                        $locked
+                    )
+                ){
+                    $this->assertRemoteSignatureImagesIntact(
+                        $locked
+                    );
+                }
                 $locked->pdf_gerado_url = $path;
                 $locked->hash_documento = $hash;
                 $locked->save();
@@ -222,7 +304,13 @@ $binary = $pdf->output();
                     'detalhes' => [
                         'versao' => $locked->versao_atual,
                         'hash' => $hash,
-                    ],
+                        'pdf_path' => $path,
+                        'template_id' => $locked->template_id,
+                        'template_sha256' => $templateHashBefore,
+                        'estado_emissao' => $locked->status,
+                        'assinaturas_digest' => $signatureDigestBefore,
+                        'document_fingerprint' => $documentFingerprintBefore,
+                    ] + ($revision??[]),
                     'ip_address' => $ip,
                 ]);
 
@@ -236,13 +324,7 @@ $binary = $pdf->output();
             throw $exception;
         }
 
-        if (
-            $oldPath &&
-            $oldPath !== $path &&
-            Storage::disk('local')->exists($oldPath)
-        ) {
-            Storage::disk('local')->delete($oldPath);
-        }
+
 
         return Contrato::query()
             ->where('tenant_id', $tenantId)
@@ -260,6 +342,699 @@ $binary = $pdf->output();
             ->findOrFail($contrato->id);
     }
 
+    /*
+     * Digest do estado de todas as assinaturas.
+     * Uma assinatura posterior nao pode autorizar
+     * reutilizacao de um PDF desatualizado.
+     */
+    /*
+     * Normalizacao deterministica de valores
+     * e mapeamentos para calculo SHA-256.
+     */
+    private function canonicalDocumentSnapshot(
+        mixed $value
+    ): mixed {
+        if(!is_array($value)){
+            return $value;
+        }
+
+        if(!array_is_list($value)){
+            ksort($value,SORT_STRING);
+        }
+
+        foreach($value as $key=>$item){
+            $value[$key]=
+                $this->canonicalDocumentSnapshot($item);
+        }
+
+        return $value;
+    }
+
+    /*
+     * Identidade documental independente
+     * do estado e da imagem da assinatura.
+     *
+     * A fonte dos campos e a mesma utilizada
+     * pelo renderizador de PDF.
+     */
+    private function documentFingerprint(
+        Contrato $contrato
+    ): string {
+        $contrato->loadMissing([
+            'template',
+            'empresa',
+            'motorista',
+            'proprietario',
+            'veiculo',
+            'assinaturas',
+        ]);
+
+        $values=$this->values(
+            $contrato,
+            $contrato->empresa
+        );
+
+        /*
+         * Apenas estas alteracoes decorrem
+         * legitimamente da confirmacao remota.
+         */
+        $volatile=[
+            'STATUS_CONTRATO'=>true,
+            'CONTRATO_STATUS'=>true,
+            'DATA_ASSINATURA'=>true,
+            'CONTRATO_DATA_ASSINATURA'=>true,
+        ];
+
+        foreach($contrato->assinaturas as $signature){
+            if(filled($signature->placeholder)){
+                $volatile[
+                    $this->normalize(
+                        (string)$signature->placeholder
+                    )
+                ]=true;
+            }
+        }
+
+        $mappings=(array)(
+            $contrato->template?->campos_mapeados
+            ?? []
+        );
+
+        /*
+         * Campos mapeados a fontes volateis
+         * tambem devem ser ignorados no
+         * valor renderizado, mas a configuracao
+         * do mapeamento continua protegida.
+         */
+        foreach($mappings as $target=>$mapping){
+            if(!is_array($mapping)){
+                continue;
+            }
+
+            $source=$this->normalize(
+                str_replace(
+                    '.',
+                    '_',
+                    (string)($mapping['campo']??'')
+                )
+            );
+
+            if(
+                isset($volatile[$source]) ||
+                str_starts_with(
+                    $source,
+                    'ASSINATURA_'
+                )
+            ){
+                $volatile[
+                    $this->normalize((string)$target)
+                ]=true;
+            }
+        }
+
+        foreach(array_keys($values) as $key){
+            if(
+                isset($volatile[$key]) ||
+                str_starts_with(
+                    $key,
+                    'ASSINATURA_'
+                )
+            ){
+                unset($values[$key]);
+            }
+        }
+
+        $snapshot=$this->canonicalDocumentSnapshot([
+            'values'=>$values,
+            'mappings'=>$mappings,
+        ]);
+
+        return hash(
+            'sha256',
+            json_encode(
+                $snapshot,
+                JSON_THROW_ON_ERROR |
+                JSON_UNESCAPED_UNICODE |
+                JSON_UNESCAPED_SLASHES
+            )
+        );
+    }
+
+    /*
+     * Confirmar o conteudo binario das
+     * assinaturas remotas da versao atual.
+     *
+     * A evidencia e gerada por
+     * ContratoService::confirmRemoteSignature.
+     */
+    /*
+     * FROTAPRO_4N33_8_4_2
+     *
+     * Identificar assinaturas remotas
+     * confirmadas para a versao atual.
+     *
+     * Assinaturas de versoes anteriores
+     * nao devem bloquear novas emissoes.
+     */
+    private function hasCurrentRemoteSignatureEvidence(
+        Contrato $contrato
+    ): bool {
+        $signatures=$contrato->assinaturas()
+            ->where(
+                'contrato_versao',
+                (int)$contrato->versao_atual
+            )
+            ->where('status','assinado')
+            ->where('verificado',true)
+            ->get();
+
+        if($signatures->isEmpty()){
+            return false;
+        }
+
+        $auditIds=LogAuditoriaContrato::query()
+            ->where('tenant_id',$contrato->tenant_id)
+            ->where('contrato_id',$contrato->id)
+            ->where('acao','assinatura_remota')
+            ->get()
+            ->map(
+                static fn($log):string=>
+                    (string)(
+                        ((array)($log->detalhes??[]))
+                            ['assinatura_id']??''
+                    )
+            )
+            ->all();
+
+        foreach($signatures as $signature){
+            $path=(string)$signature->assinatura_url;
+
+            if(
+                str_starts_with(
+                    $path,
+                    'contract-signatures/'
+                ) ||
+                in_array(
+                    (string)$signature->id,
+                    $auditIds,
+                    true
+                )
+            ){
+                return true;
+            }
+        }
+
+        return false;
+    }
+    private function assertRemoteSignatureImagesIntact(
+        Contrato $contrato
+    ): void {
+        $audits=LogAuditoriaContrato::query()
+            ->where('tenant_id',$contrato->tenant_id)
+            ->where('contrato_id',$contrato->id)
+            ->where('acao','assinatura_remota')
+            ->get();
+
+        $auditCounts=[];
+
+        foreach($audits as $audit){
+            $details=(array)($audit->detalhes??[]);
+            $id=(string)($details['assinatura_id']??'');
+
+            if($id===''){
+                continue;
+            }
+
+            $auditCounts[$id]=
+                ($auditCounts[$id]??0)+1;
+        }
+
+        $signatures=$contrato->assinaturas()
+            ->where(
+                'contrato_versao',
+                (int)$contrato->versao_atual
+            )
+            ->where('status','assinado')
+            ->where('verificado',true)
+            ->get();
+
+        $disk=Storage::disk('local');
+        $verified=0;
+
+        foreach($signatures as $signature){
+            $id=(string)$signature->id;
+            $storedPath=(string)$signature->assinatura_url;
+
+            $isRemote=
+                str_starts_with(
+                    $storedPath,
+                    'contract-signatures/'
+                ) ||
+                isset($auditCounts[$id]);
+
+            if(!$isRemote){
+                continue;
+            }
+
+            /*
+             * Uma assinatura remota confirmada
+             * exige exatamente uma evidencia
+             * de confirmacao correspondente.
+             */
+            if(($auditCounts[$id]??0)!==1){
+                throw ValidationException::withMessages([
+                    'contrato'=>
+                        'A assinatura remota não possui uma auditoria de confirmação única e válida.',
+                ]);
+            }
+
+            $expectedPath=
+                'contract-signatures/'.
+                $contrato->tenant_id.'/'.
+                $contrato->id.'/'.
+                $id.'.png';
+
+            if(
+                $storedPath!==$expectedPath ||
+                !$disk->exists($expectedPath)
+            ){
+                throw ValidationException::withMessages([
+                    'contrato'=>
+                        'O ficheiro da assinatura remota não corresponde ao registo.',
+                ]);
+            }
+
+            $binary=$disk->get($expectedPath);
+
+            if(
+                !is_string($binary) ||
+                !str_starts_with(
+                    $binary,
+                    "\x89PNG\r\n\x1A\n"
+                )
+            ){
+                throw ValidationException::withMessages([
+                    'contrato'=>
+                        'O conteúdo da assinatura remota é inválido.',
+                ]);
+            }
+
+            $expectedHash=(string)
+                $signature->hash_documento;
+
+            $actualHash=hash(
+                'sha256',
+                implode('|',[
+                    (string)$contrato->id,
+                    $id,
+                    hash('sha256',$binary),
+                ])
+            );
+
+            if(
+                !preg_match(
+                    '/^[a-f0-9]{64}$/D',
+                    $expectedHash
+                ) ||
+                !hash_equals(
+                    $expectedHash,
+                    $actualHash
+                )
+            ){
+                throw ValidationException::withMessages([
+                    'contrato'=>
+                        'A integridade da assinatura remota não foi confirmada.',
+                ]);
+            }
+
+            $verified++;
+        }
+
+        if($verified===0){
+            throw ValidationException::withMessages([
+                'contrato'=>
+                    'Nenhuma assinatura remota válida foi encontrada nesta versão.',
+            ]);
+        }
+    }
+    private function signatureDigest(
+        Contrato $contrato
+    ): string {
+        $items=$contrato->assinaturas()
+            ->orderBy('id')
+            ->get()
+            ->map(static fn($assinatura)=>[
+                'id'=>(string)$assinatura->id,
+                'versao'=>$assinatura->contrato_versao,
+                'status'=>(string)$assinatura->status,
+                'verificado'=>(bool)$assinatura->verificado,
+                'hash'=>(string)$assinatura->hash_documento,
+                'url'=>(string)$assinatura->assinatura_url,
+            ])
+            ->all();
+
+        return hash(
+            'sha256',
+            json_encode($items,JSON_THROW_ON_ERROR)
+        );
+    }
+
+    /*
+     * Verificar integridade e identidade do PDF.
+     * Nunca recriar silenciosamente o ficheiro
+     * de uma versao ja emitida.
+     */
+    private function reuseExistingPdf(
+        Contrato $contrato,
+        ?array &$revision=null
+    ): bool {
+        $path=trim((string)$contrato->pdf_gerado_url);
+        $expected=trim((string)$contrato->hash_documento);
+
+        if($path==='' && $expected===''){
+            return false;
+        }
+
+        if(
+            $path==='' ||
+            !preg_match('/^[a-f0-9]{64}$/D',$expected)
+        ){
+            throw ValidationException::withMessages([
+                'contrato'=>'O registo do PDF existente está incompleto.',
+            ]);
+        }
+
+        $prefix=
+            'contract-pdfs/'.
+            $contrato->tenant_id.'/'.
+            $contrato->id.'/';
+
+        if(!str_starts_with($path,$prefix)){
+            throw ValidationException::withMessages([
+                'contrato'=>'O caminho do PDF não corresponde ao contrato.',
+            ]);
+        }
+
+        $filename=substr($path,strlen($prefix));
+
+        if(!preg_match(
+            '/^v([1-9][0-9]*)-[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}\.pdf$/D',
+            $filename,
+            $match
+        )){
+            throw ValidationException::withMessages([
+                'contrato'=>'O PDF não possui identificação de versão válida.',
+            ]);
+        }
+
+        $disk=Storage::disk('local');
+
+        if(!$disk->exists($path)){
+            throw ValidationException::withMessages([
+                'contrato'=>'O PDF original está em falta. É necessária a recuperação do ficheiro.',
+            ]);
+        }
+
+        $binary=$disk->get($path);
+
+        if(
+            !is_string($binary) ||
+            !str_starts_with($binary,'%PDF-') ||
+            !hash_equals(
+                $expected,
+                hash('sha256',$binary)
+            )
+        ){
+            throw ValidationException::withMessages([
+                'contrato'=>'A integridade do PDF original não foi confirmada.',
+            ]);
+        }
+
+        /*
+         * Um contrato com nova versao pode
+         * receber outro PDF. O antigo fica
+         * guardado no armazenamento privado.
+         */
+        if(
+            (int)$match[1]!==
+            (int)$contrato->versao_atual
+        ){
+            return false;
+        }
+
+        /*
+         * O log deve corresponder ao ficheiro
+         * efetivamente associado ao contrato.
+         * A ordenacao por UUID nao representa
+         * necessariamente a ordem de emissao.
+         */
+        /*
+         * Um PDF ja emitido so pode ser reutilizado
+         * quando existe evidencia de emissao
+         * correspondente ao ficheiro atual.
+         *
+         * Nunca selecionar um log alternativo
+         * apenas porque e o unico disponivel.
+         */
+        $logs=LogAuditoriaContrato::query()
+            ->where('tenant_id',$contrato->tenant_id)
+            ->where('contrato_id',$contrato->id)
+            ->where('acao','geracao_pdf')
+            ->get();
+
+        $log=$logs->first(
+            static fn($entry):bool=>
+                (string)(
+                    ((array)$entry->detalhes)['pdf_path']??''
+                )===$path
+        );
+
+        if(!$log){
+            throw ValidationException::withMessages([
+                'contrato'=>
+                    'Não existe evidência de emissão correspondente ao PDF registado.',
+            ]);
+        }
+
+        $details=(array)($log->detalhes??[]);
+
+        /*
+         * Os metadados historicos incompletos
+         * nao autorizam reutilizacao automatica.
+         * O PDF original permanece preservado.
+         */
+        $requiredEvidence=[
+            'versao',
+            'hash',
+            'pdf_path',
+            'template_id',
+            'template_sha256',
+            'estado_emissao',
+            'assinaturas_digest',
+        ];
+
+        foreach($requiredEvidence as $field){
+            $value=$details[$field]??null;
+
+            if(
+                !is_string($value) &&
+                !is_int($value)
+            ){
+                throw ValidationException::withMessages([
+                    'contrato'=>
+                        'O registo de auditoria do PDF está incompleto: '.$field.'.',
+                ]);
+            }
+
+            if(trim((string)$value)===''){
+                throw ValidationException::withMessages([
+                    'contrato'=>
+                        'O registo de auditoria do PDF não contém '.$field.'.',
+                ]);
+            }
+        }
+
+        /*
+         * Comparar a evidencia com o documento
+         * efetivamente guardado, nao apenas com
+         * a existencia de um log qualquer.
+         */
+        $evidenceValid=
+            (string)$details['pdf_path']===$path &&
+            hash_equals(
+                $expected,
+                (string)$details['hash']
+            ) &&
+            ctype_digit((string)$details['versao']) &&
+            (int)$details['versao']===(int)$match[1] &&
+            (string)$details['template_id']===
+                (string)$contrato->template_id &&
+            (bool)preg_match(
+                '/^[a-f0-9]{64}$/D',
+                (string)$details['template_sha256']
+            ) &&
+            (bool)preg_match(
+                '/^[a-f0-9]{64}$/D',
+                (string)$details['assinaturas_digest']
+            );
+
+        if(!$evidenceValid){
+            throw ValidationException::withMessages([
+                'contrato'=>
+                    'O registo de auditoria não corresponde à versão, ao hash ou à origem do PDF.',
+            ]);
+        }
+
+        /*
+         * A emissao atual tem um digest
+         * de assinaturas. Registos anteriores
+         * precisam de uma auditoria separada.
+         */
+        $recordedDigest=
+            isset($details['assinaturas_digest'])
+            ? (string)$details['assinaturas_digest']
+            : null;
+
+        $currentDigest=$this->signatureDigest($contrato);
+
+        $recordedStatus=
+            isset($details['estado_emissao'])
+            ? (string)$details['estado_emissao']
+            : null;
+
+        $signatureChanged=
+            $recordedDigest!==null &&
+            !hash_equals(
+                $recordedDigest,
+                $currentDigest
+            );
+
+        $statusChanged=
+            $recordedStatus!==null &&
+            $recordedStatus!==$contrato->status;
+
+        if(
+            $recordedDigest===null &&
+            $contrato->assinaturas()->exists()
+        ){
+            throw ValidationException::withMessages([
+                'contrato'=>
+                    'O PDF legado não possui evidência suficiente para validar as assinaturas.',
+            ]);
+        }
+
+        /*
+         * Sem modificacoes, reutilizar o mesmo
+         * ficheiro e preservar o hash original.
+         */
+        if(!$signatureChanged && !$statusChanged){
+            return true;
+        }
+
+        /*
+         * A unica revisao automatica permitida:
+         * enviado -> assinado, com assinatura
+         * remota confirmada e template identico.
+         */
+        $signedCount=$contrato->assinaturas()
+            ->where(
+                'contrato_versao',
+                (int)$contrato->versao_atual
+            )
+            ->where('status','assinado')
+            ->where('verificado',true)
+            ->whereNotNull('assinado_em')
+            ->count();
+
+        $pending=$contrato->assinaturas()
+            ->where(
+                'contrato_versao',
+                (int)$contrato->versao_atual
+            )
+            ->where(function($query){
+                $query
+                    ->where('status','!=','assinado')
+                    ->orWhere('verificado',false);
+            })
+            ->exists();
+
+        $remoteAudit=LogAuditoriaContrato::query()
+            ->where('tenant_id',$contrato->tenant_id)
+            ->where('contrato_id',$contrato->id)
+            ->where('acao','assinatura_remota')
+            ->exists();
+
+        $currentTemplateHash=hash(
+            'sha256',
+            (string)$contrato->template?->conteudo_original
+        );
+
+        /*
+         * O PDF original deve possuir snapshot
+         * e os dados estaveis devem coincidir.
+         * Logs anteriores continuam consultaveis,
+         * mas nao autorizam revisao automatica
+         * sem esta evidencia.
+         */
+        $recordedFingerprint=(string)(
+            $details['document_fingerprint']??''
+        );
+
+        $documentMatches=
+            (bool)preg_match(
+                '/^[a-f0-9]{64}$/D',
+                $recordedFingerprint
+            ) &&
+            hash_equals(
+                $recordedFingerprint,
+                $this->documentFingerprint($contrato)
+            );
+        $validTransition=
+            $signatureChanged &&
+            $statusChanged &&
+            $recordedStatus==='enviado' &&
+            $contrato->status==='assinado' &&
+            $contrato->data_assinatura!==null &&
+            (int)($details['versao']??0)===
+                (int)$contrato->versao_atual &&
+            (string)($details['template_id']??'')===
+                (string)$contrato->template_id &&
+            isset($details['template_sha256']) &&
+            hash_equals(
+                (string)$details['template_sha256'],
+                $currentTemplateHash
+            ) &&
+            $signedCount>0 &&
+            !$pending &&
+            $remoteAudit &&
+            $documentMatches;
+
+        if(!$validTransition){
+            throw ValidationException::withMessages([
+                'contrato'=>
+                    'O documento ou as assinaturas foram alterados. A revisão automática não está autorizada.',
+            ]);
+        }
+
+        /*
+         * A revisão conserva o caminho e o hash
+         * do documento anterior na auditoria.
+         */
+        /*
+         * Antes de produzir o PDF definitivo,
+         * confirmar a imagem realmente assinada.
+         */
+        $this->assertRemoteSignatureImagesIntact(
+            $contrato
+        );
+        $revision=[
+            'pdf_anterior_path'=>$path,
+            'pdf_anterior_hash'=>$expected,
+            'motivo_revisao'=>'assinatura_remota',
+        ];
+
+        return false;
+    }
     public function assertReadyForPdf(
         Contrato $contrato,
         ?Empresa $empresa = null

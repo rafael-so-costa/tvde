@@ -29,7 +29,7 @@ return new class extends Migration
                 $table->string('acao', 50);
 
                 $table->json('detalhes')
-                    ->default('{}');
+                    ->default(new \Illuminate\Database\Query\Expression("('{}')"));
 
                 $table->string('ip_address', 45)
                     ->nullable();
