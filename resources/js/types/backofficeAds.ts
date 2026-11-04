@@ -216,6 +216,7 @@ export interface AdSettings {
     tenant_internal_max_days: number;
     tenant_internal_allow_partners: boolean;
     public_marketplace_enabled: boolean;
+    commercial_ads_enabled: boolean;
     manager_panel_external_ads_enabled: boolean;
     saas_inventory_reserved_percent: number;
     default_frequency_cap_daily: number;

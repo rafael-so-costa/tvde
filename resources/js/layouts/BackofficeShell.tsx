@@ -201,6 +201,10 @@ export default function BackofficeShell() {
                         <WalletCards className="h-5 w-5 shrink-0" />
                         Faturação
                     </NavLink>
+                    <NavLink to="/backoffice/cupoes" className={navClass}>
+                        <Tag className="h-5 w-5 shrink-0" />
+                        Cupões promocionais
+                    </NavLink>
                 </div>
 
                 <div className="px-1 pb-3 pt-7">

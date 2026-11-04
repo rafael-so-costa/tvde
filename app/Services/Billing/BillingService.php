@@ -74,21 +74,29 @@ class BillingService
             ]);
         }
 
+        // O checkout nao cria nem avanca ciclos.
+        // As datas devem ter sido definidas previamente
+        // pelo servico que gere as subscricoes.
         $periodStart =
             $subscription
                 ->current_period_starts_at
-                ?->copy()
-            ?? now();
+                ?->copy();
 
         $periodEnd =
             $subscription
                 ->current_period_ends_at
-                ?->copy()
-            ?? $this->periodEnd(
-                $periodStart,
-                $subscription
-                    ->billing_cycle
-            );
+                ?->copy();
+
+        if (
+            $periodStart === null ||
+            $periodEnd === null ||
+            $periodStart->greaterThanOrEqualTo($periodEnd)
+        ) {
+            throw ValidationException::withMessages([
+                'billing_cycle' =>
+                    'O periodo de faturacao nao esta definido ou e invalido.',
+            ]);
+        }
 
         $idempotency =
             implode(
@@ -282,6 +290,19 @@ class BillingService
             ]);
         }
 
+        // Nunca emitir pagamentos para cobrancas
+        // canceladas, expiradas, reembolsadas ou
+        // com um estado desconhecido.
+        if (
+            $charge->status !==
+            BillingCharge::STATUS_PENDING
+        ) {
+            throw ValidationException::withMessages([
+                'charge' =>
+                    'Esta cobranca nao permite novos pagamentos.',
+            ]);
+        }
+
         $existing =
             BillingPayment::query()
                 ->where(
@@ -439,6 +460,11 @@ class BillingService
                     $lockedPayment->status ===
                     BillingPayment::STATUS_PAID
                 ) {
+                    if (config('billing.coupons.enabled', false)) {
+                        app(CouponRedemptionSettlementService::class)
+                            ->settle($lockedPayment->id);
+                    }
+
                     return $lockedPayment;
                 }
 
@@ -491,10 +517,10 @@ class BillingService
 
                 $lockedPayment->save();
 
-                if (
-                    $charge->status !==
-                    BillingCharge::STATUS_PAID
-                ) {
+                $chargeWasPending =
+                    $charge->status !== BillingCharge::STATUS_PAID;
+
+                if ($chargeWasPending) {
                     $charge->status =
                         BillingCharge::STATUS_PAID;
 
@@ -502,7 +528,18 @@ class BillingService
                         $now;
 
                     $charge->save();
+                }
 
+                // Executado na mesma transacao financeira.
+                // Uma falha reverte o pagamento e a cobranca.
+                if (config('billing.coupons.enabled', false)) {
+                    app(CouponRedemptionSettlementService::class)
+                        ->settle($lockedPayment->id);
+                }
+
+                // Ativar o servico apenas depois de
+                // validar a liquidacao do cupao.
+                if ($chargeWasPending) {
                     $this->applyPaidCharge(
                         $charge,
                         $lockedPayment,
@@ -544,6 +581,13 @@ class BillingService
                 'payment' =>
                     'A simulação apenas está disponível para pagamentos MOCK em sandbox.',
             ]);
+        }
+
+        // Quando os cupoes estiverem ativos,
+        // reutilizar os bloqueios e a transacao
+        // do mesmo metodo utilizado nos callbacks.
+        if (config('billing.coupons.enabled', false)) {
+            return $this->confirmPaid($payment);
         }
 
         if (

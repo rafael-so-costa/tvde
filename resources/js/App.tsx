@@ -52,6 +52,9 @@ const BackofficeBillingPage = lazy(
 const BackofficeBillingOrdersPage = lazy(
     () => import("./pages/BackofficeBillingOrdersPage"),
 );
+const BackofficeCouponsPage = lazy(
+    () => import("./pages/BackofficeCouponsPage"),
+);
 const BackofficeDashboardPage = lazy(
     () => import("./pages/BackofficeDashboardPage"),
 );
@@ -381,6 +384,10 @@ export default function App() {
                         <Route
                             path="faturacao/pedidos"
                             element={<BackofficeBillingOrdersPage />}
+                        />
+                        <Route
+                            path="cupoes"
+                            element={<BackofficeCouponsPage />}
                         />
 
                         <Route

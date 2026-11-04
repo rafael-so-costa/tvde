@@ -44,6 +44,7 @@ class BackofficeAdSettingsController extends Controller
                 'tenant_internal_max_days' => 30,
                 'tenant_internal_allow_partners' => true,
                 'public_marketplace_enabled' => true,
+                'commercial_ads_enabled' => true,
                 'manager_panel_external_ads_enabled' => false,
                 'saas_inventory_reserved_percent' => 30,
                 'default_frequency_cap_daily' => 3,

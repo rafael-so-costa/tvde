@@ -40,7 +40,8 @@ type BooleanSetting =
     | "tenant_internal_free_enabled"
     | "tenant_internal_requires_approval"
     | "tenant_internal_allow_partners"
-    | "public_marketplace_enabled";
+    | "public_marketplace_enabled"
+    | "commercial_ads_enabled";
 
 const inputClass =
     "h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 hover:border-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100";
@@ -452,6 +453,24 @@ export default function BackofficeAdSettingsPage() {
                         }
                     />
                 </div>
+            </SettingsSection>
+
+            <SettingsSection
+                icon={Store}
+                title="Comercialização de anúncios"
+                description="Define se o FrotaPRO aceita novas campanhas comerciais pagas. Não interfere com anúncios próprios, campanhas existentes ou pagamentos pendentes."
+            >
+                <SettingSwitch
+                    label="Permitir novas vendas de anúncios"
+                    description="Quando desativado, novas campanhas pagas não podem ser contratadas. Os anúncios públicos e os pedidos existentes continuam disponíveis."
+                    checked={form.commercial_ads_enabled}
+                    onChange={() => toggle("commercial_ads_enabled")}
+                />
+                {!form.commercial_ads_enabled && (
+                    <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                        Novas vendas suspensas. As campanhas próprias do FrotaPRO e as campanhas anteriormente contratadas continuam em circulação.
+                    </p>
+                )}
             </SettingsSection>
 
             <SettingsSection

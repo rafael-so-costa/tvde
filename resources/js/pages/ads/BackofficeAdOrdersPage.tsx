@@ -1,4 +1,6 @@
 import axios from "axios";
+import { useState } from "react";
+import CouponCheckoutField from "../../components/billing/CouponCheckoutField";
 import {
     CheckCircle2,
     CreditCard,
@@ -48,13 +50,27 @@ export default function BackofficeAdOrdersPage() {
     const generateMutation =
         useMutation({
             mutationFn:
-                async (
-                    orderId: string,
-                ) => {
-                    const response =
-                        await api.post(
-                            `/api/backoffice/faturacao/ads/${orderId}/multibanco`,
-                        );
+                async ({
+                    orderId,
+                    couponCode,
+                }: {
+                    orderId: string;
+                    couponCode: string;
+                }) => {
+                    const code = couponCode.trim().toUpperCase();
+
+                    const response = code
+                        ? await api.post(
+                              "/api/backoffice/faturacao/cupoes/emitir",
+                              {
+                                  scope: "ad_order",
+                                  source_id: orderId,
+                                  coupon_code: code,
+                              },
+                          )
+                        : await api.post(
+                              `/api/backoffice/faturacao/ads/${orderId}/multibanco`,
+                          );
 
                     return response
                         .data as BillingPaymentMutationResponse;
@@ -172,10 +188,11 @@ export default function BackofficeAdOrdersPage() {
                                     simulating={
                                         simulateMutation.isPending
                                     }
-                                    onGenerate={() =>
-                                        generateMutation.mutate(
-                                            order.id,
-                                        )
+                                    onGenerate={(couponCode) =>
+                                        generateMutation.mutate({
+                                            orderId: order.id,
+                                            couponCode,
+                                        })
                                     }
                                     onSimulate={(
                                         paymentId,
@@ -204,13 +221,15 @@ function OrderRow({
     order: AdOrder;
     generating: boolean;
     simulating: boolean;
-    onGenerate: () => void;
+    onGenerate: (couponCode: string) => void;
     onSimulate: (
         paymentId: string,
     ) => void;
 }) {
     const payment =
         order.billing_payment;
+
+    const [couponCode, setCouponCode] = useState("");
 
     return (
         <div className="space-y-4 px-5 py-5">
@@ -239,6 +258,14 @@ function OrderRow({
                 </div>
             </div>
 
+            {!payment && order.status === "pending" && (
+                <CouponCheckoutField
+                    scope="ad_order"
+                    sourceId={order.id}
+                    code={couponCode}
+                    onCodeChange={setCouponCode}
+                />
+            )}
             {payment ? (
                 <PaymentBox
                     payment={
@@ -259,9 +286,7 @@ function OrderRow({
                         disabled={
                             generating
                         }
-                        onClick={
-                            onGenerate
-                        }
+                        onClick={() => onGenerate(couponCode)}
                         className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60"
                     >
                         {generating ? (

@@ -1307,6 +1307,8 @@ Route::get(
     });
 });
 
+require __DIR__.'/backoffice_coupons.php';
+require __DIR__.'/backoffice_coupon_checkout.php';
 require __DIR__.'/backoffice_ads.php';
 require __DIR__.'/ads.php';
 require __DIR__.'/documentos.php';

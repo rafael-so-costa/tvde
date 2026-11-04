@@ -3,6 +3,12 @@
 use App\Http\Controllers\Ads\AdDeliveryController;
 use App\Http\Controllers\Ads\AdTrackingController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Ads\CommercialSalesStatusController;
+
+Route::get(
+    '/ads/commercial-status',
+    [CommercialSalesStatusController::class, 'show']
+)->middleware('throttle:60,1');
 
 Route::get(
     '/ads/serve/public',

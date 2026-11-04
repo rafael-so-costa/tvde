@@ -48,6 +48,11 @@ class UpdateBackofficeAdSettingsRequest extends FormRequest
                 'boolean',
             ],
 
+            'commercial_ads_enabled' => [
+                'sometimes',
+                'boolean',
+            ],
+
             'manager_panel_external_ads_enabled' => [
                 'required',
                 'boolean',

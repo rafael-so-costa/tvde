@@ -14,8 +14,14 @@ use Illuminate\Validation\ValidationException;
 
 class AdCampaignService
 {
+    public function __construct(
+        private readonly AdCommercialSalesPolicy $commercialSales
+    ) {}
+
     public function create(array $data, User $user): AdCampaign
     {
+        $this->commercialSales->assertCanCreate($data);
+
         return DB::transaction(function () use ($data, $user) {
             $targeting = $this->extractTargeting($data);
 
@@ -51,6 +57,8 @@ class AdCampaignService
         array $data,
         User $user
     ): AdCampaign {
+        $this->commercialSales->assertCanUpdate($campaign, $data);
+
         return DB::transaction(function () use ($campaign, $data, $user) {
             $targeting = $this->extractTargeting($data);
 
@@ -481,6 +489,8 @@ class AdCampaignService
         if ($existing) {
             return $existing;
         }
+
+        $this->commercialSales->assertCanCreateOrder($campaign);
 
         return $campaign->orders()->create([
             'advertiser_id' => $campaign->advertiser_id,

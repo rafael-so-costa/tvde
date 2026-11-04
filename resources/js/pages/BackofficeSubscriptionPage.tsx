@@ -28,6 +28,7 @@ import {
 } from "react-router-dom";
 
 import api from "../lib/api";
+import CouponCheckoutField from "../components/billing/CouponCheckoutField";
 
 import type {
     BillingPaymentMutationResponse,
@@ -50,6 +51,8 @@ export default function BackofficeSubscriptionPage() {
 
     const queryClient =
         useQueryClient();
+
+    const [couponCode, setCouponCode] = useState("");
 
     const [
         billingCycle,
@@ -236,10 +239,20 @@ export default function BackofficeSubscriptionPage() {
         useMutation({
             mutationFn:
                 async () => {
-                    const response =
-                        await api.post(
-                            `/api/backoffice/faturacao/assinaturas/${id}/multibanco`,
-                        );
+                    const code = couponCode.trim().toUpperCase();
+
+                    const response = code
+                        ? await api.post(
+                              "/api/backoffice/faturacao/cupoes/emitir",
+                              {
+                                  scope: "saas_subscription",
+                                  source_id: id,
+                                  coupon_code: code,
+                              },
+                          )
+                        : await api.post(
+                              `/api/backoffice/faturacao/assinaturas/${id}/multibanco`,
+                          );
 
                     return response
                         .data as BillingPaymentMutationResponse;
@@ -685,6 +698,17 @@ export default function BackofficeSubscriptionPage() {
                 />
 
                 <div className="p-5">
+                    {!billingPayment &&
+                        subscription.status !== "canceled" && (
+                        <div className="mb-5">
+                            <CouponCheckoutField
+                                scope="saas_subscription"
+                                sourceId={id ?? ""}
+                                code={couponCode}
+                                onCodeChange={setCouponCode}
+                            />
+                        </div>
+                    )}
                     {billingPayment ? (
                         <SubscriptionPayment
                             payment={
