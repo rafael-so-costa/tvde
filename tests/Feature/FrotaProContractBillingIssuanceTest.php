@@ -812,3 +812,515 @@ test('4p11 pdf incorpora assinatura empresa e motorista como imagens',function()
     expect(hash('sha256',$binary))
         ->toBe($issued->hash_documento);
 });
+
+/*
+ * FROTAPRO_4P18_PREVIEW_INTEGRADO
+ *
+ * Testes em SQLite isolado.
+ * Nenhuma emissao documental definitiva.
+ */
+
+test('4p18 preview dos tres contratos financeiros nao consome numero',function(){
+    Storage::fake('local');
+
+    $cases=[
+        [
+            'servicos',
+            'contrato_de_prestacao_de_servicos',
+            'fixa',
+            '100',
+            'mensal',
+            '100,00',
+            'mensal',
+        ],
+        [
+            'singular',
+            'aluguer_tvde_pessoa_singular',
+            'variavel',
+            '25',
+            'semanal',
+            '5%',
+            'semanal',
+        ],
+        [
+            'coletiva',
+            'aluguer_tvde_pessoa_coletiva',
+            'mista',
+            '50',
+            'quinzenal',
+            '50,00',
+            'quinzenal',
+        ],
+    ];
+
+    foreach($cases as [
+        $suffix,
+        $code,
+        $mode,
+        $amount,
+        $period,
+        $expectedAmount,
+        $expectedPeriod
+    ]){
+        [$tenant,$user,$template,$type]=b4n6Fixture(
+            '4p18-'.$suffix,
+            $code
+        );
+
+        $sequenceBefore=b4n6Sequence();
+        $contractsBefore=Contrato::count();
+        $documentsBefore=Documento::count();
+        $logsBefore=LogAuditoriaContrato::count();
+
+        $result=app(
+            \App\Services\ContratoPreviewService::class
+        )->preview(
+            [
+                'tipo_contrato_id'=>$type->id,
+                'data_inicio'=>'2026-11-07',
+                'data_fim'=>'2027-11-07',
+                'campos_preenchidos'=>b4n6Fields(
+                    $mode,
+                    $amount,
+                    $period
+                ),
+                'assinaturas'=>[],
+            ],
+            $tenant->id
+        );
+
+        $html=$result['html'];
+
+        expect($html)
+            ->toBeString()
+            ->toContain('preview-mode')
+            ->toContain('CONTRATO FINANCEIRO DE TESTE')
+            ->toContain($expectedAmount)
+            ->toContain($expectedPeriod);
+
+        expect($result['meta']['preview'])->toBeTrue();
+        expect($result['meta']['tipo_contrato_id'])
+            ->toBe($type->id);
+
+        expect(b4n6Sequence())->toBe($sequenceBefore);
+        expect(Contrato::count())->toBe($contractsBefore);
+        expect(Documento::count())->toBe($documentsBefore);
+        expect(LogAuditoriaContrato::count())->toBe($logsBefore);
+
+        expect(Storage::disk('local')
+            ->allFiles('contract-pdfs'))->toBe([]);
+    }
+});
+
+test('4p18 preview apresenta as duas assinaturas sem persistencia',function(){
+    Storage::fake('local');
+
+    [$tenant,$user,$template,$type]=b4n6Fixture(
+        '4p18-assinaturas',
+        'contrato_de_prestacao_de_servicos'
+    );
+
+    $template->conteudo_original .=
+        "\nAssinatura Empresa: {{ASSINATURA_EMPRESA}}\n".
+        "Assinatura Motorista: {{ASSINATURA_MOTORISTA}}\n";
+
+    $template->save();
+
+    $type->assinaturas_configuracao=[
+        [
+            'placeholder'=>'ASSINATURA_EMPRESA',
+            'obrigatoria'=>true,
+            'modos'=>['presencial'],
+        ],
+        [
+            'placeholder'=>'ASSINATURA_MOTORISTA',
+            'obrigatoria'=>true,
+            'modos'=>['presencial'],
+        ],
+    ];
+
+    $type->save();
+
+    $empresaPng=b4p12SignaturePng('empresa');
+    $motoristaPng=b4p12SignaturePng('motorista');
+
+    expect($empresaPng)->not->toBe($motoristaPng);
+
+    $sequenceBefore=b4n6Sequence();
+
+    $result=app(
+        \App\Services\ContratoPreviewService::class
+    )->preview(
+        [
+            'tipo_contrato_id'=>$type->id,
+            'data_inicio'=>'2026-11-07',
+            'data_fim'=>'2027-11-07',
+            'campos_preenchidos'=>b4n6Fields(
+                'fixa',
+                '100',
+                'mensal'
+            ),
+            'assinaturas'=>[
+                [
+                    'placeholder'=>'ASSINATURA_EMPRESA',
+                    'modo'=>'presencial',
+                    'assinatura_url'=>$empresaPng,
+                ],
+                [
+                    'placeholder'=>'ASSINATURA_MOTORISTA',
+                    'modo'=>'presencial',
+                    'assinatura_url'=>$motoristaPng,
+                ],
+            ],
+        ],
+        $tenant->id
+    );
+
+    $html=$result['html'];
+
+    expect(substr_count($html,'class="signature"'))
+        ->toBe(2);
+
+    expect($html)
+        ->toContain($empresaPng)
+        ->toContain($motoristaPng);
+
+    expect(strip_tags($html))
+        ->not->toContain('data:image/png;base64,');
+
+    expect(b4n6Sequence())->toBe($sequenceBefore);
+    expect(Contrato::count())->toBe(0);
+    expect(Documento::count())->toBe(0);
+    expect(LogAuditoriaContrato::count())->toBe(0);
+
+    expect(Storage::disk('local')
+        ->allFiles('contract-pdfs'))->toBe([]);
+});
+
+test('4p18 preview financeiro incompleto e rejeitado sem efeitos',function(){
+    Storage::fake('local');
+
+    [$tenant,$user,$template,$type]=b4n6Fixture(
+        '4p18-incompleto',
+        'aluguer_tvde_pessoa_coletiva'
+    );
+
+    $fields=b4n6Fields(
+        'mista',
+        '50',
+        'quinzenal'
+    );
+
+    unset($fields['BASE_CALCULO_COBRANCA']);
+
+    $sequenceBefore=b4n6Sequence();
+
+    expect(fn()=>app(
+        \App\Services\ContratoPreviewService::class
+    )->preview(
+        [
+            'tipo_contrato_id'=>$type->id,
+            'data_inicio'=>'2026-11-07',
+            'data_fim'=>'2027-11-07',
+            'campos_preenchidos'=>$fields,
+        ],
+        $tenant->id
+    ))->toThrow(ValidationException::class);
+
+    expect(b4n6Sequence())->toBe($sequenceBefore);
+    expect(Contrato::count())->toBe(0);
+    expect(Documento::count())->toBe(0);
+
+    expect(Storage::disk('local')
+        ->allFiles('contract-pdfs'))->toBe([]);
+});
+
+/*
+ * FROTAPRO_4P19_PDF_HTTP
+ *
+ * Endpoint real de preview PDF.
+ * Os dados sao criados apenas no SQLite dos testes.
+ */
+
+function b4p19Login(
+    $test,
+    Tenant $tenant,
+    User $user
+):void{
+    $user->forceFill([
+        'password'=>\Illuminate\Support\Facades\Hash::make(
+            'SenhaTeste123!'
+        ),
+        'ativo'=>true,
+    ])->save();
+
+    \App\Models\TenantUser::create([
+        'tenant_id'=>$tenant->id,
+        'user_id'=>$user->id,
+        'status'=>'ativo',
+        'principal'=>true,
+    ]);
+
+    $role=\App\Models\Role::firstOrCreate(
+        ['codigo'=>'funcionario'],
+        [
+            'nome'=>'Funcionário',
+            'sistema'=>true,
+        ]
+    );
+
+    \App\Models\UserRole::create([
+        'user_id'=>$user->id,
+        'role_id'=>$role->id,
+        'tenant_id'=>$tenant->id,
+    ]);
+
+    $permission=\App\Models\Permission::firstOrCreate(
+        ['codigo'=>'contratos'],
+        [
+            'modulo'=>'contratos',
+            'nome'=>'Contratos',
+        ]
+    );
+
+    \App\Models\RolePermission::updateOrCreate(
+        [
+            'role_id'=>$role->id,
+            'permission_id'=>$permission->id,
+        ],
+        [
+            'nivel'=>'configurar',
+        ]
+    );
+
+    $test->withHeaders([
+        'Origin'=>'http://localhost:8000',
+        'Referer'=>'http://localhost:8000/',
+        'Accept'=>'application/json',
+    ])->postJson(
+        '/login',
+        [
+            'email'=>$user->email,
+            'password'=>'SenhaTeste123!',
+        ]
+    )->assertOk();
+}
+
+/*
+ * FROTAPRO_4P19_2_ISOLATED_DATASETS
+ *
+ * Cada tipo contratual e um teste Pest independente.
+ * Cada execucao recebe nova aplicacao, sessao e
+ * banco SQLite de teste com RefreshDatabase.
+ */
+test('4p19 rota pdf gera tres tipos sem numero definitivo',function(
+    string $suffix,
+    string $code,
+    string $mode,
+    string $period
+){
+    Storage::fake('local');
+
+    [$tenant,$user,$template,$type]=b4n6Fixture(
+        $suffix,
+        $code
+    );
+
+    /*
+     * Um unico login por teste.
+     * Nao reutilizar a sessao entre tenants.
+     */
+    b4p19Login($this,$tenant,$user);
+
+    $sequenceBefore=b4n6Sequence();
+    $contractsBefore=Contrato::count();
+    $documentsBefore=Documento::count();
+    $logsBefore=LogAuditoriaContrato::count();
+
+    $response=$this->postJson(
+        '/api/contratos/preview-pdf',
+        [
+            'tipo_contrato_id'=>$type->id,
+            'data_inicio'=>'2026-11-07',
+            'data_fim'=>'2027-11-07',
+            'campos_preenchidos'=>b4n6Fields(
+                $mode,
+                '50',
+                $period
+            ),
+            'assinaturas'=>[],
+        ]
+    );
+
+    $response->assertOk();
+    $response->assertHeader(
+        'Content-Type',
+        'application/pdf'
+    );
+
+    $binary=$response->getContent();
+
+    expect($binary)->toStartWith('%PDF-');
+    expect(strlen($binary))->toBeGreaterThan(1000);
+
+    $text=(new Parser())
+        ->parseContent($binary)
+        ->getText();
+
+    /*
+     * Um preview nao pode usar numero definitivo.
+     */
+    expect($text)->toContain('A ATRIBUIR');
+
+    expect(b4n6Sequence())->toBe($sequenceBefore);
+    expect(Contrato::count())->toBe($contractsBefore);
+    expect(Documento::count())->toBe($documentsBefore);
+    expect(LogAuditoriaContrato::count())->toBe($logsBefore);
+
+    expect(
+        Storage::disk('local')->allFiles('contract-pdfs')
+    )->toBe([]);
+})->with([
+    'prestacao-de-servicos'=>[
+        '4p19-servicos',
+        'contrato_de_prestacao_de_servicos',
+        'fixa',
+        'mensal',
+    ],
+    'aluguer-pessoa-singular'=>[
+        '4p19-singular',
+        'aluguer_tvde_pessoa_singular',
+        'variavel',
+        'semanal',
+    ],
+    'aluguer-pessoa-coletiva'=>[
+        '4p19-coletiva',
+        'aluguer_tvde_pessoa_coletiva',
+        'mista',
+        'quinzenal',
+    ],
+]);
+
+test('4p19 rota pdf incorpora duas assinaturas sem guardar contrato',function(){
+    Storage::fake('local');
+
+    [$tenant,$user,$template,$type]=b4n6Fixture(
+        '4p19-assinaturas',
+        'contrato_de_prestacao_de_servicos'
+    );
+
+    $template->conteudo_original .=
+        "\nNIF: {{EMPRESA_NIF}}\n".
+        "Empresa: {{ASSINATURA_EMPRESA}}\n".
+        "Motorista: {{ASSINATURA_MOTORISTA}}\n";
+
+    $template->save();
+
+    $type->entidades=[
+        'empresa'=>true,
+        'motorista'=>true,
+    ];
+
+    $type->assinaturas_configuracao=[
+        [
+            'placeholder'=>'ASSINATURA_EMPRESA',
+            'obrigatoria'=>true,
+            'modos'=>['presencial'],
+        ],
+        [
+            'placeholder'=>'ASSINATURA_MOTORISTA',
+            'obrigatoria'=>true,
+            'modos'=>['presencial'],
+        ],
+    ];
+
+    $type->save();
+
+    $empresa=new \App\Models\Empresa([
+        'nome_empresa'=>'Empresa de Teste PDF',
+        'nif'=>'501964843',
+        'ativo'=>true,
+        'endereco_rua'=>'Rua de Teste',
+        'endereco_cep'=>'1000-001',
+        'endereco_cidade'=>'Lisboa',
+    ]);
+
+    $empresa->tenant_id=$tenant->id;
+    $empresa->save();
+
+    $motorista=new \App\Models\Motorista([
+        'nome_completo'=>'Motorista de Teste PDF',
+        'ativo'=>true,
+    ]);
+
+    $motorista->tenant_id=$tenant->id;
+    $motorista->save();
+
+    b4p19Login($this,$tenant,$user);
+
+    $empresaPng=b4p12SignaturePng('empresa');
+    $motoristaPng=b4p12SignaturePng('motorista');
+
+    $seq=b4n6Sequence();
+
+    $response=$this->postJson(
+        '/api/contratos/preview-pdf',
+        [
+            'tipo_contrato_id'=>$type->id,
+            'empresa_id'=>$empresa->id,
+            'motorista_id'=>$motorista->id,
+            'data_inicio'=>'2026-11-07',
+            'data_fim'=>'2027-11-07',
+            'campos_preenchidos'=>b4n6Fields(
+                'fixa','100','mensal'
+            ),
+            'assinaturas'=>[
+                [
+                    'placeholder'=>'ASSINATURA_EMPRESA',
+                    'modo'=>'presencial',
+                    'assinatura_url'=>$empresaPng,
+                ],
+                [
+                    'placeholder'=>'ASSINATURA_MOTORISTA',
+                    'modo'=>'presencial',
+                    'assinatura_url'=>$motoristaPng,
+                ],
+            ],
+        ]
+    );
+
+    $response->assertOk();
+    $response->assertHeader(
+        'Content-Type','application/pdf'
+    );
+
+    $binary=$response->getContent();
+
+    expect($binary)->toStartWith('%PDF-');
+
+    preg_match_all(
+        '/\/Subtype\s*\/Image\b/',
+        $binary,
+        $images
+    );
+
+    expect(count($images[0]))
+        ->toBeGreaterThanOrEqual(2);
+
+    $text=(new Parser())
+        ->parseContent($binary)
+        ->getText();
+
+    expect($text)->not->toContain(
+        'data:image/png;base64,'
+    );
+
+    expect(b4n6Sequence())->toBe($seq);
+    expect(Contrato::count())->toBe(0);
+    expect(Documento::count())->toBe(0);
+    expect(LogAuditoriaContrato::count())->toBe(0);
+
+    expect(
+        Storage::disk('local')->allFiles('contract-pdfs')
+    )->toBe([]);
+});
