@@ -23,11 +23,80 @@ class ContratoPdfService
         private DocumentoRegistryService $documentoRegistryService
     ) {}
 
+    /*
+     * FROTAPRO_4P6_ATOMIC_PDF_ISSUANCE
+     *
+     * Reservar o numero documental e concluir
+     * a emissao dentro da mesma transacao.
+     *
+     * Uma falha de validacao ou emissao reverte
+     * os registos e a sequencia documental.
+     */
+
     public function generate(
         string $contratoId,
         string $tenantId,
         User $actor,
         ?string $ip = null
+    ): Contrato {
+        $generatedPdfPath = null;
+
+        try {
+            return DB::transaction(
+                function () use (
+                    $contratoId,
+                    $tenantId,
+                    $actor,
+                    $ip,
+                    &$generatedPdfPath
+                ): Contrato {
+                    Contrato::query()
+                        ->where('tenant_id',$tenantId)
+                        ->whereKey($contratoId)
+                        ->lockForUpdate()
+                        ->firstOrFail();
+
+                    return $this->generateAtomico(
+                        $contratoId,
+                        $tenantId,
+                        $actor,
+                        $ip,
+                        $generatedPdfPath
+                    );
+                },
+                1
+            );
+        } catch (Throwable $exception) {
+            /*
+             * FROTAPRO_4P11_OUTER_ROLLBACK_CLEANUP
+             *
+             * Se a transacao exterior falhar
+             * depois da escrita do PDF, evitar
+             * deixar ficheiro temporario orfao.
+             *
+             * Nao se aplica a PDFs historicos:
+             * a variavel so recebe caminhos novos.
+             */
+            if ($generatedPdfPath !== null) {
+                try {
+                    Storage::disk('local')->delete(
+                        $generatedPdfPath
+                    );
+                } catch (Throwable $cleanupException) {
+                    report($cleanupException);
+                }
+            }
+
+            throw $exception;
+        }
+    }
+
+    private function generateAtomico(
+        string $contratoId,
+        string $tenantId,
+        User $actor,
+        ?string $ip,
+        ?string &$generatedPdfPath
     ): Contrato {
         $contrato = Contrato::query()
             ->where('tenant_id', $tenantId)
@@ -123,10 +192,16 @@ class ContratoPdfService
             (string)$contrato->template->conteudo_original
         );
 
+        /*
+         * Reserva explicita durante a emissao.
+         * Esta chamada ocorre dentro da transacao.
+         */
+
         $documento = $this
             ->documentoRegistryService
             ->sync(
-                $contrato
+                $contrato,
+                true
             );
 
         if ($documento) {
@@ -185,6 +260,12 @@ $binary = $pdf->output();
             'v'.$contrato->versao_atual.'-'.
             Str::uuid()->toString().
             '.pdf';
+
+        /*
+         * O caminho fica registado antes da escrita
+         * para permitir limpeza em caso de falha.
+         */
+        $generatedPdfPath = $path;
 
         if (! Storage::disk('local')->put($path, $binary)) {
             throw new RuntimeException(
@@ -1275,13 +1356,23 @@ $binary = $pdf->output();
             ){
                 continue;
             }
-            if(
-                (int)$contrato->versao_atual>1 &&
+            /*
+             * FROTAPRO_4P6_SIGNATURE_IMAGE_ONLY
+             *
+             * Nao utilizar texto Base64 guardado
+             * nos campos preenchidos do contrato.
+             *
+             * As assinaturas sao carregadas dos
+             * registos de assinatura da versao
+             * atual e convertidas em imagens.
+             */
+
+            if (
                 str_starts_with(
-                    $this->normalize((string)$key),
+                    $normalizedKey,
                     'ASSINATURA_'
                 )
-            ){
+            ) {
                 continue;
             }
             if (

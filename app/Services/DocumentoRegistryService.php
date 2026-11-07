@@ -24,10 +24,45 @@ class DocumentoRegistryService
         private DocumentoNumeroService $numeroService
     ) {}
 
-    public function sync(Model $model): ?Documento
+    public function sync(
+        Model $model,
+        bool $reservarNumeroContrato = false
+    ): ?Documento
     {
         if(!$this->ready()){
             return null;
+        }
+
+        /*
+         * FROTAPRO_4P6_DOCUMENT_NUMBER_GATE
+         *
+         * Contratos sem PDF definitivo nao recebem
+         * automaticamente um novo numero documental.
+         *
+         * A reserva de um novo numero ocorre apenas
+         * mediante autorizacao explicita durante
+         * a emissao do PDF.
+         *
+         * Documentos historicos ja numerados
+         * continuam a poder ser sincronizados.
+         */
+
+        if (
+            $model instanceof Contrato &&
+            blank($model->pdf_gerado_url) &&
+            !$reservarNumeroContrato
+        ) {
+            $exists = Documento::query()
+                ->where('entidade_tipo','contrato')
+                ->where(
+                    'entidade_id',
+                    (string)$model->getKey()
+                )
+                ->exists();
+
+            if (!$exists) {
+                return null;
+            }
         }
 
         $payload=$this->payload($model);

@@ -164,18 +164,33 @@ export default function ContractReviewStep({
                     />
 
                     {activeSignatures.map(
-                        (signature) =>
+                        (signature, index) =>
                             signature ? (
-                                <Value
-                                    key={`${signature.modo}-${signature.signatario_nome}`}
-                                    label="Modo"
-                                    value={
-                                        signature.modo ===
-                                        "presencial"
-                                            ? "Presencial"
-                                            : "Remota"
-                                    }
-                                />
+                                <div
+                                    key={`${signature.modo}-${index}`}
+                                    className="rounded-xl border border-slate-200 p-3"
+                                >
+                                    <p className="text-sm font-medium text-slate-700">
+                                        {signature.signatario_nome || `Assinatura ${index + 1}`}
+                                    </p>
+
+                                    <p className="mt-1 text-xs text-slate-500">
+                                        {signature.modo === "presencial"
+                                            ? "Assinatura presencial"
+                                            : "Assinatura remota"}
+                                    </p>
+
+                                    {signature.modo === "presencial" &&
+                                        /^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(
+                                            signature.assinatura_url,
+                                        ) && (
+                                            <img
+                                                src={signature.assinatura_url}
+                                                alt="Imagem da assinatura"
+                                                className="mt-3 h-20 max-w-full object-contain"
+                                            />
+                                        )}
+                                </div>
                             ) : null,
                     )}
                 </Card>
@@ -187,7 +202,11 @@ export default function ContractReviewStep({
                 <Card title="Campos preenchidos">
                     {Object.entries(
                         form.campos_preenchidos,
-                    ).map(
+                    )
+                        .filter(
+                            ([key]) => !key.toUpperCase().startsWith("ASSINATURA_"),
+                        )
+                        .map(
                         ([key, value]) => (
                             <Value
                                 key={key}

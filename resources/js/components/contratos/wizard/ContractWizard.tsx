@@ -590,6 +590,7 @@ export default function ContractWizard({
                         valor_caucao:numeric(form.valor_caucao),
                         valor_total:numeric(form.valor_total),
                         campos_preenchidos:form.campos_preenchidos,
+                        assinaturas:buildSignatures(signatures),
                     }}
                 />
             )}

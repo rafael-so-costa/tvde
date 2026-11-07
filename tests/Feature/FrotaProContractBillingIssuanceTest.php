@@ -149,6 +149,83 @@ function b4n6Document(Contrato $contract):Documento
         ->firstOrFail();
 }
 
+/*
+ * FROTAPRO_4P12_VALID_PNG_TEST_FIXTURE
+ *
+ * PNG RGB valido, gerado sem GD nem bibliotecas externas.
+ * Sao imagens sinteticas para testes automatizados.
+ *
+ * Cada linha utiliza filtro PNG 0 (None).
+ * Os blocos IHDR, IDAT e IEND recebem CRC real.
+ */
+function b4p12SignaturePng(string $who):string
+{
+    if(!in_array($who,['empresa','motorista'],true)){
+        throw new \InvalidArgumentException(
+            'Identificador de assinatura desconhecido.'
+        );
+    }
+
+    $width=192;
+    $height=64;
+    $raw='';
+
+    for($y=0;$y<$height;$y++){
+        // PNG filter type 0.
+        $raw.="\x00";
+
+        for($x=0;$x<$width;$x++){
+            $curve=$who==='empresa'
+                ? 32+(int)round(10*sin($x/12.0))
+                    +(int)round(3*cos($x/5.0))
+                : 29+(int)round(8*cos($x/9.0))
+                    +(int)round(4*sin($x/4.0));
+
+            $stroke=
+                $x>=12 &&
+                $x<=178 &&
+                abs($y-$curve)<=1;
+
+            $raw.=$stroke
+                ? "\x15\x25\x35"
+                : "\xff\xff\xff";
+        }
+    }
+
+    $chunk=static function(
+        string $type,
+        string $payload
+    ):string{
+        $body=$type.$payload;
+
+        return pack('N',strlen($payload)).
+            $body.
+            pack('N',crc32($body));
+    };
+
+    $png="\x89PNG\r\n\x1a\n".
+        $chunk(
+            'IHDR',
+            pack(
+                'NNCCCCC',
+                $width,
+                $height,
+                8,
+                2,
+                0,
+                0,
+                0
+            )
+        ).
+        $chunk(
+            'IDAT',
+            gzcompress($raw,9)
+        ).
+        $chunk('IEND','');
+
+    return 'data:image/png;base64,'.
+        base64_encode($png);
+}
 test('4n6 criacao incompleta nao cria contrato nem atribui numero',function(){
     Storage::fake('local');
 
@@ -216,10 +293,12 @@ test('4n6 tres modalidades emitem pdf valido mantendo o codigo',function(){
 
         expect($contract->exists)->toBeTrue();
 
-        $before=b4n6Document($contract);
-        $initialCode=$before->codigo;
-        $initialId=$before->id;
         $sequence=b4n6Sequence();
+
+        expect(Documento::query()
+            ->where('entidade_tipo','contrato')
+            ->where('entidade_id',$contract->id)
+            ->exists())->toBeFalse();
 
         $issued=app(ContratoPdfService::class)
             ->generate(
@@ -229,10 +308,10 @@ test('4n6 tres modalidades emitem pdf valido mantendo o codigo',function(){
             );
 
         $after=b4n6Document($contract);
+        $initialCode=$after->codigo;
 
-        expect($after->id)->toBe($initialId);
-        expect($after->codigo)->toBe($initialCode);
-        expect(b4n6Sequence())->toBe($sequence);
+        expect($initialCode)->toMatch('/^G\d{6}$/');
+        expect(b4n6Sequence())->toBe($sequence+1);
 
         expect($issued->pdf_gerado_url)->not->toBeNull();
         expect($issued->hash_documento)
@@ -270,7 +349,7 @@ test('4n6 tres modalidades emitem pdf valido mantendo o codigo',function(){
     }
 });
 
-test('4n6 emissao incompleta preserva numero e permite correcao',function(){
+test('4p8 emissao financeira incompleta nao reserva numero',function(){
     Storage::fake('local');
 
     [$tenant,$user,,$type]=b4n6Fixture(
@@ -279,17 +358,16 @@ test('4n6 emissao incompleta preserva numero e permite correcao',function(){
     );
 
     $contract=b4n6Create(
-        $tenant,
-        $user,
-        $type,
-        b4n6Fields()
+        $tenant,$user,$type,b4n6Fields()
     );
 
-    $document=b4n6Document($contract);
-
-    $documentId=$document->id;
-    $documentCode=$document->codigo;
     $sequence=b4n6Sequence();
+
+    $documentQuery=fn()=>Documento::query()
+        ->where('entidade_tipo','contrato')
+        ->where('entidade_id',$contract->id);
+
+    expect($documentQuery()->exists())->toBeFalse();
 
     $invalid=$contract->campos_preenchidos;
     unset($invalid['BASE_CALCULO_COBRANCA']);
@@ -306,20 +384,11 @@ test('4n6 emissao incompleta preserva numero e permite correcao',function(){
     )->toThrow(ValidationException::class);
 
     expect($contract->fresh()->pdf_gerado_url)->toBeNull();
+    expect($documentQuery()->exists())->toBeFalse();
     expect(b4n6Sequence())->toBe($sequence);
 
-    expect(b4n6Document($contract)->id)->toBe($documentId);
-    expect(b4n6Document($contract)->codigo)->toBe($documentCode);
-
-    expect(
-        Storage::disk('local')->allFiles('contract-pdfs')
-    )->toBe([]);
-
-    expect(LogAuditoriaContrato::query()
-        ->where('contrato_id',$contract->id)
-        ->where('acao','geracao_pdf')
-        ->count()
-    )->toBe(0);
+    expect(Storage::disk('local')
+        ->allFiles('contract-pdfs'))->toBe([]);
 
     $corrected=app(ContratoService::class)
         ->updateDraft(
@@ -327,17 +396,16 @@ test('4n6 emissao incompleta preserva numero e permite correcao',function(){
             $tenant->id,
             [
                 'campos_preenchidos'=>b4n6Fields(
-                    'mista',
-                    '50',
-                    'quinzenal'
+                    'mista','50','quinzenal'
                 ),
             ],
             $user
         );
 
-    expect(
-        $corrected->campos_preenchidos['CONDICOES_COBRANCA']
-    )->toContain('50,00 €');
+    expect($corrected->campos_preenchidos['CONDICOES_COBRANCA'])
+        ->toContain('50,00 €');
+
+    expect($documentQuery()->exists())->toBeFalse();
 
     $issued=app(ContratoPdfService::class)
         ->generate(
@@ -346,29 +414,401 @@ test('4n6 emissao incompleta preserva numero e permite correcao',function(){
             $user
         );
 
+    $doc=$documentQuery()->firstOrFail();
+
+    expect($doc->codigo)->toMatch('/^G\d{6}$/');
+    expect(b4n6Sequence())->toBe($sequence+1);
+
     expect($issued->pdf_gerado_url)->not->toBeNull();
 
     Storage::disk('local')->assertExists(
         $issued->pdf_gerado_url
     );
 
-    expect(b4n6Sequence())->toBe($sequence);
-    expect(b4n6Document($contract)->id)->toBe($documentId);
-    expect(b4n6Document($contract)->codigo)->toBe($documentCode);
-
-    $text=(new Parser())
-        ->parseContent(
-            Storage::disk('local')->get(
-                $issued->pdf_gerado_url
-            )
+    $text=(new Parser())->parseContent(
+        Storage::disk('local')->get(
+            $issued->pdf_gerado_url
         )
-        ->getText();
+    )->getText();
 
     expect($text)->toContain('50,00');
+    expect($text)->toContain($doc->codigo);
 
     expect(LogAuditoriaContrato::query()
         ->where('contrato_id',$contract->id)
         ->where('acao','geracao_pdf')
-        ->count()
-    )->toBe(1);
+        ->count())->toBe(1);
+});
+
+test('4p8 nif invalido bloqueia criacao assinada e imagem surge no pdf',function(){
+    Storage::fake('local');
+
+    [$tenant,$user,$template,$type]=b4n6Fixture(
+        'nif4p8',
+        'contrato_de_prestacao_de_servicos'
+    );
+
+    $template->conteudo_original .=
+        "\nNIF: {{EMPRESA_NIF}}\n".
+        "Assinatura: {{ASSINATURA_EMPRESA}}\n";
+
+    $template->save();
+
+    $type->entidades=['empresa'=>true];
+
+    $type->assinaturas_configuracao=[
+        [
+            'placeholder'=>'ASSINATURA_EMPRESA',
+            'obrigatoria'=>true,
+            'modos'=>['presencial'],
+        ],
+    ];
+
+    $type->save();
+
+    $empresa=new \App\Models\Empresa([
+        'nome_empresa'=>'Empresa de Teste 4P8',
+        'nif'=>'111111111',
+        'ativo'=>true,
+        'endereco_rua'=>'Rua dos Testes',
+        'endereco_cep'=>'1000-001',
+        'endereco_cidade'=>'Lisboa',
+    ]);
+
+    $empresa->tenant_id=$tenant->id;
+    $empresa->save();
+
+    // Imagem sintetica com CRC valido.
+    $signature=b4p12SignaturePng('empresa');
+
+    $payload=[
+        'tipo_contrato_id'=>$type->id,
+        'empresa_id'=>$empresa->id,
+        'data_inicio'=>'2026-11-05',
+        'data_fim'=>'2027-11-05',
+        'campos_preenchidos'=>b4n6Fields(
+            'fixa','100','mensal'
+        ),
+        'assinaturas'=>[
+            [
+                'placeholder'=>'ASSINATURA_EMPRESA',
+                'modo'=>'presencial',
+                'assinatura_url'=>$signature,
+            ],
+        ],
+    ];
+
+    $sequence=b4n6Sequence();
+
+    expect(fn()=>app(ContratoService::class)
+        ->create($payload,$user,$tenant->id)
+    )->toThrow(ValidationException::class);
+
+    expect(Contrato::query()
+        ->where('tenant_id',$tenant->id)
+        ->count())->toBe(0);
+
+    expect(b4n6Sequence())->toBe($sequence);
+
+    // Corrigir a origem, nunca substituir o NIF
+    // automatico por um campo livre do wizard.
+    $empresa->nif='501964843';
+    $empresa->save();
+
+    $contract=app(ContratoService::class)
+        ->create($payload,$user,$tenant->id);
+
+    expect($contract->status)->toBe('assinado');
+
+    expect(Documento::query()
+        ->where('entidade_tipo','contrato')
+        ->where('entidade_id',$contract->id)
+        ->exists())->toBeFalse();
+
+    expect(b4n6Sequence())->toBe($sequence);
+
+    $contract->load([
+        'template',
+        'empresa',
+        'assinaturas',
+    ]);
+
+    $html=app(ContratoPdfService::class)
+        ->renderHtml($contract,$empresa,false);
+
+    expect($html)->toContain(
+        '<img src="data:image/png;base64,'
+    );
+
+    expect(strip_tags($html))
+        ->not->toContain('data:image/png;base64,');
+
+    $issued=app(ContratoPdfService::class)
+        ->generate($contract->id,$tenant->id,$user);
+
+    $doc=Documento::query()
+        ->where('entidade_tipo','contrato')
+        ->where('entidade_id',$contract->id)
+        ->firstOrFail();
+
+    expect($doc->codigo)->toMatch('/^G\d{6}$/');
+    expect(b4n6Sequence())->toBe($sequence+1);
+
+    expect($issued->hash_documento)
+        ->toMatch('/^[a-f0-9]{64}$/');
+
+    Storage::disk('local')->assertExists(
+        $issued->pdf_gerado_url
+    );
+
+    $binary=Storage::disk('local')
+        ->get($issued->pdf_gerado_url);
+
+    expect($binary)->toStartWith('%PDF-');
+    expect(hash('sha256',$binary))
+        ->toBe($issued->hash_documento);
+});
+
+/*
+ * FROTAPRO 4P.11
+ * Testes de integridade, sem acesso a MySQL operacional.
+ */
+
+test('4p11 falha apos reservar numero reverte documento e ficheiro',function(){
+    Storage::fake('local');
+
+    [$tenant,$user,,$type]=b4n6Fixture(
+        'rollback4p11',
+        'prestacao_servico'
+    );
+
+    $contract=b4n6Create(
+        $tenant,
+        $user,
+        $type,
+        b4n6Fields('fixa','100','mensal')
+    );
+
+    $sequence=b4n6Sequence();
+
+    $documentQuery=fn()=>Documento::query()
+        ->where('entidade_tipo','contrato')
+        ->where('entidade_id',$contract->id);
+
+    expect($documentQuery()->exists())->toBeFalse();
+
+    $mock=\Mockery::mock(
+        \App\Services\ChecklistProcessService::class
+    );
+
+    $mock->shouldReceive('completeDocumentGeneration')
+        ->once()
+        ->andThrow(
+            new \RuntimeException(
+                'FALHA_CONTROLADA_4P11'
+            )
+        );
+
+    app()->instance(
+        \App\Services\ChecklistProcessService::class,
+        $mock
+    );
+
+    expect(fn()=>app(ContratoPdfService::class)
+        ->generate(
+            $contract->id,
+            $tenant->id,
+            $user
+        )
+    )->toThrow(
+        \RuntimeException::class,
+        'FALHA_CONTROLADA_4P11'
+    );
+
+    expect($documentQuery()->exists())->toBeFalse();
+    expect(b4n6Sequence())->toBe($sequence);
+
+    $fresh=$contract->fresh();
+
+    expect($fresh->pdf_gerado_url)->toBeNull();
+    expect($fresh->hash_documento)->toBeNull();
+
+    expect(
+        Storage::disk('local')->allFiles('contract-pdfs')
+    )->toBe([]);
+
+    expect(LogAuditoriaContrato::query()
+        ->where('contrato_id',$contract->id)
+        ->where('acao','geracao_pdf')
+        ->count())->toBe(0);
+});
+
+test('4p11 pdf incorpora assinatura empresa e motorista como imagens',function(){
+    Storage::fake('local');
+
+    [$tenant,$user,$template,$type]=b4n6Fixture(
+        'assinaturas4p11',
+        'contrato_de_prestacao_de_servicos'
+    );
+
+    $template->conteudo_original .=
+        "\nNIF: {{EMPRESA_NIF}}\n".
+        "Empresa: {{ASSINATURA_EMPRESA}}\n".
+        "Motorista: {{ASSINATURA_MOTORISTA}}\n";
+
+    $template->save();
+
+    $type->entidades=[
+        'empresa'=>true,
+        'motorista'=>true,
+    ];
+
+    $type->assinaturas_configuracao=[
+        [
+            'placeholder'=>'ASSINATURA_EMPRESA',
+            'obrigatoria'=>true,
+            'modos'=>['presencial'],
+        ],
+        [
+            'placeholder'=>'ASSINATURA_MOTORISTA',
+            'obrigatoria'=>true,
+            'modos'=>['presencial'],
+        ],
+    ];
+
+    $type->save();
+
+    $empresa=new \App\Models\Empresa([
+        'nome_empresa'=>'Empresa Teste Assinaturas',
+        'nif'=>'501964843',
+        'ativo'=>true,
+        'endereco_rua'=>'Rua de Teste',
+        'endereco_cep'=>'1000-001',
+        'endereco_cidade'=>'Lisboa',
+    ]);
+
+    $empresa->tenant_id=$tenant->id;
+    $empresa->save();
+
+    $motorista=new \App\Models\Motorista([
+        'nome_completo'=>'Motorista Teste Assinaturas',
+        'ativo'=>true,
+    ]);
+
+    $motorista->tenant_id=$tenant->id;
+    $motorista->save();
+
+    $empresaPng=b4p12SignaturePng('empresa');
+    $motoristaPng=b4p12SignaturePng('motorista');
+
+    expect($empresaPng)->not->toBe($motoristaPng);
+
+    foreach([$empresaPng,$motoristaPng] as $image){
+        $decoded=base64_decode(
+            substr($image,strpos($image,',')+1),
+            true
+        );
+
+        expect($decoded)->not->toBeFalse();
+
+        $info=getimagesizefromstring($decoded);
+
+        expect($info)->not->toBeFalse();
+        expect($info[0])->toBe(192);
+        expect($info[1])->toBe(64);
+    }
+
+    $contract=app(ContratoService::class)->create([
+        'tipo_contrato_id'=>$type->id,
+        'empresa_id'=>$empresa->id,
+        'motorista_id'=>$motorista->id,
+        'data_inicio'=>'2026-11-05',
+        'data_fim'=>'2027-11-05',
+        'campos_preenchidos'=>b4n6Fields(
+            'fixa','100','mensal'
+        ),
+        'assinaturas'=>[
+            [
+                'placeholder'=>'ASSINATURA_EMPRESA',
+                'modo'=>'presencial',
+                'assinatura_url'=>$empresaPng,
+            ],
+            [
+                'placeholder'=>'ASSINATURA_MOTORISTA',
+                'modo'=>'presencial',
+                'assinatura_url'=>$motoristaPng,
+            ],
+        ],
+    ],$user,$tenant->id);
+
+    expect($contract->status)->toBe('assinado');
+
+    $contract->load([
+        'template',
+        'empresa',
+        'motorista',
+        'assinaturas',
+    ]);
+
+    $html=app(ContratoPdfService::class)
+        ->renderHtml($contract,$empresa,false);
+
+    preg_match_all(
+        '/<img\b[^>]*class="signature"[^>]*>/iu',
+        $html,
+        $matches
+    );
+
+    expect(count($matches[0]))->toBe(2);
+
+    expect(strip_tags($html))
+        ->not->toContain('data:image/png;base64,');
+
+    $sequence=b4n6Sequence();
+
+    $issued=app(ContratoPdfService::class)
+        ->generate(
+            $contract->id,
+            $tenant->id,
+            $user
+        );
+
+    expect(b4n6Sequence())->toBe($sequence+1);
+
+    Storage::disk('local')
+        ->assertExists($issued->pdf_gerado_url);
+
+    $binary=Storage::disk('local')
+        ->get($issued->pdf_gerado_url);
+
+    expect($binary)->toStartWith('%PDF-');
+
+    /*
+     * Pelo menos um recurso de imagem no PDF.
+     * Duas ocorrencias iguais podem partilhar
+     * um unico recurso de imagem internamente.
+     */
+    /*
+     * A empresa e o motorista usam imagens
+     * diferentes. O PDF deve incorporar ambas.
+     */
+    preg_match_all(
+        '/\/Subtype\s*\/Image\b/',
+        $binary,
+        $embeddedImages
+    );
+
+    expect(count($embeddedImages[0]))
+        ->toBeGreaterThanOrEqual(2);
+
+    $text=(new Parser())
+        ->parseContent($binary)
+        ->getText();
+
+    expect($text)
+        ->not->toContain('data:image/png;base64,')
+        ->not->toContain('iVBORw0KGgo');
+
+    expect(hash('sha256',$binary))
+        ->toBe($issued->hash_documento);
 });

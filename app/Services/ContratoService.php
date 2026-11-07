@@ -240,6 +240,68 @@ class ContratoService
                 }
             }
 
+            /*
+             * FROTAPRO_4P6_VALIDATE_BEFORE_SIGNED_CREATE
+             *
+             * Os contratos criados atraves dos tipos
+             * configurados devem passar pela validacao
+             * documental antes de serem registados
+             * como assinados ou enviados.
+             *
+             * Isto inclui o NIF da empresa e os
+             * restantes campos automaticos.
+             */
+
+            if (
+                $tipoContrato !== null &&
+                in_array(
+                    $contrato->status,
+                    ['assinado','enviado'],
+                    true
+                )
+            ) {
+                $contrato->setRelation(
+                    'template',
+                    $template
+                );
+
+                $contrato->setRelation(
+                    'tipoContrato',
+                    $tipoContrato
+                );
+
+                $contrato->setRelation(
+                    'empresa',
+                    $empresa
+                );
+
+                $contrato->setRelation(
+                    'motorista',
+                    $motorista
+                );
+
+                $contrato->setRelation(
+                    'proprietario',
+                    $proprietario
+                );
+
+                $contrato->setRelation(
+                    'veiculo',
+                    $veiculo
+                );
+
+                $contrato->setRelation(
+                    'assinaturas',
+                    collect()
+                );
+
+                app(ContratoPdfService::class)
+                    ->assertReadyForPdf(
+                        $contrato,
+                        $empresa
+                    );
+            }
+
             $contrato->save();
 
             $processTemplate =
