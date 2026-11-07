@@ -93,6 +93,7 @@ interface RgpdWorkflowResponse {
     data: {
         codigo: string;
         registo_id: string;
+        estado_registo: string;
         publicavel: boolean;
         etapas: RgpdWorkflowEtapa[];
         resumo: {
@@ -106,6 +107,8 @@ interface RgpdWorkflowResponse {
         };
     };
 }
+
+import RgpdWorkflowActions from "../components/rgpd/RgpdWorkflowActions";
 
 interface Pessoa {
     id: string;
@@ -1349,6 +1352,17 @@ export default function RgpdPage() {
                                             </div>
                                         )}
                                     </section>
+
+                                    {workflow.data && selectedId && (
+                                        <RgpdWorkflowActions
+                                            api={api}
+                                            registoId={selectedId}
+                                            workflow={workflow.data.data}
+                                            onUpdated={() => {
+                                                void workflow.refetch();
+                                            }}
+                                        />
+                                    )}
 
                                     <div className="space-y-3">
                                         <h3 className="font-semibold">

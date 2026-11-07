@@ -23,6 +23,14 @@ Route::middleware([
             'permission:templates,configurar'
         )->group(function (): void {
 
+            Route::get(
+                '/rgpd/{id}/workflow/capacidades',
+                [
+                    RgpdWorkflowEvidenciaController::class,
+                    'capacidades',
+                ]
+            )->whereUuid('id');
+
             Route::post(
                 '/rgpd/{id}/workflow/validar',
                 [

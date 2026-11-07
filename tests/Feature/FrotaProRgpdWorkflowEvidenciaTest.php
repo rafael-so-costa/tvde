@@ -741,3 +741,117 @@ test(
         )->assertNotFound();
     }
 );
+
+test(
+    '4r105 administrador consulta capacidades do workflow',
+    function (): void {
+        [
+            $tenant,
+            $users,
+            $registo
+        ] = rgpd104Cenario();
+
+        rgpd104Login(
+            $this,
+            $tenant,
+            $users['validador']
+        );
+
+        config([
+            'rgpd.api_enabled' => true,
+        ]);
+
+        $this->getJson(
+            "/api/rgpd/{$registo->id}/workflow/capacidades"
+        )
+            ->assertOk()
+            ->assertJsonPath(
+                'data.pode_gerir',
+                true
+            );
+
+        expect(
+            \App\Models\RgpdWorkflowEvidencia::count()
+        )->toBe(0);
+    }
+);
+
+test(
+    '4r105 titular sem permissao nao consulta capacidades administrativas',
+    function (): void {
+        [
+            $tenant,
+            $users,
+            $registo
+        ] = rgpd104Cenario();
+
+        rgpd104Login(
+            $this,
+            $tenant,
+            $users['titular']
+        );
+
+        config([
+            'rgpd.api_enabled' => true,
+        ]);
+
+        $this->getJson(
+            "/api/rgpd/{$registo->id}/workflow/capacidades"
+        )->assertForbidden();
+    }
+);
+
+test(
+    '4r105 endpoint de capacidades obedece ao bloqueio da API',
+    function (): void {
+        [
+            $tenant,
+            $users,
+            $registo
+        ] = rgpd104Cenario();
+
+        rgpd104Login(
+            $this,
+            $tenant,
+            $users['validador']
+        );
+
+        config([
+            'rgpd.api_enabled' => false,
+        ]);
+
+        $this->getJson(
+            "/api/rgpd/{$registo->id}/workflow/capacidades"
+        )->assertNotFound();
+    }
+);
+
+test(
+    '4r105 capacidades administrativas protegem outro tenant',
+    function (): void {
+        [
+            ,
+            ,
+            $registoA
+        ] = rgpd104Cenario();
+
+        [
+            $tenantB,
+            $usersB
+        ] = rgpd104Cenario();
+
+        rgpd104Login(
+            $this,
+            $tenantB,
+            $usersB['validador']
+        );
+
+        config([
+            'rgpd.api_enabled' => true,
+        ]);
+
+        $this->getJson(
+            "/api/rgpd/{$registoA->id}/workflow/capacidades"
+        )->assertNotFound();
+    }
+);

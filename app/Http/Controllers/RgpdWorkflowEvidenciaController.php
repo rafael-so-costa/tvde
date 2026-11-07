@@ -25,6 +25,34 @@ final class RgpdWorkflowEvidenciaController extends Controller
         );
     }
 
+    /*
+     * FROTAPRO_4R1051_CAPABILITIES
+     *
+     * Esta acao esta protegida pela
+     * permissao templates/configurar
+     * diretamente nas rotas.
+     */
+    public function capacidades(
+        string $id
+    ): JsonResponse {
+        $this->enabled();
+
+        $tenantId = $this->tenantContext->requireId();
+
+        app(
+            \App\Services\RgpdWorkflowEstadoService::class
+        )->consultar(
+            $tenantId,
+            $id
+        );
+
+        return response()->json([
+            'data' => [
+                'pode_gerir' => true,
+            ],
+        ]);
+    }
+
     public function validar(
         Request $request,
         string $id
