@@ -3,6 +3,7 @@ import {
     FileStack,
     FileText,
     Settings2,
+    ShieldCheck,
 } from "lucide-react";
 
 import {
@@ -32,6 +33,12 @@ const items = [
         to:"/contratos/recursos",
         label:"Templates e workflows",
         icon:FileStack,
+        end:false,
+    },
+    {
+        to:"/contratos/rgpd",
+        label:"RGPD",
+        icon:ShieldCheck,
         end:false,
     },
 ];

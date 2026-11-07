@@ -197,6 +197,10 @@ const ChecklistRemoteSignaturePage = lazy(
 const SinistrosPage = lazy(
     () => import("./pages/SinistrosPage"),
 );
+const RgpdPage = lazy(
+    () => import("./pages/RgpdPage"),
+);
+
 const TemplatesPage = lazy(
     () => import("./pages/TemplatesPage"),
 );
@@ -672,6 +676,11 @@ export default function App() {
                             <Route
                                 path="contratos/configuracao/:id"
                                 element={<ContratoTipoPage />}
+                            />
+
+                            <Route
+                                path="contratos/rgpd"
+                                element={<RgpdPage />}
                             />
 
                             <Route

@@ -1330,3 +1330,4 @@ require __DIR__.'/productivity.php';
 require __DIR__.'/checklist_signatures.php';
 
 require __DIR__.'/contrato_pdf_preview.php';
+require __DIR__.'/rgpd.php';
