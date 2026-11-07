@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\RgpdAssinatura;
+use App\Models\RgpdWorkflowEvidencia;
 use App\Models\RgpdComprovativo;
 use App\Models\RgpdRegisto;
 use Illuminate\Support\Facades\Storage;
@@ -347,6 +348,85 @@ final class RgpdWorkflowEstadoService
                 false,
         ];
 
+        /*
+         * FROTAPRO_4R1041_WORKFLOW_EVIDENCE_READ
+         *
+         * Confirmar evidencias imutaveis.
+         * Nenhuma etapa humana e concluida
+         * sem HMAC valido e dependencias reais.
+         */
+        $evidencias = RgpdWorkflowEvidencia::query()
+            ->where('tenant_id', $tenantId)
+            ->where(
+                'rgpd_registo_id',
+                $registo->id
+            )
+            ->get()
+            ->keyBy('codigo_etapa');
+
+        $evidenciaValida = static function (
+            string $codigo,
+            ?string $assinaturaHash = null,
+            ?string $pdfHash = null
+        ) use (
+            $evidencias,
+            $registo
+        ): bool {
+            $item = $evidencias->get($codigo);
+
+            if (
+                !$item ||
+                !$item->integridadeValida() ||
+                !hash_equals(
+                    (string)$registo->documento_sha256,
+                    (string)$item->documento_sha256
+                )
+            ) {
+                return false;
+            }
+
+            if (
+                $item->assinatura_sha256 !==
+                $assinaturaHash ||
+                $item->pdf_sha256 !== $pdfHash
+            ) {
+                return false;
+            }
+
+            return true;
+        };
+
+        $concluidas['validar_informacao'] =
+            $identificado &&
+            $snapshotValido &&
+            $escolhasValidas &&
+            $evidenciaValida(
+                'validar_informacao'
+            );
+
+        $concluidas['comprovar_disponibilizacao'] =
+            $concluidas['validar_informacao'] &&
+            $evidenciaValida(
+                'comprovar_disponibilizacao'
+            );
+
+        $concluidas['conferencia_rgpd'] =
+            $concluidas['identificar_titular'] &&
+            $concluidas['validar_informacao'] &&
+            $concluidas['gerar_documento_rgpd'] &&
+            $concluidas['comprovar_disponibilizacao'] &&
+            $concluidas['registar_autorizacoes'] &&
+            $concluidas['comprovar_assinatura_titular'] &&
+            $pdfValido &&
+            $assinatura !== null &&
+            $comprovativo !== null &&
+            $evidenciaValida(
+                'conferencia_rgpd',
+                (string)$assinatura?->assinatura_sha256,
+                (string)$comprovativo?->arquivo_sha256
+            ) &&
+            $evidencias->get('validar_informacao')?->ator_id !==
+                $evidencias->get('conferencia_rgpd')?->ator_id;
         $justificacoes = [
             'identificar_titular' =>
                 $identificado
@@ -378,6 +458,20 @@ final class RgpdWorkflowEstadoService
                 'Pendente de conferência final auditada.',
         ];
 
+        if ($concluidas['validar_informacao']) {
+            $justificacoes['validar_informacao'] =
+                'Validação identificada, auditada e íntegra.';
+        }
+
+        if ($concluidas['comprovar_disponibilizacao']) {
+            $justificacoes['comprovar_disponibilizacao'] =
+                'Titular autenticado confirmou o documento apresentado.';
+        }
+
+        if ($concluidas['conferencia_rgpd']) {
+            $justificacoes['conferencia_rgpd'] =
+                'Conferência concluída por segundo responsável com PDF íntegro.';
+        }
         return [
             'codigo' => self::WORKFLOW,
 
@@ -437,7 +531,7 @@ final class RgpdWorkflowEstadoService
                     )->count(),
 
                 'conferencia_final_pendente' =>
-                    true,
+                    !$concluidas['conferencia_rgpd'],
             ],
         ];
     }

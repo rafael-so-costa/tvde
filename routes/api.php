@@ -1334,3 +1334,4 @@ require __DIR__.'/rgpd.php';
 require __DIR__.'/rgpd_titular.php';
 require __DIR__.'/rgpd_comprovativos.php';
 require __DIR__.'/rgpd_workflow.php';
+require __DIR__.'/rgpd_workflow_evidencias.php';
