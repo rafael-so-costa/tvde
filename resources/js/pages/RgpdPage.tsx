@@ -80,6 +80,33 @@ interface DetailResponse {
     };
 }
 
+interface RgpdWorkflowEtapa {
+    codigo: string;
+    ordem: number;
+    titulo: string;
+    tipo: string;
+    estado: "concluido" | "pendente";
+    evidencia: string;
+}
+
+interface RgpdWorkflowResponse {
+    data: {
+        codigo: string;
+        registo_id: string;
+        publicavel: boolean;
+        etapas: RgpdWorkflowEtapa[];
+        resumo: {
+            etapas_concluidas: number;
+            etapas_total: number;
+            snapshot_integro: boolean;
+            assinatura_integra: boolean;
+            comprovativo_pdf_integro: boolean;
+            revogacoes_registadas: number;
+            conferencia_final_pendente: boolean;
+        };
+    };
+}
+
 interface Pessoa {
     id: string;
     nome_completo?: string;
@@ -325,6 +352,36 @@ export default function RgpdPage() {
             );
 
             return response.data as DetailResponse;
+        },
+    });
+
+    /*
+     * FROTAPRO_4R103_REACT_WORKFLOW
+     * Estados exclusivamente de leitura.
+     */
+    const workflow = useQuery({
+        queryKey: [
+            "rgpd-workflow",
+            tenant?.id,
+            selectedId,
+        ],
+
+        enabled:
+            Boolean(
+                tenant?.id &&
+                selectedId &&
+                list.isSuccess
+            ) &&
+            canRead,
+
+        retry: false,
+
+        queryFn: async (): Promise<RgpdWorkflowResponse> => {
+            const response = await api.get(
+                `/api/rgpd/${selectedId}/workflow`
+            );
+
+            return response.data as RgpdWorkflowResponse;
         },
     });
 
@@ -1209,6 +1266,89 @@ export default function RgpdPage() {
                                             {selected.registo.documento_sha256}
                                         </p>
                                     </div>
+
+                                    <section className="space-y-3 border-t border-slate-100 pt-5">
+                                        <div className="flex items-center justify-between gap-3">
+                                            <h3 className="font-semibold text-slate-950">
+                                                Workflow RGPD
+                                            </h3>
+
+                                            {workflow.data && (
+                                                <span className="text-xs font-semibold text-slate-500">
+                                                    {workflow.data.data.resumo.etapas_concluidas}
+                                                    /
+                                                    {workflow.data.data.resumo.etapas_total}
+                                                    {" "}etapas
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        <p className="text-xs text-slate-500">
+                                            As etapas dependem de evidências reais.
+                                            Validação humana, disponibilização ao
+                                            titular e conferência final permanecem
+                                            pendentes até terem prova auditável.
+                                        </p>
+
+                                        {workflow.isLoading && (
+                                            <p className="text-sm text-slate-500">
+                                                A verificar as etapas RGPD...
+                                            </p>
+                                        )}
+
+                                        {workflow.isError && (
+                                            <p className="text-sm text-red-700">
+                                                Não foi possível consultar o workflow.
+                                            </p>
+                                        )}
+
+                                        {workflow.data && (
+                                            <div className="space-y-2">
+                                                {workflow.data.data.etapas.map(
+                                                    (etapa) => (
+                                                        <div
+                                                            key={etapa.codigo}
+                                                            className="rounded-xl border border-slate-200 p-3"
+                                                        >
+                                                            <div className="flex items-center justify-between gap-3">
+                                                                <p className="text-sm font-semibold text-slate-900">
+                                                                    {etapa.ordem}. {etapa.titulo}
+                                                                </p>
+
+                                                                <span
+                                                                    className={
+                                                                        "rounded-full px-2 py-1 text-xs font-semibold " +
+                                                                        (
+                                                                            etapa.estado === "concluido"
+                                                                                ? "bg-emerald-50 text-emerald-800"
+                                                                                : "bg-amber-50 text-amber-800"
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    {etapa.estado === "concluido"
+                                                                        ? "Concluído"
+                                                                        : "Pendente"}
+                                                                </span>
+                                                            </div>
+
+                                                            <p className="mt-2 text-xs text-slate-500">
+                                                                {etapa.evidencia}
+                                                            </p>
+                                                        </div>
+                                                    )
+                                                )}
+
+                                                <p className="text-xs text-slate-500">
+                                                    PDF original íntegro:{" "}
+                                                    {workflow.data.data.resumo.comprovativo_pdf_integro
+                                                        ? "Sim"
+                                                        : "Não"}
+                                                    {" · "}Revogações:{" "}
+                                                    {workflow.data.data.resumo.revogacoes_registadas}
+                                                </p>
+                                            </div>
+                                        )}
+                                    </section>
 
                                     <div className="space-y-3">
                                         <h3 className="font-semibold">
