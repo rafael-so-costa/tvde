@@ -38,7 +38,9 @@ import type {
 import type {
     Veiculo,
 } from "../../../types/veiculo";
-import ContractIdentificationStep from "./ContractIdentificationStep";
+import ContractIdentificationStep, {
+    requiresFirstPaymentDate,
+} from "./ContractIdentificationStep";
 import {validateBillingFields} from "./ContractBillingFields";
 import ContractReviewStep from "./ContractReviewStep";
 import ContractSignatureStep from "./ContractSignatureStep";
@@ -929,9 +931,8 @@ function validateIdentification(
 
         const value =
             topLevel[key] ??
-            form.campos_preenchidos[
-                field.campo
-            ];
+            form.campos_preenchidos[field.campo] ??
+            form.campos_preenchidos[key];
 
         if(
             type.cobranca_habilitada &&
@@ -946,6 +947,36 @@ function validateIdentification(
             String(value).trim() === ""
         ) {
             return `Preencha o campo ${field.campo}.`;
+        }
+    }
+
+    if (requiresFirstPaymentDate(type)) {
+        const value = String(
+            form.campos_preenchidos[
+                "DATA_PRIMEIRO_PAGAMENTO"
+            ] ?? "",
+        ).trim();
+
+        const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+
+        if (!match) {
+            return "Informe a data do primeiro pagamento.";
+        }
+
+        const year = Number(match[1]);
+        const month = Number(match[2]);
+        const day = Number(match[3]);
+
+        const date = new Date(
+            Date.UTC(year, month - 1, day),
+        );
+
+        if (
+            date.getUTCFullYear() !== year ||
+            date.getUTCMonth() !== month - 1 ||
+            date.getUTCDate() !== day
+        ) {
+            return "A data do primeiro pagamento é inválida.";
         }
     }
 

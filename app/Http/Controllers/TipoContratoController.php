@@ -54,6 +54,16 @@ class TipoContratoController extends Controller
 
             $tipo->setAttribute('cobranca_habilitada',$enabled);
 
+            // FROTAPRO_4Q4_PAYMENT_DATE_FLAG
+            // O template ja foi carregado: nenhuma consulta adicional.
+            $tipo->setAttribute(
+                'primeiro_pagamento_obrigatorio',
+                preg_match(
+                    '/\{\{\s*DATA_PRIMEIRO_PAGAMENTO\s*\}\}/iu',
+                    (string)($tipo->template?->conteudo_original ?? '')
+                )===1
+            );
+
             if($tipo->template){
                 $tipo->template->makeHidden(['conteudo_original']);
             }

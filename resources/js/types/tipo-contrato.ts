@@ -72,6 +72,7 @@ export interface TipoContrato {
     assinaturas_configuracao: TipoContratoAssinaturaConfiguracao[];
     configuracao: Record<string, unknown>;
     cobranca_habilitada?: boolean;
+    primeiro_pagamento_obrigatorio?: boolean;
 
     ativo: boolean;
     mostrar_menu: boolean;

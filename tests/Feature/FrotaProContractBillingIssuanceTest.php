@@ -1324,3 +1324,71 @@ test('4p19 rota pdf incorpora duas assinaturas sem guardar contrato',function(){
         Storage::disk('local')->allFiles('contract-pdfs')
     )->toBe([]);
 });
+
+/*
+ * FROTAPRO_4Q4_FIRST_PAYMENT_TEST
+ *
+ * Dois modelos, uma unica execucao Pest.
+ * Sem emissao documental nem reserva de numero.
+ */
+test('4q4 primeiro pagamento obrigatorio nos alugueres',function(){
+    foreach([
+        'singular'=>'aluguer_tvde_pessoa_singular',
+        'coletiva'=>'aluguer_tvde_pessoa_coletiva',
+    ] as $suffix=>$code){
+        [$tenant,$user,$template,$type]=b4n6Fixture(
+            '4q4-'.$suffix,
+            $code
+        );
+
+        $template->conteudo_original.=
+            "\nPrimeiro pagamento: {{DATA_PRIMEIRO_PAGAMENTO}}.";
+
+        $template->save();
+
+        $data=[
+            'tipo_contrato_id'=>$type->id,
+            'data_inicio'=>'2026-11-07',
+            'data_fim'=>'2027-11-07',
+            'campos_preenchidos'=>b4n6Fields(
+                'fixa','50','mensal'
+            ),
+        ];
+
+        $resolver=app(
+            \App\Services\ContratoTipoResolverService::class
+        );
+
+        $sequence=b4n6Sequence();
+        $contracts=Contrato::count();
+        $documents=Documento::count();
+
+        expect(fn()=>$resolver->resolve(
+            $data,$tenant->id
+        ))->toThrow(ValidationException::class);
+
+        $data['campos_preenchidos'][
+            'DATA_PRIMEIRO_PAGAMENTO'
+        ]='2026-02-30';
+
+        expect(fn()=>$resolver->resolve(
+            $data,$tenant->id
+        ))->toThrow(ValidationException::class);
+
+        $data['campos_preenchidos'][
+            'DATA_PRIMEIRO_PAGAMENTO'
+        ]='2026-12-01';
+
+        $preview=app(
+            \App\Services\ContratoPreviewService::class
+        )->preview($data,$tenant->id);
+
+        expect($preview['html'])
+            ->toContain('01/12/2026')
+            ->not->toContain('{{DATA_PRIMEIRO_PAGAMENTO}}');
+
+        expect(b4n6Sequence())->toBe($sequence);
+        expect(Contrato::count())->toBe($contracts);
+        expect(Documento::count())->toBe($documents);
+    }
+});

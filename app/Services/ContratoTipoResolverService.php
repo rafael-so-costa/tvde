@@ -105,6 +105,8 @@ class ContratoTipoResolverService
             $template
         );
 
+        $this->validateFirstPaymentDate($data,$template);
+
         $data['tipo_contrato_id']=$tipo->id;
         $data['tipo']=$tipo->codigo;
         $data['template_id']=$template?->id;
@@ -119,6 +121,65 @@ class ContratoTipoResolverService
                     (array)($tipo->assinaturas_configuracao??[])
                 ),
         ];
+    }
+
+    /*
+     * FROTAPRO_4Q4_FIRST_PAYMENT_BACKEND
+     *
+     * Exigencia definida pelo conteudo do modelo.
+     * Aplica-se a contratos novos, sem alterar
+     * documentos historicos ja emitidos.
+     */
+    private function validateFirstPaymentDate(
+        array $data,
+        ?TemplateContrato $template
+    ): void {
+        $content=(string)($template?->conteudo_original ?? '');
+
+        if(!preg_match(
+            '/\{\{\s*DATA_PRIMEIRO_PAGAMENTO\s*\}\}/iu',
+            $content
+        )){
+            return;
+        }
+
+        $fields=(array)($data['campos_preenchidos'] ?? []);
+        $value=null;
+
+        foreach($fields as $key=>$candidate){
+            if(
+                mb_strtoupper(trim((string)$key),'UTF-8')===
+                'DATA_PRIMEIRO_PAGAMENTO'
+            ){
+                $value=$candidate;
+                break;
+            }
+        }
+
+        $raw=is_string($value) ? trim($value) : '';
+
+        $date=$raw!==''
+            ? \DateTimeImmutable::createFromFormat('!Y-m-d',$raw)
+            : false;
+
+        $errors=\DateTimeImmutable::getLastErrors();
+
+        if(
+            $date===false ||
+            $date->format('Y-m-d')!==$raw ||
+            (
+                $errors!==false &&
+                (
+                    $errors['warning_count']>0 ||
+                    $errors['error_count']>0
+                )
+            )
+        ){
+            throw ValidationException::withMessages([
+                'campos_preenchidos.DATA_PRIMEIRO_PAGAMENTO'=>
+                    'Informe uma data válida para o primeiro pagamento.',
+            ]);
+        }
     }
 
     private function template(

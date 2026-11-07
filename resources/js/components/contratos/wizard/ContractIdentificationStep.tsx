@@ -81,6 +81,23 @@ function signatureRequires(
     );
 }
 
+/*
+ * FROTAPRO_4Q4_REQUIRED_FIRST_PAYMENT
+ *
+ * O campo e exigido pelo template ou pela
+ * configuracao explicita do tipo contratual.
+ */
+export function requiresFirstPaymentDate(
+    type: TipoContrato,
+): boolean {
+    return Boolean(type.primeiro_pagamento_obrigatorio) ||
+        type.campos_configuracao.some(
+            (field) =>
+                field.campo.trim().toUpperCase() ===
+                "DATA_PRIMEIRO_PAGAMENTO",
+        );
+}
+
 function manualFields(
     type: TipoContrato,
 ): TipoContratoCampoConfiguracao[] {
@@ -89,6 +106,11 @@ function manualFields(
             field.origem === "manual" &&
             !standardFields.has(
                 field.campo.trim().toUpperCase(),
+            ) &&
+            !(
+                requiresFirstPaymentDate(type) &&
+                field.campo.trim().toUpperCase() ===
+                    "DATA_PRIMEIRO_PAGAMENTO"
             ) &&
             !(
                 type.cobranca_habilitada &&
@@ -135,6 +157,35 @@ export default function ContractIdentificationStep({
     const fields =
         manualFields(type);
 
+    /*
+     * FROTAPRO_4Q1_REQUIRED_FIELDS
+     *
+     * As indicacoes visuais devem acompanhar
+     * as validacoes do wizard e a configuracao
+     * dos tipos de contrato.
+     */
+    const requiresDateRange = [
+        "contrato_de_prestacao_de_servicos",
+        "aluguer_tvde_pessoa_singular",
+        "aluguer_tvde_pessoa_coletiva",
+    ].includes(type.codigo);
+
+    const requiredManualFields = new Set(
+        type.campos_configuracao
+            .filter(
+                (field) =>
+                    field.origem === "manual" &&
+                    field.obrigatorio,
+            )
+            .map(
+                (field) =>
+                    field.campo.trim().toUpperCase(),
+            ),
+    );
+
+    const requiresField = (field: string): boolean =>
+        requiredManualFields.has(field);
+
     return (
         <div className="space-y-8">
             <section>
@@ -153,9 +204,13 @@ export default function ContractIdentificationStep({
                     {showEmpresa && (
                         <SelectField
                             label="Empresa"
-                            required={Boolean(
-                                type.entidades.empresa,
-                            )}
+                            required={
+                                Boolean(type.entidades.empresa) ||
+                                signatureRequires(
+                                    type,
+                                    "ASSINATURA_EMPRESA",
+                                )
+                            }
                             value={form.empresa_id}
                             onChange={(value) =>
                                 onField(
@@ -290,6 +345,7 @@ export default function ContractIdentificationStep({
                 <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     <InputField
                         label="Data de início"
+                        required={requiresDateRange || requiresField("DATA_INICIO")}
                         type="date"
                         value={form.data_inicio}
                         onChange={(value) =>
@@ -302,6 +358,7 @@ export default function ContractIdentificationStep({
 
                     <InputField
                         label="Data de fim"
+                        required={requiresDateRange || requiresField("DATA_FIM")}
                         type="date"
                         value={form.data_fim}
                         onChange={(value) =>
@@ -312,8 +369,28 @@ export default function ContractIdentificationStep({
                         }
                     />
 
+                    {requiresFirstPaymentDate(type) && (
+                        <InputField
+                            label="Data do primeiro pagamento"
+                            type="date"
+                            required
+                            value={String(
+                                form.campos_preenchidos[
+                                    "DATA_PRIMEIRO_PAGAMENTO"
+                                ] ?? "",
+                            )}
+                            onChange={(value) =>
+                                onCustomField(
+                                    "DATA_PRIMEIRO_PAGAMENTO",
+                                    value,
+                                )
+                            }
+                        />
+                    )}
+
                     <InputField
                         label="Valor diário"
+                        required={requiresField("VALOR_DIARIA")}
                         type="number"
                         value={form.valor_diaria}
                         onChange={(value) =>
@@ -326,6 +403,7 @@ export default function ContractIdentificationStep({
 
                     <InputField
                         label="Caução"
+                        required={requiresField("VALOR_CAUCAO")}
                         type="number"
                         value={form.valor_caucao}
                         onChange={(value) =>
@@ -338,6 +416,7 @@ export default function ContractIdentificationStep({
 
                     <InputField
                         label="Valor total"
+                        required={requiresField("VALOR_TOTAL")}
                         type="number"
                         value={form.valor_total}
                         onChange={(value) =>
@@ -515,6 +594,8 @@ function InputField({
             <input
                 type={type}
                 value={value}
+                required={required}
+                aria-required={required}
                 min={
                     type === "number"
                         ? "0"
@@ -556,6 +637,8 @@ function SelectField({
 
             <select
                 value={value}
+                required={required}
+                aria-required={required}
                 onChange={(event) =>
                     onChange(event.target.value)
                 }
