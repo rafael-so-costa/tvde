@@ -89,6 +89,14 @@ class ChecklistProcessPresetService
             );
         }
 
+        // FROTAPRO_4R6_DRAFT_WORKFLOW_GUARD
+        if(($preset['publicavel']??true)===false){
+            abort(
+                409,
+                'Este workflow global ainda está em preparação e não pode ser copiado para uma organização.'
+            );
+        }
+
         return DB::transaction(
             function () use (
                 $tenantId,

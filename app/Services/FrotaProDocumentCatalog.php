@@ -106,6 +106,20 @@ final class FrotaProDocumentCatalog
                 true,
                 '1.1'
             ),
+
+            $this->document(
+                'informacao_tratamento_dados_rgpd',
+                'Informação sobre o Tratamento de Dados Pessoais e Autorizações Específicas (RGPD)',
+                'informacao-tratamento-dados-rgpd',
+                'Proteção de Dados (RGPD)',
+                'declaracao',
+                'rgpd_informacao_autorizacoes',
+                'Informação RGPD, tomada de conhecimento e autorizações específicas para titulares associados à organização.',
+                90,
+                false,
+                '1.0',
+                false
+            ),
         ];
     }
 
@@ -211,7 +225,8 @@ final class FrotaProDocumentCatalog
         string $summary,
         int $order,
         bool $featured=false,
-        string $version='1.0'
+        string $version='1.0',
+        bool $publishable=true
     ): array {
         $workflowCodes=
             collect(
@@ -277,6 +292,7 @@ final class FrotaProDocumentCatalog
 
             'destaque'=>$featured,
             'ativo'=>true,
+            'publicavel'=>$publishable,
             'ordem'=>$order,
         ];
     }

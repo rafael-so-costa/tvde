@@ -1,0 +1,194 @@
+INFORMAÇÃO SOBRE O TRATAMENTO DE DADOS PESSOAIS E AUTORIZAÇÕES ESPECÍFICAS (RGPD)
+
+VERSÃO DE TRABALHO 1.0 — SUJEITA A REVISÃO JURÍDICA E CONFIGURAÇÃO DA EMPRESA
+
+1. IDENTIFICAÇÃO DO RESPONSÁVEL PELO TRATAMENTO
+
+Responsável: {{EMPRESA_NOME_EMPRESA}}
+NIF/NIPC: {{EMPRESA_NIF}}
+Morada: {{EMPRESA_ENDERECO_COMPLETO}}
+
+Contacto para questões de privacidade: [CONFIGURAR CONTACTO DE PRIVACIDADE DA EMPRESA]
+
+Encarregado da proteção de dados, quando aplicável: [CONFIGURAR OU INDICAR NÃO APLICÁVEL]
+
+2. IDENTIFICAÇÃO DO TITULAR DOS DADOS
+
+Nome completo: [IDENTIFICAR O TITULAR]
+Qualidade: [MOTORISTA / PROPRIETÁRIO / COLABORADOR / OUTRO]
+Número de identificação interna, se aplicável: [IDENTIFICADOR]
+Contacto: [CONTACTO DO TITULAR]
+
+A identificação deverá ser preenchida através do respetivo cadastro ou de um formulário seguro, consoante a qualidade do titular.
+
+3. FINALIDADES DO TRATAMENTO
+
+Os dados pessoais poderão ser tratados, quando necessário e justificado, para:
+
+a) Identificar o titular e gerir a relação contratual, profissional ou operacional com a empresa.
+
+b) Cumprir obrigações legais, fiscais, contabilísticas, laborais, regulatórias e de transporte aplicáveis.
+
+c) Gerir documentação, contratos, pagamentos, veículos, seguros, autorizações, inspeções e processos administrativos relacionados com a atividade TVDE.
+
+d) Controlar acessos aos sistemas, proteger equipamentos e informações, garantir a segurança operacional e prevenir utilizações não autorizadas.
+
+e) Gerir incidentes, reclamações, pedidos de informação e exercício de direitos.
+
+f) Desenvolver atividades adicionais apenas quando exista fundamento jurídico adequado e informação específica prestada ao titular.
+
+4. FUNDAMENTOS DE LICITUDE
+
+Consoante a finalidade, o tratamento poderá basear-se em:
+
+a) Execução de contrato ou diligências pré-contratuais, quando aplicável.
+
+b) Cumprimento de obrigação jurídica a que o responsável esteja sujeito.
+
+c) Interesses legítimos devidamente identificados e avaliados, quando aplicável e respeitados os direitos do titular.
+
+d) Consentimento livre, específico, informado e inequívoco, exclusivamente para finalidades em que essa seja a base jurídica adequada.
+
+A recolha de uma assinatura de tomada de conhecimento não equivale, por si só, ao consentimento para todas as finalidades.
+
+O consentimento não deverá ser utilizado para substituir fundamentos legais adequados ao tratamento necessário à relação laboral ou contratual.
+
+5. CATEGORIAS DE DADOS
+
+Poderão ser tratados, na medida do necessário:
+
+a) Dados de identificação e contacto.
+
+b) Dados de habilitação profissional, documentação e elegibilidade para a atividade.
+
+c) Dados contratuais, financeiros e de faturação.
+
+d) Dados de veículos e respetiva utilização profissional.
+
+e) Registos técnicos de acesso, segurança e operações.
+
+f) Outras categorias especificamente identificadas, com fundamento legal adequado.
+
+Dados de categorias especiais, designadamente dados de saúde, apenas poderão ser tratados quando exista fundamento jurídico válido e seja satisfeita uma condição aplicável do artigo 9.º do RGPD.
+
+6. DESTINATÁRIOS E SUBCONTRATANTES
+
+Os dados poderão ser comunicados, quando necessário e legalmente permitido, a autoridades públicas competentes, entidades reguladoras, prestadores de serviços de tecnologia, alojamento, contabilidade, seguros e outros destinatários legitimamente envolvidos na finalidade.
+
+A empresa deverá identificar as categorias efetivamente aplicáveis à sua operação e assegurar os contratos e garantias exigidos aos subcontratantes.
+
+7. PRAZOS DE CONSERVAÇÃO
+
+Os dados serão conservados durante os períodos necessários às finalidades declaradas e aos prazos legais aplicáveis.
+
+Tabela de conservação a configurar pela empresa:
+
+Identificação e cadastro: [DEFINIR PRAZO OU CRITÉRIO]
+Contratos e documentação: [DEFINIR PRAZO OU CRITÉRIO]
+Dados contabilísticos e fiscais: [DEFINIR PRAZO LEGAL APLICÁVEL]
+Registos operacionais: [DEFINIR PRAZO OU CRITÉRIO]
+Autorizações e consentimentos: [DEFINIR PRAZO OU CRITÉRIO]
+Dados de localização, quando tratados: [DEFINIR PRAZO OU CRITÉRIO]
+
+Quando aplicável, a conservação poderá prolongar-se pelo período estritamente necessário ao exercício ou defesa de direitos.
+
+8. DIREITOS DO TITULAR
+
+Nos termos legais aplicáveis, o titular pode exercer os direitos de informação, acesso, retificação, apagamento, limitação do tratamento, portabilidade, oposição e de não ficar sujeito a decisões exclusivamente automatizadas nas condições previstas no RGPD.
+
+Pode apresentar reclamação à Comissão Nacional de Proteção de Dados, sem prejuízo de outros meios de tutela.
+
+Os pedidos devem ser dirigidos ao contacto de privacidade indicado pela empresa.
+
+9. TRANSFERÊNCIAS INTERNACIONAIS E DECISÕES AUTOMATIZADAS
+
+Transferências para países terceiros, se existentes, devem ser identificadas, incluindo o fundamento e as garantias aplicáveis.
+
+Transferências internacionais: [DECLARAR SITUAÇÃO EFETIVA]
+
+Decisões exclusivamente automatizadas, incluindo definição de perfis, quando aplicável: [DECLARAR EXISTÊNCIA, LÓGICA E CONSEQUÊNCIAS]
+
+10. GEOLOCALIZAÇÃO E REGISTOS OPERACIONAIS
+
+O eventual tratamento de dados de localização de veículos, dispositivos ou operações deve obedecer a finalidade determinada, necessidade, proporcionalidade, transparência e fundamento jurídico adequado.
+
+A existência de uma autorização opcional neste documento não legitima, por si só, a monitorização contínua ou indiscriminada do trabalhador ou de terceiros.
+
+11. DECLARAÇÃO DE TOMADA DE CONHECIMENTO
+
+Declaro ter recebido ou tido acesso à informação sobre o tratamento dos meus dados pessoais, incluindo as finalidades, os fundamentos de licitude, os destinatários, os prazos de conservação ou critérios aplicáveis e os direitos que me assistem.
+
+Esta declaração comprova a disponibilização da informação, não constituindo consentimento genérico.
+
+Nome do titular: [PREENCHER OU AUTOPREENCHER]
+Data: [DATA DA DECLARAÇÃO]
+Assinatura do titular: [RECOLHER ATRAVÉS DO MÓDULO DE ASSINATURAS]
+
+12. AUTORIZAÇÕES ESPECÍFICAS E FACULTATIVAS
+
+Cada opção abaixo requer uma escolha autónoma e expressa. Nenhuma opção deverá estar previamente selecionada.
+
+12.1. UTILIZAÇÃO PROMOCIONAL DE IMAGEM
+
+Autorizo a utilização da minha imagem em fotografias ou vídeos para divulgação institucional ou promocional, nas condições específicas que me forem apresentadas.
+
+[ ] AUTORIZO
+[ ] NÃO AUTORIZO
+
+12.2. UTILIZAÇÃO PROMOCIONAL DE VOZ
+
+Autorizo a utilização da minha voz em gravações destinadas às finalidades promocionais específicas comunicadas.
+
+[ ] AUTORIZO
+[ ] NÃO AUTORIZO
+
+12.3. LOCALIZAÇÃO PARA FINALIDADE FACULTATIVA ESPECÍFICA
+
+Autorizo o tratamento de dados de localização exclusivamente para a seguinte finalidade facultativa, previamente descrita:
+
+[DESCREVER FINALIDADE FACULTATIVA, OU INDICAR NÃO APLICÁVEL]
+
+[ ] AUTORIZO
+[ ] NÃO AUTORIZO
+[ ] NÃO APLICÁVEL
+
+A autorização não substitui a análise do fundamento jurídico dos tratamentos de localização necessários à operação.
+
+12.4. DADOS DE CATEGORIAS ESPECIAIS
+
+Finalidade específica: [DESCREVER OU INDICAR NÃO APLICÁVEL]
+
+Categorias de dados: [IDENTIFICAR]
+
+Condição do artigo 9.º do RGPD: [IDENTIFICAR]
+
+Apenas quando o consentimento explícito seja uma condição de licitude apropriada e suficiente em conjunto com os demais requisitos legais:
+
+[ ] PRESTO CONSENTIMENTO EXPLÍCITO
+[ ] NÃO PRESTO CONSENTIMENTO
+[ ] NÃO APLICÁVEL
+
+Nenhuma recolha de dados sensíveis é autorizada apenas pela existência desta secção.
+
+13. REVOGAÇÃO DAS AUTORIZAÇÕES
+
+Quando o tratamento se baseie no consentimento, este poderá ser retirado a qualquer momento através do contacto de privacidade da empresa.
+
+A retirada não compromete a licitude do tratamento efetuado anteriormente, nem afeta operações que disponham de outro fundamento jurídico válido.
+
+A recusa de autorizações facultativas não deverá impedir a relação principal quando o tratamento não seja necessário à sua execução.
+
+14. REGISTO DAS ESCOLHAS E DA ASSINATURA
+
+Cada escolha deverá ficar associada à versão deste documento, à finalidade específica, à identidade do titular, à data, ao método de recolha e ao registo de auditoria.
+
+Nome do titular: [PREENCHER OU AUTOPREENCHER]
+Data das escolhas: [DATA]
+Assinatura de confirmação das escolhas: [RECOLHER ATRAVÉS DO MÓDULO DE ASSINATURAS]
+
+15. REVISÃO E VIGÊNCIA
+
+A empresa deverá rever este documento antes da sua utilização, adaptando-o às finalidades efetivas de tratamento, bases legais, destinatários, prazos de conservação, contactos e mecanismos de exercício de direitos.
+
+Versão: 1.0 — Rascunho técnico
+Estado: Pendente de configuração, integração de assinaturas e revisão jurídica.

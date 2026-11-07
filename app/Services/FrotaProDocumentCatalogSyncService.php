@@ -28,6 +28,11 @@ final class FrotaProDocumentCatalogSyncService
             $this->catalog->all()
             as $document
         ){
+            // FROTAPRO_4R6_SKIP_DRAFT_IN_PLAN
+            if(($document['publicavel']??true)===false){
+                continue;
+            }
+
             $content=
                 $this->catalog->content(
                     $document
@@ -297,6 +302,11 @@ final class FrotaProDocumentCatalogSyncService
                     $this->catalog->all()
                     as $document
                 ){
+                    // FROTAPRO_4R6_SKIP_DRAFT_IN_APPLY
+                    if(($document['publicavel']??true)===false){
+                        continue;
+                    }
+
                     $analysis=
                         $this->modelService
                             ->analyzeContent(

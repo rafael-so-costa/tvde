@@ -5,7 +5,7 @@ use App\Services\FrotaProWorkflowCatalog;
 use App\Services\TemplateTextAnalyzerService;
 
 test(
-    'catalogo documental FrotaPRO possui oito modelos recomendados',
+    'catalogo documental FrotaPRO possui nove modelos recomendados',
     function(){
         $catalog=
             app(
@@ -16,19 +16,19 @@ test(
             $catalog->all();
 
         expect($documents)
-            ->toHaveCount(8);
+            ->toHaveCount(9);
 
         expect(
             collect($documents)
                 ->pluck('codigo')
                 ->unique()
-        )->toHaveCount(8);
+        )->toHaveCount(9);
 
         expect(
             collect($documents)
                 ->pluck('slug')
                 ->unique()
-        )->toHaveCount(8);
+        )->toHaveCount(9);
     }
 );
 
@@ -258,6 +258,9 @@ test(
                 'ASSINATURA_PROPRIETARIO',
                 'ASSINATURA_MOTORISTA',
             ],
+
+            // Assinatura generica ainda nao implementada.
+            'informacao_tratamento_dados_rgpd'=>[],
         ];
 
         foreach(

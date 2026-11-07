@@ -19,7 +19,7 @@ test(
             $catalog->all();
 
         expect($workflows)
-            ->toHaveCount(12);
+            ->toHaveCount(13);
 
         $codes=
             collect($workflows)
@@ -28,7 +28,7 @@ test(
         expect(
             $codes->unique()
         )->toHaveCount(
-            12
+            13
         );
 
         foreach([
@@ -45,6 +45,7 @@ test(
             'autorizacao_tvde_proprietario_terceiro',
             'aluguer_tvde_pessoa_singular',
             'aluguer_tvde_pessoa_coletiva',
+            'rgpd_informacao_autorizacoes',
         ] as $code){
             expect(
                 $codes->contains(
@@ -56,7 +57,7 @@ test(
 );
 
 test(
-    'oito modelos documentais possuem workflow recomendado',
+    'nove modelos documentais possuem workflow recomendado',
     function(){
         $map=
             app(
@@ -64,7 +65,7 @@ test(
             )->documentWorkflowMap();
 
         expect($map)
-            ->toHaveCount(8);
+            ->toHaveCount(9);
 
         expect(
             array_keys($map)
@@ -77,6 +78,7 @@ test(
             'autorizacao_tvde_proprietario_terceiro',
             'aluguer_veiculo_pessoa_singular',
             'aluguer_veiculo_pessoa_coletiva',
+            'informacao_tratamento_dados_rgpd',
         ]);
 
         $workflowCodes=
@@ -273,7 +275,7 @@ test(
             );
 
         expect($result)
-            ->toHaveCount(12);
+            ->toHaveCount(13);
 
         expect(
             collect($result)
@@ -337,3 +339,62 @@ test(
         )->toBeFalse();
     }
 );
+
+/*
+ * FROTAPRO_4R6_RGPD_GLOBAL_TESTS
+ *
+ * Modelo e workflow globais em rascunho.
+ * Validacao de associacao e bloqueio de copia.
+ */
+test('rgpd global possui modelo e workflow vinculados em rascunho',function(){
+    $document=app(
+        \App\Services\FrotaProDocumentCatalog::class
+    )->find('informacao_tratamento_dados_rgpd');
+
+    $workflow=collect(
+        app(
+            \App\Services\FrotaProWorkflowCatalog::class
+        )->all()
+    )->firstWhere(
+        'codigo',
+        'rgpd_informacao_autorizacoes'
+    );
+
+    expect($document)->not->toBeNull();
+    expect($workflow)->not->toBeNull();
+
+    expect($document['publicavel'])->toBeFalse();
+    expect($workflow['publicavel'])->toBeFalse();
+
+    expect($document['workflow_codigo'])
+        ->toBe($workflow['codigo']);
+
+    $content=app(
+        \App\Services\FrotaProDocumentCatalog::class
+    )->content($document);
+
+    expect($content)
+        ->toContain('TRATAMENTO DE DADOS PESSOAIS')
+        ->toContain('AUTORIZO')
+        ->toContain('NÃO AUTORIZO');
+
+    $types=collect($workflow['items'])
+        ->pluck('tipo')
+        ->all();
+
+    expect($types)->toContain('preenchimento');
+    expect($types)->toContain('upload');
+
+    expect($workflow['items'])->toHaveCount(7);
+});
+
+test('workflow rgpd em rascunho nao pode ser copiado',function(){
+    expect(fn()=>app(
+        \App\Services\ChecklistProcessPresetService::class
+    )->copyToTenant(
+        (string)\Illuminate\Support\Str::uuid(),
+        'rgpd_informacao_autorizacoes'
+    ))->toThrow(
+        \Symfony\Component\HttpKernel\Exception\HttpException::class
+    );
+});
