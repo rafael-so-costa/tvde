@@ -833,6 +833,35 @@ class ModeloDocumentoSaasService
                     ->lockForUpdate()
                     ->findOrFail($id);
 
+                /*
+                 * FROTAPRO_4R62_RGPD_PUBLICATION_GUARD
+                 *
+                 * Visivel no backoffice como rascunho.
+                 * Nao permite publicacao antecipada.
+                 */
+                $rgpdDocument=app(
+                    FrotaProDocumentCatalog::class
+                )->find(
+                    'informacao_tratamento_dados_rgpd'
+                );
+
+                if(
+                    $rgpdDocument &&
+                    ($rgpdDocument['publicavel']??true)===false &&
+                    (
+                        Str::slug((string)$model->slug)===
+                            Str::slug((string)$rgpdDocument['slug']) ||
+                        Str::slug((string)$model->nome)===
+                            Str::slug((string)$rgpdDocument['nome'])
+                    )
+                ){
+                    throw ValidationException::withMessages([
+                        'modelo'=>
+                            'O RGPD está disponível como rascunho. '.
+                            'A publicação está bloqueada até concluir '.
+                            'as assinaturas, os consentimentos e a revisão jurídica.',
+                    ]);
+                }
                 if (
                     !$model->ativo
                 ) {
