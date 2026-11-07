@@ -34,6 +34,54 @@ final class RgpdRegisto extends Model
 
     protected static function booted(): void
     {
+        /*
+         * FROTAPRO_4R102_TEXT_SNAPSHOT
+         *
+         * Guarda o texto exato no registo.
+         * Nao depende de futuras alteracoes
+         * ao modelo documental global.
+         */
+        static::creating(
+            static function (self $registo): void {
+                $catalogo = app(
+                    \App\Services\FrotaProDocumentCatalog::class
+                );
+
+                $documento = $catalogo->find(
+                    (string)$registo->modelo_codigo
+                );
+
+                if (
+                    !$documento ||
+                    ($documento['publicavel'] ?? true) !== false
+                ) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'modelo' =>
+                            'Modelo RGPD em rascunho não encontrado.',
+                    ]);
+                }
+
+                $texto = $catalogo->content(
+                    $documento
+                );
+
+                if (
+                    !hash_equals(
+                        (string)$registo->documento_sha256,
+                        hash('sha256', $texto)
+                    )
+                ) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'documento' =>
+                            'O hash RGPD não corresponde ao modelo.',
+                    ]);
+                }
+
+                $registo->documento_texto_snapshot =
+                    $texto;
+            }
+        );
+
         static::updating(
             static function (self $registo): void {
                 if (
