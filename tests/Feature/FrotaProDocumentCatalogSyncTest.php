@@ -9,7 +9,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 uses(RefreshDatabase::class);
 
 test(
-    'dry run identifica oito modelos novos sem alterar banco',
+    'dry run identifica nove modelos novos sem alterar banco',
     function(){
         $plan=
             app(
@@ -18,11 +18,11 @@ test(
 
         expect(
             $plan['summary']['models']
-        )->toBe(8);
+        )->toBe(9);
 
         expect(
             $plan['summary']['create']
-        )->toBe(8);
+        )->toBe(9);
 
         expect(
             $plan['summary']['blocked']
@@ -41,7 +41,7 @@ test(
 );
 
 test(
-    'sincronizacao cria oito modelos publicados de forma idempotente',
+    'sincronizacao cria nove modelos publicados de forma idempotente',
     function(){
         $service=
             app(
@@ -53,21 +53,21 @@ test(
 
         expect(
             $first['summary']['models']
-        )->toBe(8);
+        )->toBe(9);
 
         expect(
             $first['summary']['created']
-        )->toBe(8);
+        )->toBe(9);
 
         expect(
             ModeloDocumentoSaas::query()
                 ->count()
-        )->toBe(8);
+        )->toBe(9);
 
         expect(
             ModeloDocumentoSaasVersao::query()
                 ->count()
-        )->toBe(8);
+        )->toBe(9);
 
         expect(
             ModeloDocumentoSaas::query()
@@ -76,7 +76,7 @@ test(
                     'publicado'
                 )
                 ->count()
-        )->toBe(8);
+        )->toBe(9);
 
         $second=
             $service->apply();
@@ -91,17 +91,17 @@ test(
 
         expect(
             $second['summary']['unchanged']
-        )->toBe(8);
+        )->toBe(9);
 
         expect(
             ModeloDocumentoSaas::query()
                 ->count()
-        )->toBe(8);
+        )->toBe(9);
 
         expect(
             ModeloDocumentoSaasVersao::query()
                 ->count()
-        )->toBe(8);
+        )->toBe(9);
     }
 );
 
@@ -241,7 +241,7 @@ test(
         expect(
             ModeloDocumentoSaas::query()
                 ->count()
-        )->toBe(8);
+        )->toBe(9);
 
         $updated=
             ModeloDocumentoSaas::query()

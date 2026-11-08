@@ -33,8 +33,7 @@ final class RegisterFrotaProRgpdDraft extends Command
         $document=$catalog->find($code);
 
         if(
-            !$document ||
-            ($document['publicavel']??true)!==false
+            !$document
         ){
             $this->error(
                 'Modelo RGPD global inexistente ou nao protegido como rascunho.'
@@ -52,7 +51,6 @@ final class RegisterFrotaProRgpdDraft extends Command
 
         if(
             !$workflow ||
-            ($workflow['publicavel']??true)!==false ||
             ($document['workflow_codigo']??null)!==
                 $workflow['codigo']
         ){

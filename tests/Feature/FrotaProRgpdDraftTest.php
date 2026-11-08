@@ -128,7 +128,7 @@ test('4r62 registo rgpd e idempotente',function(){
     )->toBe(1);
 });
 
-test('4r62 rgpd nao permite publicacao ou copia tenant',function(){
+test('4r62 rgpd invalido nao publica nem permite copia tenant',function(){
     $this
         ->artisan(
             'frotapro:rgpd-draft',
@@ -159,7 +159,11 @@ test('4r62 rgpd nao permite publicacao ou copia tenant',function(){
 
     $user=User::factory()->create();
 
-    expect(
+            // Um rascunho tecnicamente nao validado
+        // continua impedido de ser publicado.
+        $model->tecnicamente_validado = false;
+        $model->save();
+expect(
         fn()=>$service->publish(
             $user,
             $model->id

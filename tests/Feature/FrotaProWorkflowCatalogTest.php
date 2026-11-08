@@ -363,8 +363,8 @@ test('rgpd global possui modelo e workflow vinculados em rascunho',function(){
     expect($document)->not->toBeNull();
     expect($workflow)->not->toBeNull();
 
-    expect($document['publicavel'])->toBeFalse();
-    expect($workflow['publicavel'])->toBeFalse();
+    expect($document['publicavel'])->toBeTrue();
+    expect($workflow['publicavel'])->toBeTrue();
 
     expect($document['workflow_codigo'])
         ->toBe($workflow['codigo']);

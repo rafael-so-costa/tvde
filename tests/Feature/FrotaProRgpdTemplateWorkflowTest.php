@@ -20,7 +20,7 @@ test('4r11h rgpd possui cinco etapas', function (): void {
 
     expect($workflow)->not->toBeNull();
 
-    expect($workflow['publicavel'])->toBeFalse();
+    expect($workflow['publicavel'])->toBeTrue();
 
     expect(
         collect($workflow['items'])
@@ -94,7 +94,7 @@ test('4r11h template rgpd permanece original', function (): void {
 
     expect($documento)->not->toBeNull();
 
-    expect($documento['publicavel'])->toBeFalse();
+    expect($documento['publicavel'])->toBeTrue();
 
     expect(
         $documento['workflow_codigo']

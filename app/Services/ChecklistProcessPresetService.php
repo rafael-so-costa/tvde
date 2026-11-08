@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\ChecklistProcessTemplate;
 use App\Models\ChecklistProcessTemplateItem;
+use App\Models\ModeloDocumentoSaas;
 use App\Models\TipoContrato;
 use Illuminate\Support\Facades\DB;
 
@@ -40,7 +41,11 @@ class ChecklistProcessPresetService
         )
             ->filter(
                 fn(array $preset): bool =>
-                    ($preset['publicavel'] ?? true) !== false
+                    ($preset['publicavel'] ?? true) !== false &&
+                    (
+                        $preset['codigo'] !== 'rgpd_informacao_autorizacoes' ||
+                        $this->rgpdReleased()
+                    )
             )
             ->map(
                 function (
@@ -101,6 +106,16 @@ class ChecklistProcessPresetService
             );
         }
 
+        // FROTAPRO_4R12C1_RGPD_RELEASE_GUARD
+        if (
+            $code === 'rgpd_informacao_autorizacoes' &&
+            !$this->rgpdReleased()
+        ) {
+            abort(
+                409,
+                'O RGPD ainda nao possui uma versao publicada.'
+            );
+        }
         return DB::transaction(
             function () use (
                 $tenantId,
@@ -299,6 +314,23 @@ class ChecklistProcessPresetService
         return $candidate;
     }
 
+    private function rgpdReleased(): bool
+    {
+        return ModeloDocumentoSaas::query()
+            ->where(
+                'slug',
+                'informacao-tratamento-dados-rgpd'
+            )
+            ->where('status', 'publicado')
+            ->where('ativo', true)
+            ->where('tecnicamente_validado', true)
+            ->whereNotNull('versao_publicada')
+            ->whereHas(
+                'categoria',
+                fn($query) => $query->where('ativo', true)
+            )
+            ->exists();
+    }
     private function presets(): array
     {
         return app(

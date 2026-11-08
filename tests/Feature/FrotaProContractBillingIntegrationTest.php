@@ -170,7 +170,7 @@ test('4n34 modelos do catalogo possuem marcadores',function(){
 test('4n34 dry run do catalogo sem bloqueios',function(){
     $plan=app(FrotaProDocumentCatalogSyncService::class)->plan();
 
-    expect($plan['summary']['create'])->toBe(8);
+    expect($plan['summary']['create'])->toBe(9);
     expect($plan['summary']['blocked'])->toBe(0);
     expect($plan['blockers'])->toBe([]);
 });

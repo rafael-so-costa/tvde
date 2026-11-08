@@ -118,7 +118,7 @@ final class FrotaProDocumentCatalog
                 90,
                 false,
                 '1.0',
-                false
+                true
             ),
         ];
     }

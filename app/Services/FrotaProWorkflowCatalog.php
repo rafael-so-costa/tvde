@@ -911,7 +911,7 @@ final class FrotaProWorkflowCatalog
             ],
             false,
             1,
-            false
+            true
         );
     }
     private function workflow(
