@@ -275,7 +275,7 @@ test(
             );
 
         expect($result)
-            ->toHaveCount(13);
+            ->toHaveCount(12);
 
         expect(
             collect($result)
@@ -385,7 +385,19 @@ test('rgpd global possui modelo e workflow vinculados em rascunho',function(){
     expect($types)->toContain('preenchimento');
     expect($types)->toContain('upload');
 
-    expect($workflow['items'])->toHaveCount(7);
+    expect($workflow['items'])->toHaveCount(5);
+
+    expect(
+        collect($workflow['items'])
+            ->pluck('codigo')
+            ->all()
+    )->toBe([
+        'preencher_rgpd',
+        'validar_itens_rgpd',
+        'previsualizar_rgpd',
+        'conferir_assinatura_rgpd',
+        'emitir_pdf_rgpd',
+    ]);
 });
 
 test('workflow rgpd em rascunho nao pode ser copiado',function(){

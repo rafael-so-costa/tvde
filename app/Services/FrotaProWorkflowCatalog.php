@@ -808,18 +808,27 @@ final class FrotaProWorkflowCatalog
      * e a assinatura generica do titular
      * serao implementadas antes da ativacao.
      */
+    /*
+     * FROTAPRO_4R11F_RGPD_SIMPLE
+     *
+     * Workflow documental de cinco etapas.
+     * Template e workflow em rascunho.
+     *
+     * As etapas nao executam assinaturas
+     * ou PDFs por si proprias.
+     */
     private function rgpdInformacaoAutorizacoes(): array
     {
         return $this->workflow(
             'rgpd_informacao_autorizacoes',
-            'RGPD — informação e autorizações específicas',
+            'Informação e autorizações RGPD',
             'Proteção de Dados (RGPD)',
-            'Fluxo de identificação do titular, informação, escolhas independentes e comprovativos.',
+            'Preenchimento, validação, pré-visualização, assinatura e PDF.',
             [
                 $this->item(
-                    'identificar_titular',
+                    'preencher_rgpd',
                     1,
-                    'Identificar o titular dos dados',
+                    'Preencher identificação e autorizações',
                     'preenchimento',
                     [
                         'perfis'=>[
@@ -831,54 +840,6 @@ final class FrotaProWorkflowCatalog
                         'campos'=>[
                             'qualidade_titular',
                             'identificador_titular',
-                        ],
-                    ]
-                ),
-
-                $this->item(
-                    'validar_informacao',
-                    2,
-                    'Conferir informação RGPD da empresa',
-                    'tarefa',
-                    [
-                        'itens'=>[
-                            'responsavel',
-                            'finalidades',
-                            'bases_legais',
-                            'destinatarios',
-                            'conservacao',
-                            'direitos',
-                            'contactos',
-                        ],
-                    ]
-                ),
-
-                $this->item(
-                    'gerar_documento_rgpd',
-                    3,
-                    'Gerar documento de informação RGPD',
-                    'gerar_documento'
-                ),
-
-                $this->item(
-                    'comprovar_disponibilizacao',
-                    4,
-                    'Comprovar entrega da informação',
-                    'upload',
-                    [
-                        'tipo_comprovativo'=>
-                            'entrega_informacao',
-                        'associar_versao'=>true,
-                    ]
-                ),
-
-                $this->item(
-                    'registar_autorizacoes',
-                    5,
-                    'Registar autorizações específicas',
-                    'preenchimento',
-                    [
-                        'campos'=>[
                             'autorizacao_imagem',
                             'autorizacao_voz',
                             'autorizacao_localizacao',
@@ -891,32 +852,60 @@ final class FrotaProWorkflowCatalog
                         ],
                         'pre_selecionadas'=>false,
                         'escolhas_independentes'=>true,
-                        'revogaveis'=>true,
                     ]
                 ),
 
                 $this->item(
-                    'comprovar_assinatura_titular',
-                    6,
-                    'Anexar comprovativo assinado',
+                    'validar_itens_rgpd',
+                    2,
+                    'Validar dados e escolhas',
+                    'tarefa',
+                    [
+                        'itens'=>[
+                            'empresa',
+                            'titular',
+                            'finalidades',
+                            'bases_legais',
+                            'destinatarios',
+                            'conservacao',
+                            'direitos',
+                            'contactos',
+                            'autorizacoes',
+                        ],
+                    ]
+                ),
+
+                $this->item(
+                    'previsualizar_rgpd',
+                    3,
+                    'Conferir pré-visualização',
+                    'tarefa',
+                    [
+                        'conferir_versao'=>true,
+                        'conferir_conteudo'=>true,
+                        'conferir_autorizacoes'=>true,
+                    ]
+                ),
+
+                $this->item(
+                    'conferir_assinatura_rgpd',
+                    4,
+                    'Conferir assinatura do titular',
                     'upload',
                     [
-                        'tipo_comprovativo'=>
-                            'assinatura_titular',
+                        'tipo_comprovativo'=>'assinatura_titular',
                         'associar_versao'=>true,
                     ]
                 ),
 
                 $this->item(
-                    'conferencia_rgpd',
-                    7,
-                    'Conferir escolhas e comprovativos',
-                    'tarefa',
+                    'emitir_pdf_rgpd',
+                    5,
+                    'Emitir PDF e arquivar',
+                    'gerar_documento',
                     [
-                        'conferir_identidade'=>true,
-                        'conferir_versao'=>true,
-                        'conferir_autorizacoes'=>true,
-                        'conferir_comprovativos'=>true,
+                        'numeracao'=>'global',
+                        'arquivo'=>'documentos',
                     ]
                 ),
             ],

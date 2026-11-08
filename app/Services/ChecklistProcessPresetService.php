@@ -38,6 +38,10 @@ class ChecklistProcessPresetService
         return collect(
             $this->presets()
         )
+            ->filter(
+                fn(array $preset): bool =>
+                    ($preset['publicavel'] ?? true) !== false
+            )
             ->map(
                 function (
                     array $preset

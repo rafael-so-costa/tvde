@@ -47,7 +47,7 @@ export default function ContratosSubnav(){
     return (
         <nav className="mb-6 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
             <div className="flex min-w-max gap-1">
-                {items.map(
+                {items.filter((item) => item.to !== "/contratos/rgpd").map(
                     ({
                         to,
                         label,
