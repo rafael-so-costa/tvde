@@ -3241,3 +3241,82 @@ test(
         ])->toBe($before);
     }
 );
+
+
+test(
+    '4r14b5j endpoint preview-pdf RGPD 1.2 devolve PDF antes da assinatura sem registos',
+    function (): void {
+        \Illuminate\Support\Facades\Storage::fake('local');
+        $f = rgpdV11IntegrationFixture(true);
+        $tenant = $f['tenant'];
+        $model = $f['template']->modeloDocumentoSaas;
+        $version = $f['template']->modeloDocumentoSaasVersaoOrigem;
+        $template = $f['template'];
+
+        $body = implode("\n", [
+            '1. RESPONSÁVEL PELO TRATAMENTO DE DADOS',
+            'Titular: {{RGPD_TITULAR_NOME}}',
+            'Contacto: {{RGPD_CONTACTO_PRIVACIDADE}}',
+            '2. Dados Pessoais Recolhidos',
+            '7. Autorizações Facultativas',
+            '7.1 — Utilização de Imagem',
+            'Decisão: {{RGPD_DECISAO_IMAGEM}}',
+            '7.2 — Utilização de Voz',
+            'Decisão: {{RGPD_DECISAO_VOZ}}',
+            '7.3 — Geolocalização Facultativa',
+            'Finalidade: {{RGPD_GEO_FINALIDADE}}',
+            'Decisão: {{RGPD_DECISAO_GEO}}',
+            'Assinatura: {{ASSINATURA_TITULAR}}',
+        ]);
+
+        $model->slug = 'informacao-tratamento-dados-rgpd';
+        $model->versao = '1.2';
+        $model->versao_publicada = '1.2';
+        $model->conteudo = $body;
+        $model->conteudo_parametrizado = $body;
+        $model->save();
+
+        $version->versao = '1.2';
+        $version->conteudo_original = $body;
+        $version->conteudo_parametrizado = $body;
+        $version->checksum = hash('sha256', $body);
+        $version->save();
+
+        $template->modelo_documento_saas_versao = '1.2';
+        $template->conteudo_original = $body;
+        $template->save();
+
+        $tenant->settings = ['fleet' => ['rgpd' => []]];
+        $tenant->save();
+
+        $empresa = $f['empresa'];
+        $empresa->privacidade_contacto_email = 'rgpd@example.test';
+        $empresa->save();
+
+        $payload = rgpdV11HttpPayload($f);
+        unset($payload['campos_preenchidos']['RGPD_DECISAO_SENSIVEIS']);
+        $payload['campos_preenchidos']['RGPD_DECISAO_GEO'] = 'nao_aplicavel';
+
+        rgpdV11HttpLogin($this, $tenant);
+
+        $before = [
+            \App\Models\Contrato::count(),
+            \App\Models\Documento::count(),
+            \App\Models\AssinaturaDigital::count(),
+        ];
+
+        $pdf = $this->withHeaders(rgpdV11HttpHeaders())
+            ->postJson('/api/contratos/preview-pdf', $payload)
+            ->assertOk();
+
+        expect($pdf->headers->get('Content-Type'))
+            ->toContain('application/pdf');
+        expect($pdf->getContent())->toStartWith('%PDF-');
+
+        expect([
+            \App\Models\Contrato::count(),
+            \App\Models\Documento::count(),
+            \App\Models\AssinaturaDigital::count(),
+        ])->toBe($before);
+    }
+);
