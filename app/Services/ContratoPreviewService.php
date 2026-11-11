@@ -116,7 +116,11 @@ class ContratoPreviewService
                 $rawRgpdFields,
                 $motorista,
                 $proprietario,
-                $empresa
+                $empresa,
+                (string) (
+                    $template->modelo_documento_saas_versao
+                    ?: '1.1'
+                )
             );
 
             $kind = (string) (

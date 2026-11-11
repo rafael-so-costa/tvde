@@ -3129,3 +3129,115 @@ test(
         )->toThrow(ValidationException::class);
     }
 );
+
+
+/*
+ * FROTAPRO_4R14B5J_RGPD12_PREVIEW_REGRESSION
+ *
+ * O preview deve passar a versao do template para o snapshot.
+ * O PDF e temporario: nao gera numero, contrato ou assinatura.
+ */
+test(
+    '4r14b5j preview pdf RGPD 1.2 aceita politica simplificada sem gravar dados',
+    function (): void {
+        \Illuminate\Support\Facades\Storage::fake('local');
+
+        $fixture = rgpdV11IntegrationFixture(true);
+        $tenant = $fixture['tenant'];
+        $model = $fixture['template']->modeloDocumentoSaas;
+        $version = $fixture['template']->modeloDocumentoSaasVersaoOrigem;
+        $template = $fixture['template'];
+
+        $body = implode("\n", [
+            '1. RESPONSÁVEL PELO TRATAMENTO DE DADOS',
+            'A {{EMPRESA_NOME_EMPRESA}} disponibiliza o contacto {{RGPD_CONTACTO_PRIVACIDADE}}.',
+            '2. Dados Pessoais Recolhidos',
+            'Titular: {{RGPD_TITULAR_NOME}}',
+            '7. Autorizações Facultativas',
+            '7.1 — Utilização de Imagem',
+            'Decisão: {{RGPD_DECISAO_IMAGEM}}',
+            '7.2 — Utilização de Voz',
+            'Decisão: {{RGPD_DECISAO_VOZ}}',
+            '7.3 — Geolocalização Facultativa',
+            'Finalidade: {{RGPD_GEO_FINALIDADE}}',
+            'Decisão: {{RGPD_DECISAO_GEO}}',
+            'Assinatura: {{ASSINATURA_TITULAR}}',
+        ]);
+
+        $model->slug = 'informacao-tratamento-dados-rgpd';
+        $model->versao = '1.2';
+        $model->versao_publicada = '1.2';
+        $model->conteudo = $body;
+        $model->conteudo_parametrizado = $body;
+        $model->save();
+
+        $version->versao = '1.2';
+        $version->conteudo_original = $body;
+        $version->conteudo_parametrizado = $body;
+        $version->checksum = hash('sha256', $body);
+        $version->save();
+
+        $template->modelo_documento_saas_versao = '1.2';
+        $template->conteudo_original = $body;
+        $template->save();
+
+        // Sem politica RGPD 1.1 preenchida: reproduz a empresa real.
+        $tenant->settings = ['fleet' => ['rgpd' => []]];
+        $tenant->save();
+
+        $empresa = $fixture['empresa'];
+        $empresa->privacidade_contacto_email = 'rgpd@example.test';
+        $empresa->save();
+
+        $fields = rgpdV11Input();
+        unset($fields['RGPD_DECISAO_SENSIVEIS']);
+        $fields['RGPD_DECISAO_GEO'] = 'nao_aplicavel';
+
+        $payload = [
+            'tipo' => 'rgpd_informacao_autorizacoes',
+            'template_id' => $template->id,
+            'empresa_id' => $empresa->id,
+            'motorista_id' => $fixture['motorista']->id,
+            'campos_preenchidos' => $fields,
+            'assinaturas' => [],
+        ];
+
+        $before = [
+            \App\Models\Contrato::count(),
+            \App\Models\Documento::count(),
+            \App\Models\AssinaturaDigital::count(),
+        ];
+
+        $result = app(\App\Services\ContratoPreviewService::class)
+            ->preview($payload, (string) $tenant->id);
+
+        $html = (string) $result['html'];
+
+        expect($html)
+            ->toContain('DECLARAÇÃO DE PROTEÇÃO DE DADOS E PRIVACIDADE')
+            ->toContain('rgpd-v12-title')
+            ->toContain('NÃO AUTORIZO')
+            ->toContain('NÃO APLICÁVEL')
+            ->toContain('Assinatura a recolher')
+            ->not->toContain('{{RGPD_');
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html)
+            ->setPaper('a4', 'portrait')
+            ->setOptions([
+                'isRemoteEnabled' => false,
+                'isPhpEnabled' => false,
+                'defaultFont' => 'DejaVu Serif',
+            ]);
+
+        $binary = $pdf->output();
+
+        expect($binary)->toStartWith('%PDF-');
+        expect(strlen($binary))->toBeGreaterThan(1000);
+
+        expect([
+            \App\Models\Contrato::count(),
+            \App\Models\Documento::count(),
+            \App\Models\AssinaturaDigital::count(),
+        ])->toBe($before);
+    }
+);
