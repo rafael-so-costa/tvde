@@ -18,6 +18,7 @@ import type {
 interface Props {
     open: boolean;
     empresa: Empresa | null;
+    privacyAvailable: boolean;
     onClose: () => void;
     onSubmit: (
         payload: EmpresaPayload
@@ -134,6 +135,7 @@ function valueOrNull(
 export default function EmpresaFormModal({
     open,
     empresa,
+    privacyAvailable,
     onClose,
     onSubmit,
 }: Props) {
@@ -377,6 +379,18 @@ export default function EmpresaFormModal({
             status_cadastro:
                 form.status_cadastro,
         };
+
+        /*
+         * FROTAPRO_4R14B4X
+         *
+         * O backend tambem valida, impedindo
+         * perda silenciosa via API.
+         */
+        if (!privacyAvailable) {
+            for (const field of privacyFields) {
+                delete payload[field.name];
+            }
+        }
 
         try {
             await onSubmit(payload);
@@ -800,6 +814,29 @@ export default function EmpresaFormModal({
                                 modelos documentais.
                             </p>
 
+                            {!privacyAvailable && (
+                                <div
+                                    role="status"
+                                    className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
+                                >
+                                    <p className="font-semibold">
+                                        Configuração RGPD indisponível
+                                    </p>
+                                    <p className="mt-1">
+                                        A atualização da estrutura da base
+                                        de dados ainda está pendente.
+                                        Pode guardar os restantes dados
+                                        da empresa normalmente. Os campos
+                                        de privacidade ficarão disponíveis
+                                        após a migração autorizada.
+                                    </p>
+                                </div>
+                            )}
+
+                            <fieldset
+                                disabled={!privacyAvailable}
+                                className={!privacyAvailable ? "opacity-50" : ""}
+                            >
                             <div className="grid sm:grid-cols-2 gap-4">
                                 {privacyFields.map((field) => (
                                     <div
@@ -844,6 +881,7 @@ export default function EmpresaFormModal({
                                     </div>
                                 ))}
                             </div>
+                            </fieldset>
                         </section>
                         <section>
                             <h3 className="font-semibold text-slate-900 mb-4">

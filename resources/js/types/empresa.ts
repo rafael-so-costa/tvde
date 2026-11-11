@@ -89,6 +89,7 @@ export interface EmpresaListMeta {
     multi_company_enabled: boolean;
     can_create: boolean;
     can_delete: boolean;
+    rgpd_privacidade_disponivel?: boolean;
 }
 
 export interface EmpresaListResponse {

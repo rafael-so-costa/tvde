@@ -8,6 +8,7 @@ use App\Models\Empresa;
 use App\Models\Tenant;
 use App\Services\SaasEntitlementService;
 use App\Services\TenantContext;
+use App\Services\EmpresaRgpdSchemaGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 
@@ -15,7 +16,8 @@ class EmpresaController extends Controller
 {
     public function __construct(
         private TenantContext $tenantContext,
-        private SaasEntitlementService $entitlements
+        private SaasEntitlementService $entitlements,
+        private EmpresaRgpdSchemaGuard $privacySchema
     ) {}
 
     public function index(): JsonResponse
@@ -45,6 +47,7 @@ class EmpresaController extends Controller
                     $empresas->isEmpty(),
 
                 'can_delete' => $multiCompanyEnabled,
+                'rgpd_privacidade_disponivel' => $this->privacySchema->available(),
             ],
         ]);
     }
@@ -73,7 +76,7 @@ class EmpresaController extends Controller
         }
 
         $empresa = new Empresa(
-            $request->validated()
+            $this->privacySchema->filterPayload($request->validated())
         );
 
         $empresa->tenant_id =
@@ -108,7 +111,7 @@ class EmpresaController extends Controller
             );
 
         $empresa->fill(
-            $request->validated()
+            $this->privacySchema->filterPayload($request->validated())
         );
 
         $empresa->save();

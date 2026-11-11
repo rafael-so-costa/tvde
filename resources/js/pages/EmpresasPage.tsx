@@ -863,6 +863,9 @@ export default function EmpresasPage() {
                 open={
                     formOpen
                 }
+                privacyAvailable={
+                    empresaMeta?.rgpd_privacidade_disponivel === true
+                }
                 empresa={
                     editing
                 }
