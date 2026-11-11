@@ -213,9 +213,16 @@ final class FrotaProRgpdV11Service
 
             $contact = trim((string) (
                 $companyPrivacy['RGPD_CONTACTO_PRIVACIDADE']
-                ?? $policy['contacto_privacidade']
-                ?? $companyEmail
+                ?? ''
             ));
+            if ($contact === '') {
+                $contact = trim((string) (
+                    $policy['contacto_privacidade'] ?? ''
+                ));
+            }
+            if ($contact === '') {
+                $contact = $companyEmail;
+            }
 
             if ($contact === '' || !filter_var($contact, FILTER_VALIDATE_EMAIL)) {
                 $errors['rgpd.contacto_privacidade'] =
