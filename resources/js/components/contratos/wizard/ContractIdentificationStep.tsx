@@ -362,6 +362,7 @@ export default function ContractIdentificationStep({
             {isRgpd && (
                 <ContractRgpdFields
                     type={type}
+                    empresa={empresas.find((item) => item.id === form.empresa_id)}
                     form={form}
                     funcionarios={funcionarios}
                     loading={funcionariosLoading}

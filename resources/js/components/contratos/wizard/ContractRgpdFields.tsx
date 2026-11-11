@@ -1,3 +1,4 @@
+import type { Empresa } from "../../../types/empresa";
 import type { Motorista } from "../../../types/motorista";
 import type { Proprietario } from "../../../types/proprietario";
 import type { ContractWizardForm, TipoContrato } from "../../../types/tipo-contrato";
@@ -246,6 +247,7 @@ function choiceLabel(key: string, option: string): string {
 interface Props {
     form: ContractWizardForm;
     type: TipoContrato;
+    empresa?: Empresa;
     funcionarios: RgpdFuncionario[];
     loading: boolean;
     error: string;
@@ -256,11 +258,15 @@ interface Props {
 }
 
 export default function ContractRgpdFields({
-    form, type, funcionarios, loading, error, search, onSearch, onField, onCustomField,
+    form, type, empresa, funcionarios, loading, error, search, onSearch, onField, onCustomField,
 }: Props) {
     const fields = form.campos_preenchidos;
     const kind = String(fields.RGPD_TITULAR_TIPO ?? "");
     const display = (key: string): string => String(fields[key] ?? "");
+    const companyGeoPurpose = String(
+        empresa?.privacidade_finalidade_localizacao ?? ""
+    ).trim();
+    const isRgpd12 = type.template?.modelo_documento_saas_versao === "1.2";
     const employeeOptions = funcionarios.filter((item) => {
         const haystack = `${item.nome} ${item.email ?? ""} ${item.nif ?? ""}`.toLowerCase();
         return item.id === fields.RGPD_TITULAR_ID || haystack.includes(search.trim().toLowerCase());
@@ -337,6 +343,15 @@ export default function ContractRgpdFields({
                                 <option value={option} key={option}>{choiceLabel(decision.key, option)}</option>
                             ))}
                         </select>
+                        {decision.key === "RGPD_DECISAO_GEO" && isRgpd12 && (
+                            <span className="mt-2 block text-xs leading-relaxed text-slate-600">
+                                {display(decision.key) === "autorizo"
+                                    ? companyGeoPurpose
+                                        ? `Finalidade registada na empresa: ${companyGeoPurpose}`
+                                        : "Para autorizar, a empresa deve ter uma finalidade concreta registada em Empresas > Editar empresa > RGPD > Finalidade facultativa de localização. Se este tratamento não existir, selecione Não aplicável."
+                                    : "Selecione Não aplicável se a empresa não realizar este tratamento facultativo. A recusa também é uma decisão válida."}
+                            </span>
+                        )}
                     </label>
                 ))}
             </div>

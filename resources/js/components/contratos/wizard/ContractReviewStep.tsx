@@ -16,7 +16,7 @@ import type {
     Veiculo,
 } from "../../../types/veiculo";
 import type { ReactNode } from "react";
-import { isRgpdType, rgpdDecisions } from "./ContractRgpdFields";
+import { isRgpdType, rgpdDecisionsForType } from "./ContractRgpdFields";
 
 interface Props {
     type: TipoContrato;
@@ -135,7 +135,7 @@ export default function ContractReviewStep({
                             }
                         />
 
-                        {rgpdDecisions.map((decision) => (
+                        {rgpdDecisionsForType(type).map((decision) => (
                             <Value
                                 key={decision.key}
                                 label={decision.label}
@@ -147,6 +147,16 @@ export default function ContractReviewStep({
                                 )}
                             />
                         ))}
+                        {type.template?.modelo_documento_saas_versao === "1.2" &&
+                            form.campos_preenchidos.RGPD_DECISAO_GEO === "autorizo" &&
+                            !String(empresa?.privacidade_finalidade_localizacao ?? "").trim() && (
+                                <p role="alert" className="mt-3 text-sm text-amber-800">
+                                    Geolocalização autorizada, mas não foi identificada uma finalidade
+                                    na empresa. Antes de emitir, configure-a em Empresas &gt; Editar empresa
+                                    &gt; RGPD, ou volte a Dados e selecione Não aplicável caso este
+                                    tratamento não exista.
+                                </p>
+                            )}
                     </Card>
                 ) : (
                 <Card title="Condições">

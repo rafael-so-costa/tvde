@@ -3320,3 +3320,56 @@ test(
         ])->toBe($before);
     }
 );
+
+
+/*
+ * FROTAPRO_4R14B5K_RGPD12_GEO_CONSENT
+ *
+ * Geolocalizacao autorizada exige finalidade definida na
+ * fonte autoritativa. "Nao aplicavel" permanece escolha valida.
+ */
+test(
+    '4r14b5k rgpd 1.2 recusa autorizacao geo sem finalidade na empresa',
+    function (): void {
+        $f = rgpdV11IntegrationFixture(true);
+        $tenant = $f['tenant'];
+        $tenant->settings = ['fleet' => ['rgpd' => []]];
+        $tenant->save();
+
+        $empresa = $f['empresa'];
+        $empresa->privacidade_contacto_email = 'privacidade@example.test';
+        $empresa->save();
+
+        $fields = rgpdV11Input();
+        unset($fields['RGPD_DECISAO_SENSIVEIS']);
+        $fields['RGPD_DECISAO_GEO'] = 'autorizo';
+
+        expect(
+            fn () => app(FrotaProRgpdV11Service::class)->snapshot(
+                (string) $tenant->id,
+                $fields,
+                $f['motorista'],
+                null,
+                $empresa->fresh(),
+                '1.2'
+            )
+        )->toThrow(ValidationException::class);
+
+        $empresa->privacidade_finalidade_localizacao =
+            'Registo facultativo de deslocacoes acordado com o titular.';
+        $empresa->save();
+
+        $snapshot = app(FrotaProRgpdV11Service::class)->snapshot(
+            (string) $tenant->id,
+            $fields,
+            $f['motorista'],
+            null,
+            $empresa->fresh(),
+            '1.2'
+        );
+
+        expect($snapshot['RGPD_DECISAO_GEO'])->toBe('autorizo');
+        expect($snapshot['RGPD_GEO_FINALIDADE'])
+            ->toBe('Registo facultativo de deslocacoes acordado com o titular.');
+    }
+);

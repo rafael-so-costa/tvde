@@ -409,8 +409,12 @@ final class FrotaProRgpdV11Service
                 $result['RGPD_GEO_FINALIDADE'] ?? ''
             )
         ) {
-            $errors['RGPD_GEO_FINALIDADE'] =
-                'Configure a finalidade de localização.';
+            $errors['RGPD_GEO_FINALIDADE'] = $isV12
+                ? 'Geolocalizacao autorizada sem finalidade definida. '.
+                    'Em Empresas > Editar empresa > RGPD, configure '.
+                    'a finalidade facultativa de localizacao. '.
+                    'Se este tratamento nao existir, escolha Nao aplicavel.'
+                : 'Configure a finalidade de localização.';
         }
 
         if (
