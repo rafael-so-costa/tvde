@@ -840,8 +840,9 @@ class ModeloDocumentoSaasService
                  * Nao permite publicacao antecipada.
                  */
                 if (
-                    Str::slug((string) $model->slug) ===
-                    'informacao-tratamento-dados-rgpd-v11'
+                    FrotaProRgpdV11ModelSlug::matches(
+                        (string) $model->slug
+                    )
                 ) {
                     throw ValidationException::withMessages([
                         'modelo' =>

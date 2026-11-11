@@ -2908,3 +2908,124 @@ test(
             ->toBe($before);
     }
 );
+
+/*
+ * FROTAPRO_4R14B4W
+ *
+ * Corrigir a compatibilidade entre a grafia
+ * do catalogo RGPD 1.1 e a grafia legada.
+ */
+
+test(
+    '4r14b4w aceita identificador do catalogo e legado',
+    function (): void {
+        $fixture = rgpdV11IntegrationFixture(true);
+
+        $template = $fixture['template'];
+
+        $model = $template->modeloDocumentoSaas;
+
+        foreach ([
+            'informacao-tratamento-dados-rgpd-v1-1',
+            'informacao-tratamento-dados-rgpd-v11',
+        ] as $slug) {
+            $model->slug = $slug;
+            $model->save();
+
+            app(
+                FrotaProRgpdV11Integration::class
+            )->assertReleaseReady(
+                $template->fresh()
+            );
+        }
+
+        expect(true)->toBeTrue();
+    }
+);
+
+test(
+    '4r14b4w rejeita identificador semelhante desconhecido',
+    function (): void {
+        $fixture = rgpdV11IntegrationFixture(true);
+
+        $template = $fixture['template'];
+
+        $model = $template->modeloDocumentoSaas;
+
+        $model->slug =
+            'informacao-tratamento-dados-rgpd-v1-1-extra';
+
+        $model->save();
+
+        expect(
+            fn () =>
+                app(
+                    FrotaProRgpdV11Integration::class
+                )->assertReleaseReady(
+                    $template->fresh()
+                )
+        )->toThrow(
+            ValidationException::class
+        );
+    }
+);
+
+test(
+    '4r14b4w identificador canonico nao ignora revisao juridica',
+    function (): void {
+        $fixture = rgpdV11IntegrationFixture(false);
+
+        $template = $fixture['template'];
+
+        $model = $template->modeloDocumentoSaas;
+
+        $model->slug =
+            'informacao-tratamento-dados-rgpd-v1-1';
+
+        $model->save();
+
+        expect(
+            fn () =>
+                app(
+                    FrotaProRgpdV11Integration::class
+                )->assertReleaseReady(
+                    $template->fresh()
+                )
+        )->toThrow(
+            ValidationException::class
+        );
+    }
+);
+
+test(
+    '4r14b4w publicacao bloqueada nos dois identificadores',
+    function (): void {
+        $fixture = rgpdV11IntegrationFixture(true);
+
+        $model =
+            $fixture['template']->modeloDocumentoSaas;
+
+        $actor =
+            \App\Models\User::factory()->create();
+
+        foreach ([
+            'informacao-tratamento-dados-rgpd-v1-1',
+            'informacao-tratamento-dados-rgpd-v11',
+        ] as $slug) {
+            $model->slug = $slug;
+            $model->save();
+
+            expect(
+                fn () =>
+                    app(
+                        \App\Services\ModeloDocumentoSaasService::class
+                    )->publish(
+                        $actor,
+                        (string) $model->id
+                    )
+            )->toThrow(
+                ValidationException::class
+            );
+        }
+    }
+);

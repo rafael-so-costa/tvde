@@ -57,8 +57,9 @@ final class FrotaProRgpdV11Integration
         if (
             !$model ||
             !$version ||
-            Str::slug((string) $model->slug) !==
-                'informacao-tratamento-dados-rgpd-v11' ||
+            !FrotaProRgpdV11ModelSlug::matches(
+                (string) $model->slug
+            ) ||
             !$model->isPublicado() ||
             !$model->tecnicamente_validado ||
             !$model->juridicamente_revisto ||
