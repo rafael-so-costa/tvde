@@ -2687,3 +2687,224 @@ test(
         );
     }
 );
+
+/*
+ * FROTAPRO_4R14B4N_TESTS
+ *
+ * Compatibilidade com tipos e workflows RGPD
+ * existentes antes da normalizacao de codigos.
+ *
+ * Estes testes utilizam fixtures SQLite e
+ * nao representam publicacao juridica real.
+ */
+
+test(
+    '4r14b4n tipo rgpd e workflow legado permitem assinatura remota',
+    function (): void {
+        \Illuminate\Support\Facades\Storage::fake('local');
+        \Illuminate\Support\Facades\Mail::fake();
+
+        $fixture = rgpdV11FullOfficialFixture();
+
+        $type = rgpd4iType($fixture);
+
+        $type->codigo = 'rgpd';
+
+        $type->entidades = [
+            'empresa' => true,
+            'motorista' => false,
+            'proprietario' => false,
+            'veiculo' => false,
+        ];
+
+        $type->save();
+
+        $workflow = $type->checklistProcessTemplate;
+
+        $workflow->codigo =
+            'frotapro_rgpd_informacao_autorizacoes';
+
+        $workflow->save();
+
+        rgpdV11HttpLogin(
+            $this,
+            $fixture['tenant']
+        );
+
+        $payload = rgpd4iPayload(
+            $fixture,
+            $type
+        );
+
+        $payload['assinaturas'] =
+            rgpdV11Signature();
+
+        $beforeContracts =
+            \App\Models\Contrato::count();
+
+        $beforeDocuments =
+            \App\Models\Documento::count();
+
+        /*
+         * Preview com os codigos legados.
+         */
+        $this
+            ->withHeaders(rgpdV11HttpHeaders())
+            ->postJson(
+                '/api/contratos/preview',
+                $payload
+            )
+            ->assertOk();
+
+        expect(\App\Models\Contrato::count())
+            ->toBe($beforeContracts);
+
+        /*
+         * A criacao usa o tipo e workflow legados,
+         * mas continua a exigir uma unica
+         * ASSINATURA_TITULAR.
+         */
+        $response = $this
+            ->withHeaders(rgpdV11HttpHeaders())
+            ->postJson(
+                '/api/contratos',
+                $payload
+            )
+            ->assertCreated()
+            ->assertJsonPath(
+                'data.status',
+                'enviado'
+            );
+
+        $contract = \App\Models\Contrato::query()
+            ->findOrFail(
+                $response->json('data.id')
+            );
+
+        expect(
+            (string) $contract->tipo_contrato_id
+        )->toBe((string) $type->id);
+
+        expect(
+            (string) $contract->template_id
+        )->toBe((string) $fixture['template']->id);
+
+        $signature =
+            \App\Models\AssinaturaDigital::query()
+                ->where(
+                    'contrato_id',
+                    $contract->id
+                )
+                ->sole();
+
+        expect($signature->placeholder)
+            ->toBe('ASSINATURA_TITULAR');
+
+        expect($signature->status)
+            ->toBe('pendente');
+
+        expect(\App\Models\Documento::count())
+            ->toBe($beforeDocuments);
+    }
+);
+
+test(
+    '4r14b4n rejeita workflow desconhecido no tipo rgpd legado',
+    function (): void {
+        \Illuminate\Support\Facades\Mail::fake();
+
+        $fixture = rgpdV11FullOfficialFixture();
+
+        $type = rgpd4iType($fixture);
+
+        $type->codigo = 'rgpd';
+        $type->save();
+
+        $workflow = $type->checklistProcessTemplate;
+
+        $workflow->codigo = 'workflow_nao_rgpd';
+        $workflow->save();
+
+        rgpdV11HttpLogin(
+            $this,
+            $fixture['tenant']
+        );
+
+        $payload = rgpd4iPayload(
+            $fixture,
+            $type
+        );
+
+        $payload['assinaturas'] =
+            rgpdV11Signature();
+
+        $before = \App\Models\Contrato::count();
+
+        $this
+            ->withHeaders(rgpdV11HttpHeaders())
+            ->postJson(
+                '/api/contratos',
+                $payload
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'tipo_contrato_id',
+            ]);
+
+        expect(\App\Models\Contrato::count())
+            ->toBe($before);
+    }
+);
+
+test(
+    '4r14b4n rejeita template comum associado a tipo rgpd',
+    function (): void {
+        \Illuminate\Support\Facades\Mail::fake();
+
+        $fixture = rgpdV11FullOfficialFixture();
+
+        $type = rgpd4iType($fixture);
+
+        $type->codigo = 'rgpd';
+        $type->save();
+
+        /*
+         * Alterar apenas a fixture de teste.
+         * Um tipo RGPD nao pode utilizar
+         * template comum.
+         */
+        $fixture['template']->conteudo_original =
+            'Documento comum sem placeholders RGPD.';
+
+        $fixture['template']->save();
+
+        rgpdV11HttpLogin(
+            $this,
+            $fixture['tenant']
+        );
+
+        $payload = rgpd4iPayload(
+            $fixture,
+            $type
+        );
+
+        $payload['assinaturas'] =
+            rgpdV11Signature();
+
+        $before = \App\Models\Contrato::count();
+
+        $this
+            ->withHeaders(rgpdV11HttpHeaders())
+            ->postJson(
+                '/api/contratos',
+                $payload
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'template_id',
+            ]);
+
+        expect(\App\Models\Contrato::count())
+            ->toBe($before);
+    }
+);

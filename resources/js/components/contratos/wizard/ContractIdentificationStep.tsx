@@ -17,7 +17,7 @@ import type {
 } from "../../../types/veiculo";
 import type { ReactNode } from "react";
 import ContractBillingFields from "./ContractBillingFields";
-import ContractRgpdFields, { isRgpdType, type RgpdFuncionario } from "./ContractRgpdFields";
+import ContractRgpdFields, { isRgpdType, rgpdTypeConfigurationError, type RgpdFuncionario } from "./ContractRgpdFields";
 
 interface Props {
     type: TipoContrato;
@@ -344,6 +344,20 @@ export default function ContractIdentificationStep({
                     )}
                 </div>
             </section>
+
+            {isRgpd && rgpdTypeConfigurationError(type) && (
+                <div
+                    role="alert"
+                    className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
+                >
+                    <p className="font-semibold">
+                        Configuração RGPD incompleta
+                    </p>
+                    <p className="mt-2">
+                        {rgpdTypeConfigurationError(type)}
+                    </p>
+                </div>
+            )}
 
             {isRgpd && (
                 <ContractRgpdFields

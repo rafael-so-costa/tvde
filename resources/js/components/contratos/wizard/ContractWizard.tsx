@@ -47,6 +47,10 @@ import ContractSignatureStep from "./ContractSignatureStep";
 import ContractTemplateStep from "./ContractTemplateStep";
 import ContractWorkflowProgress from "./ContractWorkflowProgress";
 import { isRgpdType, rgpdSigner, validateRgpdFields, type RgpdFuncionario } from "./ContractRgpdFields";
+import {
+    rgpdRelevantChange,
+    invalidateRgpdCapturedSignature,
+} from "./rgpdSignatureIntegrity";
 
 interface Props {
     open: boolean;
@@ -127,6 +131,11 @@ export default function ContractWizard({
 
     const [error, setError] =
         useState<string | null>(null);
+
+    const [
+        rgpdSignatureInvalidated,
+        setRgpdSignatureInvalidated,
+    ] = useState(false);
     const [funcionarios, setFuncionarios] = useState<RgpdFuncionario[]>([]);
     const [funcionariosError, setFuncionariosError] = useState("");
     const [funcionariosLoading, setFuncionariosLoading] = useState(false);
@@ -239,6 +248,7 @@ export default function ContractWizard({
         setStep(0);
         setForm(initialForm);
         setSignatures({});
+        setRgpdSignatureInvalidated(false);
         setFuncionarios([]);
         setFuncionarioSearch("");
         setFuncionariosError("");
@@ -359,7 +369,48 @@ export default function ContractWizard({
             nextSignatures,
         );
 
+        setRgpdSignatureInvalidated(false);
         setError(null);
+    }
+
+    /**
+     * FROTAPRO_4R14B4R
+     *
+     * A assinatura presencial anterior deixa
+     * de valer quando os dados RGPD mudam.
+     *
+     * Nao altera contratos de outros tipos.
+     */
+    function invalidateRgpdOnChange(
+        field: string,
+        previousValue: unknown,
+        nextValue: unknown,
+    ) {
+        if (
+            !rgpdRelevantChange(
+                isRgpdType(selectedType),
+                field,
+                previousValue,
+                nextValue,
+            )
+        ) {
+            return;
+        }
+
+        if (
+            !signatures.ASSINATURA_TITULAR
+                ?.assinatura_url
+        ) {
+            return;
+        }
+
+        setSignatures((current) =>
+            invalidateRgpdCapturedSignature(
+                current,
+            ),
+        );
+
+        setRgpdSignatureInvalidated(true);
     }
 
     function setField(
@@ -369,6 +420,12 @@ export default function ContractWizard({
         >,
         value: string,
     ) {
+        invalidateRgpdOnChange(
+            field,
+            form[field],
+            value,
+        );
+
         setForm((current) => ({
             ...current,
             [field]: value,
@@ -383,6 +440,12 @@ export default function ContractWizard({
             | boolean
             | null,
     ) {
+        invalidateRgpdOnChange(
+            key,
+            form.campos_preenchidos[key],
+            value,
+        );
+
         setForm((current) => ({
             ...current,
 
@@ -431,6 +494,14 @@ export default function ContractWizard({
             >
         >,
     ) {
+        if (
+            placeholder === "ASSINATURA_TITULAR" &&
+            typeof values.assinatura_url === "string" &&
+            values.assinatura_url.length > 0
+        ) {
+            setRgpdSignatureInvalidated(false);
+        }
+
         setSignatures((current) => {
             const existing =
                 current[placeholder];
@@ -744,6 +815,9 @@ export default function ContractWizard({
                             <ContractSignatureStep
                                 type={
                                     selectedType
+                                }
+                                signatureResetWarning={
+                                    rgpdSignatureInvalidated
                                 }
                                 signatures={
                                     wizardSignatures

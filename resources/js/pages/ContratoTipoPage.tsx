@@ -1858,6 +1858,7 @@ export default function ContratoTipoPage() {
                                 (placeholder) =>
                                     placeholder !== "ASSINATURA_TITULAR" ||
                                     [
+                                        "rgpd",
                                         "rgpd_informacao_autorizacoes",
                                         "informacao_tratamento_dados_rgpd",
                                     ].includes(form.codigo.trim()),

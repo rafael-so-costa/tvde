@@ -529,10 +529,17 @@ class ContratoTipoResolverService
         ?TemplateContrato $template,
         string $field
     ): bool {
+        /*
+         * FROTAPRO_4R14B4N
+         *
+         * Codigo rgpd corresponde ao tipo legado,
+         * mas requer template RGPD reconhecido.
+         */
         if(
             !in_array(
                 (string) $tipo->codigo,
                 [
+                    'rgpd',
                     'rgpd_informacao_autorizacoes',
                     'informacao_tratamento_dados_rgpd',
                 ],

@@ -17,12 +17,142 @@ export const rgpdDecisions = [
     { key: "RGPD_DECISAO_SENSIVEIS", label: "Dados de categorias especiais para a finalidade identificada", options: ["autorizo", "nao_autorizo", "nao_aplicavel"] },
 ] as const;
 
-export function isRgpdType(type: TipoContrato | null | undefined): boolean {
-    return Boolean(
-        type &&
-        ["rgpd_informacao_autorizacoes", "informacao_tratamento_dados_rgpd"].includes(type.codigo) &&
-        type.assinaturas_configuracao.some((signature) => signature.placeholder === "ASSINATURA_TITULAR"),
+/**
+ * Identifica o formulario RGPD independentemente de a
+ * configuracao de assinaturas estar correta.
+ *
+ * Os nomes legados servem apenas para apresentar
+ * o formulario e um aviso de configuracao.
+ * Nao autorizam a emissao do documento.
+ */
+export function isRgpdType(
+    type: TipoContrato | null | undefined,
+): boolean {
+    if (!type) return false;
+
+    const code = String(type.codigo ?? "")
+        .trim()
+        .toLowerCase();
+
+    if (
+        [
+            "rgpd_informacao_autorizacoes",
+            "informacao_tratamento_dados_rgpd",
+            "rgpd",
+        ].includes(code)
+    ) {
+        return true;
+    }
+
+    const name = String(type.nome ?? "")
+        .trim()
+        .toLowerCase();
+
+    const templateName = String(
+        type.template?.nome ?? "",
+    )
+        .trim()
+        .toLowerCase();
+
+    return (
+        name === "rgpd" &&
+        templateName.includes(
+            "tratamento de dados pessoais",
+        )
     );
+}
+
+/**
+ * Confirma a configuracao que o backend exige.
+ * Uma configuracao invalida nunca permite emitir.
+ */
+export function rgpdTypeConfigurationError(
+    type: TipoContrato,
+): string | null {
+    if (!isRgpdType(type)) return null;
+
+    const code = String(type.codigo ?? "")
+        .trim()
+        .toLowerCase();
+
+    const allowedCodes = [
+        "rgpd",
+        "rgpd_informacao_autorizacoes",
+        "informacao_tratamento_dados_rgpd",
+    ];
+
+    if (!allowedCodes.includes(code)) {
+        return (
+            "O tipo RGPD possui um codigo documental " +
+            "incompativel. Em Tipos de contrato, configure " +
+            "o codigo rgpd_informacao_autorizacoes."
+        );
+    }
+
+    if (!type.template_id) {
+        return "Associe um modelo documental RGPD ao tipo.";
+    }
+
+    const workflowCode =
+        type.checklist_process_template?.codigo ?? "";
+
+    if (
+        ![
+            "rgpd_informacao_autorizacoes",
+            "frotapro_rgpd_informacao_autorizacoes",
+        ].includes(workflowCode)
+    ) {
+        return (
+            "Associe o workflow RGPD correto ao tipo " +
+            "documental. O codigo do workflow deve ser " +
+            "rgpd_informacao_autorizacoes."
+        );
+    }
+
+    const configured =
+        type.assinaturas_configuracao;
+
+    if (
+        configured.length !== 1 ||
+        configured[0]?.placeholder !==
+            "ASSINATURA_TITULAR" ||
+        configured[0]?.obrigatoria !== true ||
+        configured[0]?.modos.length === 0
+    ) {
+        return (
+            "O RGPD exige exatamente uma assinatura " +
+            "configurada: ASSINATURA_TITULAR, obrigatoria. " +
+            "Remova as assinaturas de motorista, " +
+            "proprietario, empresa e testemunha " +
+            "deste tipo documental."
+        );
+    }
+
+    if (
+        !type.entidades.empresa ||
+        type.entidades.motorista ||
+        type.entidades.proprietario ||
+        type.entidades.veiculo
+    ) {
+        return (
+            "No tipo RGPD, configure apenas a Empresa " +
+            "como entidade obrigatoria. O motorista, " +
+            "proprietario, colaborador ou titular externo " +
+            "sera selecionado no formulario RGPD."
+        );
+    }
+
+    if (
+        type.configuracao.associar_motorista_veiculo ===
+        true
+    ) {
+        return (
+            "Desative a associacao automatica de " +
+            "motorista e veiculo no tipo RGPD."
+        );
+    }
+
+    return null;
 }
 
 export function rgpdSigner(
@@ -56,6 +186,13 @@ export function validateRgpdFields(
     funcionarios: RgpdFuncionario[],
 ): string | null {
     if (!isRgpdType(type)) return null;
+
+    const configurationError =
+        rgpdTypeConfigurationError(type);
+
+    if (configurationError) {
+        return configurationError;
+    }
 
     const fields = form.campos_preenchidos;
     const kind = String(fields.RGPD_TITULAR_TIPO ?? "");

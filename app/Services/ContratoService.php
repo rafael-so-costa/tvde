@@ -117,6 +117,37 @@ class ContratoService
 
             $rgpdIntegration = app(FrotaProRgpdV11Integration::class);
 
+            /*
+             * FROTAPRO_4R14B4N_LEGACY
+             *
+             * O codigo legado RGPD apenas pode
+             * utilizar um template RGPD reconhecido.
+             *
+             * Isto nao dispensa a publicacao,
+             * a integridade ou a revisao juridica.
+             */
+            $tipoDeclaradoRgpd =
+                $tipoContrato !== null &&
+                in_array(
+                    (string) $tipoContrato->codigo,
+                    [
+                        'rgpd',
+                        'rgpd_informacao_autorizacoes',
+                        'informacao_tratamento_dados_rgpd',
+                    ],
+                    true
+                );
+
+            if (
+                $tipoDeclaradoRgpd &&
+                !$rgpdIntegration->applies($template)
+            ) {
+                throw ValidationException::withMessages([
+                    'template_id' =>
+                        'O tipo RGPD exige um template RGPD reconhecido e versionado.',
+                ]);
+            }
+
             if ($rgpdIntegration->applies($template)) {
                 /*
                  * FROTAPRO_4R14B4G_RGPD_GLOBAL_WORKFLOW
@@ -132,15 +163,23 @@ class ContratoService
                     $tipoPermitido = in_array(
                         (string) $tipoContrato->codigo,
                         [
+                            'rgpd',
                             'rgpd_informacao_autorizacoes',
                             'informacao_tratamento_dados_rgpd',
                         ],
                         true
                     );
 
-                    $workflowPermitido =
-                        ($workflowTemplate?->codigo ?? null)
-                        === 'rgpd_informacao_autorizacoes';
+                    $workflowPermitido = in_array(
+                        (string) (
+                            $workflowTemplate?->codigo ?? ''
+                        ),
+                        [
+                            'rgpd_informacao_autorizacoes',
+                            'frotapro_rgpd_informacao_autorizacoes',
+                        ],
+                        true
+                    );
 
                     $assinaturaConfigurada =
                         count($signatureConfiguration) === 1

@@ -16,6 +16,7 @@ import type {
     Veiculo,
 } from "../../../types/veiculo";
 import type { ReactNode } from "react";
+import { isRgpdType, rgpdDecisions } from "./ContractRgpdFields";
 
 interface Props {
     type: TipoContrato;
@@ -116,6 +117,38 @@ export default function ContractReviewStep({
                     />
                 </Card>
 
+                {isRgpdType(type) ? (
+                    <Card title="Autorizações específicas (RGPD)">
+                        <Value
+                            label="Qualidade do titular"
+                            value={String(
+                                form.campos_preenchidos.RGPD_TITULAR_TIPO ??
+                                "—"
+                            )}
+                        />
+
+                        <Value
+                            label="Titular"
+                            value={
+                                signatures.ASSINATURA_TITULAR
+                                    ?.signatario_nome || "—"
+                            }
+                        />
+
+                        {rgpdDecisions.map((decision) => (
+                            <Value
+                                key={decision.key}
+                                label={decision.label}
+                                value={rgpdChoiceLabel(
+                                    decision.key,
+                                    form.campos_preenchidos[
+                                        decision.key
+                                    ],
+                                )}
+                            />
+                        ))}
+                    </Card>
+                ) : (
                 <Card title="Condições">
                     <Value
                         label="Início"
@@ -154,6 +187,7 @@ export default function ContractReviewStep({
                         )}
                     />
                 </Card>
+                )}
 
                 <Card title="Assinaturas">
                     <Value
@@ -196,7 +230,7 @@ export default function ContractReviewStep({
                 </Card>
             </div>
 
-            {Object.keys(
+            {!isRgpdType(type) && Object.keys(
                 form.campos_preenchidos,
             ).length > 0 && (
                 <Card title="Campos preenchidos">
@@ -262,6 +296,37 @@ function Value({
             </span>
         </div>
     );
+}
+
+function rgpdChoiceLabel(
+    key: string,
+    value: unknown,
+): string {
+    const choice = String(value ?? "");
+
+    if (choice === "nao_aplicavel") {
+        return "Não aplicável";
+    }
+
+    if (key === "RGPD_DECISAO_SENSIVEIS") {
+        if (choice === "autorizo") {
+            return "Presto consentimento explícito";
+        }
+
+        if (choice === "nao_autorizo") {
+            return "Não presto consentimento";
+        }
+    }
+
+    if (choice === "autorizo") {
+        return "Autorizo";
+    }
+
+    if (choice === "nao_autorizo") {
+        return "Não autorizo";
+    }
+
+    return "Por responder";
 }
 
 function money(value: string): string {

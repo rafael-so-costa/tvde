@@ -25,6 +25,7 @@ interface Props {
     type: TipoContrato;
     signatures: ContractWizardSignatures;
     titularTipo?: string;
+    signatureResetWarning?: boolean;
 
     empresa?: Empresa;
     motorista?: Motorista;
@@ -66,6 +67,7 @@ export default function ContractSignatureStep({
     type,
     signatures,
     titularTipo,
+    signatureResetWarning = false,
     empresa,
     motorista,
     proprietario,
@@ -100,6 +102,31 @@ export default function ContractSignatureStep({
                     este tipo de contrato.
                 </p>
             </div>
+
+            {signatureResetWarning && (
+                <div
+                    role="alert"
+                    className="flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
+                >
+                    <AlertTriangle
+                        className="h-5 w-5 shrink-0"
+                    />
+
+                    <div>
+                        <p className="font-semibold">
+                            É necessária uma nova assinatura
+                        </p>
+
+                        <p className="mt-1">
+                            A assinatura anterior foi anulada
+                            porque os dados do titular ou as
+                            autorizações RGPD foram alterados.
+                            Recolha novamente a assinatura
+                            antes de criar a declaração.
+                        </p>
+                    </div>
+                </div>
+            )}
 
             {type.assinaturas_configuracao.map(
                 (config) => (
