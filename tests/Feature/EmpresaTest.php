@@ -912,3 +912,210 @@ test(
         );
     }
 );
+
+/*
+ * FROTAPRO_4R14B4Y
+ *
+ * Testes HTTP utilizando exclusivamente
+ * SQLite em memoria.
+ *
+ * A remocao de colunas acontece apenas na
+ * base temporaria do teste.
+ */
+
+test(
+    '4r14b4y API anuncia RGPD disponivel com schema completo',
+    function (): void {
+        $tenant = criarTenantEmpresa(
+            'Tenant RGPD Schema',
+            'tenant-rgpd-schema-4y'
+        );
+
+        $user = criarUsuarioEmpresa(
+            'rgpd-schema-4y@example.invalid',
+            $tenant,
+            'configurar'
+        );
+
+        autenticarUsuarioEmpresa($this, $user);
+
+        $this
+            ->withHeaders(empresaSpaHeaders())
+            ->getJson('/api/empresas')
+            ->assertOk()
+            ->assertJsonPath(
+                'meta.rgpd_privacidade_disponivel',
+                true
+            );
+    }
+);
+
+test(
+    '4r14b4y API cria e atualiza empresa sem colunas RGPD',
+    function (): void {
+        /*
+         * Eliminar as colunas apenas do SQLite
+         * temporario criado por RefreshDatabase.
+         */
+        \Illuminate\Support\Facades\Schema::table(
+            'empresas',
+            function (
+                \Illuminate\Database\Schema\Blueprint $table
+            ): void {
+                $table->dropColumn(
+                    \App\Services\EmpresaRgpdSchemaGuard::COLUMNS
+                );
+            }
+        );
+
+        expect(
+            app(
+                \App\Services\EmpresaRgpdSchemaGuard::class
+            )->available()
+        )->toBeFalse();
+
+        $tenant = criarTenantEmpresa(
+            'Tenant Schema Legado',
+            'tenant-schema-legado-4y'
+        );
+
+        $user = criarUsuarioEmpresa(
+            'rgpd-legado-4y@example.invalid',
+            $tenant,
+            'configurar'
+        );
+
+        autenticarUsuarioEmpresa($this, $user);
+
+        $this
+            ->withHeaders(empresaSpaHeaders())
+            ->getJson('/api/empresas')
+            ->assertOk()
+            ->assertJsonPath(
+                'meta.rgpd_privacidade_disponivel',
+                false
+            );
+
+        /*
+         * O cliente envia campos RGPD vazios.
+         * A API nao deve tentar grava-los.
+         */
+        $create = $this
+            ->withHeaders(empresaSpaHeaders())
+            ->postJson('/api/empresas', [
+                'nome_empresa' =>
+                    'Empresa Schema Legado',
+
+                'nif' => '500000018',
+
+                'privacidade_contacto_email' => null,
+
+                'privacidade_prazo_contratos' => '',
+            ])
+            ->assertCreated();
+
+        $id = $create->json('data.id');
+
+        expect($id)->not->toBeNull();
+
+        $this
+            ->withHeaders(empresaSpaHeaders())
+            ->patchJson("/api/empresas/{$id}", [
+                'nome_empresa' =>
+                    'Empresa Schema Legado Atualizada',
+
+                'privacidade_contacto_email' => null,
+            ])
+            ->assertOk()
+            ->assertJsonPath(
+                'data.nome_empresa',
+                'Empresa Schema Legado Atualizada'
+            );
+
+        $this->assertDatabaseHas('empresas', [
+            'id' => $id,
+            'nome_empresa' =>
+                'Empresa Schema Legado Atualizada',
+        ]);
+    }
+);
+
+test(
+    '4r14b4y API rejeita dados RGPD quando colunas faltam',
+    function (): void {
+        \Illuminate\Support\Facades\Schema::table(
+            'empresas',
+            function (
+                \Illuminate\Database\Schema\Blueprint $table
+            ): void {
+                $table->dropColumn(
+                    \App\Services\EmpresaRgpdSchemaGuard::COLUMNS
+                );
+            }
+        );
+
+        $tenant = criarTenantEmpresa(
+            'Tenant RGPD Protegido',
+            'tenant-rgpd-protegido-4y'
+        );
+
+        $user = criarUsuarioEmpresa(
+            'rgpd-protegido-4y@example.invalid',
+            $tenant,
+            'configurar'
+        );
+
+        autenticarUsuarioEmpresa($this, $user);
+
+        /*
+         * Criacao com valor RGPD preenchido:
+         * HTTP 422, sem inserir empresa.
+         */
+        $this
+            ->withHeaders(empresaSpaHeaders())
+            ->postJson('/api/empresas', [
+                'nome_empresa' => 'Empresa Rejeitada',
+                'nif' => '500000018',
+                'privacidade_contacto_email' =>
+                    'privacidade@example.invalid',
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'privacidade_contacto_email',
+            ]);
+
+        $this->assertDatabaseMissing('empresas', [
+            'nome_empresa' => 'Empresa Rejeitada',
+        ]);
+
+        /*
+         * Atualizacao com valor RGPD preenchido:
+         * tambem nao pode alterar a empresa.
+         */
+        $empresa = criarEmpresaNoTenant(
+            $tenant,
+            'Empresa Original',
+            '500000034'
+        );
+
+        $this
+            ->withHeaders(empresaSpaHeaders())
+            ->patchJson(
+                "/api/empresas/{$empresa->id}",
+                [
+                    'nome_empresa' => 'Empresa Alterada',
+                    'privacidade_contacto_email' =>
+                        'privacidade@example.invalid',
+                ]
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'privacidade_contacto_email',
+            ]);
+
+        $this->assertDatabaseHas('empresas', [
+            'id' => $empresa->id,
+            'nome_empresa' => 'Empresa Original',
+        ]);
+    }
+);
