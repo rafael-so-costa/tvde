@@ -76,7 +76,10 @@ final class FrotaProRgpdV11Integration
             !$model->juridicamente_revisto ||
             !$model->publicado_em ||
             !$version->publicado_em ||
-            (string) $model->versao_publicada !== $documentVersion ||
+            (
+                $documentVersion === '1.2' &&
+                (string) $model->versao_publicada !== $documentVersion
+            ) ||
             (string) $version->versao !== $documentVersion ||
             (string) $version->modelo_documento_saas_id !==
                 (string) $model->id ||
