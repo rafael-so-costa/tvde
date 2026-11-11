@@ -3029,3 +3029,103 @@ test(
         }
     }
 );
+
+
+// FROTAPRO_4R14B5H — verificar a versao 1.2 sem dispensar revisao juridica.
+test(
+    '4r14b5h versao 1.2 aceita tres decisoes e politica simplificada',
+    function (): void {
+        $f = rgpdV11IntegrationFixture(true);
+        $model = $f['template']->modeloDocumentoSaas;
+        $version = $f['template']->modeloDocumentoSaasVersaoOrigem;
+        $template = $f['template'];
+
+        $model->slug = 'informacao-tratamento-dados-rgpd';
+        $model->versao = '1.2';
+        $model->versao_publicada = '1.2';
+        $model->save();
+
+        $version->versao = '1.2';
+        $version->save();
+
+        $template->modelo_documento_saas_versao = '1.2';
+        $template->save();
+
+        $tenant = $f['tenant'];
+        $tenant->settings = ['fleet' => ['rgpd' => []]];
+        $tenant->save();
+
+        $empresa = $f['empresa'];
+        $empresa->privacidade_contacto_email = 'contacto@example.test';
+        $empresa->save();
+
+        $fields = rgpdV11Input();
+        unset($fields['RGPD_DECISAO_SENSIVEIS']);
+        $fields['RGPD_DECISAO_GEO'] = 'nao_aplicavel';
+
+        $result = app(FrotaProRgpdV11Integration::class)->prepare(
+            (string) $tenant->id,
+            $template->fresh(),
+            $fields,
+            rgpdV11Signature(),
+            $f['motorista'],
+            null,
+            $empresa->fresh()
+        );
+
+        expect($result['snapshot']['RGPD_VERSAO_MODELO'])->toBe('1.2');
+        expect($result['snapshot']['RGPD_CONTACTO_PRIVACIDADE'])->toBe(
+            'contacto@example.test'
+        );
+        expect($result['snapshot']['RGPD_GEO_FINALIDADE'])->toBe('Nao aplicavel');
+        expect($result['snapshot'])->not->toHaveKey('RGPD_DECISAO_SENSIVEIS');
+        expect($result['assinaturas'])->toHaveCount(1);
+    }
+);
+
+test(
+    '4r14b5h versao 1.2 continua a exigir revisao juridica',
+    function (): void {
+        $f = rgpdV11IntegrationFixture(false);
+        $model = $f['template']->modeloDocumentoSaas;
+        $version = $f['template']->modeloDocumentoSaasVersaoOrigem;
+        $template = $f['template'];
+        $model->slug = 'informacao-tratamento-dados-rgpd';
+        $model->versao = '1.2';
+        $model->versao_publicada = '1.2';
+        $model->save();
+        $version->versao = '1.2';
+        $version->save();
+        $template->modelo_documento_saas_versao = '1.2';
+        $template->save();
+
+        expect(
+            fn () => app(FrotaProRgpdV11Integration::class)
+                ->assertReleaseReady($template->fresh())
+        )->toThrow(ValidationException::class);
+    }
+);
+
+test(
+    '4r14b5h versao 1.2 rejeita checksum adulterado',
+    function (): void {
+        $f = rgpdV11IntegrationFixture(true);
+        $model = $f['template']->modeloDocumentoSaas;
+        $version = $f['template']->modeloDocumentoSaasVersaoOrigem;
+        $template = $f['template'];
+        $model->slug = 'informacao-tratamento-dados-rgpd';
+        $model->versao = '1.2';
+        $model->versao_publicada = '1.2';
+        $model->save();
+        $version->versao = '1.2';
+        $version->checksum = str_repeat('0', 64);
+        $version->save();
+        $template->modelo_documento_saas_versao = '1.2';
+        $template->save();
+
+        expect(
+            fn () => app(FrotaProRgpdV11Integration::class)
+                ->assertReleaseReady($template->fresh())
+        )->toThrow(ValidationException::class);
+    }
+);

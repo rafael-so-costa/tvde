@@ -43,6 +43,7 @@ export interface TipoContratoAssinaturaConfiguracao {
 export interface TipoContratoTemplateSummary {
     id: string;
     nome: string;
+    modelo_documento_saas_versao?: string | null;
     tipo_arquivo: string;
     ativo: boolean;
 }

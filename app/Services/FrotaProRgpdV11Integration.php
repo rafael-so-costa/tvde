@@ -47,27 +47,37 @@ final class FrotaProRgpdV11Integration
         ) {
             throw ValidationException::withMessages([
                 'template_id' =>
-                    'O RGPD 1.1 exige um modelo SaaS publicado e versionado.',
+                    'O RGPD exige um modelo SaaS publicado e versionado.',
             ]);
         }
 
         $model = $template->modeloDocumentoSaas;
         $version = $template->modeloDocumentoSaasVersaoOrigem;
 
+        $documentVersion = (string) (
+            $template->modelo_documento_saas_versao ?? ''
+        );
+        $isSupported = in_array($documentVersion, ['1.1', '1.2'], true);
+        $slug = Str::slug((string) ($model?->slug ?? ''));
+        $slugMatches = $documentVersion === '1.2'
+            ? $slug === 'informacao-tratamento-dados-rgpd'
+            : (
+                FrotaProRgpdV11ModelSlug::matches($slug) ||
+                $slug === 'informacao-tratamento-dados-rgpd'
+            );
+
         if (
             !$model ||
             !$version ||
-            !FrotaProRgpdV11ModelSlug::matches(
-                (string) $model->slug
-            ) ||
+            !$isSupported ||
+            !$slugMatches ||
             !$model->isPublicado() ||
             !$model->tecnicamente_validado ||
             !$model->juridicamente_revisto ||
             !$model->publicado_em ||
             !$version->publicado_em ||
-            (string) $model->versao_publicada !== '1.1' ||
-            (string) $template->modelo_documento_saas_versao !== '1.1' ||
-            (string) $version->versao !== '1.1' ||
+            (string) $model->versao_publicada !== $documentVersion ||
+            (string) $version->versao !== $documentVersion ||
             (string) $version->modelo_documento_saas_id !==
                 (string) $model->id ||
             !$version->juridicamente_revisto ||
@@ -85,7 +95,7 @@ final class FrotaProRgpdV11Integration
         ) {
             throw ValidationException::withMessages([
                 'template_id' =>
-                    'O RGPD 1.1 ainda nao esta publicado e juridicamente validado, ou a copia foi alterada.',
+                    'O RGPD nao esta juridicamente aprovado, a versao e invalida, ou a copia foi alterada.',
             ]);
         }
     }
@@ -114,7 +124,7 @@ final class FrotaProRgpdV11Integration
         ) {
             throw ValidationException::withMessages([
                 'template_id' =>
-                    'Modelo RGPD 1.1 invalido para esta organizacao.',
+                    'Modelo RGPD invalido para esta organizacao.',
             ]);
         }
 
@@ -125,7 +135,8 @@ final class FrotaProRgpdV11Integration
             $fields,
             $motorista,
             $proprietario,
-            $empresa
+            $empresa,
+            (string) $template->modelo_documento_saas_versao
         );
 
         if (

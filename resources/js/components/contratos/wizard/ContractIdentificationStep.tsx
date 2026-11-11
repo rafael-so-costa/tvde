@@ -361,6 +361,7 @@ export default function ContractIdentificationStep({
 
             {isRgpd && (
                 <ContractRgpdFields
+                    type={type}
                     form={form}
                     funcionarios={funcionarios}
                     loading={funcionariosLoading}

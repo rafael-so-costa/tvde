@@ -17,6 +17,12 @@ export const rgpdDecisions = [
     { key: "RGPD_DECISAO_SENSIVEIS", label: "Dados de categorias especiais para a finalidade identificada", options: ["autorizo", "nao_autorizo", "nao_aplicavel"] },
 ] as const;
 
+export function rgpdDecisionsForType(type: TipoContrato) {
+    return type.template?.modelo_documento_saas_versao === "1.2"
+        ? rgpdDecisions.filter((item) => item.key !== "RGPD_DECISAO_SENSIVEIS")
+        : rgpdDecisions;
+}
+
 /**
  * Identifica o formulario RGPD independentemente de a
  * configuracao de assinaturas estar correta.
@@ -221,7 +227,7 @@ export function validateRgpdFields(
             if (!String(fields[key] ?? "").trim()) return `Informe o ${label} do titular externo.`;
         }
     }
-    for (const decision of rgpdDecisions) {
+    for (const decision of rgpdDecisionsForType(type)) {
         if (!decision.options.some((option) => option === fields[decision.key])) {
             return `Registe uma decisão expressa para: ${decision.label}.`;
         }
@@ -239,6 +245,7 @@ function choiceLabel(key: string, option: string): string {
 
 interface Props {
     form: ContractWizardForm;
+    type: TipoContrato;
     funcionarios: RgpdFuncionario[];
     loading: boolean;
     error: string;
@@ -249,7 +256,7 @@ interface Props {
 }
 
 export default function ContractRgpdFields({
-    form, funcionarios, loading, error, search, onSearch, onField, onCustomField,
+    form, type, funcionarios, loading, error, search, onSearch, onField, onCustomField,
 }: Props) {
     const fields = form.campos_preenchidos;
     const kind = String(fields.RGPD_TITULAR_TIPO ?? "");
@@ -321,7 +328,7 @@ export default function ContractRgpdFields({
             <h3 className="mt-8 text-lg font-semibold text-slate-950">Autorizações específicas</h3>
             <p className="mt-1 text-sm text-slate-500">Não existe consentimento pré-selecionado. Recusar uma autorização facultativa é uma escolha válida.</p>
             <div className="mt-5 grid gap-4 md:grid-cols-2">
-                {rgpdDecisions.map((decision) => (
+                {rgpdDecisionsForType(type).map((decision) => (
                     <label key={decision.key} className="block text-sm font-medium text-slate-700">
                         {decision.label} *
                         <select className={selectClass} value={display(decision.key)} required onChange={(event) => onCustomField(decision.key, event.target.value)}>

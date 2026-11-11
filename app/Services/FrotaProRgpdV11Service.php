@@ -155,8 +155,16 @@ final class FrotaProRgpdV11Service
         array $fields,
         ?Motorista $motorista = null,
         ?Proprietario $proprietario = null,
-        ?Empresa $empresa = null
+        ?Empresa $empresa = null,
+        string $documentVersion = '1.1'
     ): array {
+        if (!in_array($documentVersion, ['1.1', '1.2'], true)) {
+            throw ValidationException::withMessages([
+                'template_id' => 'Versao RGPD nao suportada.',
+            ]);
+        }
+
+        $isV12 = $documentVersion === '1.2';
         $tenant = Tenant::query()->findOrFail($tenantId);
 
         $policy = data_get(
@@ -192,20 +200,53 @@ final class FrotaProRgpdV11Service
             ? $this->companyPrivacyValues($empresa)
             : [];
 
-        foreach (self::POLICY as $token => $source) {
-            $value = trim(
-                (string) (
+        /*
+         * RGPD 1.1: conserva as 14 exigencias originais.
+         * RGPD 1.2: contacto de privacidade e finalidade de
+         * geolocalizacao apenas se a autorizacao for concedida.
+         */
+        if ($isV12) {
+            $companyEmail = (
+                $empresa !== null &&
+                (string) $empresa->tenant_id === $tenantId
+            ) ? trim((string) ($empresa->email ?? '')) : '';
+
+            $contact = trim((string) (
+                $companyPrivacy['RGPD_CONTACTO_PRIVACIDADE']
+                ?? $policy['contacto_privacidade']
+                ?? $companyEmail
+            ));
+
+            if ($contact === '' || !filter_var($contact, FILTER_VALIDATE_EMAIL)) {
+                $errors['rgpd.contacto_privacidade'] =
+                    'Configure um e-mail de privacidade valido na empresa.';
+            } else {
+                $result['RGPD_CONTACTO_PRIVACIDADE'] = $contact;
+            }
+
+            $geoPurpose = trim((string) (
+                $companyPrivacy['RGPD_GEO_FINALIDADE']
+                ?? $policy['geo_finalidade']
+                ?? ''
+            ));
+
+            $result['RGPD_GEO_FINALIDADE'] = $geoPurpose !== ''
+                ? $geoPurpose
+                : 'Nao aplicavel';
+        } else {
+            foreach (self::POLICY as $token => $source) {
+                $value = trim((string) (
                     $companyPrivacy[$token]
                     ?? $policy[$source]
                     ?? ''
-                )
-            );
+                ));
 
-            if ($value === '') {
-                $errors['rgpd.'.$source] =
-                    'Configure esta informação na política RGPD.';
-            } else {
-                $result[$token] = $value;
+                if ($value === '') {
+                    $errors['rgpd.'.$source] =
+                        'Configure esta informação na política RGPD.';
+                } else {
+                    $result[$token] = $value;
+                }
             }
         }
 
@@ -331,7 +372,18 @@ final class FrotaProRgpdV11Service
 
         $result['RGPD_TITULAR_EMAIL'] = $email;
 
-        foreach (self::CHOICES as $field => $options) {
+        $requiredChoices = $isV12
+            ? array_intersect_key(
+                self::CHOICES,
+                array_flip([
+                    'RGPD_DECISAO_IMAGEM',
+                    'RGPD_DECISAO_VOZ',
+                    'RGPD_DECISAO_GEO',
+                ])
+            )
+            : self::CHOICES;
+
+        foreach ($requiredChoices as $field => $options) {
             $choice = strtolower(
                 trim((string) ($fields[$field] ?? ''))
             );
@@ -355,6 +407,7 @@ final class FrotaProRgpdV11Service
         }
 
         if (
+            !$isV12 &&
             ($result['RGPD_DECISAO_SENSIVEIS'] ?? '')
             === 'autorizo'
         ) {
@@ -383,7 +436,7 @@ final class FrotaProRgpdV11Service
         $result['RGPD_RECOLHA_EM'] =
             now()->toIso8601String();
 
-        $result['RGPD_VERSAO_MODELO'] = '1.1';
+        $result['RGPD_VERSAO_MODELO'] = $documentVersion;
 
         return $result;
     }
@@ -457,24 +510,49 @@ final class FrotaProRgpdV11Service
                     $fields,
                     $contract->motorista,
                     $contract->proprietario,
-                    $contract->empresa
+                    $contract->empresa,
+                    (string) (
+                        $contract->template?->modelo_documento_saas_versao
+                        ?? '1.1'
+                    )
                 )
             );
         }
 
-        foreach (array_merge(
-            array_keys(self::POLICY),
-            array_keys(self::CHOICES),
-            [
+        $documentVersion = (string) (
+            $fields['RGPD_VERSAO_MODELO'] ?? '1.1'
+        );
+        $isV12 = $documentVersion === '1.2';
+
+        $requiredFields = $isV12
+            ? [
+                'RGPD_CONTACTO_PRIVACIDADE',
+                'RGPD_GEO_FINALIDADE',
+                'RGPD_DECISAO_IMAGEM',
+                'RGPD_DECISAO_VOZ',
+                'RGPD_DECISAO_GEO',
                 'RGPD_TITULAR_NOME',
                 'RGPD_TITULAR_NIF',
                 'RGPD_TITULAR_QUALIDADE',
-                'RGPD_TITULAR_IDENTIFICADOR',
                 'RGPD_TITULAR_CONTACTO',
                 'RGPD_DATA_DECLARACAO',
                 'RGPD_DATA_ESCOLHAS',
             ]
-        ) as $field) {
+            : array_merge(
+                array_keys(self::POLICY),
+                array_keys(self::CHOICES),
+                [
+                    'RGPD_TITULAR_NOME',
+                    'RGPD_TITULAR_NIF',
+                    'RGPD_TITULAR_QUALIDADE',
+                    'RGPD_TITULAR_IDENTIFICADOR',
+                    'RGPD_TITULAR_CONTACTO',
+                    'RGPD_DATA_DECLARACAO',
+                    'RGPD_DATA_ESCOLHAS',
+                ]
+            );
+
+        foreach ($requiredFields as $field) {
             if (
                 trim((string) ($fields[$field] ?? '')) === ''
             ) {
@@ -491,6 +569,16 @@ final class FrotaProRgpdV11Service
         ];
 
         $values = [];
+        $pdfChoices = $isV12
+            ? array_intersect_key(
+                self::CHOICES,
+                array_flip([
+                    'RGPD_DECISAO_IMAGEM',
+                    'RGPD_DECISAO_VOZ',
+                    'RGPD_DECISAO_GEO',
+                ])
+            )
+            : self::CHOICES;
 
         foreach ($fields as $key => $value) {
             if (!str_starts_with((string) $key, 'RGPD_')) {
@@ -499,11 +587,11 @@ final class FrotaProRgpdV11Service
 
             $text = (string) $value;
 
-            if (isset(self::CHOICES[$key])) {
+            if (isset($pdfChoices[$key])) {
                 if (
                     !in_array(
                         $text,
-                        self::CHOICES[$key],
+                        $pdfChoices[$key],
                         true
                     )
                 ) {

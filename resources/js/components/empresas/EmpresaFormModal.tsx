@@ -9,7 +9,6 @@ import {
     LoaderCircle,
     X,
 } from 'lucide-react';
-import { rgpdCompanyPolicyStatus } from '../../lib/rgpdCompanyPolicy';
 import type {
     Empresa,
     EmpresaPayload,
@@ -266,7 +265,9 @@ export default function EmpresaFormModal({
         return null;
     }
 
-    const policyStatus = rgpdCompanyPolicyStatus(form);
+    const privacyEmailReady = Boolean(
+        form.privacidade_contacto_email.trim() || form.email.trim()
+    );
 
     function update<K extends keyof FormState>(
         field: K,
@@ -810,49 +811,27 @@ export default function EmpresaFormModal({
                             </h3>
 
                             <p className="text-sm text-slate-500 mb-4">
-                                Configure os dados reais da empresa.
-                                O encarregado de proteção de dados
-                                é preenchido quando aplicável.
-                                Estes valores serão utilizados nos
-                                modelos documentais.
+                                Utilize os contactos reais da empresa.
+                                O RGPD 1.2 utiliza o e-mail principal, ou o contacto
+                                de privacidade quando preenchido.
+                                A finalidade de localizacao e facultativa.
                             </p>
 
                             {privacyAvailable && (
-                                <div
-                                    role="status"
-                                    aria-live="polite"
-                                    className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-800"
-                                >
-                                    <p className="font-semibold">
-                                        Política documental RGPD 1.1: {policyStatus.complete}/{policyStatus.total} requisitos preenchidos na empresa
+                                <div role="status" className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-800">
+                                    <p className="font-semibold">RGPD 1.2 — configuracao simplificada</p>
+                                    <p className="mt-1">
+                                        {privacyEmailReady
+                                            ? "Contacto de privacidade disponivel."
+                                            : "Informe o e-mail principal ou o contacto de privacidade da empresa."}
                                     </p>
-                                    {policyStatus.missing.length > 0 ? (
-                                        <details className="mt-2">
-                                            <summary className="cursor-pointer text-indigo-700">
-                                                Ver {policyStatus.missing.length} requisitos documentais por preencher
-                                            </summary>
-                                            <ul className="mt-2 list-disc space-y-1 pl-5">
-                                                {policyStatus.missing.map((item) => (
-                                                    <li key={item.token}>
-                                                        {item.label} <span className="text-xs text-slate-500">({item.token})</span>
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </details>
-                                    ) : (
-                                        <p className="mt-2 text-emerald-800">
-                                            Os 14 valores estão presentes no formulário. Confirme a exatidão, a aplicabilidade e a revisão jurídica.
-                                        </p>
-                                    )}
-                                    <p className="mt-2 text-xs text-slate-600">
-                                        Este indicador verifica apenas a presença de valores na empresa;
-                                        não considera configurações legadas do tenant nem constitui aprovação jurídica,
-                                        validação dos conteúdos ou autorização para emitir RGPD.
-                                        Para o EPD, indique apenas os dados reais quando aplicável.
+                                    <p className="mt-1 text-xs text-slate-600">
+                                        A finalidade de geolocalizacao facultativa apenas e exigida
+                                        quando o titular escolher autorizar. Os campos historicos
+                                        permanecem na base, mas nao sao solicitados neste formulario.
                                     </p>
                                 </div>
                             )}
-
 
                             {!privacyAvailable && (
                                 <div
@@ -878,7 +857,12 @@ export default function EmpresaFormModal({
                                 className={!privacyAvailable ? "opacity-50" : ""}
                             >
                             <div className="grid sm:grid-cols-2 gap-4">
-                                {privacyFields.map((field) => (
+                                {privacyFields
+                                    .filter((field) =>
+                                        field.name === "privacidade_contacto_email" ||
+                                        field.name === "privacidade_finalidade_localizacao"
+                                    )
+                                    .map((field) => (
                                     <div
                                         key={field.name}
                                         className={

@@ -24,7 +24,7 @@ class TipoContratoController extends Controller
         $query=TipoContrato::query()
             ->where('tenant_id',$this->tenantId())
             ->with([
-                'template:id,nome,tipo_arquivo,ativo,conteudo_original',
+                'template:id,nome,tipo_arquivo,ativo,conteudo_original,modelo_documento_saas_versao',
                 'checklistProcessTemplate:id,codigo,nome,ativo,versao',
             ])
             ->withCount('contratos')
