@@ -29,6 +29,10 @@ import {
 } from "react-router-dom";
 import api from "../lib/api";
 import {
+    isRgpdConfigurationCode,
+    proposeRgpdConfiguration,
+} from "../lib/rgpdTypeConfig";
+import {
     useTenant,
 } from "../contexts/TenantContext";
 import {
@@ -282,6 +286,8 @@ export default function ContratoTipoPage() {
             blankForm(),
         );
 
+    const [rgpdPrepared, setRgpdPrepared] = useState(false);
+
     const [
         baseConfiguration,
         setBaseConfiguration,
@@ -386,6 +392,8 @@ export default function ContratoTipoPage() {
             setForm(
                 blankForm(),
             );
+
+            setRgpdPrepared(false);
 
             setBaseConfiguration(
                 {},
@@ -531,6 +539,8 @@ export default function ContratoTipoPage() {
                 ),
         });
 
+        setRgpdPrepared(false);
+
         setBaseConfiguration(
             item.configuracao ??
                 {},
@@ -620,6 +630,8 @@ export default function ContratoTipoPage() {
                                 saved.id,
                             ],
                         });
+
+                    setRgpdPrepared(false);
 
                     setSuccess(
                         "Tipo de contrato guardado com sucesso.",
@@ -1232,6 +1244,45 @@ export default function ContratoTipoPage() {
                     Guardar
                 </button>
             </div>
+
+            {canConfigure &&
+                isRgpdConfigurationCode(form.codigo) && (
+                <div className="mb-6 rounded-2xl border border-indigo-200 bg-indigo-50 p-5">
+                    <h2 className="font-semibold text-indigo-950">
+                        Configuração RGPD 1.1
+                    </h2>
+
+                    <p className="mt-2 text-sm leading-6 text-indigo-800">
+                        Preparar apenas a empresa como entidade obrigatória
+                        e uma assinatura do titular dos dados. O template,
+                        o workflow e os campos existentes serão preservados.
+                    </p>
+
+                    <button
+                        type="button"
+                        disabled={saveMutation.isPending}
+                        onClick={() => {
+                            setForm((current) =>
+                                proposeRgpdConfiguration(current)
+                            );
+                            setRgpdPrepared(true);
+                            setError(null);
+                            setSuccess(null);
+                        }}
+                        className="mt-4 rounded-xl bg-indigo-700 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+                    >
+                        Preparar configuração RGPD 1.1
+                    </button>
+
+                    {rgpdPrepared && (
+                        <p role="status" className="mt-3 text-sm font-semibold text-amber-800">
+                            Configuração preparada apenas neste formulário.
+                            Ainda não foi guardada na base de dados.
+                            Reveja as alterações antes de qualquer gravação.
+                        </p>
+                    )}
+                </div>
+            )}
 
             {!canConfigure && (
                 <div className="mb-6 flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
