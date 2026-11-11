@@ -1289,6 +1289,21 @@ $binary = $pdf->output();
                 $values
             );
 
+        /*
+         * FROTAPRO_4R14B5I_RGPD12_PDF_LAYOUT
+         *
+         * Corrige apenas a apresentacao da declaracao RGPD 1.2.
+         * O texto versionado, o checksum e os PDF ja emitidos
+         * permanecem inalterados.
+         */
+        if (
+            (string) ($contrato->template?->modelo_documento_saas_versao ?? '') === '1.2' &&
+            app(FrotaProRgpdV11Service::class)->isRgpd($contrato->template)
+        ) {
+            $documentHtml = app(FrotaProRgpdV12PdfFormatter::class)
+                ->format($documentHtml);
+        }
+
         $documentHtml=preg_replace(
             '/\bcom\s+periodicidade\s+pagamento\s+único\b/iu',
             'de uma só vez',

@@ -287,6 +287,50 @@ body.preview-mode .running-header{
     page-break-before:auto;
 }
 
+/* FROTAPRO_4R14B5I: tipografia da declaracao RGPD 1.2 */
+.document .rgpd-v12-document .rgpd-v12-title{
+    margin:1mm 0 7mm;
+    padding:0 0 3mm;
+    border-bottom:.5pt solid #b7c6d5;
+    font-family:"DejaVu Sans",Arial,sans-serif;
+    font-size:12.7pt;
+    line-height:1.35;
+    color:#183047;
+    font-weight:700;
+    text-align:center;
+    text-transform:uppercase;
+    page-break-inside:avoid;
+    page-break-after:avoid
+}
+
+.document .rgpd-v12-section{
+    margin:5mm 0 2mm;
+    padding:0 0 1mm;
+    font-family:"DejaVu Sans",Arial,sans-serif;
+    font-size:10pt;
+    font-weight:700;
+    line-height:1.35;
+    color:#1a3048;
+    border-bottom:.3pt solid #d9e2eb;
+    page-break-inside:avoid;
+    page-break-after:avoid
+}
+
+.document .rgpd-v12-subsection{
+    margin:3.5mm 0 1.5mm;
+    font-family:"DejaVu Sans",Arial,sans-serif;
+    font-size:9.3pt;
+    font-weight:700;
+    line-height:1.3;
+    color:#30465b;
+    page-break-after:avoid
+}
+
+.document .rgpd-v12-document .doc-paragraph{
+    margin:0 0 2.7mm;
+    text-align:left;
+    line-height:1.44
+}
 </style>
 </head>
 @php
