@@ -106,9 +106,14 @@ class DocumentoRegistryService
                 'motorista_id'=>$model->motorista_id,
                 'proprietario_id'=>$model->proprietario_id,
                 'veiculo_id'=>$model->veiculo_id,
-                'categoria'=>'contratos',
+                'categoria'=>app(FrotaProRgpdV11Integration::class)
+                    ->applies($model->template)
+                    ? 'rgpd' : 'contratos',
                 'tipo'=>(string)$model->tipo,
-                'titulo'=>'Contrato '.str_replace('_',' ',(string)$model->tipo),
+                'titulo'=>app(FrotaProRgpdV11Integration::class)
+                    ->applies($model->template)
+                    ? 'Informacao e autorizacoes RGPD 1.1'
+                    : 'Contrato '.str_replace('_',' ',(string)$model->tipo),
                 'entidade_tipo'=>'contrato',
                 'entidade_id'=>$model->id,
                 'arquivo_nome'=>$model->pdf_gerado_url?basename($model->pdf_gerado_url):null,

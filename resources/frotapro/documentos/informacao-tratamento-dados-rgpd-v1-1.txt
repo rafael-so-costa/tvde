@@ -1,0 +1,149 @@
+INFORMAÇÃO SOBRE O TRATAMENTO DE DADOS PESSOAIS E AUTORIZAÇÕES ESPECÍFICAS (RGPD)
+
+VERSÃO 1.1
+
+1. RESPONSÁVEL PELO TRATAMENTO
+
+Empresa: {{EMPRESA_NOME_EMPRESA}}
+NIF/NIPC: {{EMPRESA_NIF}}
+Morada: {{EMPRESA_ENDERECO_COMPLETO}}
+Contacto de privacidade: {{RGPD_CONTACTO_PRIVACIDADE}}
+Encarregado de proteção de dados: {{RGPD_EPD}}
+
+2. IDENTIFICAÇÃO DO TITULAR
+
+Nome completo: {{RGPD_TITULAR_NOME}}
+NIF: {{RGPD_TITULAR_NIF}}
+Qualidade: {{RGPD_TITULAR_QUALIDADE}}
+Identificador: {{RGPD_TITULAR_IDENTIFICADOR}}
+Contacto: {{RGPD_TITULAR_CONTACTO}}
+
+3. FINALIDADES DO TRATAMENTO
+
+Os dados pessoais poderão ser tratados, conforme aplicável, para identificação, gestão de relações contratuais e profissionais, cumprimento de obrigações legais, administração de documentos, faturação, operações TVDE, segurança e exercício de direitos.
+
+Cada tratamento deverá corresponder a uma finalidade efetivamente prosseguida e comunicada pela organização.
+
+4. FUNDAMENTOS DE LICITUDE
+
+Os tratamentos poderão basear-se, conforme aplicável, na execução contratual, no cumprimento de obrigações jurídicas, em interesses legítimos devidamente avaliados ou no consentimento.
+
+O consentimento será utilizado apenas quando constituir fundamento adequado, sendo livre, específico, informado e revogável.
+
+A assinatura de tomada de conhecimento não constitui consentimento genérico.
+
+5. CATEGORIAS DE DADOS
+
+Poderão ser tratados dados de identificação, contacto, documentação profissional, contratos, faturação, veículos e registos operacionais, na medida necessária.
+
+Dados de categorias especiais exigem fundamento jurídico válido e uma condição aplicável do artigo 9.º do RGPD.
+
+6. DESTINATÁRIOS
+
+Os dados poderão ser comunicados, quando necessário e legalmente permitido, a autoridades competentes, entidades reguladoras, prestadores de serviços tecnológicos, contabilísticos, seguradoras e outros destinatários legitimados.
+
+A organização deverá disponibilizar informação adequada sobre os destinatários e subcontratantes efetivamente utilizados.
+
+7. CONSERVAÇÃO DOS DADOS
+
+Identificação e cadastro: {{RGPD_RETENCAO_CADASTRO}}
+
+Contratos e documentação: {{RGPD_RETENCAO_CONTRATOS}}
+
+Dados contabilísticos e fiscais: {{RGPD_RETENCAO_FISCAL}}
+
+Registos operacionais: {{RGPD_RETENCAO_OPERACIONAL}}
+
+Autorizações e comprovativos: {{RGPD_RETENCAO_CONSENTIMENTOS}}
+
+Localização: {{RGPD_RETENCAO_LOCALIZACAO}}
+
+Os dados serão conservados de acordo com os prazos legais e os critérios aplicáveis às finalidades efetivas do tratamento.
+
+8. DIREITOS DOS TITULARES
+
+O titular poderá exercer, nos termos legalmente aplicáveis, os direitos de informação, acesso, retificação, apagamento, limitação, portabilidade, oposição e proteção relativamente a decisões exclusivamente automatizadas.
+
+Os pedidos devem ser apresentados através do contacto de privacidade indicado neste documento.
+
+O titular poderá apresentar reclamação à Comissão Nacional de Proteção de Dados (CNPD).
+
+9. TRANSFERÊNCIAS E DECISÕES AUTOMATIZADAS
+
+Transferências internacionais e garantias: {{RGPD_TRANSFERENCIAS}}
+
+Decisões automatizadas e definição de perfis: {{RGPD_DECISOES_AUTOMATIZADAS}}
+
+10. GEOLOCALIZAÇÃO
+
+O eventual tratamento de dados de localização deverá respeitar as exigências de finalidade, necessidade, proporcionalidade, transparência e fundamento jurídico adequado.
+
+A autorização facultativa abaixo não legitima monitorização indiscriminada.
+
+11. TOMADA DE CONHECIMENTO
+
+Declaro ter recebido ou tido acesso à informação sobre o tratamento dos meus dados pessoais, incluindo finalidades, fundamentos, destinatários, conservação e direitos.
+
+Esta declaração não constitui consentimento genérico.
+
+Titular: {{RGPD_TITULAR_NOME}}
+Data: {{RGPD_DATA_DECLARACAO}}
+Assinatura: {{ASSINATURA_TITULAR}}
+
+12. AUTORIZAÇÕES ESPECÍFICAS
+
+As escolhas são independentes e não estão previamente selecionadas.
+
+As respostas possíveis são AUTORIZO e NÃO AUTORIZO. Quando legítimo e indicado, poderá ser utilizada a resposta NÃO APLICÁVEL.
+
+12.1 IMAGEM
+
+Utilização da imagem para finalidades promocionais específicas previamente comunicadas.
+
+Decisão: {{RGPD_DECISAO_IMAGEM}}
+
+12.2 VOZ
+
+Utilização da voz para finalidades promocionais específicas previamente comunicadas.
+
+Decisão: {{RGPD_DECISAO_VOZ}}
+
+12.3 GEOLOCALIZAÇÃO FACULTATIVA
+
+Finalidade: {{RGPD_GEO_FINALIDADE}}
+
+Decisão: {{RGPD_DECISAO_GEO}}
+
+12.4 CATEGORIAS ESPECIAIS DE DADOS
+
+Finalidade: {{RGPD_SENSIVEL_FINALIDADE}}
+
+Categorias: {{RGPD_SENSIVEL_CATEGORIAS}}
+
+Condição do artigo 9.º: {{RGPD_SENSIVEL_ARTIGO9}}
+
+Decisão: {{RGPD_DECISAO_SENSIVEIS}}
+
+Esta secção não autoriza por si só a recolha de categorias especiais de dados.
+
+13. RETIRADA DE CONSENTIMENTO
+
+O consentimento, quando utilizado como fundamento jurídico, poderá ser retirado através do contacto de privacidade.
+
+A retirada não afeta a licitude do tratamento anteriormente efetuado.
+
+A recusa de uma autorização facultativa não deverá impedir a relação principal quando o tratamento não seja necessário à sua execução.
+
+14. REGISTO DAS ESCOLHAS
+
+Titular: {{RGPD_TITULAR_NOME}}
+
+Data das escolhas: {{RGPD_DATA_ESCOLHAS}}
+
+As decisões serão associadas ao documento, à respetiva versão, à identidade do titular e à evidência da assinatura recolhida.
+
+15. REVISÃO
+
+Este documento deve refletir as práticas reais da organização. A configuração das finalidades, bases legais, destinatários, prazos e contactos carece de validação pela entidade responsável.
+
+Versão do documento: 1.1

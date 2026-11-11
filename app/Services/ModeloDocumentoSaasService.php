@@ -839,6 +839,16 @@ class ModeloDocumentoSaasService
                  * Visivel no backoffice como rascunho.
                  * Nao permite publicacao antecipada.
                  */
+                if (
+                    Str::slug((string) $model->slug) ===
+                    'informacao-tratamento-dados-rgpd-v11'
+                ) {
+                    throw ValidationException::withMessages([
+                        'modelo' =>
+                            'O RGPD 1.1 continua bloqueado para publicacao ate revisao juridica e aprovacao final do fluxo de assinatura/PDF.',
+                    ]);
+                }
+
                 $rgpdDocument=app(
                     FrotaProDocumentCatalog::class
                 )->find(

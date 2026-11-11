@@ -46,6 +46,7 @@ import ContractReviewStep from "./ContractReviewStep";
 import ContractSignatureStep from "./ContractSignatureStep";
 import ContractTemplateStep from "./ContractTemplateStep";
 import ContractWorkflowProgress from "./ContractWorkflowProgress";
+import { isRgpdType, rgpdSigner, validateRgpdFields, type RgpdFuncionario } from "./ContractRgpdFields";
 
 interface Props {
     open: boolean;
@@ -126,6 +127,10 @@ export default function ContractWizard({
 
     const [error, setError] =
         useState<string | null>(null);
+    const [funcionarios, setFuncionarios] = useState<RgpdFuncionario[]>([]);
+    const [funcionariosError, setFuncionariosError] = useState("");
+    const [funcionariosLoading, setFuncionariosLoading] = useState(false);
+    const [funcionarioSearch, setFuncionarioSearch] = useState("");
 
     const [saving, setSaving] =
         useState(false);
@@ -178,6 +183,54 @@ export default function ContractWizard({
                 form.veiculo_id,
         );
 
+    const rgpdTipo = String(form.campos_preenchidos.RGPD_TITULAR_TIPO ?? "");
+    const wizardSignatures = useMemo<ContractWizardSignatures>(() => {
+        if (!isRgpdType(selectedType) || !signatures.ASSINATURA_TITULAR) return signatures;
+        const signer = rgpdSigner(form, motorista, proprietario, funcionarios);
+        const state = signatures.ASSINATURA_TITULAR;
+        const onlyPresencial = rgpdTipo === "outro";
+        const canPresencial = selectedType?.assinaturas_configuracao.some(
+            (config) => config.placeholder === "ASSINATURA_TITULAR" && config.modos.includes("presencial"),
+        );
+        return {
+            ...signatures,
+            ASSINATURA_TITULAR: {
+                ...state,
+                signatario_nome: signer.nome,
+                signatario_email: signer.email,
+                modo: onlyPresencial && canPresencial ? "presencial" : state.modo,
+            },
+        };
+    }, [selectedType, signatures, form, motorista, proprietario, funcionarios, rgpdTipo]);
+
+    useEffect(() => {
+        if (!open || !isRgpdType(selectedType) || rgpdTipo !== "colaborador") return;
+        let cancelled = false;
+        setFuncionariosLoading(true);
+        const timer = window.setTimeout(() => {
+            api.get("/api/funcionarios", { params: { search: funcionarioSearch, per_page: 100 } })
+                .then((response) => {
+                    if (cancelled) return;
+                    const rows = (response.data?.data ?? []) as RgpdFuncionario[];
+                    setFuncionarios((previous) => {
+                        const merged = new Map(previous.map((item) => [item.id, item]));
+                        for (const row of rows) merged.set(row.id, row);
+                        return [...merged.values()];
+                    });
+                    setFuncionariosError("");
+                })
+                .catch((reason: unknown) => {
+                    if (cancelled) return;
+                    const forbidden = axios.isAxiosError(reason) && reason.response?.status === 403;
+                    setFuncionariosError(forbidden
+                        ? "Não possui permissão para consultar colaboradores. Solicite a autorização ao administrador."
+                        : "Não foi possível consultar os colaboradores.");
+                })
+                .finally(() => { if (!cancelled) setFuncionariosLoading(false); });
+        }, 300);
+        return () => { cancelled = true; window.clearTimeout(timer); };
+    }, [open, selectedType?.id, rgpdTipo, funcionarioSearch]);
+
     useEffect(() => {
         if (!open) {
             return;
@@ -186,6 +239,9 @@ export default function ContractWizard({
         setStep(0);
         setForm(initialForm);
         setSignatures({});
+        setFuncionarios([]);
+        setFuncionarioSearch("");
+        setFuncionariosError("");
         setError(null);
         setSaving(false);
         setPreviewOpen(false);
@@ -410,16 +466,13 @@ export default function ContractWizard({
         }
 
         if (step === 1) {
-            return validateIdentification(
-                selectedType,
-                form,
-            );
+            return validateRgpdFields(selectedType, form, funcionarios) ?? validateIdentification(selectedType, form);
         }
 
         if (step === 2) {
             return validateSignatures(
                 selectedType,
-                signatures,
+                wizardSignatures,
                 empresa,
                 motorista,
                 proprietario,
@@ -464,7 +517,7 @@ export default function ContractWizard({
             return;
         }
 
-        const identification=validateIdentification(selectedType,form);
+        const identification=validateRgpdFields(selectedType, form, funcionarios) ?? validateIdentification(selectedType,form);
 
         if(identification){
             setError(identification);
@@ -475,7 +528,7 @@ export default function ContractWizard({
         const validation =
             validateSignatures(
                 selectedType,
-                signatures,
+                wizardSignatures,
                 empresa,
                 motorista,
                 proprietario,
@@ -542,7 +595,7 @@ export default function ContractWizard({
 
                         assinaturas:
                             buildSignatures(
-                                signatures,
+                                wizardSignatures,
                             ),
                     },
                 );
@@ -592,7 +645,7 @@ export default function ContractWizard({
                         valor_caucao:numeric(form.valor_caucao),
                         valor_total:numeric(form.valor_total),
                         campos_preenchidos:form.campos_preenchidos,
-                        assinaturas:buildSignatures(signatures),
+                        assinaturas:buildSignatures(wizardSignatures),
                     }}
                 />
             )}
@@ -669,6 +722,11 @@ export default function ContractWizard({
                                 veiculos={
                                     veiculos
                                 }
+                                funcionarios={funcionarios}
+                                funcionariosLoading={funcionariosLoading}
+                                funcionariosError={funcionariosError}
+                                funcionarioSearch={funcionarioSearch}
+                                onFuncionarioSearch={setFuncionarioSearch}
                                 onField={
                                     setField
                                 }
@@ -688,7 +746,7 @@ export default function ContractWizard({
                                     selectedType
                                 }
                                 signatures={
-                                    signatures
+                                    wizardSignatures
                                 }
                                 empresa={
                                     empresa
@@ -699,6 +757,7 @@ export default function ContractWizard({
                                 proprietario={
                                     proprietario
                                 }
+                                titularTipo={rgpdTipo}
                                 onChange={
                                     setSignature
                                 }
@@ -713,7 +772,7 @@ export default function ContractWizard({
                                 }
                                 form={form}
                                 signatures={
-                                    signatures
+                                    wizardSignatures
                                 }
                                 empresa={
                                     empresa
@@ -929,6 +988,10 @@ function validateIdentification(
                 .trim()
                 .toUpperCase();
 
+        // O serviço RGPD resolve os dados de cadastro e política no servidor;
+        // qualidade e decisões são verificadas por validateRgpdFields().
+        if (isRgpdType(type) && key.startsWith("RGPD_")) continue;
+
         const value =
             topLevel[key] ??
             form.campos_preenchidos[field.campo] ??
@@ -1035,6 +1098,13 @@ function validateSignatures(
         }
 
         if (
+            config.placeholder === "ASSINATURA_TITULAR" &&
+            !state.signatario_nome.trim()
+        ) {
+            return "Informe o nome do titular dos dados.";
+        }
+
+        if (
             state.modo !== "remota"
         ) {
             continue;
@@ -1087,16 +1157,19 @@ function buildSignatures(
                         : undefined,
 
                 signatario_nome:
-                    placeholder ===
-                    "ASSINATURA_TESTEMUNHA"
+                    (
+                        placeholder === "ASSINATURA_TESTEMUNHA" ||
+                        placeholder === "ASSINATURA_TITULAR"
+                    )
                         ? state.signatario_nome.trim()
                         : undefined,
 
                 signatario_email:
-                    placeholder ===
-                        "ASSINATURA_TESTEMUNHA" &&
-                    state.modo ===
-                        "remota"
+                    (
+                        placeholder === "ASSINATURA_TESTEMUNHA" ||
+                        placeholder === "ASSINATURA_TITULAR"
+                    ) &&
+                    state.modo === "remota"
                         ? state.signatario_email.trim()
                         : undefined,
             }),

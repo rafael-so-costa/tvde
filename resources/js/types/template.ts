@@ -14,7 +14,8 @@ export type SignaturePlaceholder =
     | 'ASSINATURA_MOTORISTA'
     | 'ASSINATURA_PROPRIETARIO'
     | 'ASSINATURA_EMPRESA'
-    | 'ASSINATURA_TESTEMUNHA';
+    | 'ASSINATURA_TESTEMUNHA'
+    | 'ASSINATURA_TITULAR';
 
 export type ChecklistSystemAction =
     | 'motorista_acesso';

@@ -1606,6 +1606,24 @@ $binary = $pdf->output();
                 'email',
                 'telemovel',
                 'nome_gerente',
+                'privacidade_contacto_email',
+                'privacidade_contacto_telefone',
+                'privacidade_epd_nome',
+                'privacidade_epd_email',
+                'privacidade_destinatarios',
+                'privacidade_subcontratantes',
+                'privacidade_prazo_identificacao',
+                'privacidade_prazo_contratos',
+                'privacidade_prazo_fiscal',
+                'privacidade_prazo_operacional',
+                'privacidade_prazo_consentimentos',
+                'privacidade_prazo_localizacao',
+                'privacidade_transferencias_internacionais',
+                'privacidade_decisoes_automatizadas',
+                'privacidade_finalidade_localizacao',
+                'privacidade_finalidade_dados_especiais',
+                'privacidade_categorias_dados_especiais',
+                'privacidade_condicao_artigo9',
                 'endereco_rua',
                 'endereco_numero',
                 'endereco_complemento',
@@ -1703,11 +1721,81 @@ $binary = $pdf->output();
             );
         }
 
-        return $this->applyTemplateMappings(
+        $values = $this->applyTemplateMappings(
             $values,
             $contrato,
             $authoritativeKeys
         );
+
+        if (
+            app(FrotaProRgpdV11Integration::class)
+                ->applies($contrato->template)
+        ) {
+            $rgpdValues = app(FrotaProRgpdV11Service::class)
+                ->pdfValues($contrato, $preview);
+
+            foreach ($rgpdValues as $key => $value) {
+                /*
+                 * A assinatura definitiva e carregada
+                 * dos registos assinados e verificados
+                 * da versao atual do contrato.
+                 *
+                 * Nunca usar uma assinatura textual
+                 * fornecida pelo cliente no PDF final.
+                 */
+                if (
+                    $key === 'ASSINATURA_TITULAR' &&
+                    !$preview
+                ) {
+                    continue;
+                }
+
+                /*
+                 * O renderer FrotaPro exige:
+                 *
+                 * [
+                 *     'value' => '...',
+                 *     'html' => false
+                 * ]
+                 *
+                 * $this->put() aplica essa estrutura
+                 * e normaliza a chave.
+                 *
+                 * Os dados RGPD devem ser tratados
+                 * como texto, nunca HTML arbitrario.
+                 */
+                if (!is_string($key) ||
+                    !preg_match('/^[A-Z0-9_]+$/D', $key)) {
+                    throw ValidationException::withMessages([
+                        'contrato' =>
+                            'O RGPD contem uma chave documental invalida.',
+                    ]);
+                }
+
+                if (is_array($value)) {
+                    $value = $value['value'] ?? null;
+                }
+
+                if (
+                    $value !== null &&
+                    !is_scalar($value)
+                ) {
+                    throw ValidationException::withMessages([
+                        'contrato' =>
+                            'O RGPD contem um valor documental invalido.',
+                    ]);
+                }
+
+                $this->put(
+                    $values,
+                    $key,
+                    $value === null ? null : (string) $value,
+                    false
+                );
+            }
+        }
+
+        return $values;
     }
 
     private function addEntity(

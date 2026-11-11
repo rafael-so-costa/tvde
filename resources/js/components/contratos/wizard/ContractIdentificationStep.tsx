@@ -17,6 +17,7 @@ import type {
 } from "../../../types/veiculo";
 import type { ReactNode } from "react";
 import ContractBillingFields from "./ContractBillingFields";
+import ContractRgpdFields, { isRgpdType, type RgpdFuncionario } from "./ContractRgpdFields";
 
 interface Props {
     type: TipoContrato;
@@ -26,6 +27,11 @@ interface Props {
     proprietarios: Proprietario[];
     motoristas: Motorista[];
     veiculos: Veiculo[];
+    funcionarios: RgpdFuncionario[];
+    funcionariosLoading: boolean;
+    funcionariosError: string;
+    funcionarioSearch: string;
+    onFuncionarioSearch: (value: string) => void;
 
     onField: (
         field: keyof Omit<
@@ -104,6 +110,7 @@ function manualFields(
     return type.campos_configuracao.filter(
         (field) =>
             field.origem === "manual" &&
+            !(isRgpdType(type) && field.campo.trim().toUpperCase().startsWith("RGPD_")) &&
             !standardFields.has(
                 field.campo.trim().toUpperCase(),
             ) &&
@@ -126,33 +133,34 @@ export default function ContractIdentificationStep({
     proprietarios,
     motoristas,
     veiculos,
+    funcionarios,
+    funcionariosLoading,
+    funcionariosError,
+    funcionarioSearch,
+    onFuncionarioSearch,
     onField,
     onCustomField,
     onVehicle,
 }: Props) {
+    const isRgpd = isRgpdType(type);
+    const titularTipo = String(form.campos_preenchidos.RGPD_TITULAR_TIPO ?? "");
+
     const showEmpresa =
-        Boolean(type.entidades.empresa) ||
+        isRgpd || Boolean(type.entidades.empresa) ||
         signatureRequires(
             type,
             "ASSINATURA_EMPRESA",
         );
 
-    const showProprietario =
-        Boolean(type.entidades.proprietario) ||
-        signatureRequires(
-            type,
-            "ASSINATURA_PROPRIETARIO",
-        );
+    const showProprietario = isRgpd
+        ? titularTipo === "proprietario"
+        : Boolean(type.entidades.proprietario) || signatureRequires(type, "ASSINATURA_PROPRIETARIO");
 
-    const showMotorista =
-        Boolean(type.entidades.motorista) ||
-        signatureRequires(
-            type,
-            "ASSINATURA_MOTORISTA",
-        );
+    const showMotorista = isRgpd
+        ? titularTipo === "motorista"
+        : Boolean(type.entidades.motorista) || signatureRequires(type, "ASSINATURA_MOTORISTA");
 
-    const showVeiculo =
-        Boolean(type.entidades.veiculo);
+    const showVeiculo = !isRgpd && Boolean(type.entidades.veiculo);
 
     const fields =
         manualFields(type);
@@ -238,7 +246,7 @@ export default function ContractIdentificationStep({
                         <SelectField
                             label="Motorista"
                             required={
-                                Boolean(
+                                isRgpd || Boolean(
                                     type.entidades
                                         .motorista,
                                 ) ||
@@ -298,7 +306,7 @@ export default function ContractIdentificationStep({
                         <SelectField
                             label="Proprietário"
                             required={
-                                Boolean(
+                                isRgpd || Boolean(
                                     type.entidades
                                         .proprietario,
                                 ) ||
@@ -337,7 +345,20 @@ export default function ContractIdentificationStep({
                 </div>
             </section>
 
-            <section className="border-t border-slate-200 pt-7">
+            {isRgpd && (
+                <ContractRgpdFields
+                    form={form}
+                    funcionarios={funcionarios}
+                    loading={funcionariosLoading}
+                    error={funcionariosError}
+                    search={funcionarioSearch}
+                    onSearch={onFuncionarioSearch}
+                    onField={onField}
+                    onCustomField={onCustomField}
+                />
+            )}
+
+            {!isRgpd && (<section className="border-t border-slate-200 pt-7">
                 <h3 className="text-lg font-semibold text-slate-950">
                     Condições
                 </h3>
@@ -427,9 +448,9 @@ export default function ContractIdentificationStep({
                         }
                     />
                 </div>
-            </section>
+            </section>)}
 
-            {type.cobranca_habilitada && (
+            {!isRgpd && type.cobranca_habilitada && (
                 <ContractBillingFields
                     fields={form.campos_preenchidos}
                     onChange={onCustomField}

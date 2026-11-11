@@ -26,6 +26,25 @@ class StoreEmpresaRequest extends FormRequest
         return [
             'tenant_id' => ['prohibited'],
 
+            'privacidade_contacto_email' => ['nullable', 'email', 'max:190'],
+            'privacidade_contacto_telefone' => ['nullable', 'string', 'max:30'],
+            'privacidade_epd_nome' => ['nullable', 'string', 'max:255'],
+            'privacidade_epd_email' => ['nullable', 'email', 'max:190'],
+            'privacidade_destinatarios' => ['nullable', 'string', 'max:3000'],
+            'privacidade_subcontratantes' => ['nullable', 'string', 'max:3000'],
+            'privacidade_prazo_identificacao' => ['nullable', 'string', 'max:1000'],
+            'privacidade_prazo_contratos' => ['nullable', 'string', 'max:1000'],
+            'privacidade_prazo_fiscal' => ['nullable', 'string', 'max:1000'],
+            'privacidade_prazo_operacional' => ['nullable', 'string', 'max:1000'],
+            'privacidade_prazo_consentimentos' => ['nullable', 'string', 'max:1000'],
+            'privacidade_prazo_localizacao' => ['nullable', 'string', 'max:1000'],
+            'privacidade_transferencias_internacionais' => ['nullable', 'string', 'max:3000'],
+            'privacidade_decisoes_automatizadas' => ['nullable', 'string', 'max:3000'],
+            'privacidade_finalidade_localizacao' => ['nullable', 'string', 'max:2000'],
+            'privacidade_finalidade_dados_especiais' => ['nullable', 'string', 'max:2000'],
+            'privacidade_categorias_dados_especiais' => ['nullable', 'string', 'max:2000'],
+            'privacidade_condicao_artigo9' => ['nullable', 'string', 'max:2000'],
+
             'nome_empresa' => [
                 'required',
                 'string',

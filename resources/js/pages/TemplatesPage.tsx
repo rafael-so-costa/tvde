@@ -76,6 +76,7 @@ const signatureLabels: Record<SignaturePlaceholder, string> = {
     ASSINATURA_EMPRESA: "Empresa",
 
     ASSINATURA_TESTEMUNHA: "Testemunha",
+    ASSINATURA_TITULAR: "Titular dos dados",
 };
 
 const systemActionLabels: Record<ChecklistSystemAction, string> = {

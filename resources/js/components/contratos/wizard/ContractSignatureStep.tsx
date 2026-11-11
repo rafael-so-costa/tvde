@@ -24,6 +24,7 @@ import type {
 interface Props {
     type: TipoContrato;
     signatures: ContractWizardSignatures;
+    titularTipo?: string;
 
     empresa?: Empresa;
     motorista?: Motorista;
@@ -56,11 +57,15 @@ const labels: Record<
 
     ASSINATURA_TESTEMUNHA:
         "Testemunha",
+
+    ASSINATURA_TITULAR:
+        "Titular dos dados",
 };
 
 export default function ContractSignatureStep({
     type,
     signatures,
+    titularTipo,
     empresa,
     motorista,
     proprietario,
@@ -108,6 +113,7 @@ export default function ContractSignatureStep({
                                 config.placeholder
                             ]
                         }
+                        titularTipo={titularTipo}
                         targetEmail={emailFor(
                             config.placeholder,
                             empresa,
@@ -131,6 +137,7 @@ function SignatureCard({
     config,
     state,
     targetEmail,
+    titularTipo,
     onChange,
 }: {
     config: TipoContratoAssinaturaConfiguracao;
@@ -140,6 +147,7 @@ function SignatureCard({
           ]
         | undefined;
     targetEmail: string | null;
+    titularTipo?: string;
     onChange: (
         values: Partial<
             NonNullable<
@@ -247,7 +255,9 @@ function SignatureCard({
                             }
                             className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none"
                         >
-                            {config.modos.map(
+                            {config.modos
+                                .filter((mode) => !(config.placeholder === "ASSINATURA_TITULAR" && titularTipo === "outro" && mode === "remota"))
+                                .map(
                                 (mode) => (
                                     <option
                                         key={
@@ -267,18 +277,23 @@ function SignatureCard({
                         </select>
                     </label>
 
-                    {config.placeholder ===
-                        "ASSINATURA_TESTEMUNHA" && (
+                    {(config.placeholder ===
+                        "ASSINATURA_TESTEMUNHA" ||
+                        config.placeholder ===
+                        "ASSINATURA_TITULAR") && (
                         <div className="grid gap-4 md:grid-cols-2">
                             <label>
                                 <span className="mb-2 block text-sm font-medium text-slate-700">
-                                    Nome da testemunha *
+                                    {config.placeholder === "ASSINATURA_TITULAR"
+                                        ? "Nome do titular *"
+                                        : "Nome da testemunha *"}
                                 </span>
 
                                 <input
                                     value={
                                         state.signatario_nome
                                     }
+                                    readOnly={config.placeholder === "ASSINATURA_TITULAR"}
                                     onChange={(
                                         event,
                                     ) =>
@@ -305,6 +320,7 @@ function SignatureCard({
                                         value={
                                             state.signatario_email
                                         }
+                                        readOnly={config.placeholder === "ASSINATURA_TITULAR"}
                                         onChange={(
                                             event,
                                         ) =>
@@ -341,7 +357,9 @@ function SignatureCard({
                             }
                         />
                     ) : config.placeholder !==
-                      "ASSINATURA_TESTEMUNHA" ? (
+                      "ASSINATURA_TESTEMUNHA" &&
+                      config.placeholder !==
+                      "ASSINATURA_TITULAR" ? (
                         targetEmail ? (
                             <div className="flex gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4">
                                 <Mail className="h-5 w-5 shrink-0 text-blue-600" />

@@ -142,6 +142,7 @@ class StoreContratoRequest extends FormRequest
                     'ASSINATURA_PROPRIETARIO',
                     'ASSINATURA_EMPRESA',
                     'ASSINATURA_TESTEMUNHA',
+                    'ASSINATURA_TITULAR',
                 ]),
             ],
 

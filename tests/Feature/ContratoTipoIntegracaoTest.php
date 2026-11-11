@@ -1432,3 +1432,329 @@ test('preview pdf impede substituicao de template',function(){
     expect(\App\Models\Contrato::count())
         ->toBe(0);
 });
+
+
+/*
+ * FROTAPRO_4R14B4E_HTTP_OPTIONS
+ *
+ * Os cenarios exercitam a API de contratos
+ * com o wizard/tipo documental configuravel.
+ */
+
+function cti4eFields(): array
+{
+    return [
+        [
+            'campo' => 'RGPD_DECISAO_IMAGEM',
+            'origem' => 'manual',
+            'tipo' => 'select',
+            'obrigatorio' => true,
+            'opcoes' => [
+                'AUTORIZO',
+                'NÃO AUTORIZO',
+            ],
+        ],
+        [
+            'campo' => 'RGPD_DECISAO_VOZ',
+            'origem' => 'manual',
+            'tipo' => 'select',
+            'obrigatorio' => true,
+            'opcoes' => [
+                'AUTORIZO',
+                'NÃO AUTORIZO',
+            ],
+        ],
+        [
+            'campo' => 'RGPD_DECISAO_GEO',
+            'origem' => 'manual',
+            'tipo' => 'select',
+            'obrigatorio' => true,
+            'opcoes' => [
+                'AUTORIZO',
+                'NÃO AUTORIZO',
+                'NÃO APLICÁVEL',
+            ],
+        ],
+        [
+            'campo' => 'RGPD_DECISAO_SENSIVEIS',
+            'origem' => 'manual',
+            'tipo' => 'select',
+            'obrigatorio' => true,
+            'opcoes' => [
+                'PRESTO CONSENTIMENTO EXPLÍCITO',
+                'NÃO PRESTO CONSENTIMENTO',
+                'NÃO APLICÁVEL',
+            ],
+        ],
+    ];
+}
+
+function cti4eFixture(
+    $test,
+    string $suffix,
+    ?array $configuredFields = null
+): array {
+    $tenant = ctiTenant(
+        "Empresa RGPD {$suffix}",
+        "empresa-rgpd-{$suffix}"
+    );
+
+    $admin = ctiAdmin(
+        $tenant,
+        "admin-{$suffix}@frotapro.test"
+    );
+
+    $motorista = ctiMotorista(
+        $tenant,
+        "Rgpd{$suffix}"
+    );
+
+    $veiculo = ctiVeiculo(
+        $tenant,
+        'ZZ-42-ZZ'
+    );
+
+    $tipo = ctiTipo(
+        $tenant,
+        "teste_rgpd_{$suffix}",
+        null,
+        null,
+        [
+            'entidades' => [
+                'motorista' => true,
+                'veiculo' => true,
+            ],
+            'campos_configuracao' =>
+                $configuredFields ?? cti4eFields(),
+            'assinaturas_configuracao' => [],
+        ]
+    );
+
+    ctiLogin($test, $admin);
+
+    return [
+        'tipo' => $tipo,
+        'payload' => [
+            'tipo_contrato_id' => $tipo->id,
+            'motorista_id' => $motorista->id,
+            'veiculo_id' => $veiculo->id,
+            'campos_preenchidos' => [
+                'RGPD_DECISAO_IMAGEM' => 'AUTORIZO',
+                'RGPD_DECISAO_VOZ' => 'NÃO AUTORIZO',
+                'RGPD_DECISAO_GEO' => 'NÃO APLICÁVEL',
+                'RGPD_DECISAO_SENSIVEIS' => 'NÃO APLICÁVEL',
+            ],
+        ],
+    ];
+}
+
+test(
+    '4r14b4e rejeita valores fora das opcoes via http',
+    function (): void {
+        $fixture = cti4eFixture(
+            $this,
+            'invalidos'
+        );
+
+        $payload = $fixture['payload'];
+        $before = \App\Models\Contrato::count();
+
+        foreach (array_keys($payload['campos_preenchidos']) as $key) {
+            $invalid = $payload;
+
+            $invalid['campos_preenchidos'][$key] =
+                'VALOR_INVENTADO_PELA_API';
+
+            $this
+                ->withHeaders(ctiHeaders())
+                ->postJson('/api/contratos', $invalid)
+                ->assertUnprocessable()
+                ->assertJsonValidationErrors([
+                    "campos_preenchidos.{$key}",
+                ]);
+        }
+
+        expect(\App\Models\Contrato::count())
+            ->toBe($before);
+
+        $this
+            ->withHeaders(ctiHeaders())
+            ->postJson('/api/contratos', $payload)
+            ->assertCreated()
+            ->assertJsonPath(
+                'data.tipo_contrato_id',
+                $fixture['tipo']->id
+            );
+    }
+);
+
+test(
+    '4r14b4e exige escolhas mas aceita recusa',
+    function (): void {
+        $fixture = cti4eFixture(
+            $this,
+            'recusa'
+        );
+
+        $payload = $fixture['payload'];
+
+        foreach (array_keys($payload['campos_preenchidos']) as $key) {
+            $missing = $payload;
+
+            unset(
+                $missing['campos_preenchidos'][$key]
+            );
+
+            $this
+                ->withHeaders(ctiHeaders())
+                ->postJson('/api/contratos', $missing)
+                ->assertUnprocessable()
+                ->assertJsonValidationErrors([
+                    "campos_preenchidos.{$key}",
+                ]);
+        }
+
+        $payload['campos_preenchidos'] = [
+            'RGPD_DECISAO_IMAGEM' => 'NÃO AUTORIZO',
+            'RGPD_DECISAO_VOZ' => 'NÃO AUTORIZO',
+            'RGPD_DECISAO_GEO' => 'NÃO AUTORIZO',
+            'RGPD_DECISAO_SENSIVEIS' =>
+                'NÃO PRESTO CONSENTIMENTO',
+        ];
+
+        $response = $this
+            ->withHeaders(ctiHeaders())
+            ->postJson('/api/contratos', $payload)
+            ->assertCreated();
+
+        $contract = \App\Models\Contrato::query()
+            ->findOrFail(
+                $response->json('data.id')
+            );
+
+        expect(
+            $contract->campos_preenchidos[
+                'RGPD_DECISAO_IMAGEM'
+            ]
+        )->toBe('NÃO AUTORIZO');
+
+        expect(
+            $contract->campos_preenchidos[
+                'RGPD_DECISAO_SENSIVEIS'
+            ]
+        )->toBe('NÃO PRESTO CONSENTIMENTO');
+    }
+);
+
+test(
+    '4r14b4e campo opcional aceita vazio mas nao valor falso',
+    function (): void {
+        $fields = [[
+            'campo' => 'RGPD_DECISAO_GEO',
+            'origem' => 'manual',
+            'tipo' => 'select',
+            'obrigatorio' => false,
+            'opcoes' => [
+                'AUTORIZO',
+                'NÃO AUTORIZO',
+                'NÃO APLICÁVEL',
+            ],
+        ]];
+
+        $fixture = cti4eFixture(
+            $this,
+            'opcional',
+            $fields
+        );
+
+        $payload = $fixture['payload'];
+
+        $payload['campos_preenchidos'] = [
+            'RGPD_DECISAO_GEO' => 'FALSO',
+        ];
+
+        $this
+            ->withHeaders(ctiHeaders())
+            ->postJson('/api/contratos', $payload)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'campos_preenchidos.RGPD_DECISAO_GEO',
+            ]);
+
+        $payload['campos_preenchidos'] = [];
+
+        $this
+            ->withHeaders(ctiHeaders())
+            ->postJson('/api/contratos', $payload)
+            ->assertCreated();
+    }
+);
+
+/*
+ * FROTAPRO_4R14B4G_TYPE_SIGNATURE_CONFIGURATION
+ *
+ * Testa a configuracao do tipo documental.
+ * A emissao RGPD requer adicionalmente
+ * modelo aprovado e workflow associado.
+ */
+test(
+    '4r14b4g permite configurar assinatura do titular',
+    function (): void {
+        $tenant = ctiTenant(
+            'Tenant RGPD Global',
+            'tenant-rgpd-global'
+        );
+
+        $admin = ctiAdmin(
+            $tenant,
+            'rgpd.global@frotapro.test'
+        );
+
+        ctiLogin($this, $admin);
+
+        $signature = [[
+            'placeholder' => 'ASSINATURA_TITULAR',
+            'obrigatoria' => true,
+            'modos' => ['presencial', 'remota'],
+        ]];
+
+        $response = $this
+            ->withHeaders(ctiHeaders())
+            ->postJson(
+                '/api/tipos-contrato',
+                [
+                    'nome' => 'RGPD Global Teste',
+                    'slug' => 'rgpd-global-teste',
+                    'codigo' => 'rgpd_informacao_autorizacoes',
+                    'ativo' => false,
+                    'mostrar_menu' => false,
+                    'assinaturas_configuracao' => $signature,
+                ]
+            )
+            ->assertCreated()
+            ->assertJsonPath(
+                'data.assinaturas_configuracao.0.placeholder',
+                'ASSINATURA_TITULAR'
+            );
+
+        $id = $response->json('data.id');
+
+        $this
+            ->withHeaders(ctiHeaders())
+            ->patchJson(
+                "/api/tipos-contrato/{$id}",
+                [
+                    'assinaturas_configuracao' => [[
+                        'placeholder' => 'ASSINATURA_TITULAR',
+                        'obrigatoria' => true,
+                        'modos' => ['presencial'],
+                    ]],
+                ]
+            )
+            ->assertOk()
+            ->assertJsonPath(
+                'data.assinaturas_configuracao.0.modos.0',
+                'presencial'
+            );
+    }
+);

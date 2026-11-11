@@ -94,6 +94,7 @@ const placeholders:
         "ASSINATURA_PROPRIETARIO",
         "ASSINATURA_EMPRESA",
         "ASSINATURA_TESTEMUNHA",
+        "ASSINATURA_TITULAR",
     ];
 
 const signatureLabels:
@@ -112,6 +113,7 @@ const signatureLabels:
 
         ASSINATURA_TESTEMUNHA:
             "Testemunha",
+        ASSINATURA_TITULAR: "Titular dos dados",
     };
 
 function blankSignatures():
@@ -142,6 +144,12 @@ function blankSignatures():
         },
 
         ASSINATURA_TESTEMUNHA: {
+            enabled: false,
+            obrigatoria: true,
+            presencial: true,
+            remota: true,
+        },
+        ASSINATURA_TITULAR: {
             enabled: false,
             obrigatoria: true,
             presencial: true,
@@ -1845,7 +1853,16 @@ export default function ContratoTipoPage() {
                     description="Configure quem assina e quais modos de assinatura estão permitidos."
                 >
                     <div className="grid gap-4 md:grid-cols-2">
-                        {placeholders.map(
+                        {placeholders
+                            .filter(
+                                (placeholder) =>
+                                    placeholder !== "ASSINATURA_TITULAR" ||
+                                    [
+                                        "rgpd_informacao_autorizacoes",
+                                        "informacao_tratamento_dados_rgpd",
+                                    ].includes(form.codigo.trim()),
+                            )
+                            .map(
                             (
                                 placeholder,
                             ) => {

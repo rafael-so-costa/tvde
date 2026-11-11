@@ -115,7 +115,102 @@ class ContratoService
                 $data['empresa_id'] ?? null
             );
 
-            if ($tipoContrato) {
+            $rgpdIntegration = app(FrotaProRgpdV11Integration::class);
+
+            if ($rgpdIntegration->applies($template)) {
+                /*
+                 * FROTAPRO_4R14B4G_RGPD_GLOBAL_WORKFLOW
+                 *
+                 * O RGPD utiliza o tipo documental
+                 * e workflow existentes.
+                 *
+                 * A identidade do titular continua
+                 * a ser validada exclusivamente pela
+                 * integracao RGPD.
+                 */
+                if ($tipoContrato !== null) {
+                    $tipoPermitido = in_array(
+                        (string) $tipoContrato->codigo,
+                        [
+                            'rgpd_informacao_autorizacoes',
+                            'informacao_tratamento_dados_rgpd',
+                        ],
+                        true
+                    );
+
+                    $workflowPermitido =
+                        ($workflowTemplate?->codigo ?? null)
+                        === 'rgpd_informacao_autorizacoes';
+
+                    $assinaturaConfigurada =
+                        count($signatureConfiguration) === 1
+                        && (
+                            $signatureConfiguration[0]['placeholder']
+                            ?? null
+                        ) === 'ASSINATURA_TITULAR'
+                        && (
+                            $signatureConfiguration[0]['obrigatoria']
+                            ?? false
+                        ) === true;
+
+                    if (
+                        !$tipoPermitido ||
+                        !$workflowPermitido ||
+                        !$assinaturaConfigurada
+                    ) {
+                        throw ValidationException::withMessages([
+                            'tipo_contrato_id' =>
+                                'O RGPD exige um tipo documental proprio, workflow RGPD e assinatura obrigatoria do titular.',
+                        ]);
+                    }
+
+                    $modoTitular = strtolower(
+                        trim(
+                            (string) (
+                                $assinaturasInput[0]['modo']
+                                ?? ''
+                            )
+                        )
+                    );
+
+                    if (
+                        !in_array(
+                            $modoTitular,
+                            (array) (
+                                $signatureConfiguration[0]['modos']
+                                ?? []
+                            ),
+                            true
+                        )
+                    ) {
+                        throw ValidationException::withMessages([
+                            'assinaturas' =>
+                                'O modo de assinatura do titular nao esta permitido neste workflow.',
+                        ]);
+                    }
+                } elseif (
+                    ($data['tipo'] ?? null) !==
+                        'rgpd_informacao_autorizacoes'
+                ) {
+                    throw ValidationException::withMessages([
+                        'tipo' =>
+                            'Tipo documental RGPD invalido.',
+                    ]);
+                }
+
+                $prepared = $rgpdIntegration->prepare(
+                    $tenantId,
+                    $template,
+                    (array) ($data['campos_preenchidos'] ?? []),
+                    $assinaturasInput,
+                    $motorista,
+                    $proprietario,
+                    $empresa
+                );
+
+                $data['campos_preenchidos'] = $prepared['snapshot'];
+                $assinaturas = $prepared['assinaturas'];
+            } elseif ($tipoContrato) {
                 $assinaturas =
                     $this
                         ->prepararAssinaturasConfiguradas(
@@ -1062,6 +1157,16 @@ class ContratoService
             ) {
                 throw ValidationException::withMessages([
                     'contrato' => 'Apenas contratos em rascunho e não bloqueados podem ser editados.',
+                ]);
+            }
+
+            if (
+                app(FrotaProRgpdV11Integration::class)
+                    ->applies($contrato->template)
+            ) {
+                throw ValidationException::withMessages([
+                    'contrato' =>
+                        'RGPD 1.1: para alterar o titular ou as escolhas, crie uma nova declaracao com nova assinatura.',
                 ]);
             }
 

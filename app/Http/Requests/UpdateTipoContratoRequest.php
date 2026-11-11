@@ -93,6 +93,7 @@ class UpdateTipoContratoRequest extends FormRequest
                     'ASSINATURA_PROPRIETARIO',
                     'ASSINATURA_EMPRESA',
                     'ASSINATURA_TESTEMUNHA',
+                    'ASSINATURA_TITULAR',
                 ]),
             ],
             'assinaturas_configuracao.*.obrigatoria'=>['required','boolean'],

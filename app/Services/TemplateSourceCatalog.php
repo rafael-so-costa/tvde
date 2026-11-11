@@ -21,6 +21,60 @@ class TemplateSourceCatalog
             'empresa.nome_gerente' =>
                 'Nome do gerente',
 
+            'empresa.privacidade_contacto_email' =>
+                'E-mail para privacidade',
+
+            'empresa.privacidade_contacto_telefone' =>
+                'Telefone para privacidade',
+
+            'empresa.privacidade_epd_nome' =>
+                'Nome do encarregado de proteção de dados',
+
+            'empresa.privacidade_epd_email' =>
+                'E-mail do encarregado de proteção de dados',
+
+            'empresa.privacidade_destinatarios' =>
+                'Destinatários dos dados',
+
+            'empresa.privacidade_subcontratantes' =>
+                'Categorias de subcontratantes',
+
+            'empresa.privacidade_prazo_identificacao' =>
+                'Conservação - identificação e cadastro',
+
+            'empresa.privacidade_prazo_contratos' =>
+                'Conservação - contratos e documentação',
+
+            'empresa.privacidade_prazo_fiscal' =>
+                'Conservação - dados contabilísticos e fiscais',
+
+            'empresa.privacidade_prazo_operacional' =>
+                'Conservação - registos operacionais',
+
+            'empresa.privacidade_prazo_consentimentos' =>
+                'Conservação - consentimentos',
+
+            'empresa.privacidade_prazo_localizacao' =>
+                'Conservação - dados de localização',
+
+            'empresa.privacidade_transferencias_internacionais' =>
+                'Transferências internacionais e garantias',
+
+            'empresa.privacidade_decisoes_automatizadas' =>
+                'Decisões automatizadas e definição de perfis',
+
+            'empresa.privacidade_finalidade_localizacao' =>
+                'Finalidade facultativa de localização',
+
+            'empresa.privacidade_finalidade_dados_especiais' =>
+                'Finalidade de tratamento de dados especiais',
+
+            'empresa.privacidade_categorias_dados_especiais' =>
+                'Categorias de dados especiais',
+
+            'empresa.privacidade_condicao_artigo9' =>
+                'Condição do artigo 9 do RGPD',
+
             'empresa.endereco_completo' =>
                 'Morada completa',
 
@@ -273,6 +327,9 @@ class TemplateSourceCatalog
 
             'assinatura.testemunha' =>
                 'Assinatura da testemunha',
+
+            'assinatura.titular' =>
+                'Assinatura do titular dos dados',
         ],
     ];
 

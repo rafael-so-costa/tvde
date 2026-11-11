@@ -30,6 +30,24 @@ interface FormState {
     email: string;
     telemovel: string;
     nome_gerente: string;
+    privacidade_contacto_email: string;
+    privacidade_contacto_telefone: string;
+    privacidade_epd_nome: string;
+    privacidade_epd_email: string;
+    privacidade_destinatarios: string;
+    privacidade_subcontratantes: string;
+    privacidade_prazo_identificacao: string;
+    privacidade_prazo_contratos: string;
+    privacidade_prazo_fiscal: string;
+    privacidade_prazo_operacional: string;
+    privacidade_prazo_consentimentos: string;
+    privacidade_prazo_localizacao: string;
+    privacidade_transferencias_internacionais: string;
+    privacidade_decisoes_automatizadas: string;
+    privacidade_finalidade_localizacao: string;
+    privacidade_finalidade_dados_especiais: string;
+    privacidade_categorias_dados_especiais: string;
+    privacidade_condicao_artigo9: string;
     endereco_rua: string;
     endereco_numero: string;
     endereco_complemento: string;
@@ -50,6 +68,24 @@ const emptyForm: FormState = {
     email: '',
     telemovel: '',
     nome_gerente: '',
+    privacidade_contacto_email: '',
+    privacidade_contacto_telefone: '',
+    privacidade_epd_nome: '',
+    privacidade_epd_email: '',
+    privacidade_destinatarios: '',
+    privacidade_subcontratantes: '',
+    privacidade_prazo_identificacao: '',
+    privacidade_prazo_contratos: '',
+    privacidade_prazo_fiscal: '',
+    privacidade_prazo_operacional: '',
+    privacidade_prazo_consentimentos: '',
+    privacidade_prazo_localizacao: '',
+    privacidade_transferencias_internacionais: '',
+    privacidade_decisoes_automatizadas: '',
+    privacidade_finalidade_localizacao: '',
+    privacidade_finalidade_dados_especiais: '',
+    privacidade_categorias_dados_especiais: '',
+    privacidade_condicao_artigo9: '',
     endereco_rua: '',
     endereco_numero: '',
     endereco_complemento: '',
@@ -64,6 +100,26 @@ const emptyForm: FormState = {
     status_cadastro: 'pendente',
 };
 
+const privacyFields = [
+    { name: 'privacidade_contacto_email', label: 'E-mail para privacidade', input: 'email', long: false },
+    { name: 'privacidade_contacto_telefone', label: 'Telefone para privacidade', input: 'tel', long: false },
+    { name: 'privacidade_epd_nome', label: 'Nome do encarregado de proteção de dados', input: 'text', long: false },
+    { name: 'privacidade_epd_email', label: 'E-mail do encarregado de proteção de dados', input: 'email', long: false },
+    { name: 'privacidade_destinatarios', label: 'Destinatários dos dados', input: 'text', long: true },
+    { name: 'privacidade_subcontratantes', label: 'Categorias de subcontratantes', input: 'text', long: true },
+    { name: 'privacidade_prazo_identificacao', label: 'Conservação - identificação e cadastro', input: 'text', long: true },
+    { name: 'privacidade_prazo_contratos', label: 'Conservação - contratos e documentação', input: 'text', long: true },
+    { name: 'privacidade_prazo_fiscal', label: 'Conservação - dados contabilísticos e fiscais', input: 'text', long: true },
+    { name: 'privacidade_prazo_operacional', label: 'Conservação - registos operacionais', input: 'text', long: true },
+    { name: 'privacidade_prazo_consentimentos', label: 'Conservação - consentimentos', input: 'text', long: true },
+    { name: 'privacidade_prazo_localizacao', label: 'Conservação - dados de localização', input: 'text', long: true },
+    { name: 'privacidade_transferencias_internacionais', label: 'Transferências internacionais e garantias', input: 'text', long: true },
+    { name: 'privacidade_decisoes_automatizadas', label: 'Decisões automatizadas e definição de perfis', input: 'text', long: true },
+    { name: 'privacidade_finalidade_localizacao', label: 'Finalidade facultativa de localização', input: 'text', long: true },
+    { name: 'privacidade_finalidade_dados_especiais', label: 'Finalidade de tratamento de dados especiais', input: 'text', long: true },
+    { name: 'privacidade_categorias_dados_especiais', label: 'Categorias de dados especiais', input: 'text', long: true },
+    { name: 'privacidade_condicao_artigo9', label: 'Condição do artigo 9 do RGPD', input: 'text', long: true },
+] as const;
 function valueOrNull(
     value: string
 ): string | null {
@@ -126,6 +182,42 @@ export default function EmpresaFormModal({
             nome_gerente:
                 empresa.nome_gerente ??
                 '',
+            privacidade_contacto_email:
+                empresa.privacidade_contacto_email ?? '',
+            privacidade_contacto_telefone:
+                empresa.privacidade_contacto_telefone ?? '',
+            privacidade_epd_nome:
+                empresa.privacidade_epd_nome ?? '',
+            privacidade_epd_email:
+                empresa.privacidade_epd_email ?? '',
+            privacidade_destinatarios:
+                empresa.privacidade_destinatarios ?? '',
+            privacidade_subcontratantes:
+                empresa.privacidade_subcontratantes ?? '',
+            privacidade_prazo_identificacao:
+                empresa.privacidade_prazo_identificacao ?? '',
+            privacidade_prazo_contratos:
+                empresa.privacidade_prazo_contratos ?? '',
+            privacidade_prazo_fiscal:
+                empresa.privacidade_prazo_fiscal ?? '',
+            privacidade_prazo_operacional:
+                empresa.privacidade_prazo_operacional ?? '',
+            privacidade_prazo_consentimentos:
+                empresa.privacidade_prazo_consentimentos ?? '',
+            privacidade_prazo_localizacao:
+                empresa.privacidade_prazo_localizacao ?? '',
+            privacidade_transferencias_internacionais:
+                empresa.privacidade_transferencias_internacionais ?? '',
+            privacidade_decisoes_automatizadas:
+                empresa.privacidade_decisoes_automatizadas ?? '',
+            privacidade_finalidade_localizacao:
+                empresa.privacidade_finalidade_localizacao ?? '',
+            privacidade_finalidade_dados_especiais:
+                empresa.privacidade_finalidade_dados_especiais ?? '',
+            privacidade_categorias_dados_especiais:
+                empresa.privacidade_categorias_dados_especiais ?? '',
+            privacidade_condicao_artigo9:
+                empresa.privacidade_condicao_artigo9 ?? '',
             endereco_rua:
                 empresa.endereco_rua ??
                 '',
@@ -219,6 +311,24 @@ export default function EmpresaFormModal({
                 valueOrNull(
                     form.nome_gerente
                 ),
+            privacidade_contacto_email: valueOrNull(form.privacidade_contacto_email),
+            privacidade_contacto_telefone: valueOrNull(form.privacidade_contacto_telefone),
+            privacidade_epd_nome: valueOrNull(form.privacidade_epd_nome),
+            privacidade_epd_email: valueOrNull(form.privacidade_epd_email),
+            privacidade_destinatarios: valueOrNull(form.privacidade_destinatarios),
+            privacidade_subcontratantes: valueOrNull(form.privacidade_subcontratantes),
+            privacidade_prazo_identificacao: valueOrNull(form.privacidade_prazo_identificacao),
+            privacidade_prazo_contratos: valueOrNull(form.privacidade_prazo_contratos),
+            privacidade_prazo_fiscal: valueOrNull(form.privacidade_prazo_fiscal),
+            privacidade_prazo_operacional: valueOrNull(form.privacidade_prazo_operacional),
+            privacidade_prazo_consentimentos: valueOrNull(form.privacidade_prazo_consentimentos),
+            privacidade_prazo_localizacao: valueOrNull(form.privacidade_prazo_localizacao),
+            privacidade_transferencias_internacionais: valueOrNull(form.privacidade_transferencias_internacionais),
+            privacidade_decisoes_automatizadas: valueOrNull(form.privacidade_decisoes_automatizadas),
+            privacidade_finalidade_localizacao: valueOrNull(form.privacidade_finalidade_localizacao),
+            privacidade_finalidade_dados_especiais: valueOrNull(form.privacidade_finalidade_dados_especiais),
+            privacidade_categorias_dados_especiais: valueOrNull(form.privacidade_categorias_dados_especiais),
+            privacidade_condicao_artigo9: valueOrNull(form.privacidade_condicao_artigo9),
             endereco_rua:
                 valueOrNull(
                     form.endereco_rua
@@ -677,6 +787,64 @@ export default function EmpresaFormModal({
                             </div>
                         </section>
 
+                        <section>
+                            <h3 className="font-semibold text-slate-900 mb-4">
+                                Proteção de dados (RGPD)
+                            </h3>
+
+                            <p className="text-sm text-slate-500 mb-4">
+                                Configure os dados reais da empresa.
+                                O encarregado de proteção de dados
+                                é preenchido quando aplicável.
+                                Estes valores serão utilizados nos
+                                modelos documentais.
+                            </p>
+
+                            <div className="grid sm:grid-cols-2 gap-4">
+                                {privacyFields.map((field) => (
+                                    <div
+                                        key={field.name}
+                                        className={
+                                            field.long
+                                                ? "sm:col-span-2"
+                                                : ""
+                                        }
+                                    >
+                                        <label className={labelClass}>
+                                            {field.label}
+                                        </label>
+
+                                        {field.long ? (
+                                            <textarea
+                                                rows={3}
+                                                value={form[field.name]}
+                                                onChange={(event) =>
+                                                    update(
+                                                        field.name,
+                                                        event.target.value
+                                                    )
+                                                }
+                                                className={fieldClass}
+                                            />
+                                        ) : (
+                                            <input
+                                                type={field.input}
+                                                value={form[field.name]}
+                                                onChange={(event) =>
+                                                    update(
+                                                        field.name,
+                                                        event.target.value
+                                                    )
+                                                }
+                                                className={fieldClass}
+                                            />
+                                        )}
+
+                                        {fieldError(field.name)}
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
                         <section>
                             <h3 className="font-semibold text-slate-900 mb-4">
                                 Morada

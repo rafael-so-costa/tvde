@@ -284,6 +284,18 @@ class ContratoTipoResolverService
 
         $errors=[];
 
+        /*
+         * FROTAPRO_4R14B4E_CONFIGURED_OPTIONS
+         *
+         * O cliente nao pode escolher valores
+         * fora das opcoes definidas pelo tipo.
+         */
+        $this->validateConfiguredOptions(
+            $configurations,
+            $filledFields,
+            $errors
+        );
+
         foreach($configurations as $index=>$configuration){
             if(!is_array($configuration)){
                 continue;
@@ -336,6 +348,23 @@ class ContratoTipoResolverService
                 continue;
             }
 
+            /*
+             * FROTAPRO_4R14B4I2
+             *
+             * No RGPD, determinados placeholders
+             * sao preenchidos pelo servico documental,
+             * nao pelo utilizador do wizard.
+             */
+            if(
+                $this->isRgpdServerManagedField(
+                    $tipo,
+                    $template,
+                    $field
+                )
+            ){
+                continue;
+            }
+
             if(
                 strtoupper($field)==='PERCENTAGEM_CONTRATO' &&
                 app(FrotaProContractBillingIntegration::class)
@@ -365,6 +394,185 @@ class ContratoTipoResolverService
         }
     }
 
+    /*
+     * FROTAPRO_4R14B4E_CONFIGURED_OPTIONS
+     *
+     * Validacao partilhada por todos os tipos
+     * documentais que possuem campos de selecao.
+     *
+     * A ausencia de um campo obrigatorio continua
+     * a ser validada por validateFields().
+     */
+    private function validateConfiguredOptions(
+        array $configurations,
+        array $filledFields,
+        array &$errors
+    ): void {
+        foreach ($configurations as $configuration) {
+            if (!is_array($configuration)) {
+                continue;
+            }
+
+            $origin = strtolower(
+                trim(
+                    (string) (
+                        $configuration['origem']
+                        ?? 'manual'
+                    )
+                )
+            );
+
+            if ($origin !== 'manual') {
+                continue;
+            }
+
+            $options = $configuration['opcoes'] ?? [];
+
+            if (!is_array($options) || $options === []) {
+                continue;
+            }
+
+            $field = trim(
+                (string) (
+                    $configuration['campo']
+                    ?? $configuration['name']
+                    ?? $configuration['chave']
+                    ?? ''
+                )
+            );
+
+            if ($field === '') {
+                continue;
+            }
+
+            $found = false;
+            $selected = null;
+
+            foreach ($filledFields as $key => $value) {
+                if (
+                    mb_strtoupper(
+                        trim((string) $key),
+                        'UTF-8'
+                    ) !== mb_strtoupper(
+                        $field,
+                        'UTF-8'
+                    )
+                ) {
+                    continue;
+                }
+
+                $selected = $value;
+                $found = true;
+                break;
+            }
+
+            if (
+                !$found ||
+                $selected === null ||
+                $selected === ''
+            ) {
+                continue;
+            }
+
+            $allowed = [];
+
+            foreach ($options as $option) {
+                if (is_string($option)) {
+                    $allowed[] = $option;
+                } elseif (
+                    is_int($option) ||
+                    is_float($option)
+                ) {
+                    $allowed[] = (string) $option;
+                } elseif (is_bool($option)) {
+                    $allowed[] = $option ? 'true' : 'false';
+                }
+            }
+
+            if (
+                !is_string($selected) &&
+                !is_int($selected) &&
+                !is_float($selected)
+            ) {
+                $errors["campos_preenchidos.{$field}"] =
+                    "O campo {$field} possui um valor invalido.";
+
+                continue;
+            }
+
+            if (
+                !in_array(
+                    (string) $selected,
+                    $allowed,
+                    true
+                )
+            ) {
+                $errors["campos_preenchidos.{$field}"] =
+                    "Escolha uma das opcoes permitidas para {$field}.";
+            }
+        }
+    }
+    /*
+     * FROTAPRO_4R14B4I2
+     *
+     * O tratamento especial aplica-se apenas
+     * ao tipo RGPD com template RGPD reconhecido.
+     *
+     * O servico FrotaProRgpdV11Service continua
+     * responsavel por validar e resolver cada valor.
+     *
+     * As escolhas do titular e a sua qualidade
+     * nao sao dispensadas por este metodo.
+     */
+    private function isRgpdServerManagedField(
+        TipoContrato $tipo,
+        ?TemplateContrato $template,
+        string $field
+    ): bool {
+        if(
+            !in_array(
+                (string) $tipo->codigo,
+                [
+                    'rgpd_informacao_autorizacoes',
+                    'informacao_tratamento_dados_rgpd',
+                ],
+                true
+            )
+        ){
+            return false;
+        }
+
+        if(
+            !app(FrotaProRgpdV11Service::class)
+                ->isRgpd($template)
+        ){
+            return false;
+        }
+
+        $managed = array_merge(
+            array_keys(
+                FrotaProRgpdV11Service::POLICY
+            ),
+            [
+                'RGPD_TITULAR_NOME',
+                'RGPD_TITULAR_NIF',
+                'RGPD_TITULAR_CONTACTO',
+                'RGPD_TITULAR_IDENTIFICADOR',
+                'RGPD_TITULAR_QUALIDADE',
+                'RGPD_TITULAR_EMAIL',
+                'RGPD_DATA_DECLARACAO',
+                'RGPD_DATA_ESCOLHAS',
+                'RGPD_RECOLHA_EM',
+                'RGPD_VERSAO_MODELO',
+            ]
+        );
+
+        return in_array(
+            mb_strtoupper(trim($field), 'UTF-8'),
+            $managed,
+            true
+        );
+    }
     private function hasValue(
         string $field,
         array $filledFields,

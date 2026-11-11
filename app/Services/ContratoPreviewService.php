@@ -101,6 +101,42 @@ class ContratoPreviewService
                 $data['veiculo_id'] ?? null
             );
 
+        if (
+            app(FrotaProRgpdV11Integration::class)
+                ->applies($template)
+        ) {
+            $rawRgpdFields = (array) (
+                $data['campos_preenchidos'] ?? []
+            );
+
+            $rgpdSnapshot = app(
+                FrotaProRgpdV11Service::class
+            )->snapshot(
+                $tenantId,
+                $rawRgpdFields,
+                $motorista,
+                $proprietario,
+                $empresa
+            );
+
+            $kind = (string) (
+                $rgpdSnapshot['RGPD_TITULAR_TIPO'] ?? ''
+            );
+
+            $rgpdSnapshot['RGPD_TITULAR_ID'] = match ($kind) {
+                'motorista' => $motorista?->id,
+                'proprietario' => $proprietario?->id,
+                'colaborador' =>
+                    $rawRgpdFields['RGPD_TITULAR_ID'] ?? null,
+                default => null,
+            };
+
+            $data['campos_preenchidos'] = array_merge(
+                $rawRgpdFields,
+                $rgpdSnapshot
+            );
+        }
+
         $contrato=
             new Contrato(
                 collect(

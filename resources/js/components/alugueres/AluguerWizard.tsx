@@ -2862,6 +2862,7 @@ function signatureLabel(
             'Assinatura da empresa',
         ASSINATURA_TESTEMUNHA:
             'Assinatura da testemunha',
+        ASSINATURA_TITULAR: 'Assinatura do titular dos dados',
     }[placeholder];
 }
 

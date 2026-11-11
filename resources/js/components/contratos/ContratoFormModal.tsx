@@ -162,6 +162,7 @@ function signatureLabel(placeholder: SignaturePlaceholder): string {
         ASSINATURA_PROPRIETARIO: "Assinatura do proprietário",
         ASSINATURA_EMPRESA: "Assinatura da empresa",
         ASSINATURA_TESTEMUNHA: "Assinatura da testemunha",
+        ASSINATURA_TITULAR: "Assinatura do titular dos dados",
     }[placeholder];
 }
 

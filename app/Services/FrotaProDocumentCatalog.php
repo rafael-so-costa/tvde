@@ -126,6 +126,21 @@ final class FrotaProDocumentCatalog
     public function find(
         string $code
     ): ?array {
+        if ($code === 'informacao_tratamento_dados_rgpd_v11') {
+            return $this->document(
+                'informacao_tratamento_dados_rgpd_v11',
+                'Informacao sobre Tratamento de Dados e Autorizacoes Especificas (RGPD 1.1)',
+                'informacao-tratamento-dados-rgpd-v1-1',
+                'Proteção de Dados (RGPD)',
+                'declaracao',
+                'rgpd_informacao_autorizacoes',
+                'RGPD 1.1 parametrizado com assinatura do titular e autorizacoes independentes.',
+                91,
+                false,
+                '1.1',
+                false
+            );
+        }
         return collect(
             $this->all()
         )->firstWhere(
