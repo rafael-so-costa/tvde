@@ -31,6 +31,7 @@
         "@tiptap/react": "^3.32.0",
         "@tiptap/starter-kit": "^3.32.0",
         "axios": "^1.20.0",
+        "libphonenumber-js": "1.13.16",
         "lucide-react": "^0.462.0",
         "pdfjs-dist": "^6.3.289",
         "react": "^18.3.1",

@@ -634,7 +634,7 @@ test(
             )
             ->assertJsonPath(
                 'data.telemovel',
-                '912345678'
+                '+351912345678'
             )
             ->assertJsonPath(
                 'data.endereco_cep',
@@ -654,7 +654,7 @@ test(
 
                 'email' => 'geral@empresa.pt',
 
-                'telemovel' => '912345678',
+                'telemovel' => '+351912345678',
 
                 'endereco_cep' => '1000-001',
 
@@ -889,7 +889,7 @@ test(
             )
             ->assertJsonPath(
                 'data.telemovel',
-                '213456789'
+                '+351213456789'
             )
             ->assertJsonPath(
                 'data.endereco_cep',
@@ -905,7 +905,7 @@ test(
 
                 'email' => 'novo@empresa.pt',
 
-                'telemovel' => '213456789',
+                'telemovel' => '+351213456789',
 
                 'endereco_cep' => '1999-999',
             ]
