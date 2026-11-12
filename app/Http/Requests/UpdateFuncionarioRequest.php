@@ -3,9 +3,10 @@
 namespace App\Http\Requests;
 
 use App\Rules\PortugueseNif;
-use App\Rules\PortuguesePhone;
+use App\Rules\InternationalPhone;
 use App\Services\TenantContext;
 use App\Support\PortugueseDataNormalizer;
+use App\Support\PhoneNormalizer;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -94,7 +95,7 @@ class UpdateFuncionarioRequest extends FormRequest
                 'nullable',
                 'string',
                 'max:20',
-                new PortuguesePhone,
+                new InternationalPhone,
             ],
 
             'data_nascimento' => [
@@ -176,9 +177,7 @@ class UpdateFuncionarioRequest extends FormRequest
 
         if ($this->has('telefone')) {
             $merge['telefone'] =
-                PortugueseDataNormalizer::phone(
-                    $this->input('telefone')
-                );
+                PhoneNormalizer::toE164($this->input('telefone')) ?? $this->input('telefone');
         }
 
         if ($this->has('numero_funcionario')) {

@@ -1,4 +1,5 @@
 import axios from "axios";
+import InternationalPhoneInput from "../InternationalPhoneInput";
 import {
     FormEvent,
     useEffect,
@@ -389,25 +390,30 @@ export default function FuncionarioFormModal({
                         }
                     />
 
-                    <Field
-                        field="telefone"
-                        label="Telefone"
-                        value={
-                            form.telefone ??
-                            ""
-                        }
-                        error={
-                            fieldError(
-                                "telefone"
-                            )
-                        }
-                        onChange={value=>
-                            set(
-                                "telefone",
-                                value
-                            )
-                        }
-                    />
+                    <div className="min-w-0">
+    <label
+        htmlFor="funcionario-telefone"
+        className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500"
+    >
+        Telefone
+    </label>
+
+    <InternationalPhoneInput
+        id="funcionario-telefone"
+        value={form.telefone ?? ''}
+        onChange={(value) => set('telefone', value)}
+        className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-indigo-500"
+    />
+
+    {fieldError('telefone') && (
+        <p
+            data-field-error="telefone"
+            className="mt-1.5 text-xs text-red-600"
+        >
+            {fieldError('telefone')}
+        </p>
+    )}
+</div>
 
                     <Field
                         field="data_nascimento"

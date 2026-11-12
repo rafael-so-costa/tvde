@@ -1,4 +1,5 @@
 import axios from 'axios';
+import InternationalPhoneInput from '../InternationalPhoneInput';
 import { FormEvent, useEffect, useState } from 'react';
 import { Camera, LoaderCircle, UserRound, X } from 'lucide-react';
 import type {
@@ -875,16 +876,12 @@ export default function MotoristaFormModal({
                                         Telemóvel *
                                     </label>
 
-                                    <input
-                                        value={form.telemovel}
-                                        onChange={(event) =>
-                                            update(
-                                                'telemovel',
-                                                event.target.value
-                                            )
-                                        }
-                                        className={inputClass}
-                                    />
+                                    <InternationalPhoneInput
+    id="motorista-telemovel"
+    value={form.telemovel}
+    onChange={(value) => update('telemovel', value)}
+    className={inputClass}
+/>
 
                                     {fieldError('telemovel')}
                                 </div>
@@ -913,18 +910,12 @@ export default function MotoristaFormModal({
                                         Telemóvel de emergência
                                     </label>
 
-                                    <input
-                                        value={
-                                            form.contato_urgencia_telemovel
-                                        }
-                                        onChange={(event) =>
-                                            update(
-                                                'contato_urgencia_telemovel',
-                                                event.target.value
-                                            )
-                                        }
-                                        className={inputClass}
-                                    />
+                                    <InternationalPhoneInput
+    id="motorista-contato_urgencia_telemovel"
+    value={form.contato_urgencia_telemovel}
+    onChange={(value) => update('contato_urgencia_telemovel', value)}
+    className={inputClass}
+/>
 
                                     {fieldError('contato_urgencia_telemovel')}
                                 </div>
@@ -1065,16 +1056,12 @@ export default function MotoristaFormModal({
                                         Uber telemóvel
                                     </label>
 
-                                    <input
-                                        value={form.uber_telemovel}
-                                        onChange={(event) =>
-                                            update(
-                                                'uber_telemovel',
-                                                event.target.value
-                                            )
-                                        }
-                                        className={inputClass}
-                                    />
+                                    <InternationalPhoneInput
+    id="motorista-uber_telemovel"
+    value={form.uber_telemovel}
+    onChange={(value) => update('uber_telemovel', value)}
+    className={inputClass}
+/>
 
                                     {fieldError('uber_telemovel')}
                                 </div>
@@ -1104,16 +1091,12 @@ export default function MotoristaFormModal({
                                         Bolt telemóvel
                                     </label>
 
-                                    <input
-                                        value={form.bolt_telemovel}
-                                        onChange={(event) =>
-                                            update(
-                                                'bolt_telemovel',
-                                                event.target.value
-                                            )
-                                        }
-                                        className={inputClass}
-                                    />
+                                    <InternationalPhoneInput
+    id="motorista-bolt_telemovel"
+    value={form.bolt_telemovel}
+    onChange={(value) => update('bolt_telemovel', value)}
+    className={inputClass}
+/>
 
                                     {fieldError('bolt_telemovel')}
                                 </div>

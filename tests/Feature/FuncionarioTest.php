@@ -1239,7 +1239,7 @@ test('funcionário normaliza nif email e telefone no cadastro', function () {
         )
         ->assertJsonPath(
             'data.telefone',
-            '912345678'
+            '+351912345678'
         );
 
     $this->assertDatabaseHas(
@@ -1251,7 +1251,7 @@ test('funcionário normaliza nif email e telefone no cadastro', function () {
 
             'email' => 'funcionario.normalizado@example.test',
 
-            'telefone' => '912345678',
+            'telefone' => '+351912345678',
         ]
     );
 });
@@ -1403,6 +1403,31 @@ test('atualização normaliza dados e permite manter o próprio nif', function (
         )
         ->assertJsonPath(
             'data.telefone',
-            '913456789'
+            '+351913456789'
+        );
+});
+
+test('funcionario aceita telefone internacional', function () {
+    $tenant = criarTenantFuncionario(
+        'Tenant Internacional Funcionario',
+        'tenant-internacional-funcionario'
+    );
+
+    $admin = criarAdminFuncionario(
+        $tenant,
+        'internacional.funcionario@frotapro.test'
+    );
+
+    autenticarFuncionario($this, $admin);
+
+    $this->withHeaders(funcionarioSpaHeaders())
+        ->postJson('/api/funcionarios', [
+            'nome' => 'Funcionario Internacional',
+            'telefone' => '+55 11 99876 5432',
+        ])
+        ->assertCreated()
+        ->assertJsonPath(
+            'data.telefone',
+            '+5511998765432'
         );
 });

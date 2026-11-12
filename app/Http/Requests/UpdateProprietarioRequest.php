@@ -4,10 +4,11 @@ namespace App\Http\Requests;
 
 use App\Rules\PortugueseIban;
 use App\Rules\PortugueseNif;
-use App\Rules\PortuguesePhone;
+use App\Rules\InternationalPhone;
 use App\Rules\PortuguesePostalCode;
 use App\Services\TenantContext;
 use App\Support\PortugueseDataNormalizer;
+use App\Support\PhoneNormalizer;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -84,7 +85,7 @@ class UpdateProprietarioRequest extends FormRequest
                 'nullable',
                 'string',
                 'max:20',
-                new PortuguesePhone,
+                new InternationalPhone,
             ],
 
             'data_nascimento' => [
@@ -266,9 +267,7 @@ class UpdateProprietarioRequest extends FormRequest
 
         if ($this->has('telemovel')) {
             $data['telemovel'] =
-                PortugueseDataNormalizer::phone(
-                    $this->input('telemovel')
-                );
+                PhoneNormalizer::toE164($this->input('telemovel')) ?? $this->input('telemovel');
         }
 
         if ($this->has('endereco_cep')) {

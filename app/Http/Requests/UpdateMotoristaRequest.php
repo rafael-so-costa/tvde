@@ -4,10 +4,11 @@ namespace App\Http\Requests;
 
 use App\Rules\PortugueseIban;
 use App\Rules\PortugueseNif;
-use App\Rules\PortuguesePhone;
+use App\Rules\InternationalPhone;
 use App\Rules\PortuguesePostalCode;
 use App\Services\TenantContext;
 use App\Support\PortugueseDataNormalizer;
+use App\Support\PhoneNormalizer;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -137,7 +138,7 @@ class UpdateMotoristaRequest extends FormRequest
                 'nullable',
                 'string',
                 'max:20',
-                new PortuguesePhone,
+                new InternationalPhone,
             ],
 
             'endereco' => [
@@ -210,7 +211,7 @@ class UpdateMotoristaRequest extends FormRequest
                 'nullable',
                 'string',
                 'max:20',
-                new PortuguesePhone,
+                new InternationalPhone,
             ],
 
             'uber_email' => [
@@ -225,7 +226,7 @@ class UpdateMotoristaRequest extends FormRequest
                 'nullable',
                 'string',
                 'max:20',
-                new PortuguesePhone,
+                new InternationalPhone,
             ],
 
             'certificado_tvde' => [
@@ -260,7 +261,7 @@ class UpdateMotoristaRequest extends FormRequest
                 'nullable',
                 'string',
                 'max:20',
-                new PortuguesePhone,
+                new InternationalPhone,
             ],
 
             'documentos_upload' => [
@@ -329,9 +330,7 @@ class UpdateMotoristaRequest extends FormRequest
         ) {
             if ($this->has($field)) {
                 $data[$field] =
-                    PortugueseDataNormalizer::phone(
-                        $this->input($field)
-                    );
+                    PhoneNormalizer::toE164($this->input($field)) ?? $this->input($field);
             }
         }
 

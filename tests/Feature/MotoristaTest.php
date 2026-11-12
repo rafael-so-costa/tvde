@@ -870,7 +870,7 @@ test(
                 )
                 ->assertJsonPath(
                     'data.telemovel',
-                    '912345678'
+                    '+351912345678'
                 )
                 ->assertJsonPath(
                     'data.endereco_cep',
@@ -886,7 +886,7 @@ test(
                 )
                 ->assertJsonPath(
                     'data.bolt_telemovel',
-                    '911111111'
+                    '+351911111111'
                 )
                 ->assertJsonPath(
                     'data.uber_email',
@@ -894,11 +894,11 @@ test(
                 )
                 ->assertJsonPath(
                     'data.uber_telemovel',
-                    '922222222'
+                    '+351922222222'
                 )
                 ->assertJsonPath(
                     'data.contato_urgencia_telemovel',
-                    '933333333'
+                    '+351933333333'
                 );
 
         $id =
@@ -921,7 +921,7 @@ test(
                     'motorista.normalizado@example.test',
 
                 'telemovel' =>
-                    '912345678',
+                    '+351912345678',
 
                 'endereco_cep' =>
                     '1000-001',
@@ -933,16 +933,16 @@ test(
                     'bolt.motorista@example.test',
 
                 'bolt_telemovel' =>
-                    '911111111',
+                    '+351911111111',
 
                 'uber_email' =>
                     'uber.motorista@example.test',
 
                 'uber_telemovel' =>
-                    '922222222',
+                    '+351922222222',
 
                 'contato_urgencia_telemovel' =>
-                    '933333333',
+                    '+351933333333',
             ]
         );
     }
@@ -986,7 +986,7 @@ test(
                         'email-invalido',
 
                     'telemovel' =>
-                        '+34 612 345 678',
+                        '+34 612',
 
                     'endereco_cep' =>
                         '0000-000',
@@ -1010,7 +1010,7 @@ test(
                         'Contacto Inválido',
 
                     'contato_urgencia_telemovel' =>
-                        '+34 699 999 999',
+                        '+34 699',
                 ]
             )
             ->assertUnprocessable()
@@ -1117,7 +1117,7 @@ test(
             )
             ->assertJsonPath(
                 'data.telemovel',
-                '934567890'
+                '+351934567890'
             )
             ->assertJsonPath(
                 'data.endereco_cep',
@@ -1133,7 +1133,7 @@ test(
             )
             ->assertJsonPath(
                 'data.bolt_telemovel',
-                '935111111'
+                '+351935111111'
             )
             ->assertJsonPath(
                 'data.uber_email',
@@ -1141,11 +1141,11 @@ test(
             )
             ->assertJsonPath(
                 'data.uber_telemovel',
-                '936222222'
+                '+351936222222'
             )
             ->assertJsonPath(
                 'data.contato_urgencia_telemovel',
-                '937333333'
+                '+351937333333'
             );
 
         $this->assertDatabaseHas(
@@ -1161,7 +1161,7 @@ test(
                     'motorista.update@example.test',
 
                 'telemovel' =>
-                    '934567890',
+                    '+351934567890',
 
                 'endereco_cep' =>
                     '1200-321',
@@ -1173,16 +1173,16 @@ test(
                     'bolt.update@example.test',
 
                 'bolt_telemovel' =>
-                    '935111111',
+                    '+351935111111',
 
                 'uber_email' =>
                     'uber.update@example.test',
 
                 'uber_telemovel' =>
-                    '936222222',
+                    '+351936222222',
 
                 'contato_urgencia_telemovel' =>
-                    '937333333',
+                    '+351937333333',
             ]
         );
     }
@@ -1315,3 +1315,44 @@ test(
         );
     }
 );
+
+test('motorista aceita telefones internacionais em todos os campos', function () {
+    $tenant = criarTenantMotorista(
+        'Tenant Internacional Motorista',
+        'tenant-internacional-motorista'
+    );
+
+    $user = criarUsuarioMotorista(
+        'internacional.motorista@frotapro.test',
+        $tenant,
+        'configurar'
+    );
+
+    autenticarUsuarioMotorista($this, $user);
+
+    $this->withHeaders(motoristaSpaHeaders())
+        ->postJson('/api/motoristas', [
+            'nome_completo' => 'Motorista Internacional',
+            'telemovel' => '+55 11 99876 5432',
+            'bolt_telemovel' => '+34 612 345 678',
+            'uber_telemovel' => '+44 7911 123456',
+            'contato_urgencia_telemovel' => '+55 11 98765 4321',
+        ])
+        ->assertCreated()
+        ->assertJsonPath(
+            'data.telemovel',
+            '+5511998765432'
+        )
+        ->assertJsonPath(
+            'data.bolt_telemovel',
+            '+34612345678'
+        )
+        ->assertJsonPath(
+            'data.uber_telemovel',
+            '+447911123456'
+        )
+        ->assertJsonPath(
+            'data.contato_urgencia_telemovel',
+            '+5511987654321'
+        );
+});

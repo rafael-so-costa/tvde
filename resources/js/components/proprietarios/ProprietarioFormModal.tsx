@@ -1,4 +1,5 @@
 import axios from 'axios';
+import InternationalPhoneInput from '../InternationalPhoneInput';
 import {
     FormEvent,
     useEffect,
@@ -1163,24 +1164,12 @@ export default function ProprietarioFormModal({
                                         Telemóvel
                                     </label>
 
-                                    <input
-                                        value={
-                                            form.telemovel
-                                        }
-                                        onChange={(
-                                            event
-                                        ) =>
-                                            update(
-                                                'telemovel',
-                                                event
-                                                    .target
-                                                    .value
-                                            )
-                                        }
-                                        className={
-                                            inputClass
-                                        }
-                                    />
+                                    <InternationalPhoneInput
+    id="proprietario-telemovel"
+    value={form.telemovel}
+    onChange={(value) => update('telemovel', value)}
+    className={inputClass}
+/>
                                 </div>
 
                                 <div className="sm:col-span-2">

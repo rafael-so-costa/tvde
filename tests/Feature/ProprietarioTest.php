@@ -706,7 +706,7 @@ test(
             )
             ->assertJsonPath(
                 'data.telemovel',
-                '912345678'
+                '+351912345678'
             )
             ->assertJsonPath(
                 'data.endereco_cep',
@@ -726,7 +726,7 @@ test(
 
                 'email' => 'pessoa@example.test',
 
-                'telemovel' => '912345678',
+                'telemovel' => '+351912345678',
 
                 'endereco_cep' => '1000-100',
 
@@ -913,7 +913,7 @@ test(
             )
             ->assertJsonPath(
                 'data.telemovel',
-                '213456789'
+                '+351213456789'
             )
             ->assertJsonPath(
                 'data.endereco_cep',
@@ -933,7 +933,7 @@ test(
 
                 'email' => 'atualizado@example.test',
 
-                'telemovel' => '213456789',
+                'telemovel' => '+351213456789',
 
                 'endereco_cep' => '1999-999',
 
@@ -942,3 +942,31 @@ test(
         );
     }
 );
+
+test('proprietario aceita telefone internacional', function () {
+    $tenant = criarTenantProprietario(
+        'Tenant Internacional Proprietario',
+        'tenant-internacional-proprietario'
+    );
+
+    $user = criarUsuarioProprietario(
+        'internacional.proprietario@frotapro.test',
+        $tenant,
+        'configurar'
+    );
+
+    autenticarUsuarioProprietario($this, $user);
+
+    $this->withHeaders(proprietarioSpaHeaders())
+        ->postJson(
+            '/api/proprietarios',
+            dadosProprietarioPessoaFisica([
+                'telemovel' => '+55 11 99876 5432',
+            ])
+        )
+        ->assertCreated()
+        ->assertJsonPath(
+            'data.telemovel',
+            '+5511998765432'
+        );
+});
