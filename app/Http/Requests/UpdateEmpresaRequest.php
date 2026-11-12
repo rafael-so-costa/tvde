@@ -161,12 +161,7 @@ class UpdateEmpresaRequest extends FormRequest
                 'date',
             ],
 
-            'logo_url' => [
-                'sometimes',
-                'nullable',
-                'string',
-                'max:2048',
-            ],
+            'logo_url' => ['prohibited'],
 
             'ativo' => [
                 'sometimes',

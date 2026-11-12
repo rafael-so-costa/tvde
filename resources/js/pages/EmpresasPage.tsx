@@ -1,3 +1,4 @@
+import ResourceId from '../components/ResourceId';
 import axios from "axios";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -93,6 +94,12 @@ export default function EmpresasPage() {
         formOpen,
         setFormOpen,
     ] = useState(false);
+
+    const [logoWarning, setLogoWarning] =
+        useState("");
+
+    const [logoRevision, setLogoRevision] =
+        useState(0);
 
     const [
         editing,
@@ -386,50 +393,78 @@ export default function EmpresasPage() {
     }
 
     async function handleSave(
-        payload: EmpresaPayload
+        payload: EmpresaPayload,
+        logo: File | null,
+        removeLogo: boolean
     ) {
-        if (editing) {
-            await updateMutation
-                .mutateAsync({
-                    id:
-                        editing.id,
+        setLogoWarning("");
 
-                    payload,
-                });
+        let saved: Empresa;
+        let created = false;
+
+        if (editing) {
+            saved = await updateMutation.mutateAsync({
+                id: editing.id,
+                payload,
+            });
         } else {
             if (!canCreate) {
+                throw new Error(
+                    "O plano atual não permite criar outra empresa."
+                );
+            }
+
+            saved = await createMutation.mutateAsync(payload);
+            created = true;
+        }
+
+        try {
+            if (logo) {
+                const formData = new FormData();
+                formData.append("logo", logo);
+
+                await api.post(
+                    `/api/empresas/${saved.id}/logo`,
+                    formData
+                );
+
+                setLogoRevision((value) => value + 1);
+            } else if (removeLogo) {
+                await api.delete(
+                    `/api/empresas/${saved.id}/logo`
+                );
+
+                setLogoRevision((value) => value + 1);
+            }
+        } catch (error) {
+            await queryClient.invalidateQueries({
+                queryKey: ["empresas", tenant?.id],
+            });
+
+            if (created) {
+                setLogoWarning(
+                    "A empresa foi criada, mas o envio do logótipo falhou. " +
+                    "O registo foi preservado. Edite a empresa para tentar novamente."
+                );
+
+                setFormOpen(false);
+                setEditing(null);
                 return;
             }
 
-            await createMutation
-                .mutateAsync(
-                    payload
-                );
+            throw error;
         }
 
-        await queryClient
-            .invalidateQueries({
-                queryKey: [
-                    "empresas",
-                    tenant?.id,
-                ],
-            });
+        await queryClient.invalidateQueries({
+            queryKey: ["empresas", tenant?.id],
+        });
 
-        await queryClient
-            .invalidateQueries({
-                queryKey: [
-                    "dashboard",
-                    tenant?.id,
-                ],
-            });
+        await queryClient.invalidateQueries({
+            queryKey: ["dashboard", tenant?.id],
+        });
 
-        setFormOpen(
-            false
-        );
-
-        setEditing(
-            null
-        );
+        setFormOpen(false);
+        setEditing(null);
     }
 
     if (!tenant) {
@@ -714,9 +749,7 @@ export default function EmpresasPage() {
                                                     <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-indigo-50 text-indigo-600">
                                                         {empresa.logo_url ? (
                                                             <img
-                                                                src={
-                                                                    empresa.logo_url
-                                                                }
+                                                                src={`${empresa.logo_url}${empresa.logo_url.includes("?") ? "&" : "?"}rev=${logoRevision}-${encodeURIComponent(empresa.updated_at)}`}
                                                                 alt=""
                                                                 className="h-full w-full object-cover"
                                                             />
@@ -731,6 +764,7 @@ export default function EmpresasPage() {
                                                                 empresa.nome_empresa
                                                             }
                                                         </div>
+                                                        <ResourceId id={empresa.id} />
 
                                                         <div className="mt-0.5 text-xs text-slate-500">
                                                             NIF{" "}
@@ -858,6 +892,23 @@ export default function EmpresasPage() {
                     </div>
                 )}
             </div>
+
+            {logoWarning && (
+                <div
+                    role="alert"
+                    className="mb-4 flex items-center justify-between gap-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
+                >
+                    <p>{logoWarning}</p>
+
+                    <button
+                        type="button"
+                        onClick={() => setLogoWarning("")}
+                        className="shrink-0 font-semibold underline"
+                    >
+                        Fechar
+                    </button>
+                </div>
+            )}
 
             <EmpresaFormModal
                 open={

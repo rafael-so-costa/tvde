@@ -1,3 +1,4 @@
+import ResourceId from '../components/ResourceId';
 import axios from 'axios';
 import { useEffect, useMemo, useState } from 'react';
 import {
@@ -518,6 +519,7 @@ export default function MotoristasPage() {
                                                                 motorista.nome_completo
                                                             }
                                                         </div>
+                                                        <ResourceId id={motorista.id} />
 
                                                         <div className="mt-1 text-xs text-slate-500">
                                                             {motorista.nif

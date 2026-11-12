@@ -3,8 +3,10 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Str;
 
 class Empresa extends Model
 {
@@ -53,6 +55,41 @@ class Empresa extends Model
         'status_cadastro',
     ];
 
+    protected function logoUrl(): Attribute
+    {
+        return Attribute::make(
+            get: function (?string $value): ?string {
+                if (blank($value)) {
+                    return null;
+                }
+
+                if (
+                    Str::startsWith(
+                        $value,
+                        ['http://', 'https://']
+                    )
+                ) {
+                    return $value;
+                }
+
+                if (
+                    ! Str::startsWith(
+                        $value,
+                        'empresas/'
+                    ) ||
+                    blank($this->id)
+                ) {
+                    return null;
+                }
+
+                return route(
+                    'empresas.logo',
+                    ['id' => $this->id]
+                );
+            },
+            set: fn ($value) => $value
+        );
+    }
     protected function casts(): array
     {
         return [

@@ -44,6 +44,7 @@ use App\Http\Controllers\CurrentPermissionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeclaracaoController;
 use App\Http\Controllers\EmpresaController;
+use App\Http\Controllers\EmpresaLogoController;
 use App\Http\Controllers\EstoqueController;
 use App\Http\Controllers\ExpedienteController;
 use App\Http\Controllers\ExpedientePublicController;
@@ -1008,11 +1009,14 @@ Route::get(
         Route::middleware('permission:empresas,visualizar')->group(function () {
             Route::get('/empresas', [EmpresaController::class, 'index']);
             Route::get('/empresas/{id}', [EmpresaController::class, 'show']);
+            Route::get('/empresas/{id}/logo', [EmpresaLogoController::class, 'show'])->name('empresas.logo');
         });
 
         Route::middleware('permission:empresas,configurar')->group(function () {
             Route::post('/empresas', [EmpresaController::class, 'store']);
             Route::patch('/empresas/{id}', [EmpresaController::class, 'update']);
+            Route::post('/empresas/{id}/logo', [EmpresaLogoController::class, 'store']);
+            Route::delete('/empresas/{id}/logo', [EmpresaLogoController::class, 'destroy']);
             Route::delete('/empresas/{id}', [EmpresaController::class, 'destroy']);
         });
 

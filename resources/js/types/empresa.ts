@@ -79,7 +79,7 @@ export interface EmpresaPayload {
     capital_social: number | null;
     certificado_tvde: string | null;
     certificado_tvde_valid_until: string | null;
-    logo_url: string | null;
+
     ativo: boolean;
     status_cadastro: EmpresaStatus;
 }

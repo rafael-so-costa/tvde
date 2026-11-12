@@ -143,11 +143,7 @@ class StoreEmpresaRequest extends FormRequest
                 'date',
             ],
 
-            'logo_url' => [
-                'nullable',
-                'string',
-                'max:2048',
-            ],
+            'logo_url' => ['prohibited'],
 
             'ativo' => [
                 'sometimes',

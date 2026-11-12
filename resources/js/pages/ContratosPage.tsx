@@ -1,3 +1,4 @@
+import ResourceId from '../components/ResourceId';
 import {
     useEffect,
     useMemo,
@@ -1552,6 +1553,14 @@ export default function ContratosPage() {
                                                             .template
                                                             ?.nome ??
                                                             typeLabel}
+                                                    </div>
+                                                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                                                        {contract.documento?.codigo && (
+                                                            <span className="rounded-md bg-indigo-50 px-2 py-0.5 font-mono text-xs text-indigo-700">
+                                                                Documento {contract.documento.codigo}
+                                                            </span>
+                                                        )}
+                                                        <ResourceId id={contract.id} />
                                                     </div>
 
                                                     <div className="mt-1 text-xs text-slate-400">

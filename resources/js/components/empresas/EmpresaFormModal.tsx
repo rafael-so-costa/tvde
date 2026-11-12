@@ -1,13 +1,17 @@
 import axios from 'axios';
 import InternationalPhoneInput from '../InternationalPhoneInput';
 import {
+    ChangeEvent,
     FormEvent,
     useEffect,
+    useRef,
     useState,
 } from 'react';
 import {
     Building2,
+    ImagePlus,
     LoaderCircle,
+    Trash2,
     X,
 } from 'lucide-react';
 import type {
@@ -22,7 +26,9 @@ interface Props {
     privacyAvailable: boolean;
     onClose: () => void;
     onSubmit: (
-        payload: EmpresaPayload
+        payload: EmpresaPayload,
+        logo: File | null,
+        removeLogo: boolean
     ) => Promise<void>;
 }
 
@@ -148,6 +154,21 @@ export default function EmpresaFormModal({
     const [submitting, setSubmitting] =
         useState(false);
 
+    const [logoFile, setLogoFile] =
+        useState<File | null>(null);
+
+    const logoInputRef =
+        useRef<HTMLInputElement | null>(null);
+
+    const [logoPreview, setLogoPreview] =
+        useState<string | null>(null);
+
+    const [logoRemoved, setLogoRemoved] =
+        useState(false);
+
+    const [logoError, setLogoError] =
+        useState("");
+
     const [errors, setErrors] =
         useState<
             Record<string, string[]>
@@ -164,7 +185,10 @@ export default function EmpresaFormModal({
         }
 
         setErrors({});
-        setGeneralError('');
+        setGeneralError("");
+        setLogoFile(null);
+        setLogoRemoved(false);
+        setLogoError("");
 
         if (!empresa) {
             setForm(emptyForm);
@@ -262,13 +286,80 @@ export default function EmpresaFormModal({
         });
     }, [open, empresa]);
 
+    useEffect(() => {
+        if (!logoFile) {
+            setLogoPreview(null);
+            return;
+        }
+
+        const url = URL.createObjectURL(logoFile);
+        setLogoPreview(url);
+
+        return () => {
+            URL.revokeObjectURL(url);
+        };
+    }, [logoFile]);
+
     if (!open) {
         return null;
     }
 
-    const privacyEmailReady = Boolean(
-        form.privacidade_contacto_email.trim() || form.email.trim()
-    );
+    const logoSource =
+        logoPreview ??
+        (!logoRemoved ? form.logo_url : null);
+
+    function selectLogo(
+        event: ChangeEvent<HTMLInputElement>
+    ): void {
+        const file =
+            event.currentTarget.files?.[0] ?? null;
+
+        event.currentTarget.value = "";
+
+        if (!file) {
+            return;
+        }
+
+        const validMime = [
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+        ].includes(file.type);
+
+        const validExtension =
+            /\.(jpg|jpeg|png|webp)$/i.test(file.name);
+
+        if (!validMime || !validExtension) {
+            setLogoError(
+                "Selecione uma imagem JPG, PNG ou WebP."
+            );
+            return;
+        }
+
+        if (file.size > 4 * 1024 * 1024) {
+            setLogoError(
+                "O logótipo não pode exceder 4 MB."
+            );
+            return;
+        }
+
+        setLogoFile(file);
+        setLogoRemoved(false);
+        setLogoError("");
+        setErrors((current) => ({
+            ...current,
+            logo: [],
+        }));
+    }
+
+    function removeSelectedLogo(): void {
+        setLogoFile(null);
+        setLogoRemoved(Boolean(empresa?.logo_url));
+        setLogoError("");
+    }
+
+
+
 
     function update<K extends keyof FormState>(
         field: K,
@@ -375,10 +466,7 @@ export default function EmpresaFormModal({
                     form
                         .certificado_tvde_valid_until
                 ),
-            logo_url:
-                valueOrNull(
-                    form.logo_url
-                ),
+
             ativo:
                 form.ativo,
             status_cadastro:
@@ -398,7 +486,7 @@ export default function EmpresaFormModal({
         }
 
         try {
-            await onSubmit(payload);
+            await onSubmit(payload, logoFile, logoRemoved);
         } catch (error) {
             if (
                 axios.isAxiosError(
@@ -533,8 +621,8 @@ export default function EmpresaFormModal({
                 className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm"
             />
 
-            <div className="relative w-full max-w-4xl max-h-[92vh] overflow-hidden rounded-2xl bg-white shadow-2xl">
-                <header className="h-20 px-6 flex items-center justify-between border-b border-slate-200">
+            <div className="relative flex h-[92dvh] max-h-[820px] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+                <header className="flex h-20 shrink-0 items-center justify-between border-b border-slate-200 px-6">
                     <div className="flex items-center gap-3">
                         <div className="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
                             <Building2 className="w-5 h-5" />
@@ -583,9 +671,9 @@ export default function EmpresaFormModal({
                     onSubmit={
                         handleSubmit
                     }
-                    className="advanced-validation-form overflow-y-auto max-h-[calc(92vh-80px)]"
+                    className="advanced-validation-form flex min-h-0 flex-1 flex-col overflow-hidden"
                 >
-                    <div className="p-6 space-y-8">
+                    <div className="min-h-0 flex-1 space-y-8 overflow-y-auto overscroll-contain p-6">
                         {generalError && (
                             <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                                 {
@@ -798,28 +886,9 @@ export default function EmpresaFormModal({
                                 Proteção de dados (RGPD)
                             </h3>
 
-                            <p className="text-sm text-slate-500 mb-4">
-                                Utilize os contactos reais da empresa.
-                                O RGPD 1.2 utiliza o e-mail principal, ou o contacto
-                                de privacidade quando preenchido.
-                                A finalidade de localizacao e facultativa.
-                            </p>
 
-                            {privacyAvailable && (
-                                <div role="status" className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-800">
-                                    <p className="font-semibold">RGPD 1.2 — configuracao simplificada</p>
-                                    <p className="mt-1">
-                                        {privacyEmailReady
-                                            ? "Contacto de privacidade disponivel."
-                                            : "Informe o e-mail principal ou o contacto de privacidade da empresa."}
-                                    </p>
-                                    <p className="mt-1 text-xs text-slate-600">
-                                        A finalidade de geolocalizacao facultativa apenas e exigida
-                                        quando o titular escolher autorizar. Os campos historicos
-                                        permanecem na base, mas nao sao solicitados neste formulario.
-                                    </p>
-                                </div>
-                            )}
+
+
 
                             {!privacyAvailable && (
                                 <div
@@ -1143,34 +1212,102 @@ export default function EmpresaFormModal({
                                 </div>
 
                                 <div className="sm:col-span-2">
-                                    <label
-                                        className={
-                                            labelClass
-                                        }
-                                    >
-                                        URL do logótipo
-                                    </label>
+    <label className={labelClass}>
+        Logótipo da empresa
+    </label>
 
-                                    <input
-                                        type="url"
-                                        value={
-                                            form.logo_url
-                                        }
-                                        onChange={(
-                                            event
-                                        ) =>
-                                            update(
-                                                'logo_url',
-                                                event
-                                                    .target
-                                                    .value
-                                            )
-                                        }
-                                        className={
-                                            fieldClass
-                                        }
-                                    />
-                                </div>
+    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+        <div className="flex flex-wrap items-center gap-4">
+            <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white">
+                {logoSource ? (
+                    <img
+                        src={logoSource}
+                        alt="Pré-visualização do logótipo da empresa"
+                        className="h-full w-full object-contain p-2"
+                    />
+                ) : (
+                    <Building2
+                        className="h-9 w-9 text-slate-300"
+                    />
+                )}
+            </div>
+
+            <div className="min-w-0 flex-1 space-y-3">
+                <div>
+                    <p className="text-sm font-semibold text-slate-800">
+                        {logoFile
+                            ? logoFile.name
+                            : empresa?.logo_url && !logoRemoved
+                              ? "Logótipo atual"
+                              : "Nenhum logótipo selecionado"}
+                    </p>
+
+                    <p className="mt-1 text-xs text-slate-500">
+                        JPG, PNG ou WebP, até 4 MB.
+                        Dimensões entre 80 e 5000 píxeis.
+                    </p>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                    <input
+                        ref={logoInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={selectLogo}
+                        className="hidden"
+                        aria-label="Selecionar logótipo da empresa"
+                    />
+
+                    <button
+                        type="button"
+                        onClick={() => logoInputRef.current?.click()}
+                        disabled={submitting}
+                        className="inline-flex h-10 items-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        <ImagePlus className="h-4 w-4" />
+
+                        {logoSource
+                            ? "Substituir imagem"
+                            : "Anexar logótipo"}
+                    </button>
+
+                    {logoSource && (
+                        <button
+                            type="button"
+                            onClick={removeSelectedLogo}
+                            className="inline-flex h-10 items-center gap-2 rounded-lg border border-red-200 bg-white px-4 text-sm font-semibold text-red-600 hover:bg-red-50"
+                        >
+                            <Trash2 className="h-4 w-4" />
+                            Remover
+                        </button>
+                    )}
+
+                    {logoRemoved && empresa?.logo_url && (
+                        <button
+                            type="button"
+                            onClick={() => setLogoRemoved(false)}
+                            className="h-10 rounded-lg border border-slate-200 px-4 text-sm font-medium text-slate-700"
+                        >
+                            Cancelar remoção
+                        </button>
+                    )}
+                </div>
+            </div>
+        </div>
+
+        {logoRemoved && empresa?.logo_url && (
+            <p className="mt-3 text-xs text-amber-700">
+                O logótipo atual será removido quando guardar.
+            </p>
+        )}
+
+        {(logoError || errors.logo?.[0]) && (
+            <p className="mt-3 text-xs font-medium text-red-600">
+                {logoError || errors.logo?.[0]}
+            </p>
+        )}
+    </div>
+</div>
                             </div>
                         </section>
 
@@ -1251,7 +1388,7 @@ export default function EmpresaFormModal({
                         </section>
                     </div>
 
-                    <footer className="sticky bottom-0 bg-white border-t border-slate-200 px-6 py-4 flex justify-end gap-3">
+                    <footer className="flex shrink-0 flex-wrap justify-end gap-3 border-t border-slate-200 bg-white px-6 py-4">
                         <button
                             type="button"
                             onClick={onClose}

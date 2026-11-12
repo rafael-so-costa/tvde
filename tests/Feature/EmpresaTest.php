@@ -9,6 +9,8 @@ use App\Models\TenantUser;
 use App\Models\User;
 use App\Models\UserRole;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Hash;
 
 uses(RefreshDatabase::class);
@@ -1119,3 +1121,305 @@ test(
         ]);
     }
 );
+
+test('logotipo da empresa e guardado em armazenamento privado', function () {
+    Storage::fake('local');
+
+    $tenant = criarTenantEmpresa(
+        'Tenant Logo Privado',
+        'tenant-logo-privado'
+    );
+
+    $user = criarUsuarioEmpresa(
+        'logo.privado@frotapro.test',
+        $tenant,
+        'configurar'
+    );
+
+    $empresa = criarEmpresaNoTenant(
+        $tenant,
+        'Empresa Com Logo',
+        '500000018'
+    );
+
+    autenticarUsuarioEmpresa($this, $user);
+
+    $this->withHeaders(empresaSpaHeaders())
+        ->post(
+            "/api/empresas/{$empresa->id}/logo",
+            [
+                'logo' => UploadedFile::fake()->image(
+                    'logotipo.png',
+                    400,
+                    400
+                ),
+            ]
+        )
+        ->assertOk()
+        ->assertJsonPath(
+            'data.logo_url',
+            route('empresas.logo', ['id' => $empresa->id])
+        );
+
+    $path = $empresa->fresh()->getRawOriginal('logo_url');
+
+    expect($path)->toStartWith(
+        "empresas/{$tenant->id}/{$empresa->id}/logo/"
+    );
+
+    Storage::disk('local')->assertExists($path);
+
+        $response = $this->withHeaders(empresaSpaHeaders())
+        ->get("/api/empresas/{$empresa->id}/logo")
+        ->assertOk();
+
+    $cache = $response->baseResponse->headers;
+
+    expect($cache->hasCacheControlDirective('private'))
+        ->toBeTrue();
+
+    expect($cache->hasCacheControlDirective('public'))
+        ->toBeFalse();
+
+    expect($cache->hasCacheControlDirective('no-store'))
+        ->toBeTrue();
+});
+
+test('substituir e remover logotipo elimina ficheiro anterior', function () {
+    Storage::fake('local');
+
+    $tenant = criarTenantEmpresa(
+        'Tenant Logo Substituicao',
+        'tenant-logo-substituicao'
+    );
+
+    $user = criarUsuarioEmpresa(
+        'logo.substituicao@frotapro.test',
+        $tenant,
+        'configurar'
+    );
+
+    $empresa = criarEmpresaNoTenant(
+        $tenant,
+        'Empresa Logo Substituicao',
+        '500000018'
+    );
+
+    autenticarUsuarioEmpresa($this, $user);
+
+    $url = "/api/empresas/{$empresa->id}/logo";
+
+    $this->withHeaders(empresaSpaHeaders())
+        ->post($url, [
+            'logo' => UploadedFile::fake()->image(
+                'primeiro.png',
+                400,
+                400
+            ),
+        ])
+        ->assertOk();
+
+    $first = $empresa->fresh()->getRawOriginal('logo_url');
+
+    $this->withHeaders(empresaSpaHeaders())
+        ->post($url, [
+            'logo' => UploadedFile::fake()->image(
+                'segundo.png',
+                500,
+                500
+            ),
+        ])
+        ->assertOk();
+
+    $second = $empresa->fresh()->getRawOriginal('logo_url');
+
+    expect($first)->not->toBe($second);
+
+    Storage::disk('local')->assertMissing($first);
+    Storage::disk('local')->assertExists($second);
+
+    $this->withHeaders(empresaSpaHeaders())
+        ->deleteJson($url)
+        ->assertOk()
+        ->assertJsonPath('data.logo_url', null);
+
+    Storage::disk('local')->assertMissing($second);
+
+    $this->withHeaders(empresaSpaHeaders())
+        ->get($url)
+        ->assertNotFound();
+});
+
+test('logo de outro tenant nao pode ser consultado ou alterado', function () {
+    Storage::fake('local');
+
+    $tenantA = criarTenantEmpresa(
+        'Tenant A Logo',
+        'tenant-a-logo'
+    );
+
+    $tenantB = criarTenantEmpresa(
+        'Tenant B Logo',
+        'tenant-b-logo'
+    );
+
+    $user = criarUsuarioEmpresa(
+        'logo.tenant.a@frotapro.test',
+        $tenantA,
+        'configurar'
+    );
+
+    $empresaB = criarEmpresaNoTenant(
+        $tenantB,
+        'Empresa Tenant B',
+        '500000018'
+    );
+
+    autenticarUsuarioEmpresa($this, $user);
+
+    $url = "/api/empresas/{$empresaB->id}/logo";
+
+    $this->withHeaders(empresaSpaHeaders())
+        ->get($url)
+        ->assertNotFound();
+
+    $this->withHeaders(empresaSpaHeaders())
+        ->post($url, [
+            'logo' => UploadedFile::fake()->image(
+                'invasao.png',
+                400,
+                400
+            ),
+        ])
+        ->assertNotFound();
+
+    $this->withHeaders(empresaSpaHeaders())
+        ->deleteJson($url)
+        ->assertNotFound();
+
+    expect($empresaB->fresh()->logo_url)->toBeNull();
+});
+
+test('logo exige permissao de configurar e valida imagem', function () {
+    Storage::fake('local');
+
+    $tenant = criarTenantEmpresa(
+        'Tenant Logo Permissoes',
+        'tenant-logo-permissoes'
+    );
+
+    $user = criarUsuarioEmpresa(
+        'logo.leitura@frotapro.test',
+        $tenant,
+        'visualizar'
+    );
+
+    $empresa = criarEmpresaNoTenant(
+        $tenant,
+        'Empresa Somente Leitura',
+        '500000018'
+    );
+
+    autenticarUsuarioEmpresa($this, $user);
+
+    $url = "/api/empresas/{$empresa->id}/logo";
+
+    $this->withHeaders(empresaSpaHeaders())
+        ->post($url, [
+            'logo' => UploadedFile::fake()->image(
+                'logo.png',
+                400,
+                400
+            ),
+        ])
+        ->assertForbidden();
+
+    $this->withHeaders(empresaSpaHeaders())
+        ->deleteJson($url)
+        ->assertForbidden();
+
+    expect($empresa->fresh()->logo_url)->toBeNull();
+});
+
+test('empresa nao permite definir logotipo por URL no cadastro ou edicao', function () {
+    $tenant = criarTenantEmpresa(
+        'Tenant URL Proibida',
+        'tenant-url-logo-proibida'
+    );
+
+    $user = criarUsuarioEmpresa(
+        'logo.url.proibida@frotapro.test',
+        $tenant,
+        'configurar'
+    );
+
+    autenticarUsuarioEmpresa($this, $user);
+
+    $this->withHeaders(empresaSpaHeaders())
+        ->postJson('/api/empresas', [
+            'nome_empresa' => 'Empresa URL Maliciosa',
+            'nif' => '500000018',
+            'logo_url' => 'https://example.test/logo.png',
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('logo_url');
+
+    $this->assertDatabaseMissing('empresas', [
+        'nome_empresa' => 'Empresa URL Maliciosa',
+    ]);
+
+    $empresa = criarEmpresaNoTenant(
+        $tenant,
+        'Empresa URL Protegida',
+        '500000018'
+    );
+
+    $this->withHeaders(empresaSpaHeaders())
+        ->patchJson("/api/empresas/{$empresa->id}", [
+            'logo_url' => 'https://example.test/outro.png',
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('logo_url');
+
+    expect(
+        $empresa->fresh()->getRawOriginal('logo_url')
+    )->toBeNull();
+});
+
+test('upload do logotipo rejeita ficheiros que nao sao imagens', function () {
+    Storage::fake('local');
+
+    $tenant = criarTenantEmpresa(
+        'Tenant Logo Invalido',
+        'tenant-logo-invalido'
+    );
+
+    $user = criarUsuarioEmpresa(
+        'logo.invalido@frotapro.test',
+        $tenant,
+        'configurar'
+    );
+
+    $empresa = criarEmpresaNoTenant(
+        $tenant,
+        'Empresa Logo Invalido',
+        '500000018'
+    );
+
+    autenticarUsuarioEmpresa($this, $user);
+
+    $this->withHeaders(empresaSpaHeaders())
+        ->post("/api/empresas/{$empresa->id}/logo", [
+            'logo' => UploadedFile::fake()->create(
+                'ficheiro.pdf',
+                100,
+                'application/pdf'
+            ),
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('logo');
+
+    expect(
+        $empresa->fresh()->getRawOriginal('logo_url')
+    )->toBeNull();
+});

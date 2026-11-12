@@ -11,6 +11,8 @@ use App\Services\TenantContext;
 use App\Services\EmpresaRgpdSchemaGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class EmpresaController extends Controller
 {
@@ -151,7 +153,19 @@ class EmpresaController extends Controller
             );
         }
 
+        $logoPath = $empresa->getRawOriginal('logo_url');
+
         $empresa->delete();
+
+        if (
+            is_string($logoPath) &&
+            Str::startsWith(
+                $logoPath,
+                'empresas/'.$tenant->id.'/'.$empresa->id.'/logo/'
+            )
+        ) {
+            Storage::disk('local')->delete($logoPath);
+        }
 
         return response()
             ->noContent();
